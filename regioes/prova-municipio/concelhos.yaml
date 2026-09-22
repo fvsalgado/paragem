@@ -1,0 +1,13 @@
+# Um concelho só: é o que uma câmara tem.
+#
+# O identificador não é nome de concelho português nenhum, de propósito — o
+# espaço dos identificadores é global entre regiões, e duas regiões não podem
+# partilhar um.
+
+concelhos:
+  - id: savel
+    nome: Sável
+    distrito: Sável
+    dico: "9903"
+    membro: true
+    prefixo_stop_id: sv

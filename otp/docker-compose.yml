@@ -1,0 +1,94 @@
+# O motor de viagens, para quem o aloja.
+#
+# A imagem e a versão estão FIXADAS, pela mesma razão do validador e do
+# poppler: um motor que se atualiza sozinho faz o CI mudar de opinião sem que
+# nada no repositório tenha mudado. Subir é uma decisão, tomada com os
+# itinerários antes e depois à frente. A versão tem de ser a mesma que o
+# `pipeline/src/paragem/motor.py` fixa — há um teste que o confirma.
+#
+# NOTA sobre os testes: eles NÃO passam por aqui. Correm o mesmo jar
+# diretamente, porque um teste tem de poder correr onde não há daemon de
+# Docker — e o CI é um desses sítios. Isto é o empacotamento; o motor é o mesmo.
+#
+# A região escolhe-se por variável de ambiente, porque o produto é
+# multi-região: nada aqui nomeia uma região.
+#
+#   PARAGEM_REGIAO=<a-tua-regiao> \
+#   PARAGEM_ORIGEM=https://o-dominio-do-sitio \
+#     docker compose -f otp/docker-compose.yml up
+#
+# O que fica exposto é o PROXY, na porta escolhida. O motor não publica porta
+# nenhuma: só o proxy lhe chega.
+
+name: paragem-otp
+
+services:
+  # Constrói o grafo a partir do que o `uv run pipeline build` produziu, e sai.
+  # Corre-se uma vez por cada vez que os dados mudam.
+  grafo:
+    image: docker.io/opentripplanner/opentripplanner:2.6.0
+    profiles: ["construir"]
+    command: ["--build", "--save", "/var/otp"]
+    volumes:
+      - ../build/${PARAGEM_REGIAO:?define PARAGEM_REGIAO}/otp:/var/otp
+    environment:
+      JAVA_OPTS: -Xmx${PARAGEM_OTP_MEMORIA:-6G}
+
+  # O motor, com o grafo já construído.
+  #
+  # **NÃO PUBLICA PORTA NENHUMA.** Só o proxy lhe chega, pela rede interna. Um
+  # OTP aberto à Internet sem limites derruba-se com um portátil: cada pedido é
+  # um cálculo de caminhos sobre um grafo de 97 MB, não um ficheiro servido.
+  motor:
+    image: docker.io/opentripplanner/opentripplanner:2.6.0
+    command: ["--load", "/var/otp"]
+    expose:
+      - "8080"
+    volumes:
+      - ../build/${PARAGEM_REGIAO:?define PARAGEM_REGIAO}/otp:/var/otp:ro
+    environment:
+      JAVA_OPTS: -Xmx${PARAGEM_OTP_MEMORIA:-6G}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/otp"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # O proxy: o §7 pede «só a API GraphQL necessária, atrás de um proxy com
+  # limites», e são dois requisitos, não um.
+  #
+  # Vive AQUI e não numa função da plataforma do sítio. O sítio é ficheiros
+  # estáticos de propósito — uma câmara que licencie o produto tem de o poder
+  # alojar onde quiser —, e pôr o proxy numa função amarrava o produto a uma
+  # plataforma com funções. Aqui o proxy viaja com a coisa que protege: quem
+  # levanta o motor levanta o proxy, e não há como levantar um sem o outro.
+  #
+  # As regras estão em `proxy/nginx.conf` e há testes que as correm a sério,
+  # com um nginx verdadeiro (`pipeline/tests/test_proxy.py`). Uma configuração
+  # de proxy que nunca correu é uma promessa, não uma proteção.
+  proxy:
+    image: docker.io/library/nginx:1.27-alpine
+    depends_on:
+      motor:
+        condition: service_healthy
+    ports:
+      - "${PARAGEM_OTP_PORTA:-8080}:8080"
+    volumes:
+      # `templates/` e não `conf.d/`: a imagem do nginx substitui as variáveis
+      # de ambiente nos ficheiros desta pasta antes de arrancar, e é assim que
+      # a origem permitida entra sem ficar cravada no ficheiro.
+      - ./proxy/nginx.conf:/etc/nginx/templates/default.conf.template:ro
+    environment:
+      # A origem que pode chamar a API: o domínio do sítio. NÃO é `*` — um
+      # `*` deixa qualquer página do mundo gastar este CPU.
+      PARAGEM_ORIGEM: ${PARAGEM_ORIGEM:?define PARAGEM_ORIGEM com o domínio do sítio}
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx/conf.d
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/saude"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

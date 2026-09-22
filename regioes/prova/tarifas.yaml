@@ -1,0 +1,32 @@
+# Tarifário inventado.
+#
+# Ao contrário de uma região real, estes valores entram `confirmado: true` — não
+# porque alguém os tenha ido conferir, mas porque a fonte deles é este ficheiro:
+# são ficção, e a ficção não tem nada por confirmar. É o que permite à região de
+# prova ter zero lacunas de tarifário e ao relatório de uma região real ter as
+# suas, sem que uma coisa disfarce a outra.
+
+moeda: EUR
+
+titulos:
+  - id: alta-bilhete-simples
+    rede: Rede Alta
+    nome: Bilhete simples
+    valor: 1.20
+    confirmado: true
+    fonte: inventado (região de prova)
+
+  - id: alta-passe-mensal
+    rede: Rede Alta
+    nome: Passe mensal
+    valor: 25.00
+    periodo: mes
+    confirmado: true
+    fonte: inventado (região de prova)
+
+  - id: altabike-primeira-hora
+    rede: AltaBike
+    nome: Primeira hora
+    valor: 0.00
+    confirmado: true
+    fonte: inventado (região de prova)

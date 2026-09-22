@@ -1,0 +1,23 @@
+# Dois concelhos inventados.
+#
+# Os identificadores são nomes que nenhum concelho português tem, de propósito:
+# se um dia os endereços públicos deixarem de levar a região, dois concelhos de
+# regiões diferentes não podem partilhar o identificador.
+
+concelhos:
+  - id: pedra-alta
+    nome: Pedra Alta
+    distrito: Serra
+    dico: "9901"
+    membro: true
+    prefixo_stop_id: pa
+
+  - id: ribeira-do-corvo
+    nome: Ribeira do Corvo
+    distrito: Serra
+    dico: "9902"
+    membro: true
+    prefixo_stop_id: rc
+
+prefixos_externos:
+  va: Vale Alto

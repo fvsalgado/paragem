@@ -1,0 +1,21 @@
+# A receita do Baixo Sável.
+#
+# Uma saída só, e um leitor genérico. É o mínimo que uma região pode ser: um
+# feed e nada mais. Serve para verificar que o produto não exige nenhum dos
+# outros modos para nascer inteiro.
+
+saidas:
+  - fonte: prova-gtfs-savel
+    leitor: gtfs-arquivo
+    papel: feed-proprio
+    saida: gtfs/savel-bus.zip
+    modo: autocarro
+    params:
+      recortar: false
+
+motor:
+  fuso: Europe/Lisbon
+  gtfs:
+    - gtfs/savel-bus.zip
+
+verificacoes: []

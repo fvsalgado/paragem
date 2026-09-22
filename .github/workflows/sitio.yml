@@ -1,0 +1,488 @@
+# O sítio: constrói-se, e verifica-se que é acessível.
+#
+# A acessibilidade não é um extra que se vê no fim: para uma autoridade de
+# transportes é o Decreto-Lei n.º 83/2018, e uma violação grave impede a
+# publicação. Corre aqui, em cada alteração, e não à mão quando alguém se
+# lembra.
+name: Sítio
+
+on:
+  push:
+    branches: [main]
+    # O MESMO FILTRO DO PR, e faltava aqui.
+    #
+    # O ramo tinha-o e o `main` não: um PR só de documentação não disparava
+    # nada, e a fusão dele a seguir disparava a construção inteira — o motor
+    # de viagens, os mosaicos, o Lighthouse — para publicar um sítio byte a
+    # byte igual ao que já estava no ar.
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - "LICENSE"
+      - "AUTORIA.md"
+  # `ready_for_review` está aqui porque o trabalho pesado NÃO corre em
+  # rascunho (ver o `if:` do trabalho): é quando alguém tira o rascunho que
+  # esta corrida tem de acontecer, e sem este tipo ela nunca disparava.
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    # UMA MUDANÇA DE DOCUMENTAÇÃO NÃO PARTE O SÍTIO, e este fluxo custa
+    # catorze minutos. Trazer o `main` para dentro de um ramo — quatro
+    # ficheiros em `docs/` — disparava a construção inteira, o motor de
+    # viagens e o Lighthouse.
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - "LICENSE"
+      - "AUTORIA.md"
+  workflow_dispatch:
+
+concurrency:
+  group: sitio-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sitio:
+    name: As regiões desta raiz
+    # EM RASCUNHO NÃO SE CONSTRÓI O SÍTIO INTEIRO.
+    #
+    # São catorze minutos por empurrão — construir os dados, os mosaicos, o
+    # grafo do motor, as 4 871 páginas, o axe e o Lighthouse. Num PR em
+    # rascunho com oito empurrões isso são quase duas horas de máquina para
+    # ver o que ainda está a meio.
+    #
+    # O sinal não desaparece: em rascunho corre o `Dados`, que são sete
+    # minutos e traz o que interessa nessa fase — o validador, os testes
+    # contra os dados reais e as viagens de aceitação do §9. O sítio inteiro
+    # corre quando o PR deixa de ser rascunho, e no `main`.
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      # UM MÓDULO DESLIGADO, E O TRABALHO INTEIRO A SABER DISSO.
+      #
+      # Isto estava declarado SÓ no passo que levanta o sítio. O servidor sabia
+      # que o táxi da região de prova estava desligado; o processo dos testes
+      # não — e as duas metades do mesmo CI discordavam sobre o que o sítio tem.
+      #
+      # Enquanto a região em teste era uma real, ninguém dava por isso: o
+      # desligado era de outra. No dia em que a única região que sobrou aqui foi
+      # a de prova, dois testes passaram a procurar uma página de táxi que o
+      # servidor devolve em 404 — de propósito, que é o que se está a provar.
+      #
+      # E havia uma terceira, pior: o `modulos.spec.ts` SALTA quando não vê esta
+      # variável. O teste que prova que o interruptor do painel faz efeito no
+      # sítio nunca correu — saltava em silêncio, e a suite dizia que estava
+      # tudo bem. Um guarda que se salta a si próprio não é um guarda.
+      PARAGEM_MODULOS_DESLIGADOS: prova=taxi
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # A SEMANA, para os dados construídos não ficarem velhos em silêncio.
+      #
+      # A chave da cache a seguir é feita do que está NESTE repositório, e as
+      # fontes remotas não estão: a CP, a FlixBus e o OpenStreetMap republicam
+      # sem nos avisar. Uma cache só pelo conteúdo local servia horários de
+      # dezembro para sempre, e ninguém dava por isso — é a pior avaria
+      # possível num sítio de transportes, porque tem sempre uma resposta.
+      #
+      # Com a semana na chave, os dados reconstroem-se pelo menos uma vez por
+      # semana, mesmo que aqui não mude uma linha. O `dados.yml` faz o mesmo à
+      # segunda-feira; isto é o cinto por cima dos suspensórios.
+      - name: A semana
+        run: echo "SEMANA=$(date -u +%G-W%V)" >> "$GITHUB_ENV"
+
+      # ESTE FLUXO DEIXA DE NOMEAR REGIÕES. Ver o comentário gémeo em
+      # `dados.yml`: o §11.5 promete que uma região nova entra sem um commit de
+      # código, e um fluxo que a nomeie quebra isso em silêncio — ela entra e
+      # não é construída, nem servida, nem rastreada.
+      #
+      # Daqui saem quatro coisas, e as duas últimas são as que faltavam: o mapa
+      # de anfitriões que o sítio usa para saber que região responde em que
+      # domínio, e a lista que o rastreio de ligações percorre.
+      - name: As regiões desta raiz
+        run: |
+          uv run pipeline regioes
+          echo "COM_RUAS=$(uv run pipeline regioes --ids --com-ruas | tr '\n' ' ')" >> "$GITHUB_ENV"
+          echo "SEM_RUAS=$(uv run pipeline regioes --ids --sem-ruas | tr '\n' ' ')" >> "$GITHUB_ENV"
+          echo "DOMINIOS=$(uv run pipeline regioes --ids \
+            | awk '{printf "%s%s=%s.localhost:4321", sep, $0, $0; sep=","}')" >> "$GITHUB_ENV"
+          echo "ANFITRIOES=$(uv run pipeline regioes --ids \
+            | sed 's/$/.localhost/' | tr '\n' ' ')" >> "$GITHUB_ENV"
+
+      # A CACHE DOS DADOS JÁ CONSTRUÍDOS, e é ela que corta a corrida ao meio.
+      #
+      # 251 MB — o grafo do motor, os mosaicos, o recorte do OpenStreetMap, os
+      # feeds — e quase nada disso depende do código do sítio. Um push que
+      # mexa numa linha de TypeScript estava a refazer tudo: catorze dos
+      # dezassete minutos a reconstruir ficheiro a ficheiro idêntico ao que já
+      # cá estava.
+      #
+      # Na chave entra o que os dados REALMENTE dependem: as fontes manuais, a
+      # declaração da região, o código do pipeline e as versões travadas. O
+      # `web/` não entra de propósito — é isso que faz um push de interface
+      # reaproveitar tudo.
+      #
+      # Os três `.jar` vão à boleia: são precisos para LEVANTAR o motor e para
+      # validar, mesmo quando não há nada para construir, e são 270 MB que não
+      # vale a pena voltar a descarregar.
+      - name: Cache dos dados construídos
+        id: dados
+        uses: actions/cache@v4
+        with:
+          path: |
+            build
+            .cache/otp.jar
+            .cache/gtfs-validator.jar
+            .cache/planetiler.jar
+          key: dados-v1-${{ env.SEMANA }}-${{ hashFiles('data/**', 'regioes/**', 'pipeline/**', 'uv.lock') }}
+
+      # O `pdftotext` lê os cartazes e o `osmium` recorta o OpenStreetMap: os
+      # dois só servem para CONSTRUIR dados. Numa corrida que os reaproveite da
+      # cache não se instala nada — e poupa-se um `apt-get update`, que é o
+      # passo mais dado a esperar por um espelho lento.
+      - name: Dependências de sistema
+        if: steps.dados.outputs.cache-hit != 'true'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils osmium-tool
+
+      # AS FONTES DESCARREGADAS, 2,2 GB. Só quando há o que construir.
+      #
+      # Antes restaurava-se sempre, e numa corrida em que os dados já estavam
+      # em cache era mais de um minuto a descompactar 2,2 GB para não tocar em
+      # nenhum deles.
+      #
+      # E A CHAVE LEVAVA O `run_id`, que é único por corrida. Isso faz a chave
+      # primária FALHAR SEMPRE — de propósito, no padrão de quem quer uma cache
+      # que cresce —, e uma falha da chave primária obriga o `actions/cache` a
+      # GRAVAR no fim. Medido na corrida #70 do `main`: 2,4 GB enviados e
+      # **1m33** no `Post Cache das fontes`, depois de o sítio já estar no ar,
+      # para guardar exatamente o que já lá estava.
+      #
+      # Estas fontes não crescem: mudam quando o `sources.yaml` muda, e o
+      # `hashFiles` disso já está na chave. O que falta é o que o resto do
+      # ficheiro já faz — a semana —, para que uma fonte que mude no sítio de
+      # origem sem mudar de endereço acabe por ser rebuscada. Com a semana na
+      # chave, grava-se uma vez por semana em vez de uma vez por corrida.
+      - name: Cache das fontes
+        if: steps.dados.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            .cache
+            !.cache/*.gpkg
+          key: fontes-${{ hashFiles('data/sources.yaml') }}-${{ env.SEMANA }}
+          restore-keys: |
+            fontes-${{ hashFiles('data/sources.yaml') }}-
+            fontes-
+
+      - name: Descarregar as fontes
+        if: steps.dados.outputs.cache-hit != 'true'
+        run: uv run pipeline fetch --todas
+
+      # O `build` sai com código ≠ 0 pelo bloqueio conhecido do calendário; o
+      # que interessa aqui é que ESCREVA os feeds, e o `check-bloqueios` a
+      # seguir é que julga se algum bloqueio é novo.
+      - name: Construir os dados
+        if: steps.dados.outputs.cache-hit != 'true'
+        continue-on-error: true
+        run: uv run pipeline build --todas
+
+      - name: Bloqueios
+        if: steps.dados.outputs.cache-hit != 'true'
+        run: uv run pipeline check-bloqueios --todas
+
+      - name: O que o sítio lê
+        if: steps.dados.outputs.cache-hit != 'true'
+        run: uv run pipeline sitio --todas
+
+      # A DEMONSTRAÇÃO, construída em todas as corridas.
+      #
+      # Não é enfeite: é a prova executável de que uma região entra sem um
+      # commit de código (§11.5). Constrói-se sem rede — nem uma paragem, nem
+      # uma estrada, nem um horário vêm de sítio nenhum —, por isso não
+      # depende de um servidor de terceiros estar de pé.
+      #
+      # E agora é mais do que uma prova: vive no mesmo sítio que as regiões a
+      # sério, no seu domínio, com a faixa que diz que a rede não existe.
+      #
+      # E SÃO DUAS. A segunda — o Baixo Sável — é de propósito uma autoridade
+      # de transportes que é um MUNICÍPIO e não uma CIM: uma região de prova
+      # sozinha não prova multi-região, porque não há com que a comparar —
+      # nem caixas que se sobreponham, nem identificadores de concelho que
+      # colidam, nem um segundo artigo que impeça uma contração de ficar
+      # colada ao código (§11.6).
+      #
+      # Ela entrou no repositório e estas duas últimas linhas não. O
+      # `check-regioes` exige que toda a região declarada esteja construída, e
+      # tinha razão: uma região que se declara e não se constrói é uma
+      # promessa por verificar.
+      # A demonstração deixou de ser um passo à parte: constrói-se com as
+      # outras porque é uma região como as outras, e não porque um passo se
+      # lembra dela pelo nome. O `check-regioes` a seguir continua a exigir que
+      # toda a região declarada esteja construída.
+
+      # As regiões não se podem contaminar: nada das saídas de uma pode dizer o
+      # nome de outra, e todas vão para o mesmo sítio. Este fluxo é o primeiro
+      # sítio onde isso tinha de valer — e era o último onde ainda não valia.
+      - name: As regiões não se misturam
+        run: uv run pipeline check-regioes
+
+      # OS MOSAICOS DO MAPA, do mesmo OpenStreetMap que o grafo.
+      #
+      # Se fossem dois recortes diferentes, o mapa desenhava estradas por onde
+      # o planeador não passa — e quem viaja não teria como saber qual dos dois
+      # mente. É o mesmo ficheiro `.osm.pbf` para os dois.
+      #
+      # Medido: 2m15s e 66 MB num ficheiro só. Um ficheiro, não milhares: é
+      # por ser um que não precisa de servidor de mosaicos.
+      - name: Mosaicos do mapa
+        if: steps.dados.outputs.cache-hit != 'true'
+        run: uv run pipeline mosaicos --todas
+
+      # O grafo, para o planeador poder ser testado a sério. Uma página de
+      # planeamento que nunca foi perguntada a um motor é um formulário, não um
+      # planeador.
+      - name: Grafo do motor de viagens
+        if: steps.dados.outputs.cache-hit != 'true'
+        run: uv run pipeline grafo --todas --memoria 6G
+
+
+      # O MOTOR MUDA DE PAPEL AQUI.
+      #
+      # Deixa de ser um servidor que responde a quem viaja e passa a ser uma
+      # ferramenta que responde UMA VEZ, na construção. O que ele calcula —
+      # quanto se leva a pé entre duas paragens vizinhas, pelas ruas a sério —
+      # viaja com o sítio em 34 kB, e o planeador corre no telemóvel de quem
+      # pergunta.
+      #
+      # ATENÇÃO À ORDEM: o `pipeline sitio` LIMPA a pasta antes de escrever, e
+      # os transbordos vivem lá dentro. Têm de vir depois dele, sempre.
+      # UM MOTOR POR REGIÃO, levantado e derrubado à vez.
+      #
+      # O grafo do OTP é de UMA região: uma instância só não responde pelas
+      # outras, e a que sobra numa porta responde pelo grafo errado — que é
+      # pior do que não responder. Quem tem rede viária declarada tem
+      # caminhada calculada e é julgada pelo oráculo; quem não tem fica pela
+      # linha reta, e o ficheiro di-lo.
+      - name: O motor, os transbordos e o oráculo
+        run: |
+          set -eu
+          cache="${{ steps.dados.outputs.cache-hit }}"
+          for r in $COM_RUAS; do
+            echo "── $r: com o motor levantado"
+            nohup java -Xmx6G -jar .cache/otp.jar --load --port 8801 \
+              --bindAddress 127.0.0.1 "build/$r/otp" > "otp-$r.log" 2>&1 &
+            otp=$!
+            for i in $(seq 1 60); do
+              curl -sf http://127.0.0.1:8801/otp >/dev/null && break
+              sleep 5
+            done
+            curl -sf http://127.0.0.1:8801/otp >/dev/null || { tail -40 "otp-$r.log"; exit 1; }
+            if [ "$cache" != "true" ]; then
+              uv run pipeline transbordos --regiao "$r" --motor http://127.0.0.1:8801
+            fi
+            node web/tests/oraculo.mts --regiao "$r" --motor http://127.0.0.1:8801
+            kill "$otp" 2>/dev/null || true
+            for i in $(seq 1 30); do
+              curl -sf http://127.0.0.1:8801/otp >/dev/null 2>&1 || break
+              sleep 1
+            done
+          done
+          if [ "$cache" != "true" ]; then
+            for r in $SEM_RUAS; do
+              echo "── $r: sem rede viária declarada, em linha reta"
+              uv run pipeline transbordos --regiao "$r" --motor ""
+            done
+          fi
+          uv run pytest -q pipeline/tests/test_oraculo.py
+
+      # O ORÁCULO: o planeador do navegador julgado por quem ele substituiu.
+      #
+      # Um planeador que erra uma hora de partida não dá erro nenhum — dá uma
+      # hora, e quem a lê vai para a paragem. Nenhum teste de interface apanha
+      # isso. Por isso são duas verificações e não uma:
+      #
+      #   1. contra o MOTOR, que responde às mesmas viagens de aceitação;
+      #   2. contra o FICHEIRO, perna a perna, no `test_oraculo.py` — porque
+      #      comparar só com outro programa herda os buracos desse programa, e
+      #      já apanhámos uma viagem que existe no GTFS e que o motor não vê.
+
+      # O SERVIÇO DE DISPONIBILIDADE tem testes próprios, e correm aqui.
+      #
+      # Ele não faz parte do sítio — é um serviço à parte, e por isso nem o
+      # `npm ci` do `web/` nem o `pytest` lhe tocam. Sem este passo, o
+      # analisador da página das estações podia partir-se e ninguém dava por
+      # isso até as contagens desaparecerem do sítio publicado.
+      #
+      # Não precisa de `npm ci`: o serviço não tem dependências.
+      - name: Testes do serviço de disponibilidade
+        working-directory: disponibilidade
+        run: node --test
+
+      # OS DADOS, SERVIDOS COMO O ARMAZÉM OS SERVE.
+      #
+      # O sítio deixou de ler `build/` do disco (CLAUDE.md §11.7): lê os
+      # ficheiros por HTTP, de um armazém público, e guarda cada página depois
+      # de a render. Aqui não há armazém nem deve haver — o que se testa é o
+      # código, com os dados que esta corrida acabou de construir. O
+      # `servir-dados.mjs` serve `build/` com a mesma forma que o balde tem, e
+      # é o MESMO caminho de código que a produção usa: um leitor de disco «só
+      # para os testes» era o que divergia sem ninguém dar por isso.
+      #
+      # Levanta-se ANTES da construção: a página de produto rende-se na
+      # construção e vai buscar as regiões aqui.
+      - name: Servir os dados como o armazém
+        working-directory: web
+        run: |
+          nohup node scripts/servir-dados.mjs ../build 4322 > ../dados.log 2>&1 &
+          npx --yes wait-on http://127.0.0.1:4322/ -t 30000
+          curl -sS http://127.0.0.1:4322/
+
+      - name: Construir o sítio
+        working-directory: web
+        env:
+          # Onde estão os dados: o servidor de cima, para o servidor do sítio
+          # (`PARAGEM_DADOS`) e para o navegador dos testes
+          # (`NEXT_PUBLIC_PARAGEM_DADOS`, cravado no código em tempo de
+          # construção). Em produção as duas apontam à porta pública do balde.
+          PARAGEM_DADOS: http://127.0.0.1:4322
+          NEXT_PUBLIC_PARAGEM_DADOS: http://127.0.0.1:4322
+          # CADA REGIÃO NO SEU ANFITRIÃO, como em produção. Sem base do
+          # painel, quem diz que regiões há e onde respondem é este mapa; os
+          # `*.localhost` resolvem no Chromium sem tocar no DNS
+          # (`web/tests/anfitrioes.ts`). A montra responde ao anfitrião que
+          # não é de ninguém — 127.0.0.1 —, e é para lá que a marca liga.
+          PARAGEM_DOMINIOS: ${{ env.DOMINIOS }}
+          PARAGEM_ESQUEMA: http
+          NEXT_PUBLIC_PARAGEM_PRODUTO: http://127.0.0.1:4321
+          # SEM MOTOR NENHUM — e é isso que se quer testar.
+          #
+          # Esta build esteve a cravar `http://127.0.0.1:8801`, o OTP deste
+          # runner. Nos testes funcionava; no que ia para o ar, o telemóvel de
+          # quem abria a página tentava falar consigo próprio. O planeador
+          # nunca funcionou em produção por causa disso.
+          #
+          # Agora a build de teste é IGUAL À QUE SE PUBLICA: sem motor, com o
+          # planeador a correr no navegador a partir da grelha horária. Testa-
+          # se o que se entrega, e não uma versão de laboratório.
+          #
+          # O motor continua a ser posto à prova — pelo oráculo, acima.
+          # ESTA CONSTRUÇÃO É PARA TESTAR, NÃO PARA PUBLICAR. Quem constrói o
+          # que vai para o ar é a plataforma, a partir do Git, com as variáveis
+          # do projeto dela (docs/ALOJAMENTO.md). Aqui não entra medição nem
+          # serviço nenhum: sem chave o sítio não mede, e sem serviço a página
+          # das bicicletas mostra as estações sem contagens e a dos expressos
+          # fica sem o formulário de preços — que é o que se quer testar sem
+          # rede.
+        run: |
+          npm ci
+          npm run formato
+          npm run typecheck
+          npm run test:unidade
+          npm run build
+
+      # UMA PALAVRA-PASSE SÓ PARA ESTA CORRIDA, para o painel se poder testar.
+      #
+      # O painel (`/admin`) não abre sem `ADMIN_PASSWORD_HASH` e
+      # `ADMIN_SESSION_SECRET`, e é assim que deve ser. Aqui geram-se os dois
+      # ao acaso, de cada vez, e deitam-se fora no fim: nada disto é um
+      # segredo de produção, e nada disto fica escrito num ficheiro. A senha
+      # em claro vai para o Playwright (`PARAGEM_SENHA_DE_TESTE`); o servidor
+      # só vê o hash. Não há base nos testes — o que se prova é o código.
+      - name: Uma palavra-passe só para esta corrida
+        working-directory: web
+        run: |
+          senha="$(node -e "console.log(require('node:crypto').randomBytes(18).toString('base64url'))")"
+          segredo="$(node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))")"
+          echo "::add-mask::$senha"
+          echo "::add-mask::$segredo"
+          hash="$(printf '%s' "$senha" | node scripts/senha.mjs 2>/dev/null | sed 's/^ADMIN_PASSWORD_HASH=//')"
+          echo "::add-mask::$hash"
+          {
+            echo "PARAGEM_SENHA_DE_TESTE=$senha"
+            echo "ADMIN_PASSWORD_HASH=$hash"
+            echo "ADMIN_SESSION_SECRET=$segredo"
+          } >> "$GITHUB_ENV"
+
+      # O SÍTIO A CORRER, que é o que os testes visitam.
+      #
+      # Não há `out/` para servir como ficheiros: as páginas rendem-se a
+      # pedido e ficam em cache. O `next start` é o mesmo servidor que a
+      # plataforma corre, com os dados a virem do servidor de cima — e com a
+      # palavra-passe de cima, para o painel.
+      - name: Levantar o sítio
+        working-directory: web
+        env:
+          PARAGEM_DADOS: http://127.0.0.1:4322
+          PARAGEM_DOMINIOS: ${{ env.DOMINIOS }}
+          PARAGEM_ESQUEMA: http
+        run: |
+          nohup npx next start -p 4321 > ../sitio.log 2>&1 &
+          npx --yes wait-on http://127.0.0.1:4321/ -t 60000
+
+      # TODAS AS LIGAÇÕES INTERNAS, seguidas uma a uma.
+      #
+      # Ao mudar o catálogo de sítio, 4 834 dos 4 858 destinos passaram a dar
+      # 404 — em produção, e sem um único teste a queixar-se: os testes de
+      # acessibilidade visitam dez páginas e não seguem ligações, o Lighthouse
+      # mede a página onde está e o `tsc` não sabe o que é uma rota. Isto
+      # rastreia o sítio a correr a partir da raiz e verifica que cada `href`
+      # para dentro responde. É também o que rende todas as páginas uma vez:
+      # se alguma rebentar com os dados desta corrida, rebenta aqui.
+      - name: As ligações levam a algum lado
+        working-directory: web
+        # A montra e todas as regiões, cada uma no seu anfitrião.
+        run: npm run ligacoes -- http://127.0.0.1:4321 $ANFITRIOES
+
+      - name: Navegador para os testes
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+
+      # Uma violação grave do axe impede a publicação. Não há `continue-on-error`.
+      # E o planeador é perguntado ao motor a sério: as viagens do §9, pedidas
+      # pela interface e não pela API.
+      - name: Acessibilidade (axe) e as direções
+        working-directory: web
+        env:
+          PARAGEM_OTP: http://127.0.0.1:8801
+        run: npm run test:a11y
+
+      # E a nota que o §9 exige: ≥ 95 em telemóvel.
+      - name: Acessibilidade (Lighthouse ≥ 95)
+        working-directory: web
+        run: npm run test:lighthouse
+
+      # Os registos dos dois servidores, para quando um teste falha e a razão
+      # está do lado de quem serviu e não de quem pediu.
+      - name: Guardar os registos dos servidores
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: registos-do-sitio
+          path: |
+            dados.log
+            sitio.log
+          retention-days: 7
+
+      # A PUBLICAÇÃO NÃO SAI DAQUI. Saía: este fluxo construía o sítio e
+      # enviava-o pronto, porque a plataforma não tinha como chegar ao GTFS.
+      # Deixou de precisar (CLAUDE.md §11.7): o sítio constrói-se na plataforma
+      # a partir do Git, em minutos, e os dados chegam-lhe do armazém — quem os
+      # lá põe é o fluxo `Dados`, com `uv run pipeline publicar`. O que este
+      # fluxo faz agora é o que sempre devia ter feito sozinho: provar que o
+      # código serve os dados que acabou de construir.

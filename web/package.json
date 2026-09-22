@@ -1,0 +1,40 @@
+{
+  "name": "paragem-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Paragem.pt — o sítio. Uma região por domínio; o que muda são os dados, não o código.",
+  "scripts": {
+    "dados": "node scripts/servir-dados.mjs ../build 4322",
+    "dev": "next dev",
+    "build": "next build",
+    "servir": "next start -p 4321",
+    "typecheck": "tsc --noEmit",
+    "test:unidade": "node --test tests/*.test.mts",
+    "test:a11y": "playwright test",
+    "test:lighthouse": "node tests/lighthouse.mjs",
+    "formatar": "prettier --write src tests",
+    "formato": "prettier --check src tests",
+    "ligacoes": "node tests/ligacoes.mjs"
+  },
+  "dependencies": {
+    "maplibre-gl": "5.9.0",
+    "next": "15.5.25",
+    "pmtiles": "4.4.0",
+    "posthog-js": "^1.434.2",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "22.10.2",
+    "@types/react": "19.0.2",
+    "@types/react-dom": "19.0.2",
+    "lighthouse": "^13.5.0",
+    "prettier": "3.6.2",
+    "serve": "^14.2.6",
+    "typescript": "5.7.2",
+    "wait-on": "^9.1.0"
+  }
+}

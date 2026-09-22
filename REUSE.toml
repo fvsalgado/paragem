@@ -1,0 +1,65 @@
+# Declaração de direitos legível por máquina.
+#
+# A especificação REUSE 3.3 prevê este ficheiro como alternativa ao cabeçalho
+# em cada ficheiro. A prosa está em AUTORIA.md; o inventário do que é alheio,
+# com origem e data, está em docs/TERCEIROS.md e, para os dados, em
+# data/sources.yaml. Se estes três divergirem, um deles está errado — e é isso
+# que `uv run pipeline check-proveniencia` verifica.
+#
+# RESERVA: a conformidade plena com a ferramenta `reuse` exige mais do que este
+# ficheiro, nomeadamente uma pasta LICENSES/ com o texto de cada licença
+# referida. Isso NÃO foi verificado. Quem quiser passar `reuse lint` confirma
+# na especificação antes de prometer conformidade.
+
+version = 1
+
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Fábio Salgado <fvsalgado@gmail.com>"
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# --- O que é de terceiros --------------------------------------------------
+
+# PDF de horários, mapas de rede e outros documentos publicados pelos
+# operadores e pelas autoridades de transportes. Entram à mão porque os sítios
+# de origem bloqueiam acesso automático (CLAUDE.md §4.3); a origem e a data de
+# cada um estão no `data/sources.yaml` e no cabeçalho de `data/manual/LEIA.md`.
+[[annotations]]
+path = "data/manual/**"
+precedence = "override"
+SPDX-FileCopyrightText = "os respetivos operadores e autoridades de transportes — ver data/sources.yaml"
+SPDX-License-Identifier = "LicenseRef-documento-de-terceiro"
+
+# A região de prova é inventada de fio a pavio, de propósito: é o que lhe
+# permite ser a demonstração pública sem pedir uma linha a ninguém.
+[[annotations]]
+path = [
+  "regioes/prova/**",
+  "data/manual/prova/**",
+  "regioes/prova-municipio/**",
+  "data/manual/prova-municipio/**",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Fábio Salgado <fvsalgado@gmail.com>"
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+# Fixtures de teste capturadas de ficheiros de terceiros (excertos de GTFS, de
+# OSM e de PDF, reduzidos ao mínimo para um teste correr em segundos).
+[[annotations]]
+path = "pipeline/tests/fixtures/terceiros/**"
+precedence = "override"
+SPDX-FileCopyrightText = "as respetivas origens — ver docs/TERCEIROS.md"
+SPDX-License-Identifier = "LicenseRef-capturado-de-terceiro"
+
+# A fixture do painel de bicicletas DEIXOU DE SER capturada. Reproduz a
+# estrutura de um painel de estações — as classes, os campos escondidos, os
+# rótulos —, com estações inventadas da região de prova. Era um excerto de um
+# operador real, com nomes e coordenadas que ele publica, e isso é compilação
+# de dados de um cliente num repositório público: a estrutura prova-se com
+# estações inventadas exatamente tão bem.
+[[annotations]]
+path = "disponibilidade/fixtures/**"
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Fábio Salgado <fvsalgado@gmail.com>"
+SPDX-License-Identifier = "AGPL-3.0-only"

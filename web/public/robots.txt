@@ -1,0 +1,24 @@
+# Este ficheiro não é um pormenor de configuração: é o §4.4 escrito para os
+# motores de busca.
+#
+# O que está aqui publicado tem horários de dezembro de 2025, nove dos quinze
+# preços marcados «por confirmar» e 19 viagens sem dias declarados. A interface
+# diz tudo isso a quem a lê — um resultado de pesquisa não diz nada disso a
+# quem só vê o título e a hora.
+#
+# Enquanto for assim, não se indexa. Sai quando a autoridade de transportes
+# autorizar a publicação (CLAUDE.md §9, Fase 5), e não antes — e sai DAQUI, num
+# commit que alguém assina, não num interruptor de um painel que se desliga sem
+# deixar rasto.
+#
+# E É A ÚNICA TRANCA QUE HÁ EM PRODUÇÃO. Este comentário dizia que «a proteção
+# da Vercel faz o mesmo do outro lado», e não faz: medido no painel do projeto,
+# o `ssoProtection` está ligado só para as PRÉ-VISUALIZAÇÕES. O endereço
+# público está aberto a quem lá chegue — o que é o que se quer, porque há quem
+# precise de apanhar o autocarro —, e o que não se quer é que um motor de busca
+# ponha uma hora destas num resultado sem o resto da página à volta.
+#
+# Quem mudar isto num painel não deixa rasto aqui. Quem o mudar aqui deixa.
+
+User-agent: *
+Disallow: /

@@ -1,0 +1,66 @@
+# A receita da região de prova.
+#
+# Tudo aqui usa leitores GENÉRICOS. É esse o contrato que esta região existe
+# para provar: uma região nova entra sem uma linha de código novo. Se um dia
+# alguém tiver de escrever um leitor para a Serra da Pedra Alta entrar, o
+# contrato partiu-se — e o CI conta.
+
+saidas:
+  - fonte: prova-gtfs-rede-alta
+    leitor: gtfs-arquivo
+    papel: feed-proprio
+    saida: gtfs/rede-alta.zip
+    modo: autocarro
+    params:
+      recortar: false
+
+  - fonte: prova-osm
+    leitor: osm-bicicletas
+    saida: gbfs/altabike/
+    modo: bicicleta
+    params:
+      filtro: { amenity: bicycle_rental, brand: AltaBike }
+      sistema:
+        id: altabike
+        nome: AltaBike
+        operador: Comunidade Intermunicipal da Serra da Pedra Alta
+      esperado: 3
+      station_status: false
+
+  - fonte: prova-osm
+    leitor: osm-taxis
+    saida: geojson/taxis.geojson
+    modo: taxi
+    params:
+      filtro: { amenity: taxi }
+      esperado: 2
+
+  # O traçado de um operador MUNICIPAL é um urbano municipal, e não a rede.
+  # Estava declarado como `autocarro`, que é o modo do feed próprio: o mesmo
+  # modo a sair de duas fontes que dizem coisas diferentes. Quem abrisse a
+  # página via o catálogo da rede e um traçado solto a fingirem-se do mesmo
+  # serviço.
+  - fonte: prova-osm
+    leitor: osm-rotas
+    saida: geojson/urbanos.geojson
+    modo: urbano-municipal
+    params:
+      filtro: { type: route, route: bus, operator: "C.M. Pedra Alta" }
+      nunca_filtrar_por: network
+      esperado_linhas: 1
+
+# O MOTOR DESTA REGIÃO NÃO EXISTE, e é isso que ela prova.
+#
+# Não há grafo de ruas da Serra da Pedra Alta porque a Serra da Pedra Alta não
+# existe. Mas há horários, e o planeador que corre no navegador só precisa
+# deles: a grelha sai daqui na mesma, e os transbordos a pé saem em linha reta
+# em vez de saírem das ruas.
+#
+# É a prova executável de que o planeador não depende de um servidor. Uma
+# câmara que licencie isto aloja ficheiros e mais nada.
+motor:
+  fuso: Europe/Lisbon
+  gtfs:
+    - gtfs/rede-alta.zip
+
+verificacoes: []

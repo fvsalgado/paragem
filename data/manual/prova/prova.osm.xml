@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Extrato inventado do OpenStreetMap para a região de prova.
+
+  NÃO TEM UM ÚNICO NÓ DO OSM VERDADEIRO. Tem a forma de um extrato — as mesmas
+  etiquetas, a mesma estrutura de nós, vias e relações — para os leitores
+  `osm-bicicletas`, `osm-taxis` e `osm-rotas` correrem contra ele sem pedir os
+  420 MB de Portugal e sem depender de rede nenhuma.
+
+  Os identificadores estão na gama 9xxxxxxxxx de propósito, para que ninguém os
+  confunda com objetos reais.
+
+  A relação de rota tem `network=UPA` e `operator=C.M. Pedra Alta`. É uma
+  armadilha real em miniatura: no OpenStreetMap há redes de urbanos cuja sigla
+  é usada por duas câmaras a centenas de quilómetros uma da outra, e um filtro
+  por REDE traz autocarros que nunca entraram na região. Aqui há uma segunda
+  relação com a MESMA rede e outro operador, e o leitor tem de a deixar de
+  fora — pelo OPERADOR, que é o que distingue.
+-->
+<osm version="0.6" generator="paragem-prova">
+
+  <!-- Bicicletas partilhadas: AltaBike, 3 estações -->
+  <node id="9000000001" lat="41.3202" lon="-7.2802" version="1" timestamp="2026-01-01T00:00:00Z">
+    <tag k="amenity" v="bicycle_rental"/>
+    <tag k="brand" v="AltaBike"/>
+    <tag k="name" v="AltaBike — Terminal"/>
+    <tag k="capacity" v="12"/>
+  </node>
+  <node id="9000000002" lat="41.3312" lon="-7.2688" version="1" timestamp="2026-01-01T00:00:00Z">
+    <tag k="amenity" v="bicycle_rental"/>
+    <tag k="brand" v="AltaBike"/>
+    <tag k="name" v="AltaBike — Escola Secundária"/>
+    <tag k="capacity" v="8"/>
+  </node>
+  <node id="9000000003" lat="41.3958" lon="-7.2042" version="1" timestamp="2026-01-01T00:00:00Z">
+    <tag k="amenity" v="bicycle_rental"/>
+    <tag k="brand" v="AltaBike"/>
+    <tag k="name" v="AltaBike — Largo da Ribeira"/>
+    <tag k="capacity" v="10"/>
+  </node>
+
+  <!-- Uma estação de outra marca, que o filtro tem de deixar de fora -->
+  <node id="9000000004" lat="41.4400" lon="-7.1500" version="1" timestamp="2026-01-01T00:00:00Z">
+    <tag k="amenity" v="bicycle_rental"/>
+    <tag k="brand" v="OutraBike"/>
+    <tag k="name" v="OutraBike — Fora da rede"/>
+  </node>
+
+  <!-- Praças de táxi: 2 -->
+  <node id="9000000011" lat="41.3198" lon="-7.2795" version="1" timestamp="2026-01-01T00:00:00Z">
+    <tag k="amenity" v="taxi"/>
+    <tag k="name" v="Praça de táxis de Pedra Alta"/>
+  </node>
+  <node id="9000000012" lat="41.4018" lon="-7.1984" version="1" timestamp="2026-01-01T00:00:00Z">
+    <tag k="amenity" v="taxi"/>
+    <tag k="name" v="Praça de táxis da Estação"/>
+  </node>
+
+  <!-- Geometria da rota urbana -->
+  <node id="9000000021" lat="41.3200" lon="-7.2800" version="1" timestamp="2026-01-01T00:00:00Z"/>
+  <node id="9000000022" lat="41.3250" lon="-7.2740" version="1" timestamp="2026-01-01T00:00:00Z"/>
+  <node id="9000000023" lat="41.3310" lon="-7.2690" version="1" timestamp="2026-01-01T00:00:00Z"/>
+  <node id="9000000024" lat="41.3380" lon="-7.2610" version="1" timestamp="2026-01-01T00:00:00Z"/>
+
+  <way id="9100000001" version="1" timestamp="2026-01-01T00:00:00Z">
+    <nd ref="9000000021"/>
+    <nd ref="9000000022"/>
+    <nd ref="9000000023"/>
+    <nd ref="9000000024"/>
+    <tag k="highway" v="secondary"/>
+    <tag k="name" v="Avenida da Serra"/>
+  </way>
+
+  <relation id="9200000001" version="1" timestamp="2026-01-01T00:00:00Z">
+    <member type="way" ref="9100000001" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="bus"/>
+    <tag k="ref" v="U1"/>
+    <tag k="name" v="U1: Terminal → Centro de Saúde"/>
+    <tag k="network" v="UPA"/>
+    <tag k="operator" v="C.M. Pedra Alta"/>
+    <tag k="colour" v="#5B3A8E"/>
+  </relation>
+
+  <!-- A armadilha: mesma rede, outro operador, outro território. Fica de fora. -->
+  <relation id="9200000002" version="1" timestamp="2026-01-01T00:00:00Z">
+    <member type="way" ref="9100000001" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="bus"/>
+    <tag k="ref" v="U9"/>
+    <tag k="name" v="U9: linha de outra terra com a mesma sigla de rede"/>
+    <tag k="network" v="UPA"/>
+    <tag k="operator" v="C.M. de Outra Terra"/>
+  </relation>
+
+</osm>

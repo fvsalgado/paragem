@@ -1,0 +1,398 @@
+# O registo de todas as fontes de dados.
+#
+# É o que o CLAUDE.md §4.1 exige: cada conjunto de dados com o endereço, a data
+# de obtenção, a licença e a atribuição que impõe. Uma fonte que não esteja
+# aqui não entra no pipeline — não por burocracia, mas porque um dado sem
+# proveniência não se consegue defender no dia em que alguém pergunte de onde
+# veio.
+#
+# Este ficheiro é o registo de PROVENIÊNCIA. O que cada região faz com cada
+# fonte — que leitor a lê e com que parâmetros — está em
+# `regioes/<id>/fontes.yaml`. Os dois juntam-se pelo `id` da fonte, e o
+# `uv run pipeline check-proveniencia` verifica que nenhuma região usa uma
+# fonte que não esteja aqui e que nada aqui contradiz o `REUSE.toml` ou o
+# `docs/TERCEIROS.md`.
+#
+# `obtido_em` é a data em que o ficheiro foi realmente descarregado, escrita
+# pelo pipeline. `verificado_em` é a data em que uma pessoa confirmou que o
+# endereço e os termos continuam a ser estes.
+#
+# O `sha256` vai ENTRE ASPAS. Sem elas, uma soma composta só por dígitos é lida
+# pelo YAML como um número — e uma que comece por zero perde o zero, ou, sendo
+# toda zeros, passa a ser falsa e o guarda salta-a. Não é hipotético: foi assim
+# que o teste do guarda o apanhou a não guardar nada.
+#
+# `sha256` declara-se nos ficheiros que NÃO devem mudar sozinhos — os que
+# entram à mão e os de referência. Uma soma diferente nesses é um aviso no
+# relatório: ou alguém substituiu o ficheiro, ou a origem republicou outra
+# coisa com o mesmo nome, e nenhuma das duas deve acontecer em silêncio.
+#
+# Nos ficheiros de acesso automático NÃO se declara: a CP, a FlixBus e o
+# OpenStreetMap republicam legitimamente todas as semanas, e uma soma fixa ali
+# só faria o pipeline reprovar por o mundo ter andado. Esses são comparados com
+# a última soma observada (`.cache/obtencoes.yaml`), e uma mudança fica contada
+# sem ser tratada como defeito.
+
+versao: 1
+
+fontes:
+  # --- Comboio -------------------------------------------------------------
+
+  - id: cp-gtfs
+    ambito: nacional  # o operador ferroviário nacional
+    nome: GTFS da CP
+    url: https://publico.cp.pt/gtfs/gtfs.zip
+    formato: gtfs
+    acesso: automatico
+    licenca: por-confirmar
+    licenca_nota: >-
+      Publicado abertamente pela CP e sem declaração de licença encontrada. Por
+      confirmar com a CP antes de republicar seja o que for.
+    atribuicao: CP — Comboios de Portugal
+    verificado_em: 2026-09-19
+    obtido_em: null
+    notas: >-
+      Declara validade até 12/12/2026. Sem perturbações nem tempo real.
+
+      A cobertura NUMA região não se declara aqui: é a construção dessa região
+      que a mede, e a lacuna sai no relatório dela. Uma estação que falte é um
+      facto sobre o território e não sobre a fonte.
+    robots_nota: >-
+      ATENÇÃO, E É UMA DECISÃO POR TOMAR. O `publico.cp.pt/robots.txt` é
+      `User-agent: * / Disallow: /` — o host inteiro. O §4.3 diz para não
+      automatizar sítios que o proíbem, e o `pipeline fetch` descarrega isto
+      todas as semanas. O argumento a favor é que um robots.txt governa quem
+      RASTEIA, e isto é um ficheiro que a CP publica para ser descarregado,
+      pedido uma vez por semana e por um URL fixo — não há rastreio nenhum. O
+      argumento contra é que a regra do §4.3 não abre exceções e quem a
+      escreveu não previu este caso. Fica escrito para ser decidido por quem
+      publica, e não resolvido em silêncio por quem programa. Verificado a
+      21/09/2026.
+
+  # --- Expresso ------------------------------------------------------------
+
+  - id: flixbus-gtfs
+    ambito: nacional  # rede europeia de expressos
+    nome: GTFS genérico europeu da FlixBus
+    url: https://gtfs.gis.flix.tech/gtfs_generic_eu.zip
+    formato: gtfs
+    acesso: automatico
+    licenca: por-confirmar
+    atribuicao: FlixBus
+    verificado_em: 2026-09-19
+    obtido_em: null
+    notas: >-
+      Cerca de 30 MB, com a Europa toda. Filtra-se às viagens que servem a
+      região que se está a construir — a viagem INTEIRA, e não o troço: quem
+      apanha o autocarro num destes concelhos quer saber onde ele vai acabar.
+
+  # --- Tempo real (não construído; ver docs/TEMPO-REAL.md) -----------------
+
+  - id: cp-tempo-real
+    ambito: nacional
+    nome: CP — quadro de estação e percurso de comboio, em tempo real
+    url: https://api-gateway.cp.pt/cp/services/travel-api
+    formato: json
+    acesso: proibido-sem-autorizacao
+    acesso_nota: >-
+      NÃO É UMA API ABERTA, e a distinção importa mais do que parece. O
+      gateway exige três cabeçalhos — `X-Api-Key`, `x-cp-connect-id` e
+      `x-cp-connect-secret` — e só aceita pedidos com origem `cp.pt`. As
+      chaves que circulam em projetos de terceiros são as que o site da CP
+      carrega no navegador, no `fe-config.json` dele: são da CP, não de quem
+      as copia, e o facto de estarem ao alcance de quem abre as ferramentas
+      de programador não as torna públicas. O §4.2 diz «não usar APIs
+      privadas»; esta é uma. Acresce que o repositório do produto vai ser
+      público (§11.6) e que o destinatário é uma autoridade de transportes:
+      um organismo público a apresentar-se como o sítio da CP é outra ordem
+      de risco. Só entra com autorização escrita da CP — e aí com
+      credenciais próprias, nunca com as do site.
+    licenca: por-confirmar
+    atribuicao: CP — Comboios de Portugal
+    verificado_em: 2026-09-21
+    obtido_em: null
+    notas: >-
+      O QUE TRARIA, e é exatamente o que falta ao GTFS: atraso em minutos,
+      plataforma, supressão, ETA/ETD por paragem, `IN_TRANSIT` e a última
+      estação por onde o comboio passou. Não há GPS — a posição é ao nível da
+      estação. Não existe alternativa aberta: procurado no dados.gov.pt e no
+      NAP a 21/09/2026, a CP publica o GTFS estático e nada de tempo real.
+      O trabalho de identificadores JÁ ESTÁ FEITO: o código de estação do
+      gateway é o do GTFS com hífen em vez de underscore — `94-32466` para
+      `94_32466`, Riachos. Não é preciso mapa de correspondência nenhum.
+
+  - id: nap-portugal
+    ambito: nacional
+    nome: Ponto de Acesso Nacional para dados de mobilidade (IMT)
+    url: https://nap-portugal.imt-ip.pt/API/api
+    formato: json
+    acesso: api-em-direto
+    acesso_nota: >-
+      É A PORTA DA FRENTE, e foi feita exatamente para isto. O Regulamento
+      Delegado (UE) 2017/1926 obriga cada Estado-Membro a ter um Ponto de
+      Acesso Nacional onde os dados de viagem — estáticos e dinâmicos — se
+      publicam e se pedem. Em Portugal é este, do IMT.
+
+      SEM robots.txt NENHUM neste domínio (404), ao contrário do sítio da
+      Infraestruturas de Portugal. As tabelas de referência respondem a quem
+      as peça:
+
+        GET /API/api/MultimodalSupplies/DatasetTypeCategories?local=pt
+        GET /API/api/MultimodalSupplies/DatasetTypeCategoryDetailedTypes?local=pt
+
+      A LISTA DOS FORNECIMENTOS DÁ 401: é preciso conta. E há um pedido de
+      acesso formal na própria API (`AccessRequest/Submit`), que é o mecanismo
+      que o regulamento desenhou — pede-se ao fornecedor, pelo Ponto de
+      Acesso, em vez de se ir buscar por fora.
+
+      O passo que falta é de PESSOA e não de código: registar conta como a
+      autoridade de transportes ou como o produto. Feito isso, listam-se os
+      fornecimentos ferroviários e pede-se acesso aos que interessam.
+    licenca: por-confirmar
+    licenca_nota: >-
+      A licença é por fornecimento e declara-se lá dentro — o próprio modelo
+      tem `ContractsOrLicences`. É outra razão para entrar por aqui: a
+      pergunta «com que licença é que isto se pode reutilizar» tem campo
+      próprio, em vez de ficar por confirmar para sempre.
+    atribuicao: IMT — Instituto da Mobilidade e dos Transportes
+    verificado_em: 2026-09-21
+    obtido_em: null
+    notas: >-
+      Encontrado a 21/09/2026 ao procurar a via sancionada para o tempo real
+      ferroviário, depois de o robots.txt da IP fechar a porta de trás. É a
+      via que serve as três fontes de tempo real de uma vez, e não só o
+      comboio.
+
+  - id: ip-partidas-chegadas
+    ambito: nacional
+    nome: Infraestruturas de Portugal — partidas e chegadas em tempo real
+    url: https://www.infraestruturasdeportugal.pt/negocios-e-servicos/horarios
+    formato: json
+    acesso: nao-usar
+    acesso_nota: >-
+      O ROBOTS.TXT DA IP PROÍBE ESTES DOIS ENDEREÇOS, POR NOME. Das 36 regras
+      `Disallow` do ficheiro, 34 são as do Drupal de fábrica — `/admin/`,
+      `/user/login`, os README. As duas últimas foram escritas de propósito, e
+      são exatamente os horários:
+
+        Disallow: /negocios-e-servicos/horarios-ncombio/*
+        Disallow: /negocios-e-servicos/partidas-chegada/*
+
+      O CLAUDE.md §4.3 não abre exceções: não se automatiza um sítio que o
+      proíbe. Não é questão de autorização — a IP é entidade pública e o que
+      publica é informação do setor público —, é que o operador do sítio
+      escreveu que não quer acesso automático a isto.
+
+      E HÁ UMA LETRA DE DIFERENÇA, que fica registada em vez de aproveitada: a
+      regra diz `partidas-chegada` e o endereço a sério é
+      `partidas-chegadas`, com S. Um leitor estrito de robots.txt diria que a
+      regra não apanha o caminho. Seria ler uma gralha como licença: as duas
+      únicas regras que alguém se deu ao trabalho de escrever naquele ficheiro
+      são os horários, e o que elas dizem é claro.
+    licenca: por-confirmar
+    atribuicao: Infraestruturas de Portugal
+    verificado_em: 2026-09-21
+    obtido_em: null
+    notas: >-
+      OS ENDEREÇOS FICAM ESCRITOS, para ninguém repetir esta pesquisa:
+
+        GET /negocios-e-servicos/estacao-nome/{nome}
+            → [{Distancia, NodeID, Nome}] — este NÃO está no robots
+        GET /negocios-e-servicos/partidas-chegadas/{NodeID}/{DD-MM-AAAA HH:MM}/{DD-MM-AAAA HH:MM}/{tipos}
+        GET /negocios-e-servicos/horarios-ncombio/… (o separador «Número do Comboio»)
+
+      Sem autenticação e no mesmo domínio do sítio público — ao contrário do
+      gateway da CP, não há credenciais de ninguém pelo meio. O que há é uma
+      proibição escrita.
+
+      PORQUE É QUE VALIA A PENA: a IP é a GESTORA DA INFRAESTRUTURA, e vê
+      todos os comboios da rede, seja qual for o operador. Uma fonte só
+      cobriria o que hoje exigiria uma por operadora. É o pedido que vale mais
+      a pena fazer — e a uma entidade pública o pedido invoca o regime de
+      reutilização de informação do setor público, em vez de pedir um favor.
+
+  - id: flixbus-pesquisa
+    ambito: nacional
+    nome: FlixBus — pesquisa de viagens, com preço e lugares
+    url: https://global.api.flixbus.com/search/service/v4/search
+    formato: json
+    acesso: api-em-direto
+    acesso_nota: >-
+      SEM AUTENTICAÇÃO — é o mesmo endereço que o sítio da FlixBus usa, e
+      responde a qualquer pedido. Não é documentado, o que quer dizer que
+      pode mudar sem aviso e que nada nos é prometido. O robots.txt do
+      `www.flixbus.pt` proíbe `/track/ride/`, `/track/station/`,
+      `/track/order/` e `/flux/`, e não a pesquisa; o `global.api.flixbus.com`
+      não serve robots.txt. Pelo §4.3 não há impedimento. Por confirmar são
+      os termos de utilização quanto a REPUBLICAR preços e lugares — que é
+      coisa diferente de os consultar.
+    licenca: por-confirmar
+    atribuicao: FlixBus
+    verificado_em: 2026-09-21
+    obtido_em: null
+    notas: >-
+      Devolve, por viagem: partida e chegada com fuso, o nome da paragem de
+      cada ponta — «Lisboa (Oriente)» e «Lisboa (Sete Rios)» não são a mesma
+      coisa para quem vai apanhar o autocarro —, duração, preço já com taxa
+      de plataforma, lugares disponíveis e se é direto. As cidades são UUID
+      da FlixBus e não os `stop_id` do GTFS: aqui, ao contrário da CP, é
+      preciso uma correspondência.
+
+  # --- OpenStreetMap -------------------------------------------------------
+
+  - id: osm-portugal
+    ambito: nacional  # o extrato de Portugal do OpenStreetMap
+    nome: Extrato de Portugal do OpenStreetMap
+    url: https://download.geofabrik.de/europe/portugal-latest.osm.pbf
+    url_alternativo: https://download.openstreetmap.fr/extracts/europe/portugal.osm.pbf
+    formato: osm-pbf
+    acesso: automatico
+    licenca: ODbL-1.0
+    atribuicao: © contribuidores do OpenStreetMap
+    atribuicao_obrigatoria: true
+    verificado_em: 2026-09-19
+    obtido_em: null
+    notas: >-
+      Cerca de 420 MB. Recorta-se à área de serviço com margem. NÃO depender do
+      Overpass, que é instável. A 19/09/2026 o download.geofabrik.de não
+      respondeu a partir do ambiente de construção (ligação reposta a meio); o
+      espelho do openstreetmap.fr respondeu. O pipeline regista qual dos dois
+      serviu cada corrida.
+
+  - id: calendario-escolar-despacho
+    ambito: nacional  # o calendário escolar é fixado por despacho, para o país inteiro
+    nome: Calendário escolar 2024/2025 a 2027/2028 (Despacho n.º 8368/2024, alterado pelo n.º 10430/2026)
+    url: https://files.diariodarepublica.pt/2s/2024/07/143000000/0016600171.pdf
+    url_alternativo: https://diariodarepublica.pt/dr/detalhe/despacho/8368-2024-873447631
+    formato: pdf
+    acesso: manual
+    acesso_nota: >-
+      A PÁGINA do despacho serve o texto por JavaScript e devolve a mesma casca
+      de 2 346 bytes a qualquer cliente sem navegador — foi por isso que a
+      primeira transcrição saiu de publicações que o reproduzem. **O PDF da
+      2.ª série não**: está em `files.diariodarepublica.pt` como ficheiro
+      estático e descarrega-se com um pedido. É de lá que vêm as datas que
+      estão hoje no `calendario.yaml`, lidas do Anexo I e do Anexo II.
+
+      Fica `acesso: manual` de propósito. Um despacho publicado não muda, e
+      descarregá-lo em cada corrida do pipeline é pedir a um serviço público
+      um ficheiro que já temos. Entra uma vez, com a data.
+    ficheiro: data/manual/despacho-8368-2024.pdf
+    sha256: "f4b7b76bd607a62cc46c9ff26b9cf80b283fe7ad9e09eaa05efe5158a1232a0c"
+    ficheiro_nota: >-
+      SEM eixo de região, ao contrário dos outros manuais: o calendário escolar
+      é nacional. Qualquer região deste produto usa o mesmo despacho, e pô-lo
+      em `data/manual/<regiao>/` fazia a próxima região transcrever outra vez a
+      mesma lei.
+    licenca: documento-publico
+    atribuicao: Diário da República — Ministério da Educação
+    verificado_em: 2026-09-20
+    obtido_em: 2026-09-20
+    notas: >-
+      O calendário escolar NÃO é invenção da operadora: é fixado por despacho e
+      publicado. O Despacho n.º 8368/2024, de 25 de julho, fixa quatro anos
+      letivos de uma vez — 2024/2025 a 2027/2028 —, por isso 2026/2027 e
+      2027/2028 já são lei. O Despacho n.º 10430/2026, de 21 de agosto, altera uma linha: o
+      arranque dos cursos científico-humanísticos do secundário passa para 21
+      de setembro de 2026.
+
+      O QUE ESTA FONTE RESOLVE: as três interrupções, com data exata (Natal
+      16–31/12/2026, Carnaval 8–10/02/2027, Páscoa 22/03–02/04/2027). É onde
+      estava o risco grande, porque a Páscoa anda de ano para ano e o Carnaval
+      com ela.
+
+      O QUE NÃO RESOLVE, e continua a precisar do calendário de funcionamento
+      que cada operadora publica: o arranque é um INTERVALO de cinco dias
+      e cada agrupamento escolhe lá dentro; o fim do 3.º período tem três datas
+      conforme o ciclo (4, 11 ou 30 de junho de 2027). Esses dias ficam
+      `tipo: incerto` no calendario.yaml e fora dos serviços escolares.
+
+  # --- Limites administrativos ---------------------------------------------
+
+  - id: caop
+    ambito: nacional  # a carta administrativa oficial do país
+    nome: CAOP 2025 — Carta Administrativa Oficial de Portugal (continente)
+    url: https://geo2.dgterritorio.gov.pt/caop/CAOP_Continente_2025-gpkg.zip
+    url_alternativo: https://www.dgterritorio.gov.pt/dados-abertos
+    formato: geopackage
+    acesso: automatico
+    licenca: CC-BY-4.0
+    atribuicao: Direção-Geral do Território
+    atribuicao_obrigatoria: true
+    verificado_em: 2026-09-19
+    obtido_em: 2026-09-19
+    notas: >-
+      Para atribuir paragens, praças e estações a concelhos por geometria, em
+      vez da caixa geográfica — que é um retângulo e apanha o que está à volta.
+      É também a fonte que confirma os códigos `dico` dos concelhos.
+
+      A versão é a CAOP 2025, aprovada a 28/01/2026 e publicada a 02/02/2026.
+      O ENDEREÇO DIRETO não vem do portal, que é uma página de navegação: veio
+      da API do dados.gov.pt, que é onde a DGT deposita o registo do conjunto
+      — e é também aí que está declarada a licença, CC BY 4.0. Esteve aqui
+      `licenca: por-confirmar` e `acesso: manual` por se ter presumido o
+      contrário; presumir que um dado público é difícil de obter custa tanto
+      como presumir que é fácil.
+
+  # --- Região de prova -----------------------------------------------------
+
+  - id: prova-gtfs-rede-alta
+    nome: GTFS da Rede Alta (região de prova)
+    url: null
+    formato: gtfs
+    acesso: local
+    ficheiro: data/manual/prova/gtfs-rede-alta/
+    licenca: AGPL-3.0-only
+    atribuicao: null
+    verificado_em: 2026-09-19
+    obtido_em: null
+    notas: >-
+      Inventado de fio a pavio. Não há sítio nenhum de onde isto venha, e é
+      essa a questão: a região de prova demonstra o produto sem pedir uma linha
+      a ninguém.
+
+  - id: prova-osm
+    nome: Extrato OSM da região de prova
+    url: null
+    formato: osm-xml
+    acesso: local
+    ficheiro: data/manual/prova/prova.osm.xml
+    sha256: "0d1196e4c2e673deb4ef878f105406822d44759f0ebaa323cc4ffcf555c6d6c0"
+    licenca: AGPL-3.0-only
+    atribuicao: null
+    verificado_em: 2026-09-19
+    obtido_em: null
+    notas: >-
+      Inventado. Tem a forma de um extrato do OpenStreetMap — bicicletas
+      partilhadas, praças de táxi e uma relação de rota — para os leitores
+      `osm-*` correrem contra ele, mas não tem um único nó do OSM verdadeiro.
+
+  # --- Segunda região de prova ---------------------------------------------
+  #
+  # Duas regiões inventadas, e não uma. Uma região sozinha não prova
+  # multi-região: não há com que a comparar — nem caixas que se possam
+  # sobrepor, nem identificadores de concelho que possam colidir, nem um
+  # segundo artigo que impeça uma contração de ficar colada ao código.
+  #
+  # Enquanto a compilação de dados de um cliente vivia neste repositório, era
+  # ela o segundo par — ou seja, a promessa comercial do produto estava a ser
+  # verificada contra dados de alguém. Depois de as regiões passarem a poder
+  # viver em raízes suas (docs/RAIZES.md), este repositório ficaria com uma
+  # região só, e sem nada que provasse o multi-região.
+
+  - id: prova-gtfs-savel
+    nome: GTFS do Sável Bus (segunda região de prova)
+    url: null
+    formato: gtfs
+    acesso: local
+    ficheiro: data/manual/prova-municipio/gtfs-savel/
+    licenca: AGPL-3.0-only
+    atribuicao: null
+    verificado_em: 2026-09-21
+    obtido_em: null
+    notas: >-
+      Inventado de fio a pavio, como o da Serra. Uma linha, quatro paragens,
+      duas viagens: o mínimo com que uma região existe. É deliberadamente mais
+      pobre do que o outro — a autoridade de transportes é um MUNICÍPIO e não
+      uma comunidade intermunicipal, e o produto tem de nascer inteiro com uma
+      câmara sozinha (CLAUDE.md §11.3).

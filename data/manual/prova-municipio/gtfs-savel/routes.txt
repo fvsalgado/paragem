@@ -1,0 +1,2 @@
+route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route_text_color
+SB1,SB,1,Sável (Centro) - Sável (Estação),3,0A5C7A,FFFFFF

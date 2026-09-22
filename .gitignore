@@ -1,0 +1,56 @@
+# Tudo o que o pipeline gera. Reconstrói-se com um comando a partir das fontes
+# e dos ficheiros manuais (CLAUDE.md §4.6); guardá-lo no Git era guardar duas
+# verdades sobre os mesmos dados e não saber qual delas é a de agora.
+build/
+
+# Descarregamentos em bruto. São grandes, são de terceiros e têm o seu registo
+# em data/sources.yaml com a data e a soma de verificação — é isso que se
+# versiona, não os 420 MB do OpenStreetMap.
+.cache/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node (Fase 3)
+node_modules/
+.next/
+out/
+.vercel/
+
+# Segredos — nunca commitar
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Editor e sistema
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+.DS_Store
+Thumbs.db
+
+# Relatório do gitleaks, escrito na área de trabalho quando o varrimento corre.
+results.sarif
+
+# O sítio, gerado
+web/node_modules/
+web/.next/
+web/out/
+web/test-results/
+web/playwright-report/
+web/tsconfig.tsbuildinfo
+
+
+# Os registos que o motor de viagens deixa quando é levantado à mão.
+#
+# No CI vivem no runner e morrem com ele; numa máquina de trabalho ficam na
+# raiz, e um deles chegou a entrar num commit — com o nome de uma região no
+# próprio nome do ficheiro, que é precisamente o que a §11.1 proíbe.
+otp*.log

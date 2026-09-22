@@ -1,0 +1,188 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# Uma execução por ramo: um push novo torna a anterior irrelevante antes de ela
+# acabar, e deixá-la a correr só atrasa a que interessa.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # A versão do poppler está fixada de propósito. A saída de `pdftotext -layout`
+  # muda entre versões, e é contra ela que os números do §6.1 são verificados —
+  # uma atualização silenciosa mudava as contagens sem que nada no repositório
+  # tivesse mudado. Ver docs/ARQUITETURA.md.
+  POPPLER_ESPERADO: "24.02"
+
+jobs:
+  qualidade:
+    name: Qualidade
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Instalar o uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - run: uv sync --locked
+
+      # O parser de horários corre contra o PDF verdadeiro, que está no
+      # repositório — é por isso que os testes conseguem afirmar 122 linhas,
+      # 230 blocos e 903 viagens sem descarregar nada.
+      - name: Dependências de sistema
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
+          versao="$(pdftotext -v 2>&1 | head -1 | grep -oE '[0-9]+\.[0-9]+' | head -1)"
+          echo "poppler $versao"
+          if [ "$versao" != "$POPPLER_ESPERADO" ]; then
+            echo "::warning::poppler $versao, esperado $POPPLER_ESPERADO —" \
+                 "a saída de -layout muda entre versões; reconferir os números do §6.1."
+          fi
+
+      - name: Formatação
+        run: uv run ruff format --check .
+
+      - name: Análise estática
+        run: uv run ruff check .
+
+      # Apanha o que o ruff não vê: um nome reutilizado com outro tipo, um
+      # `None` que escapa. Na primeira corrida apanhou um `s` que era uma linha
+      # de `stops.txt` e passava a ser um inteiro dez linhas abaixo.
+      - name: Tipos
+        run: uv run mypy
+
+      - name: Testes
+        run: uv run pytest -q
+
+      # Três ficheiros dizem de onde vêm os dados: data/sources.yaml,
+      # REUSE.toml e docs/TERCEIROS.md. Três sítios divergem.
+      - name: Proveniência
+        run: uv run pipeline check-proveniencia
+
+      # Os números do §6 são o critério de aceitação da Fase 1. Escritos à mão,
+      # envelhecem a mentir — por isso são conferidos contra os ficheiros.
+      - name: Números
+        run: uv run pipeline check-numeros
+
+  # A base de dados, provada num Postgres limpo em cada corrida.
+  #
+  # As migrações em `supabase/migrations/` são o que faz nascer a base do
+  # painel (docs/BASE-DE-DADOS.md). Aplicam-se aqui, por ordem, a um Postgres
+  # da mesma versão maior que o Supabase gerido serve, e a seguir correm as
+  # asserções e a comparação com os `regiao.yaml`. É o que impede que uma
+  # migração partida — ou um seed que escreva o nome de uma região de outra
+  # maneira que o `regiao.yaml` dela — chegue ao projeto real. O desenho é o
+  # do Coreto (fvsalgado/coreto), levantado.
+  migracoes:
+    name: Migrações
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        # A mesma versão maior do projeto gerido: a paridade com produção
+        # conta mais do que a novidade.
+        image: postgres:17
+        env:
+          # Sem palavra-passe, de propósito. A base existe durante o job, só
+          # aceita ligações da própria máquina e desaparece no fim; escrever
+          # aqui uma palavra-passe seria pôr num ficheiro versionado um
+          # literal com ar de segredo.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - run: uv sync --locked
+
+      # O `psql` já vem na imagem do runner. A guarda mantém o trabalho a
+      # funcionar no dia em que deixar de vir — e a dizê-lo alto.
+      - name: Garantir o cliente do PostgreSQL
+        run: |
+          if command -v psql >/dev/null 2>&1; then
+            psql --version
+          else
+            echo "::warning::O runner deixou de trazer o psql; a instalar."
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq --no-install-recommends postgresql-client
+          fi
+
+      - name: Aplicar e verificar as migrações
+        env:
+          DATABASE_URL: postgres://postgres@localhost:5432/postgres
+        run: ./scripts/verify-migrations.sh
+
+      # A base e os regiao.yaml têm de dizer o mesmo — nome e artigo de cada
+      # região, e nenhum módulo desligado que a região nem declare.
+      - name: A base diz o mesmo que os regiao.yaml
+        env:
+          DATABASE_URL: postgres://postgres@localhost:5432/postgres
+        run: uv run python ferramentas/verificar-seeds.py
+
+  regioes:
+    name: Regiões
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - run: uv sync --locked
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Dependências de sistema
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq osmium-tool
+
+      # AS DUAS regiões de prova são inventadas: constroem-se sem rede e sem
+      # pedir uma linha a ninguém. Uma prova que uma autoridade de transportes
+      # nova entra sem um commit de código; DUAS provam que o produto é
+      # multi-região — uma sozinha não tem com que se comparar.
+      #
+      # É de propósito que nenhuma delas é um cliente. O CI do produto tem de
+      # poder correr inteiro onde não há dados de ninguém (docs/RAIZES.md).
+      - name: Construir as regiões de prova
+        run: |
+          uv run pipeline build --regiao prova --sem-rede
+          uv run pipeline build --regiao prova-municipio --sem-rede
+
+      # Zero fugas: nada de uma região dentro das saídas da outra.
+      - name: Verificar as regiões
+        run: uv run pipeline check-regioes --sem-construcao
+
+      - name: Guardar o relatório
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-prova
+          path: build/reports/
+          if-no-files-found: ignore

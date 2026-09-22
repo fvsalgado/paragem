@@ -1,0 +1,74 @@
+# A segunda região de prova: o Baixo Sável.
+#
+# PORQUE É QUE SÃO DUAS. A primeira, a Serra da Pedra Alta, prova que uma
+# região nova entra sem um commit de código. Não prova — não pode provar
+# sozinha — que o produto é MULTI-região: uma região só nunca demonstra que
+# duas não se contaminam, que os identificadores de concelho não colidem, que
+# as caixas não se sobrepõem, nem que uma contração não ficou cravada.
+#
+# Enquanto a compilação de um cliente vivia no mesmo repositório, era ela o
+# segundo par, e todas essas verificações corriam contra os dados de alguém.
+# Quando essa compilação passou a viver na raiz dela (docs/RAIZES.md), o
+# repositório do produto ficou com uma região — e com a sua promessa comercial
+# por verificar em qualquer sítio onde o cliente não esteja.
+#
+# Esta região é a resposta: inventada de fio a pavio, como a outra, e escolhida
+# para ser DIFERENTE dela em tudo o que o produto tem de tolerar.
+#
+#   - O ARTIGO é «o» («do Sável», «no Sável»), contra o «a» da Serra. Com dois
+#     artigos no CI, nenhuma contração volta a ficar colada ao código.
+#   - A AUTORIDADE DE TRANSPORTES é um MUNICÍPIO e não uma CIM. O §11.3 diz que
+#     o produto se licencia a uma câmara sozinha, e isso não estava provado em
+#     lado nenhum: as duas regiões que havia eram ambas comunidades
+#     intermunicipais.
+#   - A CAIXA é disjunta das outras duas, para que uma coordenada trocada entre
+#     regiões falhe em vez de cair nas duas.
+#   - UM MODO SÓ. A Serra tem quatro; esta tem autocarro e mais nada, e é assim
+#     que se vê se um modo ausente desenha uma secção vazia.
+#
+# É deliberadamente mais pequena do que a outra: não precisa de ser uma segunda
+# demonstração, precisa de ser um segundo par.
+
+id: prova-municipio
+nome: Baixo Sável
+artigo: o
+
+demonstracao: true
+
+autoridade_de_transportes:
+  nome: Município de Sável
+  sigla: CMS
+  tipo: municipio
+  url: https://savel.example.org
+
+rede:
+  nome: Sável Bus
+  url: https://savel-bus.example.org
+  operador: Câmara Municipal de Sável
+
+dominio_env: PARAGEM_DOMINIO_PROVA_MUNICIPIO
+
+# O domínio canónico em que esta região responde. DECLARADO, não adivinhado
+# (o identificador tal e qual: é uma demonstração). A base de dados do painel guarda uma cópia
+# desta linha e o CI confere que as duas dizem o mesmo (docs/BASE-DE-DADOS.md).
+# Nada o lê ainda: o encaminhamento por host chega a seguir (CLAUDE.md §11.7).
+dominio: prova-municipio.paragem.pt
+
+territorio:
+  municipios_membros: 1
+  concelhos_servidos: 1
+  caixa:
+    lat_min: 37.10
+    lat_max: 37.35
+    lon_min: -8.80
+    lon_max: -8.55
+  margem_recorte_graus: 0.10
+
+modos:
+  - autocarro
+
+inclui:
+  concelhos: concelhos.yaml
+  tarifas: tarifas.yaml
+  calendario: calendario.yaml
+  fontes: fontes.yaml

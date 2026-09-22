@@ -1,0 +1,9 @@
+trip_id,arrival_time,departure_time,stop_id,stop_sequence
+SB1-U-01,08:00:00,08:00:00,sv_centro,1
+SB1-U-01,08:04:00,08:04:00,sv_mercado,2
+SB1-U-01,08:09:00,08:09:00,sv_hospital,3
+SB1-U-01,08:15:00,08:15:00,sv_estacao,4
+SB1-U-02,17:30:00,17:30:00,sv_estacao,1
+SB1-U-02,17:36:00,17:36:00,sv_hospital,2
+SB1-U-02,17:41:00,17:41:00,sv_mercado,3
+SB1-U-02,17:45:00,17:45:00,sv_centro,4

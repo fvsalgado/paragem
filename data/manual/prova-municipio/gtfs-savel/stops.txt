@@ -1,0 +1,5 @@
+stop_id,stop_name,stop_lat,stop_lon
+sv_centro,Sável (Centro),37.2200,-8.6800
+sv_mercado,Sável (Mercado),37.2240,-8.6750
+sv_hospital,Sável (Hospital),37.2300,-8.6700
+sv_estacao,Sável (Estação),37.2380,-8.6620

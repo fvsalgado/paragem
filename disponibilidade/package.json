@@ -1,0 +1,11 @@
+{
+  "name": "paragem-disponibilidade",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lê a página de estações de um sistema de bicicletas e serve GBFS station_status.",
+  "type": "module",
+  "engines": { "node": "22.x" },
+  "scripts": {
+    "test": "node --test"
+  }
+}

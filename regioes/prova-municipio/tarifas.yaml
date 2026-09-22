@@ -1,0 +1,22 @@
+# Tarifário inventado, como tudo nesta região.
+#
+# Entra `confirmado: true` pela mesma razão que o da Serra: a fonte destes
+# valores é este ficheiro. É ficção, e a ficção não tem nada por confirmar.
+
+moeda: EUR
+
+titulos:
+  - id: savel-bilhete-simples
+    rede: Sável Bus
+    nome: Bilhete simples
+    valor: 1.00
+    confirmado: true
+    fonte: inventado (região de prova)
+
+  - id: savel-passe-mensal
+    rede: Sável Bus
+    nome: Passe mensal
+    valor: 18.00
+    periodo: mes
+    confirmado: true
+    fonte: inventado (região de prova)

@@ -1,0 +1,81 @@
+# A região de prova: a Serra da Pedra Alta.
+#
+# NUNCA chega a produção como região real, e não precisa de o fazer: é a
+# DEMONSTRAÇÃO do produto e a PROVA executável do multi-região, ao mesmo tempo.
+#
+# É inventada de fio a pavio — nem uma paragem, nem uma estrada, nem um horário
+# vêm de sítio nenhum. É isso que lhe permite ser a montra pública sem pedir
+# autorização a ninguém, e é isso que faz com que o CI a possa construir em
+# todas as corridas sem bater à porta de um servidor de terceiros.
+#
+# É deliberadamente MÍNIMA — é a região no dia zero:
+#
+#   - sem prosa própria: prova as frases geradas a partir do nome e da contagem;
+#   - sem marcas nem cartaz social: o nascimento não pode depender de um commit
+#     de imagens;
+#   - sem comboio nem a pedido: prova que um modo ausente não desenha secção
+#     nenhuma em vez de desenhar uma secção vazia;
+#   - sem feriados municipais preenchidos: prova que a lacuna aparece no
+#     relatório em vez de desaparecer.
+#
+# O artigo é «a» («da Serra», «na Serra») DE PROPÓSITO: a outra região de prova
+# é «o», e com os dois artigos no CI nenhuma contração volta a ficar cravada no
+# código. A caixa geográfica é disjunta das outras, para que uma coordenada
+# trocada entre regiões não passe despercebida por cair nas duas.
+
+id: prova
+nome: Serra da Pedra Alta
+artigo: a
+
+# LEGÍVEL POR MÁQUINA, e não só na prosa lá de cima.
+#
+# Enquanto o sítio servia uma região de cada vez, quem o abria sabia o que
+# estava a ver. Agora a demonstração e as regiões reais vivem no mesmo sítio, e
+# uma rede inventada apresentada como informação de transportes é exatamente o
+# que o §4.4 proíbe. O produto marca-a em todas as páginas por causa disto.
+demonstracao: true
+
+autoridade_de_transportes:
+  nome: Comunidade Intermunicipal da Serra da Pedra Alta
+  sigla: CISPA
+  tipo: cim
+  url: https://serra-da-pedra-alta.example.org
+
+# O `.example` sozinho NÃO serve: o validador de GTFS recusa-o como endereço
+# inválido, e apanhou-o na primeira vez que correu sobre a região de prova. O
+# RFC 2606 reserva `example.org` para documentação, e esse passa.
+rede:
+  nome: Rede Alta
+  url: https://rede-alta.example.org
+  operador: Alta Transportes
+
+dominio_env: PARAGEM_DOMINIO_PROVA
+
+# O domínio canónico em que esta região responde. DECLARADO, não adivinhado
+# (o identificador tal e qual: é uma demonstração). A base de dados do painel guarda uma cópia
+# desta linha e o CI confere que as duas dizem o mesmo (docs/BASE-DE-DADOS.md).
+# Nada o lê ainda: o encaminhamento por host chega a seguir (CLAUDE.md §11.7).
+dominio: prova.paragem.pt
+
+territorio:
+  municipios_membros: 2
+  concelhos_servidos: 2
+  caixa:
+    lat_min: 41.20
+    lat_max: 41.50
+    lon_min: -7.45
+    lon_max: -7.10
+  margem_recorte_graus: 0.10
+
+# Três modos e mais nenhum. A ausência dos outros é a prova.
+modos:
+  - autocarro
+  - urbano-municipal
+  - bicicleta
+  - taxi
+
+inclui:
+  concelhos: concelhos.yaml
+  tarifas: tarifas.yaml
+  calendario: calendario.yaml
+  fontes: fontes.yaml

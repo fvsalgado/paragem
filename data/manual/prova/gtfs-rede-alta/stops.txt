@@ -1,0 +1,9 @@
+stop_id,stop_name,stop_lat,stop_lon
+pa_terminal,Pedra Alta (Terminal),41.3200,-7.2800
+pa_mercado,Pedra Alta (Mercado),41.3250,-7.2740
+pa_escola,Pedra Alta (Escola Secundária),41.3310,-7.2690
+pa_hospital,Pedra Alta (Centro de Saúde),41.3380,-7.2610
+va_cruzamento,Vale Alto (Cruzamento),41.3600,-7.2400
+rc_ponte,Ribeira do Corvo (Ponte),41.3900,-7.2100
+rc_largo,Ribeira do Corvo (Largo),41.3960,-7.2040
+rc_estacao,Ribeira do Corvo (Estação),41.4020,-7.1980

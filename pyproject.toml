@@ -1,0 +1,107 @@
+[project]
+name = "paragem"
+version = "0.1.0"
+description = "Paragem.pt — pipeline de dados de transportes, por região"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "AGPL-3.0-only" }
+authors = [{ name = "Fábio Salgado", email = "fvsalgado@gmail.com" }]
+
+dependencies = [
+  "pyyaml>=6.0.2",
+  "httpx>=0.28.1",
+  "osmium>=4.0.0",
+  "shapely>=2.1.2",
+  "pyproj>=3.7.2",
+  # Lê as File Geodatabase da Esri que o registo do regulador exporta. Traz o
+  # GDAL na roda, e é a razão de ser `pyogrio.raw.read` e não `read_arrow` no
+  # leitor: a segunda exigiria também o `pyarrow`, que são mais 100 MB para
+  # ler quatro tabelas.
+  "pyogrio>=0.12.0",
+  # Lê a página do sítio de reservas, gravada pelo navegador. O `lxml` é o
+  # analisador, e não o de série: o do Python desiste num documento de 4,3 MB
+  # com marcação gerada por JavaScript, e desistir aqui é perder horários.
+  "beautifulsoup4>=4.15.0",
+  # Encaminham os traçados na rede viária: o grafo dirigido (`networkx`) e a
+  # árvore que encontra depressa o arco mais próximo de cada paragem
+  # (`scipy`). São as duas maiores dependências do pipeline, e entram por uma
+  # razão só: sem elas, um feed sem traçados desenha retas por cima de casas.
+  "networkx>=3.4",
+  "scipy>=1.14",
+  "lxml>=6.1.3",
+]
+
+[project.scripts]
+pipeline = "paragem.cli:main"
+
+[dependency-groups]
+dev = [
+  "mypy>=2.3.1",
+  "pytest>=8.3.4",
+  "ruff>=0.9.0",
+  "types-pyyaml>=6.0.12.20260906",
+  "types-shapely>=2.1.0.20260728",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pipeline/src/paragem"]
+
+[tool.pytest.ini_options]
+testpaths = ["pipeline/tests"]
+pythonpath = ["pipeline/src"]
+
+[tool.mypy]
+files = ["pipeline/src"]
+mypy_path = "pipeline/src"
+python_version = "3.11"
+# Deliberadamente sem `strict`: metade deste código lê CSV e YAML, onde tudo é
+# `str | Any` e anotar cada leitura acrescentaria ruído sem acrescentar
+# garantia. O que se quer daqui é apanhar o que o `ruff` não vê — um nome
+# reutilizado com outro tipo, um `None` que escapa —, e foi exatamente isso que
+# apanhou à primeira.
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+# Bibliotecas sem anotações: o pyosmium, e as duas que encaminham os traçados.
+# Instalar os stubs delas eram mais 40 MB no ambiente para tipar seis chamadas.
+module = ["osmium.*", "networkx.*", "scipy.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# As anotações do NumPy usam sintaxe de 3.12 (`type X = …`) e este projeto
+# declara suporte a partir de 3.11. Com `python_version = "3.11"`, o mypy
+# recusa-se a LER o `numpy/__init__.pyi` — e um erro de sintaxe num stub de
+# terceiro trava a verificação toda («errors prevented further checking»), por
+# isso não é um aviso que se ignore: o CI reprova sem ter verificado nada.
+#
+# Não se sobe o `python_version` para 3.12 porque isso deixava de verificar a
+# versão que o `requires-python` promete. Salta-se o stub: o NumPy entra aqui
+# uma vez, num `column_stack` que o Shapely arrasta, e não é dele que queremos
+# garantias.
+module = ["numpy", "numpy.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
+
+[tool.ruff]
+line-length = 100
+src = ["pipeline/src", "pipeline/tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# Os testes afirmam números e às vezes comparam listas longas à vista.
+"pipeline/tests/*" = ["E501"]
+
+# O `pyogrio` traz o GDAL e não traz anotações. Não é descuido do pacote: o
+# GDAL é C++ e a camada de Python devolve `numpy` sem tipos. Silencia-se ESTE
+# módulo e não a regra toda — um `ignore_missing_imports` global apagava
+# também os avisos dos pacotes que têm anotações e que queremos ver.
+[[tool.mypy.overrides]]
+module = "pyogrio.*"
+ignore_missing_imports = true

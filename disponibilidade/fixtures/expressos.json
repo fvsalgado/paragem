@@ -1,0 +1,46 @@
+{
+  "_leia": "INVENTADO À MÃO, na Serra da Pedra Alta. Não é uma resposta guardada de operador nenhum: é a FORMA da resposta, com valores que não existem. Um teste preso a preços a sério parte no dia em que o operador muda a tabela, e guardar preços de terceiros é precisamente o que o `expressos.mjs` diz que não se faz.",
+  "trips": [
+    {
+      "results": {
+        "r2": {
+          "uid": "direct:ficticio-2",
+          "departure": { "date": "2099-07-02T18:20:00+01:00", "station_id": "s1" },
+          "arrival": { "date": "2099-07-02T20:05:00+01:00", "station_id": "s3" },
+          "duration": { "hours": 1, "minutes": 45 },
+          "price": { "total": 9.5, "total_with_platform_fee": 11.0 },
+          "available": { "seats": 4 },
+          "status": "available"
+        },
+        "r1": {
+          "uid": "direct:ficticio-1",
+          "departure": { "date": "2099-07-02T07:15:00+01:00", "station_id": "s1" },
+          "arrival": { "date": "2099-07-02T09:00:00+01:00", "station_id": "s2" },
+          "duration": { "hours": 1, "minutes": 45 },
+          "price": { "total": 6.0, "total_with_platform_fee": 7.25 },
+          "available": { "seats": 21 },
+          "status": "available"
+        },
+        "r3": {
+          "uid": "interconnection:ficticio-3",
+          "departure": { "date": "2099-07-02T21:40:00+01:00", "station_id": "s1" },
+          "arrival": { "date": "2099-07-03T01:10:00+01:00", "station_id": "s2" },
+          "duration": { "hours": 3, "minutes": 30 },
+          "price": {},
+          "available": { "seats": 0 },
+          "status": "sold_out"
+        },
+        "r4": {
+          "uid": "direct:ficticio-4",
+          "departure": {},
+          "arrival": { "date": "2099-07-02T23:00:00+01:00", "station_id": "s2" }
+        }
+      }
+    }
+  ],
+  "stations": {
+    "s1": { "name": "Pedra Alta (Terminal)" },
+    "s2": { "name": "Vale Escuro (Norte)" },
+    "s3": { "name": "Vale Escuro (Sul)" }
+  }
+}

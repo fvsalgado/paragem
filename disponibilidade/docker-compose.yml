@@ -1,0 +1,46 @@
+# O serviço de disponibilidade de bicicletas, para quem o aloja.
+#
+# Vive À PARTE do sítio, como o OTP: o sítio é ficheiros estáticos de propósito
+# (uma câmara que licencie o produto tem de o poder alojar onde quiser), e a
+# disponibilidade em tempo quase-real precisa de ler uma página quando alguém
+# pergunta. É a mesma razão por que o planeador fala com o OTP do lado do
+# cliente.
+#
+# NADA AQUI DIZ A MARCA DE NENHUM SISTEMA (CLAUDE.md §11.1). O endereço da
+# página, a origem que pode chamar o serviço e o que filtrar vêm todos do
+# ambiente — a região é que os sabe.
+#
+#   PARAGEM_PAINEL_URL=https://…/mapa-rede/ \
+#   PARAGEM_ORIGEM=https://o-dominio-do-sitio \
+#   PARAGEM_EXCLUIR=OutroSistema \
+#     docker compose -f disponibilidade/docker-compose.yml up
+#
+# O CORS fica preso a PARAGEM_ORIGEM — NUNCA `*` —, o serviço cacheia a leitura
+# 60 s por omissão (gentil com a fonte) e só lê a pedido: zero tráfego quando
+# ninguém está a ver.
+
+name: paragem-disponibilidade
+
+services:
+  disponibilidade:
+    build: .
+    image: paragem/disponibilidade:1
+    ports:
+      - "${PARAGEM_DISPONIBILIDADE_PORTA:-8802}:8080"
+    environment:
+      # A página que o próprio sistema publica com o estado de cada estação.
+      PARAGEM_PAINEL_URL: ${PARAGEM_PAINEL_URL:?define PARAGEM_PAINEL_URL com a página de estações}
+      # A origem que pode chamar isto: o domínio do sítio. NÃO é `*`.
+      PARAGEM_ORIGEM: ${PARAGEM_ORIGEM:?define PARAGEM_ORIGEM com o domínio do sítio}
+      # Sistemas a deixar de fora, separados por vírgula (a página pode listar
+      # mais do que um). Vazio = todos.
+      PARAGEM_EXCLUIR: ${PARAGEM_EXCLUIR:-}
+      # Quanto tempo se guarda uma leitura antes de a ir buscar outra vez.
+      PARAGEM_CACHE_S: ${PARAGEM_CACHE_S:-60}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/saude"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s

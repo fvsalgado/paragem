@@ -1,0 +1,43 @@
+# A pilha Supabase local — só para o CI e para desenvolvimento.
+#
+# O projeto real vive no Supabase gerido (docs/BASE-DE-DADOS.md). Este
+# ficheiro existe para quem levante uma base efémera com `supabase start`; o
+# CI não precisa dele — aplica as migrações a um Postgres limpo com o `psql`
+# (scripts/verify-migrations.sh), que é mais rápido e não depende do CLI.
+#
+# Reduzido ao que interessa: a base e a API REST. Tudo o resto fica desligado.
+project_id = "paragem"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+# A maior versão que o Supabase gerido serve — a paridade com produção conta
+# mais do que a novidade. O CI corre a mesma.
+major_version = 17
+
+[db.pooler]
+enabled = false
+
+[db.seed]
+# As três regiões nascem nas migrações, não num seed à parte: são o produto e
+# a sua demonstração, e uma base reconstruída de raiz tem de as ter.
+enabled = false
+
+[realtime]
+enabled = false
+
+[studio]
+enabled = false
+
+[inbucket]
+enabled = false
+
+[storage]
+enabled = true

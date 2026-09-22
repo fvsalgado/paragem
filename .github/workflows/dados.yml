@@ -1,0 +1,273 @@
+name: Dados
+
+# Três gatilhos, e cada um responde a uma pergunta diferente:
+#
+#   - **semanal**: as fontes mudaram? A CP, a FlixBus e o OpenStreetMap
+#     republicam sem avisar, e uma linha suprimida a meio de fevereiro não se
+#     descobre sozinha. É o build de dados que o CLAUDE.md §7 pede;
+#   - **por PR**: esta alteração ao pipeline ainda produz os mesmos números?
+#   - **à mão**: quando se acaba de pôr um ficheiro em data/manual/ e se quer
+#     ver o resultado sem esperar por segunda-feira.
+#   - **no `main`**, quando o que produz os dados muda: é daqui que os dados
+#     vão para o armazém que o sítio lê (CLAUDE.md §11.7), e uma alteração ao
+#     pipeline que fique só no repositório não chega a ninguém.
+on:
+  schedule:
+    # Segundas, às 5h07 UTC. Fora da hora certa de propósito: à hora certa toda
+    # a gente corre os seus, e os servidores de quem nos serve os dados não têm
+    # nada que aguentar isso por nossa causa.
+    - cron: "7 5 * * 1"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "pipeline/**"
+      - "regioes/**"
+      - "data/**"
+      - ".github/workflows/dados.yml"
+      - "pyproject.toml"
+      - "uv.lock"
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "pipeline/**"
+      - "regioes/**"
+      - "data/**"
+      - ".github/workflows/dados.yml"
+      - "pyproject.toml"
+      - "uv.lock"
+
+concurrency:
+  group: dados-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  dados:
+    name: As regiões desta raiz
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # Aqui em cima para que os `if:` dos passos o consigam ler — um `if` não
+      # vê `secrets.` diretamente. A chave de serviço só serve para escrever no
+      # balde; o sítio nunca a vê.
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - run: uv sync --locked
+
+      # O `servir-dados.mjs` não é preciso aqui, mas o `wait-on` é.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Java 21 e não 17: o validador dá-se bem com qualquer um a partir da 17,
+      # mas o OpenTripPlanner 2.6 é compilado para 21 e em 17 morre com
+      # `UnsupportedClassVersionError`. Uma versão só, a mais alta das duas.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Dependências de sistema
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils osmium-tool
+
+      - name: A semana
+        run: echo "SEMANA=$(date -u +%G-W%V)" >> "$GITHUB_ENV"
+
+      # ESTE FLUXO DEIXA DE NOMEAR REGIÕES, e não é arrumação.
+      #
+      # Dizia `--regiao <nome>` em quinze sítios. O §11.5 promete que uma região
+      # nova entra SEM UM COMMIT DE CÓDIGO — e com os nomes cravados aqui ela
+      # entrava e não era construída, em silêncio, até alguém reparar que o
+      # sítio dela estava vazio. É também o que permite a este mesmo fluxo
+      # servir uma raiz de fora (docs/RAIZES.md): lá as regiões são outras, e o
+      # ficheiro é o mesmo.
+      #
+      # A REDE VIÁRIA, e não o motor, separa os transbordos calculados dos em
+      # linha reta: uma região pode ter grafo só com GTFS e não ter por onde
+      # caminhar.
+      - name: As regiões desta raiz
+        run: |
+          uv run pipeline regioes
+          echo "COM_RUAS=$(uv run pipeline regioes --ids --com-ruas | tr '\n' ' ')" >> "$GITHUB_ENV"
+          echo "SEM_RUAS=$(uv run pipeline regioes --ids --sem-ruas | tr '\n' ' ')" >> "$GITHUB_ENV"
+
+      # O extrato do OpenStreetMap são centenas de MB. Descarregá-lo em todas as
+      # corridas é largura de banda de terceiros que não é preciso gastar. A
+      # chave leva a semana, para que a cópia não envelheça meses — e na corrida
+      # semanal é precisamente o contrário que se quer: ver o que mudou.
+      #
+      # ISTO ESTAVA ESCRITO E NÃO ESTAVA FEITO: a chave levava o `github.run_id`
+      # e não a semana. Um `run_id` é único por corrida, portanto a chave
+      # primária falhava sempre — e uma falha da primária obriga o
+      # `actions/cache` a GRAVAR no fim. Eram 2,4 GB enviados por corrida para
+      # guardar o que já lá estava, e a cache do repositório tem um tecto: uma
+      # cache de 2,4 GB por corrida expulsa as outras, e a seguir falham
+      # também as que teriam acertado.
+      - name: Cache das fontes
+        uses: actions/cache@v4
+        with:
+          # O `.gpkg` fica DE FORA: é a carta administrativa já descomprimida,
+          # 188 MB que se voltam a tirar do zip em segundos. Guardá-los quase
+          # duplicava a cache — e uma cache grande demora mais a repor do que a
+          # trabalho que poupa.
+          path: |
+            .cache
+            !.cache/*.gpkg
+          key: fontes-${{ hashFiles('data/sources.yaml') }}-${{ env.SEMANA }}
+          restore-keys: |
+            fontes-${{ hashFiles('data/sources.yaml') }}-
+            fontes-
+
+      - name: Descarregar as fontes
+        run: uv run pipeline fetch --todas
+
+      # Sai com código ≠ 0 quando há lacunas que bloqueiam, e hoje há uma
+      # conhecida: o calendário escolar. Quem decide se isso reprova é o passo
+      # seguinte.
+      # `--exigir-validador`: aqui o validador TEM de correr. Sem a bandeira,
+      # não o conseguir descarregar ficava num aviso e a corrida verde — foi o
+      # que aconteceu na primeira corrida, com um endereço errado, e o único
+      # sinal era uma linha no meio do registo.
+      - name: Construir
+        continue-on-error: true
+        run: uv run pipeline build --todas --exigir-validador
+
+      # Um bloqueio novo reprova. Um bloqueio conhecido que deixou de acontecer
+      # também — senão a lista envelhece a proteger o que já não existe.
+      - name: Bloqueios
+        run: uv run pipeline check-bloqueios --todas
+
+      # OS TESTES QUE SÓ UMA RAIZ COM REGIÃO CONSEGUE CORRER, E O `-rs`.
+      #
+      # Com as fontes em disco e uma região declarada, a atribuição a concelhos
+      # deixa de ser respondida por uma caixa e passa a ser a carta
+      # administrativa a responder — é isso que estes afirmam. Numa raiz sem
+      # região saltam com a razão escrita, que é o que acontece AQUI desde que
+      # a compilação de dados do cliente saiu: três, e o `-rs` põe-nos no
+      # registo em vez de os deixar passar por verdes.
+      #
+      # O comentário que estava aqui prometia asserções que já não existem —
+      # falava das viagens alinhadas pela reconstrução, que a §11.8 apagou, e
+      # descrevia o território de um cliente num repositório que é para ser
+      # público. Quem os corre a sério é o `Dados` da raiz que tem a região.
+      - name: Testes de rede e território
+        run: uv run pytest -q -rs pipeline/tests/test_rede.py pipeline/tests/test_territorio.py
+
+      # A FASE 2, e corre aqui em vez de num workflow próprio porque precisa do
+      # que o passo «Construir» acabou de produzir — repeti-lo noutro sítio era
+      # dez minutos de construção para chegar ao mesmo ponto.
+      #
+      # O grafo é a SEGUNDA OPINIÃO sobre o feed: recusa coisas que o validador
+      # deixa passar. Se ele não construir, não é o motor que está mal.
+      - name: Grafo do motor de viagens
+        run: uv run pipeline grafo --todas --memoria 6G
+
+      # As cinco viagens do §9, declaradas na receita da região e perguntadas
+      # ao OTP a sério — o mesmo jar que o `compose` aloja, sem Docker, porque
+      # aqui não há daemon.
+      - name: As viagens de aceitação
+        run: uv run pytest -q pipeline/tests/test_motor.py
+
+      # O QUE O SÍTIO LÊ, e é isto que vai para o armazém.
+      #
+      # A partir daqui os passos são os mesmos do fluxo `Sítio`, que os corre
+      # para se testar; aqui correm-se para publicar. A ordem importa: o
+      # `pipeline sitio` LIMPA a pasta antes de escrever, e os transbordos
+      # vivem lá dentro — têm de vir depois dele, sempre.
+      - name: O que o sítio lê
+        run: uv run pipeline sitio --todas
+
+      # A DEMONSTRAÇÃO DEIXOU DE SER UM PASSO À PARTE, e é o sinal de que
+      # isto ficou certo: as regiões de prova constroem-se e publicam-se com
+      # as outras porque são regiões como as outras, e não porque um passo se
+      # lembra delas pelo nome.
+
+      - name: As regiões não se misturam
+        run: uv run pipeline check-regioes
+
+      - name: Mosaicos do mapa
+        run: uv run pipeline mosaicos --todas
+
+      # UM MOTOR POR REGIÃO, levantado e derrubado à vez.
+      #
+      # O grafo do OTP é de UMA região: uma instância só não responde pelas
+      # outras. Antes isto estava escrito à mão para uma e para a demonstração,
+      # com a segunda a pedir explicitamente `--motor ""`; agora é o que cada
+      # região DECLARA que decide — quem tem rede viária tem caminhada
+      # calculada, quem não tem fica pela linha reta, e o comando já recusa
+      # fingir que houve motor quando não houve.
+      - name: Transbordos a pé
+        run: |
+          set -eu
+          for r in $COM_RUAS; do
+            echo "── $r: com o motor levantado"
+            nohup java -Xmx6G -jar .cache/otp.jar --load --port 8801 \
+              --bindAddress 127.0.0.1 "build/$r/otp" > "otp-$r.log" 2>&1 &
+            otp=$!
+            for i in $(seq 1 60); do
+              curl -sf http://127.0.0.1:8801/otp >/dev/null && break
+              sleep 5
+            done
+            curl -sf http://127.0.0.1:8801/otp >/dev/null || { tail -40 "otp-$r.log"; exit 1; }
+            uv run pipeline transbordos --regiao "$r" --motor http://127.0.0.1:8801
+            # A porta tem de ficar livre antes da região seguinte, senão a
+            # instância que sobra responde pelo grafo errado — que é pior do
+            # que não responder.
+            kill "$otp" 2>/dev/null || true
+            for i in $(seq 1 30); do
+              curl -sf http://127.0.0.1:8801/otp >/dev/null 2>&1 || break
+              sleep 1
+            done
+          done
+          for r in $SEM_RUAS; do
+            echo "── $r: sem rede viária declarada, em linha reta"
+            uv run pipeline transbordos --regiao "$r" --motor ""
+          done
+
+      # PUBLICAR: só no `main`, nunca de um PR, e só com a chave de serviço.
+      #
+      # Sem a chave o passo salta e deixa uma nota — um CI vermelho porque
+      # falta uma credencial é um CI vermelho por hábito, e um CI vermelho por
+      # hábito deixa de ser sinal. O `REVALIDATE_SECRET` é o mesmo que o sítio
+      # tem: com ele as páginas refazem-se ao segundo; sem ele, dentro de uma
+      # hora, e o comando di-lo.
+      - name: Publicar no armazém e avisar o sítio
+        if: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && env.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        env:
+          SUPABASE_URL: https://cingvgokdlvqgoaiatpn.supabase.co
+          PARAGEM_SITIO_URL: https://www.paragem.pt
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+        run: uv run pipeline publicar --todas
+
+      - name: Sem chave de serviço
+        if: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && env.SUPABASE_SERVICE_ROLE_KEY == '' }}
+        run: |
+          echo "::notice::Os dados foram construídos e verificados, mas não publicados:" \
+            "falta o segredo SUPABASE_SERVICE_ROLE_KEY (docs/ALOJAMENTO.md)."
+
+      - name: O relatório, no resumo da corrida
+        if: always()
+        run: cat build/reports/*.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Guardar os dados e o relatório
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dados
+          path: |
+            build/reports/
+            build/*/gtfs/
+            build/*/gbfs/
+            build/*/geojson/
+            build/*/paragens_sem_coordenadas.csv
+          if-no-files-found: warn
+          retention-days: 30

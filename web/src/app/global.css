@@ -1,0 +1,2170 @@
+/*
+ * O sistema de desenho, do §8 do briefing. As cores estão lá uma a uma e não
+ * se inventam aqui — há um teste que compara este ficheiro com o §8.
+ *
+ * Três coisas que não são gosto:
+ *
+ * 1. **Contraste ≥ 4,5:1.** É WCAG 2.1 AA, e para uma autoridade de
+ *    transportes é o Decreto-Lei n.º 83/2018. Os pares de cor daqui estão
+ *    medidos, e há um teste que os volta a medir.
+ * 2. **Alvos táteis ≥ 44 px.** Quem usa isto está na rua, de pé, com uma mão.
+ * 3. **Foco visível, 3 px.** Quem navega por teclado tem de ver onde está.
+ *
+ * E três que o §8 manda evitar: emojis, gradientes decorativos, rótulos em
+ * maiúsculas, e cartões todos iguais com sombra.
+ */
+
+:root {
+  /* Fundo e texto */
+  --fundo: #f5f7f4;
+  --texto: #102c3f;
+  --texto-secundario: #4a5c66;
+  --linhas: #d5ddd9;
+  --borda-campo: #6f858f;
+
+  /* Marca e modos */
+  --marca: #0a5c7a;
+  --marca-hover: #063f54;
+  --a-pedido: #8a5300;
+  --a-pedido-fundo: #fbf1e1;
+  --bicicleta: #2d6a3e;
+  --bicicleta-fundo: #e6f0e9;
+  --comboio: #3f4852;
+  --urbano-municipal: #5b3a8e;
+  --alerta: #a3261b;
+  --alerta-fundo: #fbe9e6;
+  --foco: #f2b705;
+
+  --raio: 10px;
+  --alvo: 44px;
+  --medida: 38rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Nunca se fixa o tamanho de letra em px no html: quem aumenta a letra do
+     sistema fá-lo por precisar, e um `font-size` absoluto ignora-o. */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  /* Nada empurra a página para o lado. Uma página que desliza horizontalmente
+     num telemóvel perde metade do conteúdo para quem lê com zoom. */
+  overflow-x: hidden;
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+}
+
+/* Um salto para o conteúdo, para quem navega por teclado não ter de passar
+   pelo menu em todas as páginas. Só aparece quando tem foco. */
+.saltar {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--marca);
+  color: #fff;
+  padding: 0.75rem 1rem;
+  z-index: 100;
+}
+.saltar:focus {
+  left: 0;
+}
+
+:focus-visible {
+  outline: 3px solid var(--foco);
+  outline-offset: 2px;
+}
+
+a {
+  color: var(--marca);
+  text-underline-offset: 0.2em;
+}
+a:hover {
+  color: var(--marca-hover);
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  /* Nada de rótulos em maiúsculas (§8): «PARAGEM» lê-se pior do que
+     «Paragem», e um leitor de ecrã soletra-o. */
+  text-transform: none;
+  margin: 0 0 0.5rem;
+}
+h1 {
+  font-size: 1.75rem;
+}
+h2 {
+  font-size: 1.3rem;
+  margin-top: 2rem;
+}
+h3 {
+  font-size: 1.05rem;
+}
+
+/* --- estrutura ----------------------------------------------------------- */
+
+.pagina {
+  max-width: var(--medida);
+  margin: 0 auto;
+  padding: 0 1rem 4rem;
+}
+
+.cabecalho {
+  border-bottom: 1px solid var(--linhas);
+  background: #fff;
+}
+.cabecalho .interior {
+  max-width: var(--medida);
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.cabecalho a.marca {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--marca);
+  text-decoration: none;
+  /* É uma ligação autónoma, não uma ligação no meio de uma frase: leva os
+     44 px como qualquer outra. */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+}
+/* O nome da região no cabeçalho era um `<span>` e passou a LIGAÇÃO quando o
+   sítio começou a servir mais do que uma região — leva ao início dela. Uma
+   ligação autónoma leva os 44 px, e o teste apanhou-a a 25. */
+.cabecalho a.marca-dados {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+  text-decoration: none;
+  color: var(--marca);
+}
+.cabecalho a.marca-dados:hover,
+.cabecalho a.marca-dados:focus-visible {
+  text-decoration: underline;
+}
+
+.cabecalho nav ul {
+  display: flex;
+  gap: 0.25rem 1rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+.cabecalho nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+  padding: 0 0.25rem;
+}
+
+.rodape {
+  border-top: 1px solid var(--linhas);
+  margin-top: 3rem;
+  padding: 1.5rem 1rem 3rem;
+  color: var(--texto-secundario);
+  font-size: 0.9rem;
+}
+.rodape .interior {
+  max-width: var(--medida);
+  margin: 0 auto;
+}
+.rodape ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+}
+.rodape a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+}
+
+/* --- cartões e listas ---------------------------------------------------- */
+
+/* Deliberadamente SEM sombra e com borda: o §8 manda evitar «cartões todos
+   iguais com sombra». Uma borda distingue sem pesar, e o que distingue um
+   cartão de outro é a cor do modo, não o relevo. */
+.cartao {
+  background: #fff;
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  padding: 1rem;
+  margin: 0.75rem 0;
+}
+.cartao.modo-autocarro {
+  border-left: 4px solid var(--marca);
+}
+.cartao.modo-a-pedido {
+  border-left: 4px solid var(--a-pedido);
+  background: var(--a-pedido-fundo);
+}
+.cartao.modo-bicicleta {
+  border-left: 4px solid var(--bicicleta);
+  background: var(--bicicleta-fundo);
+}
+.cartao.modo-comboio {
+  border-left: 4px solid var(--comboio);
+}
+.cartao.modo-urbano-municipal {
+  border-left: 4px solid var(--urbano-municipal);
+}
+/* Expressos e táxis são serviços privados: cartão neutro, sem cor de modo (§8). */
+.cartao.modo-expresso,
+.cartao.modo-taxi {
+  border-left: 1px solid var(--linhas);
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/*
+ * O quadro de horário de um urbano municipal.
+ *
+ * É uma TABELA porque é uma tabela: um leitor de ecrã anuncia a linha e a
+ * coluna, e sem cabeçalhos ninguém sabe de que viagem é a hora. Um `<div>`
+ * com grelha lê-se como uma parede de números.
+ *
+ * Dentro de um `<details>` fechado por omissão: a Linha Azul tem 30 paragens
+ * × 26 viagens, e desenrolar isso na página mandava o resto para fora do
+ * ecrã. Quem quer a grelha toca e abre; quem quer só a primeira hora lê-a no
+ * resumo.
+ */
+.quadro-de-horario {
+  border: 1px solid var(--linhas);
+  border-radius: 8px;
+  margin: 0.75rem 0;
+}
+.quadro-de-horario > summary {
+  cursor: pointer;
+  padding: 0.75rem;
+  min-height: var(--alvo);
+  display: flex;
+  align-items: center;
+}
+.quadro-de-horario > summary:focus-visible {
+  outline: 3px solid var(--foco);
+  outline-offset: -3px;
+}
+
+/* A nota e as regras que a folha escreve por baixo do quadro. */
+.quadro-de-horario > .nota,
+.quadro-de-horario > .regras-do-quadro {
+  margin: 0 0.75rem 0.75rem;
+  color: var(--texto-secundario);
+  font-size: 0.9rem;
+}
+.quadro-de-horario > .regras-do-quadro {
+  padding-left: 1.25rem;
+}
+
+/*
+ * Rolar na horizontal, e só aqui dentro.
+ *
+ * Vinte e seis colunas não cabem em 360 px e não há arranjo de tipografia que
+ * as meta lá. O que NÃO se faz é pôr a PÁGINA a rolar de lado: isso parte a
+ * leitura de tudo o resto. Rola a caixa, com `tabindex` para quem navega por
+ * teclado poder chegar lá — uma região que rola e não recebe foco é conteúdo
+ * inalcançável sem rato.
+ */
+.rolar-na-horizontal {
+  overflow-x: auto;
+  padding: 0 0.75rem 0.75rem;
+}
+.rolar-na-horizontal table {
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.rolar-na-horizontal th,
+.rolar-na-horizontal td {
+  padding: 0.3rem 0.5rem;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--linhas);
+}
+.rolar-na-horizontal th[scope='row'] {
+  text-align: left;
+  font-weight: 400;
+  position: sticky;
+  left: 0;
+  background: var(--fundo);
+}
+.rolar-na-horizontal thead th {
+  font-weight: 700;
+  border-bottom: 2px solid var(--linhas);
+}
+
+/*
+ * Uma lista de nomes, em colunas quando há largura.
+ *
+ * É para inventários — os 75 circuitos do transporte a pedido — em que o que
+ * interessa é procurar o nome da própria aldeia, e não ler de cima a baixo.
+ * Setenta e cinco linhas numa coluna são três ecrãs de telemóvel a rolar.
+ *
+ * `columns` e não grelha: com colunas o texto reflui sozinho conforme a
+ * largura, e no telemóvel fica uma coluna só sem ser preciso dizê-lo.
+ */
+.colunas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  columns: 14rem;
+  column-gap: 1.5rem;
+}
+.colunas > li {
+  break-inside: avoid;
+  padding: 0.2rem 0;
+}
+.lista > li {
+  border-bottom: 1px solid var(--linhas);
+}
+.lista > li:last-child {
+  border-bottom: 0;
+}
+
+/*
+ * A contagem de bicicletas ao lado do nome da estação. Secundária, porque o
+ * nome é que é a estação; o número é o estado dela agora. Aparece e desaparece
+ * conforme a leitura — nunca ocupa espaço reservado, para a lista não saltar.
+ */
+.disponibilidade {
+  color: var(--texto-secundario);
+  font-size: 0.9rem;
+}
+.disponibilidade strong {
+  color: var(--texto);
+}
+.lista a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: var(--alvo);
+  padding: 0.6rem 0.25rem;
+  text-decoration: none;
+  color: var(--texto);
+}
+.lista a:hover,
+.lista a:focus-visible {
+  background: #fff;
+}
+.lista .secundario {
+  color: var(--texto-secundario);
+  font-size: 0.9rem;
+  text-align: right;
+  /* `flex-shrink: 0` obrigava a coluna da direita a manter-se inteira e
+     empurrava a página para fora do ecrã nos concelhos com nomes de paragem
+     compridos. Encolhe, e o que não couber parte a linha. */
+  flex-shrink: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lista a > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* --- avisos e marcas ----------------------------------------------------- */
+
+.faixa {
+  border: 1px solid var(--linhas);
+  border-left: 4px solid var(--marca);
+  border-radius: var(--raio);
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  background: #fff;
+}
+.faixa.alerta {
+  border-left-color: var(--alerta);
+  background: var(--alerta-fundo);
+  color: #6d1912;
+}
+.faixa.a-pedido {
+  border-left-color: var(--a-pedido);
+  background: var(--a-pedido-fundo);
+  color: #5c3700;
+}
+
+.marca-dados {
+  display: inline-block;
+  font-size: 0.8rem;
+  color: var(--texto-secundario);
+  border: 1px solid var(--linhas);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  background: #fff;
+}
+
+.distintivo {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid transparent;
+  min-width: 2.5em;
+  text-align: center;
+}
+
+/* --- tabelas de horário -------------------------------------------------- */
+
+table.horario {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+table.horario caption {
+  text-align: left;
+  font-weight: 700;
+  padding: 0.75rem 0 0.4rem;
+}
+table.horario th,
+table.horario td {
+  text-align: left;
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid var(--linhas);
+  vertical-align: top;
+  /* Um nome de paragem longo não pode empurrar a tabela para fora do ecrã:
+     a 320 px, um nome de paragem com rua, equipamento e concelho lá dentro
+     fazia a página deslizar para o lado. */
+  overflow-wrap: anywhere;
+}
+
+/* Uma ligação dentro de uma tabela continua a ser um alvo tátil, e continua a
+   precisar dos 44 px. Sem isto, o distintivo da linha dava um alvo de 20 px —
+   que é o que o teste apanhou. */
+table.horario a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+}
+table.horario th {
+  color: var(--texto-secundario);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+/* --- formulários --------------------------------------------------------- */
+
+label {
+  display: block;
+  font-weight: 700;
+  margin: 0.75rem 0 0.25rem;
+  font-size: 0.95rem;
+}
+input,
+select,
+button {
+  font: inherit;
+}
+input,
+select {
+  width: 100%;
+  min-height: var(--alvo);
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio);
+  background: #fff;
+  color: var(--texto);
+}
+button {
+  min-height: var(--alvo);
+  padding: 0.6rem 1.1rem;
+  border-radius: var(--raio);
+  border: 1px solid var(--marca);
+  background: var(--marca);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+button:hover {
+  background: var(--marca-hover);
+  border-color: var(--marca-hover);
+}
+button.secundario {
+  background: #fff;
+  color: var(--marca);
+}
+
+/* O «Como chegar» é um BOTÃO e não uma ligação — abre as direções onde se
+   está, não muda de página. Mas tem de parecer o mesmo verbo, por isso a
+   classe é a mesma. */
+button.botao {
+  padding: 0 1rem;
+  font-weight: 700;
+}
+
+/* Uma fila de botões que não se colam nem se sobrepõem em ecrã estreito. */
+.linha-accoes {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0.75rem 0;
+}
+
+/* «Agora» ou «Partir a outra hora». É um `fieldset` com rádios a sério e não
+   dois botões que fingem: quem usa leitor de ecrã ouve «grupo: Quando, 1 de
+   2», e quem usa teclado percorre-os com as setas, como esperaria. */
+.quando-escolha {
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  padding: 0.5rem 0.75rem;
+  margin: 0.75rem 0 0;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.quando-escolha legend {
+  padding: 0 0.35rem;
+  font-size: 0.85rem;
+  color: var(--texto-secundario);
+}
+.quando-escolha label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: var(--alvo);
+  cursor: pointer;
+}
+/* O RÁDIO É QUE É PEQUENO — e não tudo o que estiver dentro do grupo.
+ *
+ * Isto esteve `.quando-escolha input`, sem o tipo, e o mesmo <fieldset> tem lá
+ * dentro os campos de DIA e de HORA. Ficavam com 20 px de lado: no telemóvel
+ * sobrava a setinha do seletor nativo e a data não cabia lá dentro — parecia
+ * um campo vazio e avariado. E 20 px é menos de metade do alvo tátil mínimo
+ * de 44 px (§4.5), num campo que se toca para escrever.
+ */
+.quando-escolha input[type='radio'] {
+  min-height: 0;
+  /* 20 px é o mínimo confortável para um rádio num telemóvel; o alvo de 44 px
+     é a etiqueta inteira, que também o ativa. */
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* A etiqueta aqui não é um alvo — o alvo é o campo por baixo dela. Sem isto
+   herdava o `display: flex` e o `min-height: 44px` dos rádios e empurrava o
+   campo para fora do cartão. */
+.quando-escolha .quando label {
+  display: block;
+  min-height: 0;
+  margin-bottom: 0.2rem;
+  font-size: 0.85rem;
+  color: var(--texto-secundario);
+}
+
+/* A opção que está desenhada no mapa. A cor sozinha não chega (1.4.1): a
+   barra à esquerda é a diferença que se vê sem distinguir cores. */
+.cartao.escolhido {
+  border-left: 4px solid var(--marca);
+  background: #fff;
+}
+
+/* --- as direções: duas cartas, e o mapa entre elas ----------------------- */
+
+/* O CARTÃO DE CIMA. Fica sempre à vista, por cima do mapa, como no Maps — e
+   é o que diz, sem uma palavra, que isto é uma viagem e não uma pesquisa. */
+.cartao-de-cima {
+  position: absolute;
+  z-index: 7;
+  top: 0.6rem;
+  left: 0.6rem;
+  right: 0.6rem;
+  max-width: 30rem;
+  background: #fff;
+  border-radius: 1rem;
+  padding: 0.5rem 0.65rem;
+  box-shadow: 0 2px 12px rgb(16 44 63 / 18%);
+}
+.cartao-de-cima.em-pagina {
+  position: static;
+  max-width: none;
+  box-shadow: none;
+  border: 1px solid var(--linhas);
+  margin-bottom: 1rem;
+}
+
+/* Um ponto na partida, um alfinete na chegada, e um tracejado a ligá-los.
+   São três formas que substituem dois rótulos — e os rótulos continuam lá,
+   para quem usa leitor de ecrã (`.sem-rotulo`). */
+.campos-viagem {
+  display: grid;
+  grid-template-columns: 1.5rem 1fr auto;
+  grid-template-areas:
+    'pa    de    troca'
+    'traco linha troca'
+    'ch    para  troca';
+  align-items: center;
+  column-gap: 0.5rem;
+}
+.marca-campo {
+  display: inline-flex;
+  justify-content: center;
+}
+.marca-campo.partida {
+  grid-area: pa;
+  color: var(--marca);
+}
+.marca-campo.chegada {
+  grid-area: ch;
+  color: var(--alerta);
+}
+.campos-viagem .escolher:nth-of-type(1) {
+  grid-area: de;
+}
+.campos-viagem .escolher:nth-of-type(2) {
+  grid-area: para;
+}
+.campos-viagem .escolher {
+  min-width: 0;
+}
+.campos-viagem .trocar {
+  grid-area: troca;
+}
+/* O tracejado que liga o ponto ao alfinete. É decorativo — `aria-hidden` no
+   HTML —, e é o que faz as duas linhas lerem-se como um percurso e não como
+   dois campos que por acaso estão um debaixo do outro. */
+.tracejado {
+  grid-area: traco;
+  justify-self: center;
+  width: 0;
+  height: 0.9rem;
+  border-left: 2px dotted var(--texto-secundario);
+}
+.divisor-campos {
+  grid-area: linha;
+  height: 1px;
+  background: var(--linhas);
+}
+
+/* Os campos do cartão de cima não têm rótulo À VISTA — têm ícone. O rótulo
+   continua na árvore de acessibilidade, que é onde faz falta.
+
+   A borda FICA, e é uma diferença deliberada em relação ao Maps: lá os campos
+   não têm contorno nenhum, e um campo sem contorno falha o critério 1.4.11
+   (contraste de elementos de interface, 3:1). A `--borda-campo` dá 3,6:1
+   sobre branco. Mais discreto do que isto passava a ilegal. */
+.escolher.sem-rotulo > label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.escolher.sem-rotulo input {
+  margin: 0;
+  border-radius: 0.6rem;
+}
+.escolher.sem-rotulo .sugestoes {
+  margin-top: 0.25rem;
+}
+
+button.trocar {
+  min-width: var(--alvo);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: var(--marca);
+  border: 1px solid var(--linhas);
+  border-radius: 999px;
+}
+button.trocar:hover {
+  background: var(--fundo);
+  border-color: var(--marca);
+  color: var(--marca);
+}
+
+.aviso-localizacao {
+  margin: 0.4rem 0 0;
+}
+
+/* --- A FOLHA DE BAIXO ---------------------------------------------------- */
+
+.folha {
+  position: absolute;
+  z-index: 6;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* PARA DE CRESCER A MEIO ECRÃ, e é a medida que faz isto ser um mapa.
+     A 100 % menos o cartão de cima, a folha tapava o mapa todo — e um mapa
+     tapado é uma lista com um cabeçalho caro. A metade vêem-se duas opções e
+     o percurso ao mesmo tempo, que é a comparação que interessa; o resto
+     desliza dentro dela. */
+  max-height: 56%;
+  overflow-y: auto;
+  /* O deslize não sai daqui: sem isto, chegar ao fim da folha continuava a
+     deslizar a página — e a página, por baixo do mapa, tem rodapé. */
+  overscroll-behavior: contain;
+  background: #fff;
+  border-radius: 1rem 1rem 0 0;
+  box-shadow: 0 -2px 14px rgb(16 44 63 / 16%);
+  padding: 0 0 1rem;
+}
+.folha.em-pagina {
+  position: static;
+  max-height: none;
+  overflow: visible;
+  box-shadow: none;
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+}
+/* Descida: ficam à vista a pega, o título, a fila dos modos e a opção
+   escolhida — que é o resumo todo, com o mapa a ocupar o resto. */
+.folha.encolhida {
+  max-height: 12rem;
+}
+
+/* A PEGA. No Maps arrasta-se; aqui também é um botão, porque um arrasto não
+   funciona com teclado, com comando de voz nem com leitor de ecrã. A área
+   tátil é a largura toda e 44 px de altura; o que se vê é a barrinha. */
+button.pega {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 1rem 1rem 0 0;
+  background: transparent;
+  cursor: grab;
+}
+button.pega::before {
+  content: '';
+  display: block;
+  width: 2.75rem;
+  height: 0.3rem;
+  margin: 0.65rem auto 0;
+  border-radius: 999px;
+  background: var(--linhas);
+}
+button.pega:hover::before,
+button.pega:focus-visible::before {
+  background: var(--texto-secundario);
+}
+
+.folha-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.25rem 1rem 0.5rem;
+}
+.folha.em-pagina .folha-titulo {
+  padding-top: 1rem;
+}
+.folha-titulo h2 {
+  margin: 0;
+  /* Um pouco acima do texto corrido, e não um título de página.
+     A 1,3 rem esta linha comia 60 px do alto da folha e repetia o que o ícone
+     da fila de modos já diz. Quem abre as direções sabe que está nas
+     direções. */
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+.redondos {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+button.redondo {
+  width: var(--alvo);
+  min-width: var(--alvo);
+  height: var(--alvo);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--fundo);
+  border: 1px solid var(--linhas);
+  color: var(--texto);
+}
+button.redondo:hover {
+  background: var(--linhas);
+  border-color: var(--borda-campo);
+  color: var(--texto);
+}
+button.redondo.activo {
+  background: var(--marca);
+  border-color: var(--marca);
+  color: #fff;
+}
+
+/* A FILA DOS MODOS, com o tempo de cada um — a primeira resposta à primeira
+   pergunta: vale a pena esperar pelo autocarro? */
+.modos {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0 0.5rem;
+  border-bottom: 1px solid var(--linhas);
+  overflow-x: auto;
+}
+button.modo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  min-height: var(--alvo);
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  color: var(--texto-secundario);
+  font-weight: 400;
+  white-space: nowrap;
+}
+button.modo:hover {
+  background: var(--fundo);
+  color: var(--texto);
+}
+button.modo.activo {
+  color: var(--marca);
+  border-bottom-color: var(--marca);
+  font-weight: 700;
+}
+
+/* As etiquetas, como as do Maps: recarregar, e a hora de partida. */
+/* A FILA DOS MODOS E AS ETIQUETAS NA MESMA LINHA.
+ *
+ * Estavam em duas, e entre o alto da folha e o primeiro resultado iam 250 px
+ * — num ecrã de telemóvel, um quarto do que se vê gasto em cabeçalho. Juntas
+ * poupam 80 px, e não se perde nada: uma é «como ir», a outra é «quando», e
+ * as duas são a mesma pergunta. */
+.linha-de-controlos {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--linhas);
+}
+.linha-de-controlos .modos {
+  border-bottom: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.etiquetas {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: nowrap;
+  align-items: center;
+  margin: 0;
+  padding: 0 0.75rem 0 0;
+  flex-shrink: 0;
+}
+.linha-de-controlos .etiqueta {
+  font-size: 0.9rem;
+  padding: 0.3rem 0.7rem;
+}
+button.etiqueta {
+  background: #fff;
+  color: var(--texto);
+  border: 1px solid var(--linhas);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  font-weight: 400;
+}
+button.etiqueta:hover {
+  background: var(--fundo);
+  border-color: var(--borda-campo);
+  color: var(--texto);
+}
+button.etiqueta[aria-expanded='true'] {
+  border-color: var(--marca);
+  color: var(--marca);
+  font-weight: 700;
+}
+button.etiqueta.so-icone {
+  padding: 0;
+  min-width: var(--alvo);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--marca);
+}
+
+.folha .quando-escolha,
+.folha .faixa,
+.folha .marca-dados,
+.folha > div > p {
+  margin-left: 1rem;
+  margin-right: 1rem;
+}
+
+/* AS OPÇÕES: linhas separadas por um traço, não cartões com sombra. É a
+   diferença entre uma lista que se percorre e cinco caixas que se leem. */
+ul.opcoes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+ul.opcoes > li + li {
+  border-top: 1px solid var(--linhas);
+}
+.opcao.escolhida {
+  background: #e8f1f4;
+  box-shadow: inset 4px 0 0 var(--marca);
+}
+
+/* O resumo é um BOTÃO que ocupa a linha toda: o alvo é a linha, como num
+   mapa, e não uma ligaçãozinha num canto. */
+button.resumo-opcao {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'tira  duracao'
+    'horas duracao'
+    'nota  duracao';
+  align-items: center;
+  gap: 0.15rem 0.75rem;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  text-align: left;
+  background: transparent;
+  color: var(--texto);
+  border: 0;
+  border-radius: 0;
+  font-weight: 400;
+}
+button.resumo-opcao:hover {
+  background: var(--fundo);
+  color: var(--texto);
+}
+.opcao.escolhida button.resumo-opcao:hover {
+  background: #dfeaef;
+}
+.resumo-opcao .tira {
+  grid-area: tira;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.resumo-opcao .passo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+.resumo-opcao .entre {
+  color: var(--linhas);
+}
+.resumo-opcao .passo-min {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.resumo-opcao .duracao {
+  grid-area: duracao;
+  font-size: 1.3rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.resumo-opcao .horas {
+  grid-area: horas;
+  font-size: 0.95rem;
+}
+.resumo-opcao .nota {
+  grid-area: nota;
+  color: var(--texto-secundario);
+  font-size: 0.85rem;
+}
+/* «amanhã, 07:30». Sem isto a hora sozinha lê-se como sendo já — e era por
+   isso que o planeador não podia sequer olhar para o dia seguinte. Herda a
+   cor do texto e não a secundária: é a parte da linha que muda o sentido
+   dela, e uma ressalva importante não se escreve mais apagada do que o
+   resto. */
+.resumo-opcao .horas .dia {
+  color: var(--texto);
+}
+/* A mais rápida, quando não é a primeira. Distingue-se pelo peso e não por
+   uma cor nova: a folha já tem cinco cores de modo, e uma sexta a dizer
+   outra coisa era mais uma convenção para quem lê decorar. */
+.resumo-opcao .nota .rapida {
+  color: var(--texto);
+}
+.opcao .percurso {
+  margin: 0;
+  padding: 0 1rem 0.75rem;
+}
+
+/* A BOLHA COM O TEMPO, pousada a meio do percurso. «53 min», ali, sem ser
+   preciso olhar para a folha — e é um elemento de HTML, não um desenho na
+   tela: cresce com o tipo de letra do sistema. */
+.bolha-tempo {
+  background: var(--marca);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  box-shadow: 0 1px 6px rgb(16 44 63 / 35%);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* OS CONTROLOS DO MAPA NÃO SÃO BOTÕES DESTE SÍTIO.
+   O `button` global deste ficheiro pinta tudo de azul-marca com texto branco
+   — e isso apanhava também os botões do MapLibre, que passavam a três bolas
+   azuis sem ícone visível no canto do mapa. Aqui repõe-se o que eles são:
+   branco, com o ícone escuro que a biblioteca desenha. */
+.maplibregl-ctrl button.maplibregl-ctrl-zoom-in,
+.maplibregl-ctrl button.maplibregl-ctrl-zoom-out,
+.maplibregl-ctrl button.maplibregl-ctrl-geolocate,
+.maplibregl-ctrl button.maplibregl-ctrl-compass,
+.maplibregl-ctrl button.maplibregl-ctrl-attrib-button,
+.maplibregl-ctrl button.maplibregl-ctrl-fullscreen {
+  background-color: #fff;
+  border: 0;
+  border-radius: 0;
+  color: var(--texto);
+  min-height: 0;
+  padding: 0;
+  font-weight: 400;
+}
+.maplibregl-ctrl button.maplibregl-ctrl-zoom-in:hover,
+.maplibregl-ctrl button.maplibregl-ctrl-zoom-out:hover,
+.maplibregl-ctrl button.maplibregl-ctrl-geolocate:hover,
+.maplibregl-ctrl button.maplibregl-ctrl-compass:hover {
+  background-color: var(--fundo);
+}
+
+/* O botão da localização, em baixo à direita e grande — onde o polegar
+   chega, e onde toda a gente já o foi procurar mil vezes noutra aplicação. */
+.app-mapa .maplibregl-ctrl-bottom-right {
+  bottom: 0.6rem;
+  right: 0.6rem;
+  z-index: 5;
+}
+.app-mapa .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group {
+  border-radius: 999px;
+  box-shadow: 0 2px 10px rgb(16 44 63 / 28%);
+  overflow: hidden;
+}
+.app-mapa .maplibregl-ctrl button.maplibregl-ctrl-geolocate {
+  width: 3rem;
+  height: 3rem;
+}
+
+.so-para-leitores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Quem pediu menos movimento ao sistema pediu-o por precisar. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --- o planeador --------------------------------------------------------- */
+
+.escolher {
+  position: relative;
+}
+
+.sugestoes {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio);
+  background: #fff;
+  max-height: 18rem;
+  overflow-y: auto;
+}
+.sugestoes li {
+  display: flex;
+  align-items: center;
+  min-height: var(--alvo);
+  padding: 0.5rem 0.7rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--linhas);
+}
+.sugestoes li:last-child {
+  border-bottom: 0;
+}
+/* A opção que as setas percorrem. Não é `:hover`: quem navega por teclado
+   nunca passa o rato, e precisa de ver onde está tanto como quem passa. */
+.sugestoes li.activo,
+.sugestoes li:hover {
+  background: var(--fundo);
+  outline: 2px solid var(--marca);
+  outline-offset: -2px;
+}
+
+.quando {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  /* Dentro do <fieldset> dos rádios, sem isto os campos colavam-se à linha
+     do «Agora / Noutra altura». */
+  width: 100%;
+  margin-top: 0.35rem;
+}
+.quando > div {
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+
+button[disabled] {
+  /* Um botão desligado tem de continuar legível: o cinzento habitual cai
+     abaixo de 4,5:1 e deixa de se ler para quem já lê com dificuldade. */
+  background: var(--texto-secundario);
+  border-color: var(--texto-secundario);
+  cursor: not-allowed;
+}
+
+/* A linha do tempo do §8: uma perna por linha, com a cor do modo à esquerda. */
+/* A LINHA DO TEMPO DE UMA VIAGEM.
+ *
+ * Três colunas: a hora, o fio com os nós, e o que lá está. As paragens são
+ * linhas de texto normal; entre duas paragens há uma linha mais baixa que diz
+ * o que se apanha. É a gramática do Maps, e lê-se de relance.
+ *
+ * A largura da hora é fixa: sem isso, «07:05» e «7:05» desalinhavam o fio, e
+ * um fio torto num mapa parece defeito. */
+ol.percurso {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+}
+ol.percurso li {
+  display: grid;
+  grid-template-columns: 3.1rem 1.1rem 1fr;
+  align-items: center;
+  column-gap: 0.5rem;
+}
+ol.percurso .hora {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+  color: var(--texto-secundario);
+  text-align: right;
+}
+ol.percurso li.paragem {
+  min-height: 1.6rem;
+}
+ol.percurso li.paragem .onde {
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  padding: 0.1rem 0;
+}
+
+/* O NÓ E O FIO. O nó é um anel; o primeiro e o último são cheios, porque são
+   o princípio e o fim e não uma passagem. */
+ol.percurso .no {
+  justify-self: center;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  border: 2.5px solid var(--marca);
+  background: #fff;
+}
+ol.percurso .no.primeiro,
+ol.percurso .no.ultimo {
+  background: var(--marca);
+}
+ol.percurso .fio {
+  justify-self: center;
+  width: 4px;
+  min-height: 2.1rem;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--marca);
+}
+ol.percurso li.troco {
+  align-items: stretch;
+}
+ol.percurso li.troco .oque {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  padding: 0.3rem 0;
+  font-size: 0.95rem;
+}
+ol.percurso li.troco .secundario {
+  font-size: 0.9rem;
+}
+
+/* A cor do fio é a do modo — a mesma do percurso desenhado no mapa, para que
+   a linha do tempo e o mapa se leiam um ao outro. A pé é tracejado, como no
+   mapa. */
+ol.percurso li.modo-comboio .fio {
+  background: var(--comboio);
+}
+ol.percurso li.modo-a-pe .fio,
+ol.percurso li.modo-bicicleta .fio {
+  background: repeating-linear-gradient(
+    180deg,
+    var(--texto-secundario) 0 5px,
+    transparent 5px 10px
+  );
+  width: 3px;
+}
+
+/* --- a página de produto, e a marca de demonstração ---------------------- */
+
+/* A faixa que diz que a rede não existe. Usa a cor de alerta porque é o que
+   ela é: um aviso de que o que está por baixo não serve para apanhar um
+   autocarro. Não usa a cor de modo nenhum, de propósito — não é um modo. */
+.marca-demonstracao {
+  border: 1px solid var(--linhas);
+  border-left: 4px solid var(--alerta);
+  border-radius: var(--raio);
+  background: var(--alerta-fundo);
+  color: #6d1912;
+  padding: 0.75rem 1rem;
+  margin: 0 0 1.25rem;
+}
+
+/* Uma lista de cartões sem marcadores. É `ul` e não `div` porque são mesmo
+   uma lista: quem usa leitor de ecrã ouve quantas regiões há antes de as
+   percorrer. */
+ul.cartoes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+ul.cartoes .cartao h3 {
+  margin: 0 0 0.35rem;
+}
+
+/* A demonstração distingue-se por uma linha tracejada e não por uma cor de
+   fundo: a cor sozinha não chega (WCAG 1.4.1), e o cartão tem de continuar a
+   parecer-se com o outro — é esse o objetivo da demonstração. A frase lá
+   dentro é que faz o trabalho. */
+.cartao.cartao-demonstracao {
+  border-style: dashed;
+  border-left: 4px dashed var(--texto-secundario);
+}
+
+.numeros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.5rem;
+  margin: 0.75rem 0 0;
+}
+.numeros > div {
+  /* Sem `flex-shrink: 0`: foi o que pôs a página a deslizar para o lado a
+     320 px da última vez. */
+  min-width: 0;
+}
+.numeros dt {
+  font-size: 0.8rem;
+  color: var(--texto-secundario);
+  margin: 0;
+}
+.numeros dd {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+
+/* --- a aplicação do mapa ------------------------------------------------- */
+
+/* O mapa OCUPA O ECRÃ. É a diferença entre um sítio com um mapa lá dentro e
+   uma aplicação de mapa — e é a diferença que se nota antes de se ler uma
+   palavra. O `100dvh` e não `100vh`: num telemóvel a barra do navegador
+   aparece e desaparece, e com `vh` o mapa fica cortado por baixo dela. */
+/* A PÁGINA DO MAPA NÃO TEM MARGENS. O `main` do sítio tem 1 rem de cada lado
+   e 4 rem em baixo — que é o que uma página de texto quer e o contrário do
+   que um mapa quer. O `:has()` é suportado por todos os navegadores atuais; e
+   onde não for, o mapa fica com uma moldura de 16 px, que é feio e não é
+   avaria. */
+main.pagina:has(.app-mapa) {
+  max-width: none;
+  padding: 0;
+}
+
+/* A ALTURA É MEDIDA, e não subtraída de cabeça.
+   Era `100dvh - 3.5rem`, e o cabeçalho tem 129 px num telemóvel — passa a
+   duas linhas, que é o que se vê e não o que se calcula. O mapa ficava 73 px
+   mais comprido do que o ecrã, a página deslizava sozinha e a folha de baixo
+   acabava por baixo da dobra. O `--alto-do-mapa` é posto pelo `AppDoMapa`, que
+   mede onde o mapa começa; o `calc` fica como rede para o primeiro instante. */
+.app-mapa {
+  position: relative;
+  height: var(--alto-do-mapa, calc(100dvh - 8rem));
+  min-height: 24rem;
+}
+
+.app-mapa .mapa-caixa,
+.app-mapa .mapa {
+  position: absolute;
+  inset: 0;
+}
+
+.mapa-caixa {
+  /* O MESMO cinzento-verde do fundo do estilo do mapa, e não o `--fundo` do
+     sítio: se a tela demorar a pintar, o que se vê por baixo é a cor do
+     mapa e não uma faixa mais clara a fingir que falta alguma coisa. */
+  background: #e6ebe3;
+}
+
+.mapa-aviso {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  padding: 0.75rem 1rem;
+  margin: 0;
+  max-width: 20rem;
+  text-align: center;
+}
+.mapa-aviso.alerta {
+  border-left: 4px solid var(--alerta);
+  background: var(--alerta-fundo);
+  color: #6d1912;
+}
+
+/* A procura flutua por cima do mapa, como no Maps. Fica ACIMA dos controlos
+   do MapLibre (z-index 3 lá dentro) mas abaixo do cartão. */
+.app-procura {
+  position: absolute;
+  z-index: 5;
+  top: 0.75rem;
+  left: 0.75rem;
+  right: 0.75rem;
+  max-width: 26rem;
+  background: #fff;
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  padding: 0.5rem 0.75rem;
+  box-shadow: 0 1px 4px rgb(16 44 63 / 12%);
+}
+
+/* A FILA DE CAMADAS, logo abaixo da procura.
+   Desliza na horizontal em vez de quebrar linha: cinco modos não cabem na
+   largura de um telemóvel, e uma segunda fila roubava mapa a quem nem estava
+   a filtrar nada. */
+.app-camadas {
+  position: absolute;
+  /* ABAIXO DA PROCURA (5), e acima dos controlos do MapLibre (3).
+     A 5 ficavam empatadas com a caixa de procura e tapavam a lista de
+     sugestões, que cai exatamente aqui: escrever o nome de uma paragem
+     mostrava os resultados e o dedo acertava numa pílula. Foram cinco testes
+     a falhar, e era uma avaria a sério — a procura deixava de se poder usar. */
+  z-index: 4;
+  top: 4.25rem;
+  left: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  /* Deixa o dedo arrastar o mapa por baixo, entre as pílulas. */
+  pointer-events: none;
+  scrollbar-width: none;
+}
+
+.app-camadas::-webkit-scrollbar {
+  display: none;
+}
+
+/* O SINAL DE QUE A FILA CONTINUA, e não uma decoração (§8).
+   A barra de deslize tapava mapa e num telemóvel nem aparece; o que resta é
+   esbater a ponta que tem mais. As classes vêm medidas do componente, por
+   isso o esbatido aparece só do lado onde há mesmo mais para ver e desaparece
+   ao chegar ao fim. Sem `ha-antes`/`ha-depois` a máscara não existe, e uma
+   fila que cabe inteira fica nítida de ponta a ponta. */
+.app-camadas.ha-depois {
+  mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+}
+
+.app-camadas.ha-antes {
+  mask-image: linear-gradient(to left, #000 calc(100% - 2rem), transparent);
+}
+
+.app-camadas.ha-antes.ha-depois {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 2rem,
+    #000 calc(100% - 2rem),
+    transparent
+  );
+}
+
+.pilula {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+  /* 44 px de alvo tátil (§4.5), mesmo sendo uma pílula baixa. */
+  min-height: 44px;
+  padding: 0.35rem 0.9rem;
+  background: #fff;
+  color: var(--texto);
+  border: 1px solid var(--linhas);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgb(16 44 63 / 12%);
+  cursor: pointer;
+}
+
+/* DESLIGADA VÊ-SE QUE ESTÁ DESLIGADA SEM SER PELA COR.
+   O estado não pode depender só de um tom mais claro — quem não distingue as
+   cores fica sem saber o que está ligado. A pílula desligada perde o ponto
+   colorido para um contorno vazio e o texto vai a secundário. */
+.pilula[aria-pressed='false'] {
+  background: var(--fundo);
+  color: var(--texto-secundario);
+}
+
+.pilula[aria-pressed='false'] .pilula-cor {
+  background: transparent !important;
+  border: 2px solid var(--borda-campo);
+}
+
+.pilula-cor {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+}
+
+/* O cartão que sobe de baixo. Num telemóvel ocupa metade do ecrã; num ecrã
+   largo encosta à esquerda, que é onde o Maps o põe. */
+.cartao-de-baixo {
+  position: absolute;
+  z-index: 6;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 60%;
+  overflow-y: auto;
+  /* O DESLIZE NÃO SAI DAQUI. Sem isto, chegar ao fim do cartão continua a
+     deslizar a PÁGINA — e a página, por baixo do mapa, tem rodapé. Quem
+     estava a ler as opções acabava no «Dados e licenças» sem perceber como. */
+  overscroll-behavior: contain;
+  background: #fff;
+  border-top: 1px solid var(--linhas);
+  border-radius: var(--raio) var(--raio) 0 0;
+  padding: 1rem;
+  box-shadow: 0 -2px 8px rgb(16 44 63 / 12%);
+}
+
+@media (min-width: 40rem) {
+  .cartao-de-baixo {
+    right: auto;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    width: 26rem;
+    max-height: calc(100% - 6rem);
+    border: 1px solid var(--linhas);
+    border-radius: var(--raio);
+  }
+}
+
+/* A PEGA: diz que isto é uma folha, e que há mais por baixo. */
+.pega {
+  display: block;
+  width: 2.25rem;
+  height: 4px;
+  margin: -0.35rem auto 0.6rem;
+  border-radius: 2px;
+  background: var(--linhas);
+}
+@media (min-width: 40rem) {
+  /* Numa janela larga isto não é uma folha, é um cartão ao lado do mapa. */
+  .pega {
+    display: none;
+  }
+}
+
+.cartao-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.cartao-cabecalho h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  line-height: 1.25;
+  /* O nome fica com a largura toda: era ele que perdia espaço para o botão. */
+  flex: 1;
+  min-width: 0;
+}
+
+/* O FECHO É DISCRETO E O ALVO CONTINUA A TER 44 px.
+   Era um botão escuro do tamanho de um terço da largura: a coisa com mais
+   peso visual na folha era a que servia para sair dela. */
+.cartao-cabecalho .fechar {
+  flex: none;
+  width: var(--alvo);
+  height: var(--alvo);
+  min-height: var(--alvo);
+  margin: -0.4rem -0.4rem 0 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.5rem;
+  line-height: 1;
+  background: none;
+  border: none;
+  color: var(--texto-secundario);
+  border-radius: 50%;
+}
+.cartao-cabecalho .fechar:hover {
+  background: var(--fundo);
+  color: var(--texto);
+}
+
+/* --- as próximas partidas ------------------------------------------------
+
+   Três colunas: o distintivo da linha, para onde vai, e quando. A terceira
+   alinha à direita porque é a que se compara de linha para linha — os olhos
+   descem por uma coluna de números, não por um parágrafo. */
+.partidas {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+}
+.partidas li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--linhas);
+}
+.partidas li:last-child {
+  border-bottom: none;
+}
+
+/* O NÚMERO DA LINHA COM A COR DELA, do `route_color` do feed. Sem cor
+   conhecida fica neutro — e um distintivo neutro continua a dizer o número. */
+.linha-distintivo {
+  flex: none;
+  min-width: 2.9rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 5px;
+  background: var(--linhas);
+  color: var(--texto);
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.partidas .destino {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.3;
+}
+/* O que não é certo continua a dizer-se, e em itálico para não competir. */
+.partidas .estimada {
+  display: block;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--texto-secundario);
+}
+
+/* `quando-passa` e não `quando`: já existe um `.quando` neste ficheiro, para
+   os campos de data e hora das direções, com `display: flex` e `width: 100%`.
+   Ganhava a este por ser declarado com a mesma especificidade e mais acima, e
+   a espera saía por cima do destino — o mesmo nome a significar duas coisas. */
+.partidas .quando-passa {
+  flex: none;
+  text-align: right;
+  line-height: 1.25;
+}
+.partidas .quando-passa strong {
+  display: block;
+  font-size: 1.05rem;
+  /* Tabular para as colunas de minutos assentarem umas nas outras. */
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.partidas .quando-passa .relogio {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--texto-secundario);
+  font-variant-numeric: tabular-nums;
+}
+
+.cartao-accoes {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+/* O botão «Como chegar» — o verbo do Maps, e por isso o único destacado. */
+a.botao {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+  padding: 0 1rem;
+  background: var(--marca);
+  color: #fff;
+  border-radius: var(--raio);
+  text-decoration: none;
+  font-weight: 700;
+}
+a.botao:hover,
+a.botao:focus-visible {
+  background: var(--marca-hover);
+}
+
+/* A procura sobre o mapa é uma BARRA, não um formulário.
+   No Maps é uma linha fina que não rouba ecrã ao mapa; aqui estava a ocupar um
+   quarto do telemóvel com um rótulo e uma descrição. O rótulo continua lá para
+   quem usa leitor de ecrã — some-se à vista, não à árvore de acessibilidade. */
+.app-procura label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.app-procura {
+  padding: 0.4rem 0.5rem;
+}
+.app-procura input {
+  margin: 0;
+}
+
+/* --- O ECRÃ DE ABERTURA: o mapa de bordo a bordo ------------------------- */
+
+/* A FAIXA DO SÍTIO SAI DA FRENTE, e a navegação muda-se para o menu.
+ *
+ * Eram 120 px de um telemóvel a repetir «Paragem.pt · <a região> · Mapa» a
+ * quem já está no mapa — e o mapa é o produto. Com ela fora, e com o rodapé
+ * fora, o mapa ocupa o ecrã inteiro como qualquer aplicação de mapas.
+ *
+ * Isto NÃO é esconder navegação: um sítio de uma autoridade pública não pode
+ * ficar sem ela porque ficou mais bonito. Está toda no `MenuDoMapa`, a um
+ * toque, e em texto no HTML de todas as outras páginas — que são as que os
+ * motores de busca leem e as que um leitor de ecrã percorre. */
+body.ecra-de-mapa .cabecalho,
+body.ecra-de-mapa .rodape {
+  display: none;
+}
+body.ecra-de-mapa .pagina {
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+body.ecra-de-mapa .app-mapa {
+  height: 100dvh;
+}
+
+/* A barra de procura a flutuar, com o menu à esquerda — a gramática do Maps.
+   O botão e a caixa partilham a mesma pastilha branca com sombra. */
+.app-procura {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0.35rem 0.3rem 0.15rem;
+  border-radius: 999px;
+  /* Afastada do topo: encostada, a sombra e o canto arredondado ficavam
+     cortados pela barra do navegador, e a pastilha parecia uma faixa. E há
+     telemóveis com entalhe. */
+  top: max(0.75rem, env(safe-area-inset-top, 0));
+}
+.app-procura .escolher {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+button.botao-menu {
+  flex-shrink: 0;
+  width: var(--alvo);
+  min-width: var(--alvo);
+  height: var(--alvo);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--texto);
+}
+button.botao-menu:hover,
+button.botao-menu:focus-visible {
+  background: var(--fundo);
+}
+
+/* --- A folha de abertura: por onde se pode ir --------------------------- */
+
+.folha-de-abertura {
+  position: absolute;
+  z-index: 6;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  border-radius: 1rem 1rem 0 0;
+  box-shadow: 0 -2px 14px rgb(16 44 63 / 16%);
+  padding: 0.9rem 0.5rem 1rem;
+}
+.folha-de-abertura h2 {
+  margin: 0 0 0.75rem;
+  padding: 0 0.6rem;
+  font-size: 1.05rem;
+}
+.folha-de-abertura .abertura-nota {
+  margin: 0.75rem 0.6rem 0;
+  font-size: 0.9rem;
+}
+
+/* OS MODOS EM CÍRCULOS, e numa fila que desliza.
+ *
+ * Seis modos não cabem lado a lado num telemóvel, e pô-los em duas filas
+ * empurrava o mapa para cima. Deslizam na horizontal — e com `scroll-snap`
+ * param alinhados, para não ficar meio círculo a espreitar. */
+/* UMA GRELHA, E NÃO UM CARROSSEL. O §8 pede a «grelha dos modos» e isto era
+   uma fila que deslizava: num telemóvel cabiam cinco dos sete, e «Expresso» e
+   «Táxi» ficavam fora do ecrã sem um sinal a dizê-lo. Quem abrisse a
+   aplicação concluía que a região não tinha táxis.
+
+   Não é o mesmo caso da fila das camadas, que flutua sobre o mapa e não pode
+   crescer: isto está dentro de uma folha que já desliza ao alto, e duas
+   linhas de círculos custam 90 px a quem ganha ver os sete modos.
+
+   `auto-fit` com um mínimo em `rem` decide as colunas pela largura real: são
+   quatro num telemóvel, sete num ecrã largo, e nunca uma coluna tão estreita
+   que corte a palavra. */
+.folha-de-abertura ul.circulos {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.6rem 0.2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(4.6rem, 1fr));
+  gap: 0.35rem 0.25rem;
+}
+a.circulo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: 4.6rem;
+  padding: 0.25rem 0.1rem;
+  text-decoration: none;
+  color: var(--texto);
+  border-radius: var(--raio);
+}
+a.circulo .bolha {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 52 px: acima dos 44 px do §4.5, e o alvo é o bloco todo — a bolha mais a
+     palavra por baixo. */
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 999px;
+  background: var(--marca);
+  color: #fff;
+}
+a.circulo .nome {
+  font-size: 0.78rem;
+  line-height: 1.15;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+a.circulo:hover .bolha,
+a.circulo:focus-visible .bolha {
+  background: var(--marca-escura, #063f54);
+}
+/* Cada modo com a sua cor, a mesma do resto do sítio. */
+a.circulo.modo-a-pedido .bolha {
+  background: var(--a-pedido);
+}
+a.circulo.modo-bicicleta .bolha {
+  background: var(--bicicleta);
+}
+a.circulo.modo-comboio .bolha {
+  background: var(--comboio);
+}
+a.circulo.modo-urbano-municipal .bolha {
+  background: var(--urbano-municipal);
+}
+/* Expressos e táxis são serviços privados: cartão neutro, sem cor de modo
+   (§8). Aqui, a bolha vazada com a borda da casa. */
+a.circulo.modo-expresso .bolha,
+a.circulo.modo-taxi .bolha {
+  background: #fff;
+  color: var(--texto);
+  border: 1px solid var(--borda-campo);
+}
+
+/* --- O menu do mapa ------------------------------------------------------ */
+
+dialog.menu-do-mapa {
+  margin: 0 auto 0 0;
+  height: 100dvh;
+  max-height: none;
+  width: min(20rem, 88vw);
+  max-width: none;
+  border: 0;
+  border-radius: 0 1rem 1rem 0;
+  padding: 0.75rem 0.5rem;
+  background: #fff;
+  color: var(--texto);
+}
+dialog.menu-do-mapa::backdrop {
+  background: rgb(16 44 63 / 45%);
+}
+.menu-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0 0.25rem 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--linhas);
+}
+.menu-marca {
+  font-weight: 700;
+  color: var(--marca);
+}
+/* A LISTA DO MENU NÃO É A LISTA DA REDE.
+ *
+ * A `.lista` do sítio põe o nome à esquerda e o número à direita, com
+ * `space-between` — serve para «Paragens · 4 634». Aqui o que está à direita
+ * é uma FRASE, e encostada à direita partia-se em duas linhas alinhadas ao
+ * contrário de tudo o resto. Aqui empilha-se: nome em cima, o que é por
+ * baixo. */
+dialog.menu-do-mapa .lista a {
+  display: block;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--raio);
+}
+dialog.menu-do-mapa .lista .secundario {
+  text-align: left;
+}
+.menu-nota {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 400;
+  margin-top: 0.1rem;
+}
+
+/* --- preços de expresso, consultados ao operador ---------------------------
+
+   O cartão é NEUTRO de propósito (§8): um expresso é serviço privado, e não
+   leva cor de modo. O que o separa do resto é a borda, não a tinta.
+
+   As duas colunas passam a uma em telemóvel — e a tabela rola na horizontal
+   em vez de espremer as horas, que é a mesma decisão que a grelha de
+   horários já tinha tomado. */
+.precos-de-expresso {
+  border: 1px solid var(--linhas);
+  border-radius: 6px;
+  padding: 0.9rem;
+  margin: 0.75rem 0 1.25rem;
+}
+
+.precos-de-expresso > label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.linha-de-campos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.linha-de-campos select {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+/* Alvos táteis de 44 px, que é o mínimo do §4.5. */
+.linha-de-campos select,
+.linha-de-campos button {
+  min-height: 44px;
+}
+
+.precos-de-expresso table {
+  margin-top: 0.9rem;
+  width: 100%;
+}
+
+.precos-de-expresso p {
+  margin-top: 0.75rem;
+}
+
+/* --- o painel ----------------------------------------------------------- */
+
+/*
+ * O painel (`/admin`) veste-se com o mesmo sistema do sítio — as mesmas
+ * cores, a mesma letra, os mesmos alvos de 44 px — e é um degrau mais largo,
+ * porque as tabelas do registo são mais largas do que qualquer página
+ * pública. Sem sombra e sem gradiente, como manda o §8.
+ */
+.painel,
+.painel-cabecalho {
+  --medida: 52rem;
+}
+.painel-cabecalho .interior form.sair {
+  margin-left: auto;
+}
+.painel-cabecalho .interior form.sair button {
+  padding: 0 0.9rem;
+}
+.painel-cabecalho nav a[aria-current='page'] {
+  font-weight: 700;
+  text-decoration: underline;
+}
+.painel h1 {
+  margin-top: 1.5rem;
+}
+.painel .entrada {
+  color: var(--texto-secundario);
+  margin: 0 0 1rem;
+}
+.painel .secundario-texto {
+  color: var(--texto-secundario);
+  font-size: 0.92rem;
+}
+.painel .alerta-texto {
+  color: var(--alerta);
+}
+.painel .cartao {
+  margin: 1rem 0;
+}
+.painel .cartao h2 {
+  margin-top: 0;
+}
+.painel .cartao h3 {
+  margin-top: 1.25rem;
+}
+.painel .cartoes > li.cartao {
+  margin: 0 0 1rem;
+  border-bottom: 1px solid var(--linhas);
+}
+.painel dl.pares {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0.75rem 0;
+}
+.painel dl.pares dt {
+  color: var(--texto-secundario);
+}
+.painel dl.pares dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.painel .lista-simples {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.painel .interruptores {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--linhas);
+}
+.painel .interruptores > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--linhas);
+}
+.painel .interruptores p {
+  margin: 0;
+}
+.painel .interruptores form,
+.painel form.em-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin: 0.5rem 0;
+}
+.painel .interruptores .estado {
+  font-size: 0.9rem;
+}
+.painel button.pequeno {
+  padding: 0 0.9rem;
+}
+.painel form.formulario {
+  max-width: 30rem;
+  margin: 1rem 0;
+}
+.painel form.formulario button {
+  margin-top: 0.75rem;
+}
+.painel .em-linha > div {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.painel .em-linha > div > label {
+  margin-top: 0;
+}
+.painel .em-linha .botoes {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 0 0 auto;
+}
+.painel form.recortes {
+  align-items: flex-end;
+  margin: 1rem 0;
+}
+.painel label.caixa {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 400;
+  min-height: var(--alvo);
+}
+.painel label.caixa input {
+  width: 1.25rem;
+  height: 1.25rem;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--marca);
+}
+.painel .rolavel {
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+.painel table.registo {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+.painel table.registo th,
+.painel table.registo td {
+  text-align: left;
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid var(--linhas);
+  vertical-align: top;
+}
+.painel table.registo th {
+  color: var(--texto-secundario);
+  font-weight: 700;
+}
+.painel a.botao {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+  padding: 0 1rem;
+  border: 1px solid var(--marca);
+  border-radius: var(--raio);
+  background: #fff;
+  color: var(--marca);
+  font-weight: 700;
+  text-decoration: none;
+}
+.painel a.botao:hover,
+.painel a.botao:focus-visible {
+  background: var(--marca);
+  color: #fff;
+}
+.painel details.mudanca summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--alvo);
+  cursor: pointer;
+  color: var(--marca);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.painel details.mudanca dl {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+}
+.painel details.mudanca dt {
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+}
+.painel details.mudanca dd {
+  margin: 0 0 0.35rem;
+  overflow-wrap: anywhere;
+}
+.painel pre.erro {
+  overflow-x: auto;
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  background: #fff;
+  padding: 0.75rem;
+  color: var(--alerta);
+  font-size: 0.9rem;
+}
+
+/* A lista de descargas da página de dados abertos.
+ *
+ * Sem marcador e com espaço entre ficheiros: cada item tem três linhas — o
+ * nome com o tamanho, o que é, e sob que termos — e um marcador de lista ao
+ * lado de um bloco de três linhas lê-se como se as três fossem itens. */
+.descargas {
+  list-style: none;
+  padding-left: 0;
+}
+
+.descargas > li {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--linhas);
+}
+
+.descargas > li:last-child {
+  border-bottom: 0;
+}

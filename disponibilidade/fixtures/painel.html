@@ -1,0 +1,79 @@
+<!doctype html>
+<!--
+  A FORMA é fiel; os DADOS são inventados.
+
+  Este excerto reproduz, marca a marca, a estrutura do painel de estações que
+  um sistema de bicicletas publica: cada `.bike` traz as coordenadas escondidas
+  em `.stationlat`/`.stationlon`, o nome num <h2>, e dois valores
+  `.bike__available` rotulados por `.bike__subtitle`. É essa estrutura que o
+  analisador lê, e é ela que o teste tem de guardar.
+
+  As três estações são da região de prova — a Serra da Pedra Alta, que não
+  existe. Estiveram aqui as de um sistema real, com os nomes e as coordenadas
+  que ele publica, e isso é compilação de dados de um cliente num repositório
+  que é público: a estrutura prova-se com estações inventadas exatamente tão
+  bem, e a captura do painel verdadeiro vive na raiz da região que o usa.
+
+  Três coisas estão aqui de propósito:
+   - um dos cartões é de um SUBSISTEMA («BUTe - …»), para o filtro por prefixo;
+   - as contagens vêm com zero à esquerda, como o painel as escreve;
+   - um dos cartões tem ZERO bicicletas — um zero real («não há bicicletas aqui
+     agora») tem de sair como 0 e não como «sem dados», que é a diferença entre
+     poupar uma caminhada e mandar alguém fazê-la.
+-->
+<div class="bikes owl-carousel owl-theme">
+  <div class="bike d-flex p-3">
+    <div class="d-none stationlat">41.32000</div>
+    <div class="d-none stationlon">-7.28000</div>
+    <div class="border-right-blue">
+      <h2>Pedra Alta - Terminal</h2>
+      <img src="bike.svg"/>
+    </div>
+    <div class="border-left-blue">
+      <div class="w-100 d-flex align-items-center justify-content-between">
+        <p class="mb-0 me-3 bike__subtitle">Bicicletas disponíveis</p>
+        <p class="mb-0 bike__available">02</p>
+      </div>
+      <div class="w-100 d-flex align-items-center justify-content-between">
+        <p class="mb-0 me-3 bike__subtitle">Docas disponíveis</p>
+        <p class="mb-0 bike__available">08</p>
+      </div>
+    </div>
+  </div>
+  <div class="bike d-flex p-3">
+    <div class="d-none stationlat">41.40120</div>
+    <div class="d-none stationlon">-7.19500</div>
+    <div class="border-right-blue">
+      <h2>BUTe - Ribeira do Corvo - Largo da Camara Municipal</h2>
+      <img src="bike.svg"/>
+    </div>
+    <div class="border-left-blue">
+      <div class="w-100 d-flex align-items-center justify-content-between">
+        <p class="mb-0 me-3 bike__subtitle">Bicicletas disponíveis</p>
+        <p class="mb-0 bike__available">00</p>
+      </div>
+      <div class="w-100 d-flex align-items-center justify-content-between">
+        <p class="mb-0 me-3 bike__subtitle">Docas disponíveis</p>
+        <p class="mb-0 bike__available">10</p>
+      </div>
+    </div>
+  </div>
+  <div class="bike d-flex p-3">
+    <div class="d-none stationlat">41.33100</div>
+    <div class="d-none stationlon">-7.26900</div>
+    <div class="border-right-blue">
+      <h2>Pedra Alta - Estação Ferroviária</h2>
+      <img src="bike.svg"/>
+    </div>
+    <div class="border-left-blue">
+      <div class="w-100 d-flex align-items-center justify-content-between">
+        <p class="mb-0 me-3 bike__subtitle">Bicicletas disponíveis</p>
+        <p class="mb-0 bike__available">05</p>
+      </div>
+      <div class="w-100 d-flex align-items-center justify-content-between">
+        <p class="mb-0 me-3 bike__subtitle">Docas disponíveis</p>
+        <p class="mb-0 bike__available">03</p>
+      </div>
+    </div>
+  </div>
+</div>
