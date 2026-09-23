@@ -430,3 +430,72 @@ def test_a_licenca_da_fonte_continua_a_valer_quando_a_saida_nao_declara():
     from paragem.sitio import _termos
 
     assert _termos(_fonte("ODbL-1.0"), None) == "odbl"
+
+
+# --- que modos é que esta autoridade gere ----------------------------------
+
+
+def _sitio_com(modos, saidas):
+    """Um `Sitio` sem construção nenhuma: só o que a receita declara.
+
+    A propriedade em teste só olha para `regiao.modos` e `regiao.saidas`, e
+    montar uma construção inteira para a exercitar era pagar minutos para
+    provar uma soma.
+    """
+    from types import SimpleNamespace
+
+    from paragem.sitio import Sitio
+
+    s = Sitio.__new__(Sitio)
+    s.regiao = SimpleNamespace(  # type: ignore[attr-defined]
+        modos=modos,
+        saidas=[SimpleNamespace(modo=m, papel=p, saida=f"gtfs/{m}.zip") for m, p in saidas],
+    )
+    return s
+
+
+def test_um_modo_so_de_feeds_de_terceiros_nao_e_desta_autoridade():
+    """É a regra dos avisos e a das descargas, e é a mesma conta.
+
+    Quem gere o serviço é quem avisa sobre ele: um modo que só existe aqui
+    porque consumimos o feed de outra entidade aparece no mapa e nos
+    itinerários, e não sai daqui nem em ficheiro nem em aviso.
+    """
+    s = _sitio_com(
+        ["autocarro", "comboio", "expresso"],
+        [
+            ("autocarro", "feed-proprio"),
+            ("comboio", "feed-de-terceiro"),
+            ("expresso", "feed-de-terceiro"),
+        ],
+    )
+    assert s.modos_de_terceiros == ["comboio", "expresso"]
+
+
+def test_um_modo_com_feed_proprio_E_de_terceiro_continua_a_ser_nosso():
+    """Um operador vizinho que pára no mesmo cais não nos tira a rede.
+
+    Se isto passasse a dizer «de terceiros», uma região que declarasse um
+    feed vizinho ficava sem poder avisar sobre a sua PRÓPRIA rede — que é o
+    contrário do que a regra quer.
+    """
+    s = _sitio_com(
+        ["autocarro"],
+        [("autocarro", "feed-proprio"), ("autocarro", "feed-de-terceiro")],
+    )
+    assert s.modos_de_terceiros == []
+
+
+def test_um_modo_sem_feed_nenhum_e_compilado_por_nos():
+    """Bicicletas, táxis e urbanos municipais saem do OpenStreetMap e de
+    cartazes — não são o espelho do ficheiro de ninguém, e por isso a
+    autoridade da região pode escrever sobre eles."""
+    s = _sitio_com(["autocarro", "bicicleta", "taxi"], [("autocarro", "feed-proprio")])
+    assert s.modos_de_terceiros == []
+
+
+def test_um_modo_que_a_regiao_nao_declara_fica_de_fora_da_conta():
+    """A receita pode construir coisas que a região não mostra; a lista é
+    sobre o que ela mostra."""
+    s = _sitio_com(["autocarro"], [("autocarro", "feed-proprio"), ("comboio", "feed-de-terceiro")])
+    assert s.modos_de_terceiros == []

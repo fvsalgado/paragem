@@ -53,6 +53,22 @@ página de avisos da região, na faixa do catálogo, e em
 aplicações leem. Publicar invalida a cache da região: a visita seguinte já o
 mostra.
 
+**Um aviso é sobre o que esta autoridade GERE.** É a mesma regra que tira os
+feeds de terceiros das descargas, e vale pela mesma razão: um modo alimentado
+só pelo feed de outra entidade — o operador ferroviário, o de expressos —
+aparece no sítio porque quem viaja não tem de saber quem gere o quê, mas um
+aviso nosso sobre o serviço dele é republicar informação que ele publica nos
+canais dele, por que responde, e que pode desmentir uma hora depois sem nos
+dizer. Quem gere o serviço é quem avisa sobre ele.
+
+Sai da receita da região e não de uma lista escrita no código
+(`modos_de_terceiros`, em `regiao.json`): o formulário só oferece os modos
+próprios, e a ação recusa os outros — e recusa também uma linha de um operador
+de fora, ou um identificador de linha que não existe, que é a falha mais
+silenciosa desta página (o aviso fica publicado e não aparece a ninguém). Um
+modo sem feed nenhum — bicicletas, táxis, urbanos municipais — é compilado por
+nós de fontes abertas, e sobre esse a autoridade da região escreve.
+
 Três coisas que o formulário diz e convém saber antes:
 
 - **as horas são de parede, no fuso declarado** (`PARAGEM_FUSO`, por omissão

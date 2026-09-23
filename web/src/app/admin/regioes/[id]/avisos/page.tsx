@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import Aviso from '@/componentes/painel/Aviso';
 import SemChaveDeServico from '@/componentes/painel/SemChaveDeServico';
-import { IDENTIFICADOR, regiao as fichaNoArmazem } from '@/lib/dados';
+import { IDENTIFICADOR, NOME_DOS_MODOS, regiao as fichaNoArmazem } from '@/lib/dados';
 import { CAUSAS, EFEITOS, GRAVIDADES, emVigor } from '@/lib/avisos';
 import { FUSO, paraCampoLocal, porExtenso } from '@/lib/fuso';
 import { apagarAviso, guardarAviso, publicarAviso } from '@/lib/painel/acoes';
@@ -49,7 +49,19 @@ export default async function AvisosDaRegiao({ params, searchParams }: Props) {
   const aEditar = editar ? (avisos.find((a) => a.id === editar) ?? null) : null;
   const agora = new Date();
   const noAr = avisos.filter((a) => a.publicado && emVigor(a, agora));
-  const modos = noArmazem?.modos ?? [];
+
+  // OS MODOS SOBRE QUE ESTA AUTORIDADE PODE ESCREVER.
+  //
+  // Um modo alimentado só por feeds de outra entidade — o operador
+  // ferroviário, o de expressos — aparece no sítio porque quem viaja não tem
+  // de saber quem gere o quê (§1). Mas um aviso nosso sobre uma greve deles é
+  // redistribuir a informação de serviço de outra entidade: que a publica nos
+  // canais dela, que responde por ela estar certa, e que a pode desmentir uma
+  // hora depois sem nos dizer. É a mesma regra das descargas, e vem do mesmo
+  // sítio: a receita da região, não uma lista de modos escrita aqui.
+  const declarados = noArmazem?.modos ?? [];
+  const deTerceiros = noArmazem?.modos_de_terceiros ?? [];
+  const modos = declarados.filter((m) => !deTerceiros.includes(m));
 
   return (
     <>
@@ -200,25 +212,45 @@ export default async function AvisosDaRegiao({ params, searchParams }: Props) {
             type="text"
             defaultValue={(aEditar?.paragens ?? []).join(', ')}
           />
-          <label htmlFor="modos">Modos</label>
-          <input
-            id="modos"
-            name="modos"
-            type="text"
-            defaultValue={(aEditar?.modos ?? []).join(', ')}
-            aria-describedby="modos-ajuda"
-          />
           <p id="entidades-ajuda" className="secundario-texto">
             Identificadores do GTFS desta região, separados por vírgula — os mesmos que aparecem nos
             endereços das páginas de linha e de paragem.{' '}
             <strong>Deixar tudo em branco quer dizer «a rede toda»</strong>, que é o que a
             especificação manda e é raro: convém ser de propósito.
           </p>
-          <p id="modos-ajuda" className="secundario-texto">
-            {modos.length
-              ? `Esta região declara: ${modos.join(', ')}.`
-              : 'Sem dados no armazém, não se sabe que modos esta região declara.'}
-          </p>
+
+          <fieldset>
+            <legend>Modos</legend>
+            {modos.length === 0 ? (
+              <p className="secundario-texto">
+                {declarados.length === 0
+                  ? 'Sem dados no armazém, não se sabe que modos esta região declara.'
+                  : 'Esta região mostra serviços de transporte, mas não gere nenhum deles.'}
+              </p>
+            ) : (
+              modos.map((m) => (
+                <label key={m} className="caixa">
+                  <input
+                    type="checkbox"
+                    name="modos"
+                    value={m}
+                    defaultChecked={(aEditar?.modos ?? []).includes(m)}
+                  />
+                  {NOME_DOS_MODOS[m] ?? m}
+                </label>
+              ))
+            )}
+            {deTerceiros.length > 0 ? (
+              <p className="secundario-texto">
+                Aqui não estão {deTerceiros.map((m) => NOME_DOS_MODOS[m] ?? m).join(' e ')}: esta
+                região mostra esses serviços e não os gere, e{' '}
+                <strong>quem gere o serviço é quem avisa sobre ele</strong>. Um aviso nosso sobre
+                uma greve de outro operador era redistribuir informação de serviço que não é nossa e
+                que ele pode desmentir sem nos dizer. É a mesma regra que tira os feeds dele das
+                descargas.
+              </p>
+            ) : null}
+          </fieldset>
 
           <label htmlFor="url">Mais informação (endereço)</label>
           <input

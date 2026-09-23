@@ -174,6 +174,14 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
         </a>
       </p>
       <p>
+        <strong>
+          São os avisos dos serviços que a autoridade de transportes desta região gere
+        </strong>{' '}
+        — a mesma regra dos ficheiros aqui de cima. Este sítio mostra também serviços de outros
+        operadores, e sobre esses o aviso é de quem os opera: espelhá-lo aqui era republicar
+        informação de serviço de outra entidade, que a pode corrigir sem nos dizer.
+      </p>
+      <p>
         Cada pedido traz <strong>todos</strong> os avisos em vigor, e o que não vier deixou de
         valer. Sem avisos, o feed sai válido e vazio — que é diferente de não responder: se não
         conseguirmos ler a base, o endereço responde com um erro e não com um feed vazio, porque

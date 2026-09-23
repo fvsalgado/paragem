@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { CartaoDeAviso } from '@/componentes/Avisos';
 import { avisosEmVigor } from '@/lib/avisos';
+import { exigirRegiao } from '@/lib/dados';
 
 export const metadata: Metadata = { title: 'Avisos' };
 
@@ -17,7 +18,7 @@ export const revalidate = 60;
 
 export default async function Avisos({ params }: { params: Promise<{ regiao: string }> }) {
   const { regiao: rid } = await params;
-  const as = await avisosEmVigor(rid);
+  const [r, as] = await Promise.all([exigirRegiao(rid), avisosEmVigor(rid)]);
 
   return (
     <>
@@ -46,6 +47,16 @@ export default async function Avisos({ params }: { params: Promise<{ regiao: str
         as.map((a) => <CartaoDeAviso key={a.id} aviso={a} />)
       )}
 
+      {/* DE QUE É QUE ESTES AVISOS SÃO, e é preciso dizê-lo: o sítio mostra
+          comboios e expressos ao lado da rede da casa, e quem lê uma página de
+          avisos sem avisos nenhuns tem direito a saber se isso quer dizer «não
+          há» ou «não é aqui que se sabe». */}
+      <p className="secundario">
+        São os avisos dos serviços que{' '}
+        {r.autoridade.sigla || r.autoridade.nome || 'a autoridade de transportes'} gere. Para
+        alterações noutros serviços que aparecem neste sítio, o aviso é de quem os opera, e é no
+        sítio dele que sai a tempo.
+      </p>
       <p className="secundario">
         Os avisos publicados saem também em <a href="gtfs-rt/alerts.pb">GTFS-RT Service Alerts</a>,
         para quem os quiser mostrar noutro lado.

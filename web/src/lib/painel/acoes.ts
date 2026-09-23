@@ -4,7 +4,13 @@ import { revalidateTag } from 'next/cache';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { etiquetaDosAvisos } from '../avisos';
-import { ETIQUETA_DAS_REGIOES, IDENTIFICADOR, etiquetaDaRegiao } from '../dados';
+import {
+  ETIQUETA_DAS_REGIOES,
+  IDENTIFICADOR,
+  etiquetaDaRegiao,
+  linhas as linhasNoArmazem,
+  regiao as regiaoNoArmazem,
+} from '../dados';
 import { doCampoLocal } from '../fuso';
 import { abrirSessao, exigirSessao, fecharSessao, painelConfigurado } from './autenticacao';
 import { chamar } from './base';
@@ -302,12 +308,90 @@ function osAvisos(regiao: string): string {
   return `/admin/regioes/${encodeURIComponent(regiao)}/avisos/`;
 }
 
-/** As linhas, as paragens e os modos entram separados por vírgula. */
+/** As linhas e as paragens entram separadas por vírgula. */
 function lista(formData: FormData, campo: string): string[] {
   return texto(formData, campo)
     .split(',')
     .map((x) => x.trim())
     .filter(Boolean);
+}
+
+/** Os modos entram em caixas — várias com o mesmo nome. */
+function marcados(formData: FormData, campo: string): string[] {
+  return formData
+    .getAll(campo)
+    .map((v) => (typeof v === 'string' ? v.trim() : ''))
+    .filter(Boolean);
+}
+
+/**
+ * UM AVISO É SOBRE O QUE ESTA AUTORIDADE GERE. Mais nada.
+ *
+ * O formulário já só oferece os modos próprios, mas o formulário é uma
+ * cortesia: uma ação de servidor recebe o que lhe mandarem. Isto é a regra,
+ * e está aqui porque é aqui que não se contorna.
+ *
+ * Um modo alimentado só por feeds de outra entidade aparece no sítio — quem
+ * viaja não tem de saber quem gere o quê —, mas um aviso nosso sobre o
+ * serviço dela é redistribuir informação que ela publica nos canais dela,
+ * por que responde, e que pode desmentir uma hora depois sem nos dizer. É a
+ * mesma regra que tira os feeds de terceiros das descargas.
+ *
+ * Sem dados da região no armazém não se sabe o que ela declara, e aí não se
+ * valida: recusar tudo bloqueava o primeiro aviso de uma região nova, que é
+ * precisamente quando isto é mais preciso.
+ */
+async function exigirModosProprios(id: string, modos: string[]): Promise<void> {
+  if (modos.length === 0) return;
+  const ficha = await regiaoNoArmazem(id).catch(() => null);
+  if (!ficha) return;
+  const deTerceiros = ficha.modos_de_terceiros ?? [];
+  const alheios = modos.filter((m) => deTerceiros.includes(m));
+  if (alheios.length) {
+    throw new Error(
+      `${alheios.join(', ')} ${alheios.length === 1 ? 'é um modo' : 'são modos'} que esta região mostra e não gere. ` +
+        'Quem gere o serviço é quem avisa sobre ele.',
+    );
+  }
+  const desconhecidos = modos.filter((m) => !ficha.modos.includes(m));
+  if (desconhecidos.length) {
+    throw new Error(`esta região não declara ${desconhecidos.join(', ')}`);
+  }
+}
+
+/**
+ * A mesma regra ao nível da linha, e uma segunda que não é sobre direitos mas
+ * sobre servir: uma linha que não existe.
+ *
+ * Um aviso preso a um identificador com uma gralha não aparece em lado nenhum
+ * — nem na página da linha, nem para quem consome o feed — e ninguém dá por
+ * isso, porque o aviso ESTÁ publicado e a lista do painel mostra-o. É a falha
+ * mais silenciosa que esta página tem.
+ *
+ * As linhas de outro operador saem pela mesma razão que os modos deles: o
+ * catálogo marca-as com `operador`, que a rede da casa não leva.
+ *
+ * Sem catálogo — módulo desligado, ou região sem dados — não se valida.
+ */
+async function exigirLinhasProprias(id: string, linhas: string[]): Promise<void> {
+  if (linhas.length === 0) return;
+  const catalogo = await linhasNoArmazem(id).catch(() => []);
+  if (catalogo.length === 0) return;
+  const porId = new Map(catalogo.map((l) => [l.id, l]));
+  const inexistentes = linhas.filter((x) => !porId.has(x));
+  if (inexistentes.length) {
+    throw new Error(
+      `não há linha com o identificador ${inexistentes.join(', ')} — um aviso preso a um identificador errado não aparece a ninguém`,
+    );
+  }
+  const alheias = linhas.filter((x) => (porId.get(x)?.operador ?? '') !== '');
+  if (alheias.length) {
+    const nomes = [...new Set(alheias.map((x) => porId.get(x)?.operador))].join(', ');
+    throw new Error(
+      `${alheias.join(', ')} ${alheias.length === 1 ? 'é de' : 'são de'} ${nomes}, que esta região mostra e não gere. ` +
+        'Quem gere o serviço é quem avisa sobre ele.',
+    );
+  }
 }
 
 /**
@@ -321,6 +405,10 @@ export async function guardarAviso(formData: FormData): Promise<void> {
   await seguir(
     async () => {
       exigirRegiaoValida(regiao);
+      const modos = marcados(formData, 'modos');
+      const linhas = lista(formData, 'linhas');
+      await exigirModosProprios(regiao, modos);
+      await exigirLinhasProprias(regiao, linhas);
       const novo = await chamar<string>('upsert_aviso', {
         p_id: id || null,
         p_region_id: regiao,
@@ -331,9 +419,9 @@ export async function guardarAviso(formData: FormData): Promise<void> {
         p_efeito: texto(formData, 'efeito'),
         p_inicio: doCampoLocal(texto(formData, 'inicio')),
         p_fim: doCampoLocal(texto(formData, 'fim')),
-        p_linhas: lista(formData, 'linhas'),
+        p_linhas: linhas,
         p_paragens: lista(formData, 'paragens'),
-        p_modos: lista(formData, 'modos'),
+        p_modos: modos,
         p_url: texto(formData, 'url') || null,
         ...(await rasto()),
       });

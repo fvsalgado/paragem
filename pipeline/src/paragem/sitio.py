@@ -245,6 +245,38 @@ class Sitio:
         """Uma região pode não ter comboio — a de prova não tem."""
         return self._saida_com(papeis={"feed-de-terceiro"}, modo="comboio")
 
+    @property
+    def modos_de_terceiros(self) -> list[str]:
+        """Os modos que esta região MOSTRA mas não GERE.
+
+        Um modo alimentado só por feeds de outra entidade — o operador
+        ferroviário, o de expressos — aparece no mapa, nas páginas de paragem
+        e nos itinerários, porque quem viaja não tem de saber quem gere o quê
+        (§1). Mas não é da autoridade de transportes desta região, e há duas
+        coisas que por isso não saem daqui: o ficheiro de horários, que já
+        estava (`dados-abertos`), e os AVISOS.
+
+        Um aviso nosso sobre uma greve do operador ferroviário é redistribuir
+        a informação de serviço de outra entidade — que a publica nos canais
+        dela, que responde por ela estar certa, e que a pode desmentir uma
+        hora depois sem nos dizer. Quem gere o serviço é quem avisa sobre ele.
+
+        A conta sai da RECEITA, não de uma lista de modos escrita no código:
+        um modo é de terceiros quando TODAS as saídas que o alimentam são
+        `feed-de-terceiro`. Um modo sem saída nenhuma — as bicicletas, os
+        táxis, os urbanos municipais — é compilado por nós a partir de fontes
+        abertas, e esse a autoridade da região pode relatar.
+        """
+        por_modo: dict[str, list[str | None]] = {}
+        for s in self.regiao.saidas:
+            if s.modo:
+                por_modo.setdefault(s.modo, []).append(s.papel)
+        return sorted(
+            modo
+            for modo, papeis in por_modo.items()
+            if modo in self.regiao.modos and all(p == "feed-de-terceiro" for p in papeis)
+        )
+
     def _feed(self, nome: str | None) -> Gtfs | None:
         if not nome:
             return None
@@ -281,6 +313,10 @@ class Sitio:
             # que o §4.4 proíbe. O sítio marca-a em todas as páginas.
             "demonstracao": r.demonstracao,
             "modos": r.modos,
+            # Os que a região mostra e não gere — ver `modos_de_terceiros`.
+            # É por esta lista que o painel sabe sobre que modos é que a
+            # autoridade desta região pode escrever avisos.
+            "modos_de_terceiros": self.modos_de_terceiros,
             "municipios_membros": r.municipios_membros,
             "concelhos_servidos": r.concelhos_servidos,
             "caixa": {

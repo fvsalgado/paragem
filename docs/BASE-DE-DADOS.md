@@ -55,7 +55,10 @@ que sobra para o caso de o sinal se perder. A forma das colunas é a do GTFS-RT
 (`cause`, `effect`, `severity_level`, `active_period`, `informed_entity`), para
 o feed sair por tradução direta em vez de por adivinhação, e um valor de fora
 da especificação rebenta na ESCRITA — onde há uma pessoa para o corrigir — e
-não na leitura, onde há uma aplicação de outra gente.
+não na leitura, onde há uma aplicação de outra gente. E o que se escreve é só
+sobre o que a autoridade da região **gere**: os modos que vêm de feeds de
+terceiros ficam de fora, pela mesma razão que os ficheiros deles ficam fora das
+descargas ([`PAINEL.md`](PAINEL.md)).
 
 **O público degrada, a segurança fecha.** Se o sítio não conseguir ler
 `modulos`, mostra tudo — assumir tudo desligado por causa de uma falha de rede

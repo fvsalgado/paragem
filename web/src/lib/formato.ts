@@ -54,6 +54,16 @@ export type Regiao = {
   modos: string[];
   /** Os que a região declara e o painel desligou. Vazio quando não há nenhum. */
   modos_desligados?: string[];
+  /**
+   * Os que a região MOSTRA e não GERE — alimentados só por feeds de outra
+   * entidade. Aparecem no mapa e nos itinerários, mas não saem daqui nem em
+   * ficheiro nem em aviso: quem gere o serviço é quem avisa sobre ele.
+   *
+   * Opcional porque uma região construída antes disto não o traz; nesse caso
+   * não se presume nenhum, que é o lado seguro para as descargas e o lado
+   * permissivo para os avisos — e o painel di-lo.
+   */
+  modos_de_terceiros?: string[];
   municipios_membros: number;
   concelhos_servidos: number;
   caixa: { lat_min: number; lat_max: number; lon_min: number; lon_max: number };
