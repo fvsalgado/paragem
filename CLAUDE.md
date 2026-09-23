@@ -269,3 +269,36 @@ Gestão de avisos com GTFS-RT Alerts.
 
 **Fase 5 — Abertura.** Publicação dos feeds com licença aberta, depois de a
 autoridade de transportes autorizar. Widget para as câmaras.
+
+## 10. Este repositório nasceu com histórico novo
+
+Um `git log` aqui devolve **um commit**, com 788 ficheiros e a data em que isto
+foi aberto. Não é um despejo de código sem passado: é uma decisão, e vale a pena
+saber qual.
+
+O produto foi desenvolvido noutro repositório, privado, onde vivia ao lado da
+**compilação de dados de uma autoridade de transportes** — as rotas que existem,
+o mapeamento das paragens, os PDF das operadoras e das câmaras. Nada disso é
+nosso para publicar, e a abertura dos feeds depende de essa autoridade
+autorizar (Fase 5).
+
+Tirar esses ficheiros do `HEAD` não os tirava do histórico: um repositório que
+já os teve continua a tê-los em cada commit anterior, e abri-lo publicava-os na
+mesma. Por isso este nasceu limpo, em vez de ser aquele tornado público. O que
+tem passado ficou do lado privado.
+
+**O que isso significa para quem trabalha aqui:**
+
+- **a culpa e o histórico não respondem** antes desta data. Um `git blame` numa
+  linha antiga aponta para o commit inicial, e não para a decisão que a
+  escreveu. Onde a razão importa, está escrita em comentário — é por isso que
+  este código tem os comentários que tem;
+- **não há aqui nenhuma região real.** As duas de prova (§5.2) são tudo o que
+  este repositório constrói, e é de propósito: são inventadas de fio a pavio,
+  constroem-se sem rede, e provam o multi-região sem pedir uma linha a ninguém.
+  A região de um cliente vive noutra raiz (§5.1), com o seu próprio briefing;
+- **o nome de um cliente aparece em comentários do código**, a citar o caso
+  medido onde uma regra se partiu — a etiqueta de rede que num território
+  identifica os urbanos de uma cidade e noutro, a 130 km, identifica os de
+  outra. Apagar o caso não deixava a regra mais clara: deixava-a sem prova. O que não pode acontecer é um cliente ser nomeado
+  em documentos, configuração ou declarações de região, e isso é verificado.
