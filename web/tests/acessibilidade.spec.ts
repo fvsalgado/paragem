@@ -17,6 +17,7 @@ import { PRODUTO, PROVA } from './anfitrioes';
 import {
   buscaDeUmaParagem,
   concelhoComMaisParagens,
+  descargasParaConsulta,
   linhaComMaisViagens,
   ondeHaParagens,
   paragemComMaisPartidas,
@@ -254,8 +255,17 @@ test('o que não se sabe está escrito na página', async ({ page }) => {
     await expect(page.getByText(/não .*confirmad/i).first()).toBeVisible();
   }
 
+  // A PÁGINA TEM DE DIZER QUAL DOS DOIS CASOS É, e o teste tem de saber qual
+  // esperar. Estava a exigir sempre a ressalva — o que presumia que há sempre
+  // um ficheiro sem licença aberta —, e partiu-se no dia em que deixou de
+  // haver. Zero «para consulta» é o estado a que se quer chegar, não uma
+  // falha; o que seria uma falha é a página calar-se sobre os termos.
   await page.goto(`/dados-abertos/`);
-  await expect(page.getByText(/licença aberta declarada/i).first()).toBeVisible();
+  if (descargasParaConsulta() > 0) {
+    await expect(page.getByText(/licença aberta declarada/i).first()).toBeVisible();
+  } else {
+    await expect(page.getByText(/Estes ficheiros reutilizam-se/i).first()).toBeVisible();
+  }
 });
 
 test('o «Perto de ti» aberto também passa no axe', async ({ page, context }) => {

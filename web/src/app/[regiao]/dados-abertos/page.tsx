@@ -83,7 +83,9 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
   const r = await exigirRegiao(rid);
   const l = await lacunas(rid);
   const porEsclarecer = ds.filter((d) => d.licenca_por_esclarecer);
-  const abertos = ds.filter((d) => d.termos === 'odbl' || d.termos === 'nosso');
+  const sobOdbl = ds.filter((d) => d.termos === 'odbl');
+  const daCasa = ds.filter((d) => d.termos === 'nosso');
+  const abertos = [...sobOdbl, ...daCasa];
   const soParaConsulta = ds.filter((d) => d.termos === 'consulta');
 
   return (
@@ -118,11 +120,27 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
         </div>
       ) : (
         <div className="faixa">
+          {/* SOB QUE LICENÇA, LIDO DO QUE ESTÁ LÁ. Esta frase dizia «saem sob
+              ODbL» sempre, e numa região cujos ficheiros são todos obra da
+              casa isso era falso — uma página de licenças a enganar-se na
+              licença é pior do que uma página sem aviso nenhum. */}
           <p>
-            <strong>Estes ficheiros reutilizam-se.</strong> Saem sob <strong>ODbL</strong> — pode
-            levá-los, usá-los e redistribuí-los, com duas condições: atribuir a origem, e partilhar
-            nos mesmos termos o que deles derivar. A atribuição vai dentro do próprio ficheiro, em{' '}
-            <code>attributions.txt</code>, para não depender de ninguém se lembrar dela.
+            <strong>Estes ficheiros reutilizam-se.</strong>{' '}
+            {sobOdbl.length > 0 ? (
+              <>
+                {daCasa.length > 0 ? `${sobOdbl.length} ` : ''}saem sob <strong>ODbL</strong> — pode
+                levá-los, usá-los e redistribuí-los, com duas condições: atribuir a origem, e
+                partilhar nos mesmos termos o que deles derivar. A atribuição vai dentro do próprio
+                ficheiro, em <code>attributions.txt</code>, para não depender de ninguém se lembrar
+                dela.
+              </>
+            ) : null}
+            {daCasa.length > 0 ? (
+              <>
+                {sobOdbl.length > 0 ? ` Os outros ${daCasa.length} são ` : 'São '}obra da casa, sob
+                a licença do código — levam-se sem perguntar nada a ninguém.
+              </>
+            ) : null}
           </p>
           <p>
             Aqui está{' '}
