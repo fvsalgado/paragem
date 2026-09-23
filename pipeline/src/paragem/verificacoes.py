@@ -249,6 +249,89 @@ def _procurar(pasta: Path, palavras: list[str]) -> list[str]:
     return achados
 
 
+def _janela_de_servico(r, feed, rotulo: str) -> None:
+    """O CALENDÁRIO AFIRMA-SE POR INVARIANTE, E NÃO POR CONTAGEM.
+
+    O `datas_de_servico` era conferido por igualdade contra um número medido —
+    1 916 na rede, 11 701 no transporte a pedido. Partiu sozinho na primeira
+    madrugada depois de ser escrito, e com ele foi abaixo a publicação: os
+    feeds cobrem uma JANELA DESLIZANTE de 364 dias a contar de HOJE, e à
+    meia-noite sai um dia atrás e entra outro à frente. Se os dois não tiverem
+    os mesmos serviços — e não têm, entre período escolar e férias —, a
+    contagem muda sem que nada esteja mal.
+
+    É o §8 do briefing a acontecer: «número exato onde a fonte está congelada,
+    invariante onde a fonte está viva». O relógio é a fonte mais viva que há, e
+    a contagem estava cravada sobre ele.
+
+    O que se afirma em vez disso é o que tem de ser verdade em qualquer dia:
+
+      - a janela JÁ COMEÇOU e não começou há mais de uma semana. Um feed que
+        começa amanhã não serve a quem viaja hoje; um que começou há um mês é
+        um feed que ninguém reconstrói;
+      - e COBRE MESMO UM ANO, nem menos de 300 dias nem mais de 366. Sem o
+        limite de baixo, um calendário que colapsasse para três dias passava em
+        todas as outras afirmações — as contagens de linhas, viagens e paragens
+        não mudam quando o que desaparece são as datas;
+      - NENHUM SERVIÇO FICA SEM DATAS. Este era o que mais falta fazia: estava
+        declarado no `numeros.yaml` como `servicos_sem_datas: 0` e não era
+        conferido em lado nenhum. Um serviço sem datas é uma linha que existe
+        no feed e não corre em dia nenhum — e é assim que uma carreira
+        desaparece do sítio sem nada ficar vermelho.
+    """
+    from datetime import date, datetime, timedelta
+
+    def _d(s: str) -> date:
+        return datetime.strptime(s, "%Y%m%d").date()
+
+    linhas = feed.obter("calendar_dates.txt")
+    datas = sorted({x.get("date", "") for x in linhas} - {""})
+    if not datas:
+        r.afirmar(False, f"{rotulo}: o feed tem datas de serviço")
+        return
+
+    hoje = date.today()
+    primeira, ultima = _d(datas[0]), _d(datas[-1])
+
+    # A JANELA NÃO COMEÇA AMANHÃ, E NÃO COMEÇOU NO MÊS PASSADO.
+    #
+    # «Começa hoje» seria a afirmação óbvia e estaria errada pela mesma razão
+    # que o número exato: uma corrida que atravesse a meia-noite constrói num
+    # dia e confere no outro, e uma construção de ontem que se confira hoje é
+    # legítima. A folga é de uma semana, que é o ponto a partir do qual um feed
+    # velho deixa de ser «de ontem» e passa a ser um feed que ninguém
+    # reconstrói.
+    r.afirmar(
+        primeira <= hoje,
+        f"{rotulo}: a janela de serviço já começou ({datas[0]}, hoje é {hoje:%Y%m%d})",
+    )
+    r.afirmar(
+        primeira >= hoje - timedelta(days=7),
+        f"{rotulo}: e não começou há mais de uma semana ({datas[0]})",
+    )
+
+    # E COBRE MESMO UM ANO. Sem o limite de baixo, um calendário que colapsasse
+    # para três dias passava em todas as outras afirmações: as contagens de
+    # linhas, viagens e paragens não mudam quando o que desaparece são as datas.
+    r.afirmar(
+        ultima <= hoje + timedelta(days=366),
+        f"{rotulo}: e acaba dentro de um ano ({datas[-1]})",
+    )
+    r.afirmar(
+        ultima >= hoje + timedelta(days=300),
+        f"{rotulo}: e cobre o ano quase todo ({datas[-1]})",
+    )
+
+    com_datas = {x.get("service_id", "") for x in linhas}
+    servicos = {x.get("service_id", "") for x in feed.obter("trips.txt")}
+    sem = sorted(servicos - com_datas)
+    r.afirmar(
+        not sem,
+        f"{rotulo}: todos os {len(servicos)} serviços têm datas"
+        + (f" — sem datas: {', '.join(sem[:5])}" if sem else ""),
+    )
+
+
 # ---------------------------------------------------------------------------
 
 
@@ -428,7 +511,6 @@ def _numeros_de(r: Resultado, raiz: Path, da_referencia: Path, pasta: Path, f: P
             ("viagens", "trips.txt"),
             ("paragens", "stops.txt"),
             ("registos_de_horario", "stop_times.txt"),
-            ("datas_de_servico", "calendar_dates.txt"),
         ):
             if chave in construcao:
                 esperado_n = construcao[chave]["valor"]
@@ -438,6 +520,7 @@ def _numeros_de(r: Resultado, raiz: Path, da_referencia: Path, pasta: Path, f: P
                 )
         curtas = sum(1 for n in feito.paragens_por_viagem().values() if n < 2)
         r.afirmar(curtas == 0, f"{pasta.name}: nenhuma viagem com menos de 2 paragens")
+        _janela_de_servico(r, feito, pasta.name)
 
     # O FEED A PEDIDO CONTA-SE COMO O OUTRO, e é preciso contá-lo: é o
     # único transporte público de boa parte das freguesias desta região, e
@@ -454,7 +537,6 @@ def _numeros_de(r: Resultado, raiz: Path, da_referencia: Path, pasta: Path, f: P
             ("viagens", "trips.txt"),
             ("paragens", "stops.txt"),
             ("registos_de_horario", "stop_times.txt"),
-            ("datas_de_servico", "calendar_dates.txt"),
         ):
             if chave in a_pedido:
                 esperado_n = a_pedido[chave]["valor"]
@@ -465,6 +547,7 @@ def _numeros_de(r: Resultado, raiz: Path, da_referencia: Path, pasta: Path, f: P
                 )
         # A regra de reserva é o que distingue este feed de um horário:
         # sem ela, o que ele diz é uma promessa que ninguém fez.
+        _janela_de_servico(r, feito, f"{pasta.name}: a pedido")
         r.afirmar(
             len(feito.obter("booking_rules.txt")) > 0,
             f"{pasta.name}: o feed a pedido tem regras de reserva",
