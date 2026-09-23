@@ -49,7 +49,7 @@ const GRUPOS: { id: string; titulo: string; texto: string }[] = [
 ];
 
 const TERMOS: Record<string, string> = {
-  nosso: 'inventado de propósito por nós, sob a licença do código — leve-se sem perguntar',
+  nosso: 'obra da casa, sob licença aberta — leve-se sem perguntar',
   odbl: 'ODbL — reutilizável com atribuição e partilha nos mesmos termos',
   consulta: 'sem licença aberta declarada — para consulta',
   terceiro: 'ficheiro de outra entidade — os termos são dela',

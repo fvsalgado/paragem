@@ -1917,6 +1917,15 @@ NOSSO = "nosso"
 # que serve para a conferir.
 GRUPOS = ("feeds", "catalogos", "bicicletas", "geometria", "decisoes", "relatorios")
 
+#: O RELATÓRIO DA CONSTRUÇÃO É TEXTO NOSSO, e não dados de ninguém.
+#:
+#: Saía com a licença da fonte dos horários — «sem licença aberta declarada,
+#: para consulta» — e isso é falso sobre um documento que escrevemos: são as
+#: nossas contagens, as nossas lacunas e os nossos avisos sobre a nossa
+#: construção. Nenhuma operadora tem direitos sobre o nosso relatório de
+#: lacunas, e rotulá-lo assim era pedir licença a quem não a tem para dar.
+LICENCA_DO_RELATORIO = "CC-BY-4.0"
+
 
 def _termos(fonte: Any, papel: str | None, licenca_da_saida: str | None = None) -> str:
     """O rótulo sai da licença da SAÍDA quando ela a declara, e só então da fonte.
@@ -2089,6 +2098,14 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
                 modo=dona.modo,
                 papel="decisoes",
                 descricao=DECISOES.get(ficheiro.name, "uma decisão por linha, com a razão"),
+                # A LICENÇA É A DA SAÍDA DE QUE ESTA TABELA DECIDE, e não a da
+                # fonte. É o mesmo erro que o `_termos` foi escrito para
+                # corrigir, repetido aqui: a tabela carrega as MESMAS
+                # coordenadas resolvidas que o feed carrega, e saía rotulada
+                # «para consulta» ao lado do feed rotulado ODbL. Uma tabela
+                # que explica um ficheiro não pode estar sob termos mais
+                # apertados do que o ficheiro que explica.
+                licenca_da_saida=dona.licenca,
             )
 
     relatorio = raiz / "build" / "reports" / f"{regiao.id}.md"
@@ -2101,6 +2118,7 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
                 modo=None,
                 papel="relatorio",
                 descricao="o relatório da última construção: contagens, lacunas e avisos",
+                licenca_da_saida=LICENCA_DO_RELATORIO,
             )
 
     saida.sort(

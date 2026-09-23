@@ -499,3 +499,36 @@ def test_um_modo_que_a_regiao_nao_declara_fica_de_fora_da_conta():
     sobre o que ela mostra."""
     s = _sitio_com(["autocarro"], [("autocarro", "feed-proprio"), ("comboio", "feed-de-terceiro")])
     assert s.modos_de_terceiros == []
+
+
+def test_uma_tabela_de_decisoes_nao_sai_mais_fechada_do_que_o_ficheiro_que_explica():
+    """As decisões carregam as MESMAS coordenadas resolvidas que o feed.
+
+    Saíam com a licença da FONTE — «sem licença aberta declarada, para
+    consulta» — ao lado do feed que explicam, rotulado ODbL. É o mesmo erro
+    que o `_termos` foi escrito para corrigir: a licença de uma obra derivada
+    não é a da entrada principal.
+    """
+    from paragem.sitio import ODBL, _termos
+
+    class CadernoSemLicenca:
+        licenca = ""
+
+    # A saída declara ODbL porque a geometria dela vem do OpenStreetMap.
+    assert _termos(CadernoSemLicenca(), "horarios", "ODbL-1.0") == ODBL
+    # A tabela que decide sobre essa saída tem de dizer o mesmo.
+    assert _termos(CadernoSemLicenca(), "decisoes", "ODbL-1.0") == ODBL
+
+
+def test_o_relatorio_da_construcao_e_texto_nosso():
+    """São as nossas contagens sobre a nossa construção.
+
+    Nenhuma operadora tem direitos sobre o nosso relatório de lacunas, e
+    rotulá-lo «para consulta» era pedir licença a quem não a tem para dar.
+    """
+    from paragem.sitio import LICENCA_DO_RELATORIO, NOSSO, _termos
+
+    class CadernoSemLicenca:
+        licenca = ""
+
+    assert _termos(CadernoSemLicenca(), "relatorio", LICENCA_DO_RELATORIO) == NOSSO
