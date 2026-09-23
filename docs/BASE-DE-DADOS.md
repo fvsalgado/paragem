@@ -107,20 +107,34 @@ organização e paga o cómputo da instância mais pequena, por mês, além do p
 
 O que já está feito:
 
-- **As seis migrações estão aplicadas**, por ordem — as quatro primeiras no
+- **As sete migrações estão aplicadas**, por ordem — as quatro primeiras no
   dia da criação, a 0005 (o limite de tentativas) e a 0006 (a região nasce no
-  painel) com o painel. O histórico do projeto
-  (`supabase_migrations.schema_migrations`) tem as versões dos ficheiros de
-  `supabase/migrations/` — `20260922100000` a `20260922100500` —, para que um
-  `supabase db push` futuro reconheça o estado em vez de tentar aplicar tudo
-  outra vez. Uma migração nova entra pelo mesmo
+  painel) com o painel, e a **0007 (os avisos)** a 23/09/2026. O histórico do
+  projeto (`supabase_migrations.schema_migrations`) tem as versões dos
+  ficheiros de `supabase/migrations/`, para que um `supabase db push` futuro
+  reconheça o estado em vez de tentar aplicar tudo outra vez.
+
+  **O carimbo do ficheiro é a hora a que a migração CORREU, e não a hora a que
+  foi escrita.** O projeto regista a versão dele quando aplica, e um ficheiro
+  com outro carimbo fica a parecer por aplicar — um `db push` tentava-o de
+  novo. A 0007 foi escrita como `20260923020000` e correu às `20260923065530`;
+  o ficheiro foi renomeado para bater certo. Quem aplicar uma migração nova
+  confere isto a seguir. Uma migração nova entra pelo mesmo
   caminho: ficheiro no repositório, provado no CI, e só depois `db push` — o
   `verify-migrations.sh` **não** serve contra o projeto: o prelúdio cria papéis
   que o Supabase já traz.
-- **Verificado depois de aplicar**: as duas regiões de prova com o nome, o
-  artigo e o domínio dos `regiao.yaml`; as duas licenças `demo` sem prazo;
-  RLS ligada nas cinco tabelas; três policies, todas de leitura pública; as
-  cinco funções; `modulos` e `admin_actions` vazias.
+- **Verificado depois de aplicar as seis primeiras**: as duas regiões de prova
+  com o nome, o artigo e o domínio dos `regiao.yaml`; as duas licenças `demo`
+  sem prazo; RLS ligada nas cinco tabelas; três policies, todas de leitura
+  pública; as cinco funções; `modulos` e `admin_actions` vazias.
+- **A 0007 está aplicada e a verificação em SQL contra o projeto NÃO correu**
+  — a leitura foi recusada por não haver quem a aprovasse. O que se sabe: o
+  registo de migrações tem a linha, e o `verify-migrations.sh` prova o mesmo
+  ficheiro contra um Postgres limpo, com as asserções todas (a policy é
+  `select using (publicado)`; um rascunho não é visível com o papel `anon`; um
+  publicado é). O que falta é repetir a leitura contra o projeto: `avisos` com
+  RLS ligada, uma policy, e as três funções. **Confirmar antes de contar com
+  isto.**
 - **A palavra-passe da base não ficou guardada em lado nenhum.** Foi gerada ao
   acaso na criação e deitada fora: o sítio vai falar com a base pelas chaves
   de API, não por `psql`. Para uma ligação direta, redefine-se no painel do

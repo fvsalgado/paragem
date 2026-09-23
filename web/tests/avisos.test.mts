@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
 import { CAUSAS, EFEITOS, GRAVIDADES, emVigor, ordenar, type Aviso } from '../src/lib/avisos.ts';
 import { CAUSA, EFEITO, GRAVIDADE } from '../src/lib/gtfs-rt.ts';
@@ -86,10 +86,14 @@ test('ordenar não mexe no que lhe dão', () => {
  * Lê-se a migração. Se alguém acrescentar um valor ao `check` e se esquecer
  * do resto, ou ao contrário, isto diz qual e onde.
  */
-const MIGRACAO = readFileSync(
-  new URL('../../supabase/migrations/20260923020000_0007_os_avisos.sql', import.meta.url),
-  'utf8',
-);
+const PASTA = new URL('../../supabase/migrations/', import.meta.url);
+/* PELO NOME E NÃO PELO CARIMBO. A versão de uma migração é a hora a que ela
+   correu no projeto real, e o ficheiro é renomeado para bater certo com ela —
+   senão um `db push` futuro tenta aplicá-la outra vez. Um teste preso ao
+   carimbo partia-se nessa renomeação, e a mensagem não diria porquê. */
+const NOME = readdirSync(PASTA).find((f) => f.endsWith('_0007_os_avisos.sql'));
+assert.ok(NOME, 'não encontrei a migração dos avisos');
+const MIGRACAO = readFileSync(new URL(NOME!, PASTA), 'utf8');
 
 /** Os valores de um `check (<coluna> in ('A', 'B', …))`, como conjunto. */
 function valoresNoCheck(coluna: string): Set<string> {
