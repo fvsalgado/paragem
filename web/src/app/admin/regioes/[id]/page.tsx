@@ -15,6 +15,7 @@ import {
 } from '@/lib/painel/acoes';
 import { nomeDaAcao } from '@/lib/painel/auditoria';
 import { temChaveDeServico } from '@/lib/painel/base';
+import { contarAvisosPublicados } from '@/lib/painel/avisos';
 import {
   acoesDaRegiao,
   listarAliases,
@@ -55,16 +56,18 @@ export default async function FichaDaRegiao({ params, searchParams }: Props) {
   if (!IDENTIFICADOR.test(id)) notFound();
   if (!temChaveDeServico()) return <SemChaveDeServico titulo={id} />;
 
-  const [regioes, aliases, modulos, licencas, acoes, noArmazem] = await Promise.all([
-    listarRegioes(),
-    listarAliases(),
-    listarModulos(),
-    listarLicencas(),
-    acoesDaRegiao(id, 10),
-    // O `regiao.yaml` dela, tal como o pipeline o publicou: é daqui que vem
-    // a lista dos modos que a região declara. `null` sem dados no armazém.
-    fichaNoArmazem(id).catch(() => null),
-  ]);
+  const [regioes, aliases, modulos, licencas, acoes, avisosPublicados, noArmazem] =
+    await Promise.all([
+      listarRegioes(),
+      listarAliases(),
+      listarModulos(),
+      listarLicencas(),
+      acoesDaRegiao(id, 10),
+      contarAvisosPublicados(),
+      // O `regiao.yaml` dela, tal como o pipeline o publicou: é daqui que vem
+      // a lista dos modos que a região declara. `null` sem dados no armazém.
+      fichaNoArmazem(id).catch(() => null),
+    ]);
   const regiao = regioes.find((r) => r.id === id);
   if (!regiao) notFound();
 
@@ -73,6 +76,7 @@ export default async function FichaDaRegiao({ params, searchParams }: Props) {
   const asLicencas = licencas.filter((l) => l.region_id === id);
   const licenca = estadoDaLicenca(asLicencas, new Date().toISOString().slice(0, 10));
   const declarados = noArmazem?.modos ?? null;
+  const publicados = avisosPublicados.get(id) ?? 0;
   const ficha = `/admin/regioes/${encodeURIComponent(id)}/`;
 
   return (
@@ -111,6 +115,20 @@ export default async function FichaDaRegiao({ params, searchParams }: Props) {
             Nunca se desliga a última região ligada — a base recusa, e o painel diz.
           </p>
         ) : null}
+      </section>
+
+      <section aria-labelledby="avisos" className="cartao">
+        <h2 id="avisos">Avisos</h2>
+        <p>
+          {publicados === 0
+            ? 'Nada publicado. É o estado normal: um aviso de exemplo publicado é um aviso falso.'
+            : `${publicados} ${publicados === 1 ? 'aviso publicado' : 'avisos publicados'}.`}{' '}
+          O que estiver publicado e em vigor aparece na página de avisos da região e no feed{' '}
+          <code>GTFS-RT Service Alerts</code>.
+        </p>
+        <p>
+          <Link href={`${ficha}avisos/`}>Escrever e publicar avisos</Link>
+        </p>
       </section>
 
       <section aria-labelledby="dominio" className="cartao">

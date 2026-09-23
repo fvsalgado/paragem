@@ -6,7 +6,6 @@ import {
   linhas,
   paragens,
   estacoes,
-  avisos,
   NOME_DOS_MODOS,
   url,
   urlRede,
@@ -14,8 +13,10 @@ import {
   modos as lerModos,
   caminhoDoModo,
 } from '@/lib/dados';
+import FaixaDeAvisos from '@/componentes/Avisos';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import PertoDeTi from '@/componentes/PertoDeTi';
+import { avisosEmVigor } from '@/lib/avisos';
 
 /**
  * O CATÁLOGO: todas as paragens, linhas, estações e concelhos, em listas.
@@ -35,7 +36,7 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
   const ls = await linhas(rid);
   const ps = await paragens(rid);
   const es = await estacoes(rid);
-  const as = await avisos(rid);
+  const as = await avisosEmVigor(rid);
   const pontos = await procura(rid);
   const pedido = await aPedido(rid);
   const dosModos = await lerModos(rid);
@@ -71,17 +72,7 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
         </p>
       </section>
 
-      {as.length > 0 && (
-        <section aria-labelledby="avisos">
-          <h2 id="avisos">Avisos</h2>
-          {as.map((a) => (
-            <div key={a.id} className={`faixa ${a.gravidade === 'grave' ? 'alerta' : ''}`}>
-              <strong>{a.titulo}</strong>
-              <p>{a.texto}</p>
-            </div>
-          ))}
-        </section>
-      )}
+      <FaixaDeAvisos avisos={as} />
 
       <PertoDeTi regiao={rid} pontos={pontos} />
 

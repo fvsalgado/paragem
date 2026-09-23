@@ -3,7 +3,9 @@
 import { revalidateTag } from 'next/cache';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { etiquetaDosAvisos } from '../avisos';
 import { ETIQUETA_DAS_REGIOES, IDENTIFICADOR, etiquetaDaRegiao } from '../dados';
+import { doCampoLocal } from '../fuso';
 import { abrirSessao, exigirSessao, fecharSessao, painelConfigurado } from './autenticacao';
 import { chamar } from './base';
 import { CAMINHO_DA_ENTRADA, destinoSeguro } from './guarda';
@@ -290,6 +292,108 @@ export async function registarLicenca(formData: FormData): Promise<void> {
       return comAviso(ficha(regiao), 'Licença registada.', 'licencas');
     },
     (mensagem) => comAviso(ficha(regiao), `Não foi possível: ${mensagem}`, 'licencas'),
+  );
+}
+
+// --- avisos ----------------------------------------------------------------
+
+/** A página dos avisos de uma região. */
+function osAvisos(regiao: string): string {
+  return `/admin/regioes/${encodeURIComponent(regiao)}/avisos/`;
+}
+
+/** As linhas, as paragens e os modos entram separados por vírgula. */
+function lista(formData: FormData, campo: string): string[] {
+  return texto(formData, campo)
+    .split(',')
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Gravar um aviso — novo ou editado. NÃO O PUBLICA: é outro gesto, e é
+ * deliberado. Quem redige a meio de uma ocorrência não devia ter de escolher
+ * entre gravar a meio e mostrar a meio.
+ */
+export async function guardarAviso(formData: FormData): Promise<void> {
+  const regiao = texto(formData, 'regiao');
+  const id = texto(formData, 'id');
+  await seguir(
+    async () => {
+      exigirRegiaoValida(regiao);
+      const novo = await chamar<string>('upsert_aviso', {
+        p_id: id || null,
+        p_region_id: regiao,
+        p_titulo: texto(formData, 'titulo'),
+        p_texto: texto(formData, 'texto'),
+        p_gravidade: texto(formData, 'gravidade'),
+        p_causa: texto(formData, 'causa'),
+        p_efeito: texto(formData, 'efeito'),
+        p_inicio: doCampoLocal(texto(formData, 'inicio')),
+        p_fim: doCampoLocal(texto(formData, 'fim')),
+        p_linhas: lista(formData, 'linhas'),
+        p_paragens: lista(formData, 'paragens'),
+        p_modos: lista(formData, 'modos'),
+        p_url: texto(formData, 'url') || null,
+        ...(await rasto()),
+      });
+      // Um aviso EDITADO que já esteja publicado muda no sítio agora; um
+      // rascunho não muda nada, e invalidar a etiqueta à mesma não custa.
+      revalidateTag(etiquetaDosAvisos(regiao));
+      return comAviso(
+        osAvisos(regiao),
+        id
+          ? 'Aviso gravado.'
+          : 'Aviso gravado, por publicar. Enquanto não o publicares, não está no sítio nem no feed.',
+        `aviso-${novo}`,
+      );
+    },
+    (mensagem) => comAviso(osAvisos(regiao), `Não foi possível: ${mensagem}`),
+  );
+}
+
+/** Publicar ou retirar — o gesto que muda o que está no ar. */
+export async function publicarAviso(formData: FormData): Promise<void> {
+  const regiao = texto(formData, 'regiao');
+  const id = texto(formData, 'id');
+  const publicar = texto(formData, 'publicar') === '1';
+  await seguir(
+    async () => {
+      exigirRegiaoValida(regiao);
+      await chamar<null>('set_aviso_publicado', {
+        p_id: id,
+        p_publicado: publicar,
+        ...(await rasto()),
+      });
+      revalidateTag(etiquetaDosAvisos(regiao));
+      return comAviso(
+        osAvisos(regiao),
+        publicar
+          ? 'Aviso publicado. Está no sítio e no feed GTFS-RT.'
+          : 'Aviso retirado. Sai do sítio e do feed; o rasto fica.',
+        `aviso-${id}`,
+      );
+    },
+    (mensagem) => comAviso(osAvisos(regiao), `Não foi possível: ${mensagem}`),
+  );
+}
+
+/**
+ * Apagar, que NÃO é o mesmo que retirar. Retirar é «isto deixou de ser
+ * verdade»; apagar é «isto nunca devia ter sido escrito». A base guarda o
+ * aviso inteiro no rasto, para que apagar não seja esquecer.
+ */
+export async function apagarAviso(formData: FormData): Promise<void> {
+  const regiao = texto(formData, 'regiao');
+  const id = texto(formData, 'id');
+  await seguir(
+    async () => {
+      exigirRegiaoValida(regiao);
+      await chamar<null>('delete_aviso', { p_id: id, ...(await rasto()) });
+      revalidateTag(etiquetaDosAvisos(regiao));
+      return comAviso(osAvisos(regiao), 'Aviso apagado. Fica na auditoria, inteiro.');
+    },
+    (mensagem) => comAviso(osAvisos(regiao), `Não foi possível: ${mensagem}`),
   );
 }
 

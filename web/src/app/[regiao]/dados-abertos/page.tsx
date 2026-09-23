@@ -125,8 +125,9 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
             <code>attributions.txt</code>, para não depender de ninguém se lembrar dela.
           </p>
           <p>
-            Aqui está <strong>o que {r.autoridade?.nome ?? 'a autoridade de transportes'} gere</strong>.
-            Os feeds de outros operadores — o ferroviário, os expressos, as carreiras de operadores
+            Aqui está{' '}
+            <strong>o que {r.autoridade?.nome ?? 'a autoridade de transportes'} gere</strong>. Os
+            feeds de outros operadores — o ferroviário, os expressos, as carreiras de operadores
             vizinhos que entram na região — alimentam o mapa, as páginas de paragem e o planeador
             deste sítio, mas não se descarregam daqui: quem os distribui é quem os produz, que é
             também quem responde por eles estarem certos.
@@ -157,6 +158,27 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
           esclarecer com quem publica a fonte.
         </p>
       )}
+
+      {/* NÃO É UMA DESCARGA, e por isso não está na lista acima: é um endereço
+          que responde com o que está no ar AGORA. Quem o consome sonda-o; um
+          ficheiro com data não lhe servia de nada. */}
+      <h2>Avisos em tempo real</h2>
+      <p>
+        As alterações ao serviço que a autoridade de transportes publica — supressões, desvios,
+        greves — saem em <strong>GTFS-RT Service Alerts</strong>, o formato que as aplicações de
+        transportes leem:
+      </p>
+      <p>
+        <a href="../gtfs-rt/alerts.pb">
+          <code>gtfs-rt/alerts.pb</code>
+        </a>
+      </p>
+      <p>
+        Cada pedido traz <strong>todos</strong> os avisos em vigor, e o que não vier deixou de
+        valer. Sem avisos, o feed sai válido e vazio — que é diferente de não responder: se não
+        conseguirmos ler a base, o endereço responde com um erro e não com um feed vazio, porque
+        dizer «não há avisos» por cima de uma greve é pior do que não responder.
+      </p>
 
       <h2>O que falta</h2>
       <p>

@@ -23,8 +23,12 @@
 --      quem o redige a meio de uma ocorrência não devia ter de escolher entre
 --      gravar a meio e mostrar a meio.
 --
--- Invisível ao público por RLS sem policy, como o resto: quem lê é o sítio,
--- com a chave de serviço, e o que ele mostra é o que já filtrou.
+-- LEITURA PÚBLICA DO QUE ESTÁ PUBLICADO, e é a forma da `regions`: a policy
+-- é `using (publicado)`, e por isso um rascunho não existe para quem pergunta
+-- com a chave pública. Não é generosidade nem descuido — um aviso publicado
+-- vai para uma página pública e para um feed GTFS-RT que qualquer aplicação
+-- lê; pô-lo atrás da chave de serviço era guardar a sete chaves o que se
+-- acabou de gritar, e obrigava o feed a correr com a chave que ignora a RLS.
 
 create table public.avisos (
   id         uuid primary key default gen_random_uuid(),
@@ -82,7 +86,8 @@ comment on table public.avisos is
   'O que a autoridade de transportes de cada região tem a dizer: supressões, '
   'desvios, greves. Estado editável, com o rasto de cada gesto em '
   'admin_actions. A forma é a do GTFS-RT para o feed sair por tradução '
-  'direta. Nada disto é público sem a chave de serviço.';
+  'direta. Só o que está publicado é legível com a chave pública; um rascunho '
+  'não existe para quem pergunta de fora.';
 
 create index avisos_por_regiao on public.avisos (region_id, publicado, inicio desc);
 
@@ -91,6 +96,9 @@ create trigger avisos_updated_at
   for each row execute function public.set_updated_at();
 
 alter table public.avisos enable row level security;
+
+create policy avisos_public_read on public.avisos
+  for select to anon, authenticated using (publicado);
 
 -- ---------------------------------------------------------------------------
 
@@ -264,6 +272,8 @@ $$;
 -- ---------------------------------------------------------------------------
 
 revoke all on table public.avisos from public, anon, authenticated;
+-- O `select` abre a porta; quem decide o que passa por ela é a policy acima.
+grant select on table public.avisos to anon, authenticated;
 grant select, insert, update, delete on table public.avisos to service_role;
 
 revoke all on function public.upsert_aviso(

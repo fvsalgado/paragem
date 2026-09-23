@@ -188,8 +188,20 @@ declare
 begin
   select count(*) into n from pg_policies
    where schemaname = 'public'
-     and tablename in ('admin_actions', 'region_licenses', 'rate_limits', 'avisos');
+     and tablename in ('admin_actions', 'region_licenses', 'rate_limits');
   assert n = 0, format('%s policies em tabelas que deviam ser só da chave de serviço', n);
+
+  -- E a dos avisos tem UMA, de leitura, e só do que está publicado. Uma
+  -- policy a mais aqui — ou um `using` que deixasse passar rascunhos — punha
+  -- no ar o que alguém ainda estava a escrever.
+  select count(*) into n from pg_policies
+   where schemaname = 'public' and tablename = 'avisos';
+  assert n = 1, format('os avisos deviam ter uma policy e têm %s', n);
+  select count(*) into n from pg_policies
+   where schemaname = 'public' and tablename = 'avisos'
+     and policyname = 'avisos_public_read' and cmd = 'SELECT'
+     and qual = 'publicado';
+  assert n = 1, 'a policy dos avisos devia ser select using (publicado)';
 
   -- E as públicas têm RLS ligada, sem exceção.
   select count(*) into n from pg_tables t
@@ -221,11 +233,27 @@ begin
 
   -- PUBLICAR DUAS VEZES REGISTA UMA. Senão o rasto conta gestos que ninguém
   -- fez, e deixa de servir para responder «desde quando é que isto esteve no ar».
+  -- UM RASCUNHO NÃO EXISTE PARA QUEM PERGUNTA DE FORA. Isto não se prova a
+  -- ler a policy: prova-se a perguntar com o papel com que o sítio pergunta.
+  -- Se falhar, o que está a acontecer é que meio texto escrito a correr, a
+  -- meio de uma ocorrência, está no ar antes de alguém o ter decidido.
+  execute 'set local role anon';
+  select count(*) into n from public.avisos where id = v_id;
+  execute 'reset role';
+  assert n = 0, 'um rascunho não devia ser visível com a chave pública';
+
   perform public.set_aviso_publicado(v_id, true, 'schema-checks');
   perform public.set_aviso_publicado(v_id, true, 'schema-checks');
   select count(*) into n from public.admin_actions
    where entity_type = 'aviso' and action = 'aviso.publish' and entity_id = v_id::text;
   assert n = 1, format('publicar duas vezes registou %s gestos', n);
+
+  -- E publicado existe — senão a policy estaria a fechar tudo, e o feed saía
+  -- vazio em cima de uma greve.
+  execute 'set local role anon';
+  select count(*) into n from public.avisos where id = v_id;
+  execute 'reset role';
+  assert n = 1, 'um aviso publicado devia ser visível com a chave pública';
 
   -- A GRAVIDADE É A DO GTFS-RT, e um valor de fora rebenta na escrita — onde
   -- há uma pessoa para o corrigir — e não na leitura, onde há uma aplicação

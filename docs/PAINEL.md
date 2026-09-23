@@ -24,6 +24,7 @@ mapa de domínios no middleware.
 |                               | acrescentar e retirar alias (redirecionam, nunca servem)                                             | `add_region_alias`, `remove_region_alias`                   |
 |                               | ligar e desligar cada um dos sete módulos                                                            | `set_modulo`                                                |
 |                               | registar uma licença — uma linha por contrato ou renovação                                           | `add_region_license`                                        |
+| `/admin/regioes/<id>/avisos/` | escrever, corrigir, publicar, retirar e apagar avisos                                                | `upsert_aviso`, `set_aviso_publicado`, `delete_aviso`       |
 | `/admin/auditoria/`           | quem fez o quê, quando, com o antes e o depois; recortes por pessoa, ação, tipo e mês; partilhável   | — (lê `admin_actions`)                                      |
 
 Três regras que o painel herda da base e mostra a quem carrega no botão:
@@ -36,6 +37,36 @@ Três regras que o painel herda da base e mostra a quem carrega no botão:
   (`ferramentas/verificar-seeds.py`). Um módulo que a região não declara no
   `modos:` não tem interruptor: desligar o que não existe é sinal de que alguém
   confundiu regiões.
+
+### Os avisos, e porque é que publicar é um botão à parte
+
+Um aviso — uma supressão, um desvio por obra, uma greve — **nasce por
+publicar**. Quem o redige a meio de uma ocorrência não devia ter de escolher
+entre gravar a meio e mostrar a meio, e por isso gravar e publicar são dois
+gestos, com duas funções e duas linhas diferentes na auditoria. Quem depois
+perguntar «porque é que este aviso esteve no ar entre as 7h e as 9h» tem a
+resposta separada de uma correção de gralha.
+
+Publicado **e em vigor**, um aviso aparece em três sítios ao mesmo tempo: na
+página de avisos da região, na faixa do catálogo, e em
+`<dominio>/gtfs-rt/alerts.pb`, que é o feed GTFS-RT Service Alerts que outras
+aplicações leem. Publicar invalida a cache da região: a visita seguinte já o
+mostra.
+
+Três coisas que o formulário diz e convém saber antes:
+
+- **as horas são de parede, no fuso declarado** (`PARAGEM_FUSO`, por omissão
+  `Europe/Lisbon`). O servidor corre em UTC; sem isto um aviso das 8h ficava
+  guardado uma hora adiantado no verão, sem erro nenhum;
+- **em branco no fim quer dizer «não se sabe quando acaba»**, que é o caso mais
+  honesto numa avaria, e é assim que sai no feed. Não se inventa um fim.
+  Passado o fim declarado, o aviso deixa de aparecer sozinho;
+- **sem linhas, paragens nem modos quer dizer «a rede toda»** — é o que a
+  especificação manda, é raro, e convém ser de propósito.
+
+**Retirar não é apagar.** Retirar é «isto deixou de ser verdade»; apagar é
+«isto nunca devia ter sido escrito». Apagar guarda o aviso inteiro na
+auditoria: apagar não é esquecer.
 
 ### O que um módulo desligado tira do sítio
 
@@ -143,3 +174,6 @@ trabalho `Migrações`.
 - **Não toca na plataforma.** O domínio no projeto da Vercel e o DNS são
   passos à parte, e o painel di-lo em cada aviso.
 - **Não edita a identidade de uma região.** Ver acima.
+- **Não inventa avisos.** O painel é onde a autoridade de transportes escreve
+  os dela. Um aviso de exemplo publicado é um aviso falso — e uma região sem
+  avisos é o estado normal, não uma página por acabar.

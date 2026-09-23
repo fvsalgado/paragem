@@ -66,9 +66,6 @@ export const etiquetaDaRegiao = (r: string): string => `regiao:${r}`;
 /** A etiqueta da lista de regiões — a página de produto e os interruptores. */
 export const ETIQUETA_DAS_REGIOES = 'regioes';
 
-/** Os identificadores são os das pastas em `regioes/`: minúsculas, dígitos e hífens. */
-export const IDENTIFICADOR = /^[a-z0-9][a-z0-9-]{0,63}$/;
-
 /**
  * Lê um ficheiro de uma região. «Não existe» dá a omissão — é o que era antes,
  * quando se olhava para o disco; qualquer outro erro rebenta, porque uma
@@ -209,10 +206,9 @@ async function regiaoLigada(r: string): Promise<boolean> {
 // Os tipos e as funções puras vivem em `formato.ts` — ver lá porquê.
 export * from './formato';
 // O `export *` reexporta, mas não traz os nomes para ESTE ficheiro.
-import { seguro } from './formato';
+import { IDENTIFICADOR, seguro } from './formato';
 import type {
   APedido,
-  Aviso,
   Concelho,
   Descarga,
   Estacao,
@@ -368,9 +364,10 @@ export const tarifas = cache(
       reservas: {},
     }),
 );
-export const avisos = cache(
-  async (r: string): Promise<Aviso[]> => await ler<Aviso[]>(r, 'avisos.json', []),
-);
+/* OS AVISOS NÃO ESTÃO AQUI, e é a única exceção no sítio inteiro.
+   Tudo o resto vem do armazém, escrito pelo pipeline e servido da cache com
+   uma etiqueta por região. Um aviso não pode esperar por uma publicação: lê-se
+   da base, por pedido, em `lib/avisos.ts`. */
 /** `null` quando a região não declara transporte a pedido — e aí a página não existe. */
 export const aPedido = cache(async (r: string): Promise<APedido | null> => {
   if (await desligado(r, 'a-pedido')) return null;

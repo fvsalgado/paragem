@@ -1301,7 +1301,6 @@ def construir(raiz: Path, regiao: Regiao, destino: Path, territorio=None) -> Sit
         quantas_linhas, bytes_percursos = _percursos(s, regiao, g)
         if quantas_linhas:
             s.saidas.append(Saida(s.destino / "percursos", bytes_percursos, quantas_linhas))
-    s._escrever("avisos.json", _avisos(raiz, regiao))
     s._escrever("lacunas.json", _lacunas(raiz, regiao))
     s._escrever("dados-abertos.json", _dados_abertos(raiz, regiao, destino, s.destino))
     indice = _procura(indice_paragens, estacoes, modos)
@@ -1817,18 +1816,17 @@ def _horarios_a_pedido(construcao: Path | None, regiao: Regiao) -> list[dict[str
     return saida
 
 
-def _avisos(raiz: Path, regiao: Regiao) -> list[dict[str, Any]]:
-    """Os avisos, em JSON estático — a gestão em Supabase é a Fase 4 (§9).
-
-    Enquanto não houver de onde os tirar, isto é uma lista vazia e não um
-    exemplo: um aviso de exemplo publicado é um aviso falso.
-    """
-    ficheiro = raiz / "regioes" / regiao.id / "avisos.json"
-    if ficheiro.exists():
-        import json as _json
-
-        return list(_json.loads(ficheiro.read_text(encoding="utf-8")))
-    return []
+# OS AVISOS JÁ NÃO SAEM DAQUI.
+#
+# Eram um JSON estático que ninguém escrevia, à espera da gestão em Supabase
+# que a Fase 4 prometia. Ela chegou: os avisos vivem na tabela `public.avisos`,
+# escrevem-se no painel e lêem-se em direto (`web/src/lib/avisos.ts`). Deixar
+# aqui um ficheiro a mais só servia para o próximo a mexer nisto procurar os
+# avisos no sítio errado.
+#
+# É a única coisa que o sítio mostra e que o pipeline NÃO constrói, e a razão
+# é o relógio: uma greve marcada para amanhã de manhã não pode esperar por uma
+# construção.
 
 
 def _lacunas(raiz: Path, regiao: Regiao) -> dict[str, Any]:

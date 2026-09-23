@@ -14,6 +14,7 @@ sentido em tempo de execução e que o painel muda sem um commit:
 | `region_licenses`       | o registo comercial: uma linha por contrato ou renovação | só o painel, com a chave de serviço                  |
 | `admin_actions`         | cada gesto do painel, com o antes e o depois             | só o painel                                          |
 | `rate_limits`           | as tentativas de entrada no painel, por origem e janela  | só a função `rate_limit_hit`                         |
+| `avisos`                | o que a autoridade tem a dizer hoje: supressões, desvios, greves | o sítio e o feed GTFS-RT, com a chave anónima — só os publicados |
 
 É o desenho do [Coreto](https://github.com/fvsalgado/coreto) — a mesma casa, o
 mesmo autor, o mesmo problema resolvido primeiro lá —, levantado e reduzido.
@@ -41,6 +42,20 @@ sem linhas tem tudo ligado.
 que escrevem e que deixam a linha em `admin_actions`. Uma escrita direta era uma
 ação sem rasto, e o rasto é metade do que torna um interruptor confiável.
 Quem quer saber «quem desligou o comboio nesta região, e quando» lê a tabela.
+
+**Os avisos são a única coisa que o sítio mostra e o pipeline não constrói.**
+Tudo o resto — paragens, linhas, horários, mosaicos — é construído das fontes e
+publicado por ficheiro. Um aviso não pode esperar por isso: uma greve marcada
+para amanhã de manhã, um desvio que começa daqui a uma hora. Por isso vive na
+base, escreve-se no painel, e o sítio lê-o com a chave pública — a policy
+`avisos_public_read` só deixa ver o que está publicado, e por isso um rascunho
+não existe para quem pergunta de fora. Publicar invalida a etiqueta de cache da
+região e a página rende-se de novo à visita seguinte; o minuto de validade é o
+que sobra para o caso de o sinal se perder. A forma das colunas é a do GTFS-RT
+(`cause`, `effect`, `severity_level`, `active_period`, `informed_entity`), para
+o feed sair por tradução direta em vez de por adivinhação, e um valor de fora
+da especificação rebenta na ESCRITA — onde há uma pessoa para o corrigir — e
+não na leitura, onde há uma aplicação de outra gente.
 
 **O público degrada, a segurança fecha.** Se o sítio não conseguir ler
 `modulos`, mostra tudo — assumir tudo desligado por causa de uma falha de rede

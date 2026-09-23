@@ -90,6 +90,7 @@ variável não existe: quem manda é a base.
 | `ADMIN_PASSWORD_HASH`, `ADMIN_SESSION_SECRET` | produção e pré-visualização, sensíveis | a porta do painel `/admin` ([`PAINEL.md`](PAINEL.md)): o hash da palavra-passe (`web/scripts/senha.mjs`) e o segredo que assina a sessão, 32 caracteres ou mais. Sem eles o painel não abre |
 | `SUPABASE_SERVICE_ROLE_KEY` | produção e pré-visualização, sensível | a chave **secreta** «painel» do projeto Supabase: é com ela que o painel lê e chama as funções da base. Nunca `NEXT_PUBLIC_`; só o servidor a vê |
 | `IP_HASH_SALT` | produção e pré-visualização, sensível | o sal dos hashes de origem do painel (limite de tentativas, auditoria); 16 caracteres ou mais |
+| `PARAGEM_FUSO` | opcional | o fuso em que o painel lê e escreve as horas dos avisos. Por omissão `Europe/Lisbon`. **É declarado e não adivinhado**: o servidor corre em UTC e o campo `datetime-local` não leva fuso nenhum — sem isto, um aviso das 8h ficava guardado uma hora adiantado no verão, sem erro e sem aviso |
 
 Os `NEXT_PUBLIC_*` são trocados por texto **na construção** — e a construção
 é agora na Vercel, por isso é lá que vivem. Já não há nada a cravar no CI.

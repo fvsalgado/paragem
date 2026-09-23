@@ -84,7 +84,7 @@ function entidades(linhas: string[], paragens: string[]): number[] {
   ];
 }
 
-const CAUSA: Record<string, number> = {
+export const CAUSA = {
   UNKNOWN_CAUSE: 1,
   OTHER_CAUSE: 2,
   TECHNICAL_PROBLEM: 3,
@@ -97,9 +97,9 @@ const CAUSA: Record<string, number> = {
   CONSTRUCTION: 10,
   POLICE_ACTIVITY: 11,
   MEDICAL_EMERGENCY: 12,
-};
+} as const;
 
-const EFEITO: Record<string, number> = {
+export const EFEITO = {
   NO_SERVICE: 1,
   REDUCED_SERVICE: 2,
   SIGNIFICANT_DELAYS: 3,
@@ -111,14 +111,24 @@ const EFEITO: Record<string, number> = {
   STOP_MOVED: 9,
   NO_EFFECT: 10,
   ACCESSIBILITY_ISSUE: 11,
-};
+} as const;
 
-const GRAVIDADE: Record<string, number> = {
+export const GRAVIDADE = {
   UNKNOWN_SEVERITY: 1,
   INFO: 2,
   WARNING: 3,
   SEVERE: 4,
-};
+} as const;
+
+/**
+ * Os nomes, como tipos. É isto que faz com que os rótulos em português
+ * (`avisos.ts`) e estes números não possam divergir sem o compilador dar por
+ * isso: o mesmo enum escrito duas vezes é o mesmo enum até alguém acrescentar
+ * um valor só de um lado.
+ */
+export type Causa = keyof typeof CAUSA;
+export type Efeito = keyof typeof EFEITO;
+export type Gravidade = keyof typeof GRAVIDADE;
 
 export type AvisoRT = {
   id: string;
@@ -155,12 +165,12 @@ export function feedDeAvisos(avisos: AvisoRT[], lingua = 'pt', agora = new Date(
     const alerta = [
       ...periodo(segundos(a.inicio), segundos(a.fim)),
       ...entidades(a.linhas ?? [], a.paragens ?? []),
-      ...campoVarint(6, CAUSA[a.causa] ?? CAUSA.UNKNOWN_CAUSE),
-      ...campoVarint(7, EFEITO[a.efeito] ?? EFEITO.OTHER_EFFECT),
+      ...campoVarint(6, CAUSA[a.causa as Causa] ?? CAUSA.UNKNOWN_CAUSE),
+      ...campoVarint(7, EFEITO[a.efeito as Efeito] ?? EFEITO.OTHER_EFFECT),
       ...textoTraduzido(8, a.url, lingua),
       ...textoTraduzido(10, a.titulo, lingua),
       ...textoTraduzido(11, a.texto, lingua),
-      ...campoVarint(14, GRAVIDADE[a.gravidade] ?? GRAVIDADE.UNKNOWN_SEVERITY),
+      ...campoVarint(14, GRAVIDADE[a.gravidade as Gravidade] ?? GRAVIDADE.UNKNOWN_SEVERITY),
     ];
     return campoBytes(2, [...campoTexto(1, a.id), ...campoBytes(5, alerta)]);
   });

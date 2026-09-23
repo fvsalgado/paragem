@@ -14,7 +14,6 @@ import { test } from 'node:test';
 
 import GtfsRealtimeBindings from 'gtfs-realtime-bindings';
 
-
 import { feedDeAvisos, type AvisoRT } from '../src/lib/gtfs-rt.ts';
 
 const { FeedMessage } = GtfsRealtimeBindings.transit_realtime;
@@ -77,14 +76,8 @@ test('o período de vigência chega nos dois extremos', () => {
 
 test('as linhas e as paragens chegam como entidades informadas', () => {
   const a = ler(feedDeAvisos([UM])).entity![0].alert!;
-  assert.deepEqual(
-    a.informedEntity?.map((x) => x.routeId).filter(Boolean),
-    ['10', '622'],
-  );
-  assert.deepEqual(
-    a.informedEntity?.map((x) => x.stopId).filter(Boolean),
-    ['tmr-0001'],
-  );
+  assert.deepEqual(a.informedEntity?.map((x) => x.routeId).filter(Boolean), ['10', '622']);
+  assert.deepEqual(a.informedEntity?.map((x) => x.stopId).filter(Boolean), ['tmr-0001']);
 });
 
 test('um aviso sem linhas nem paragens vale para a rede toda', () => {

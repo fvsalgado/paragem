@@ -53,6 +53,14 @@ export const NOME_DAS_ACOES: Record<string, string> = {
   'region.license_add': 'registou uma licença',
   'module.enable': 'ligou um módulo',
   'module.disable': 'desligou um módulo',
+  'aviso.create': 'escreveu um aviso',
+  'aviso.update': 'corrigiu um aviso',
+  // Publicar e retirar têm nome próprio de propósito: quem pergunta «porque é
+  // que este aviso esteve no ar entre as 7h e as 9h» precisa de os distinguir
+  // de uma correção de gralha.
+  'aviso.publish': 'publicou um aviso',
+  'aviso.unpublish': 'retirou um aviso',
+  'aviso.delete': 'apagou um aviso',
 };
 
 export function nomeDaAcao(action: string): string {

@@ -9,6 +9,9 @@
  * A regra que isto fixa: aqui dentro não entra nada que toque no disco.
  */
 
+/** Os identificadores são os das pastas em `regioes/`: minúsculas, dígitos e hífens. */
+export const IDENTIFICADOR = /^[a-z0-9][a-z0-9-]{0,63}$/;
+
 export type Ponto = {
   nome: string;
   lat: number;
@@ -162,15 +165,6 @@ export type Tarifas = {
   titulos: Titulo[];
   por_confirmar: number;
   reservas: Record<string, unknown>;
-};
-
-export type Aviso = {
-  id: string;
-  titulo: string;
-  texto: string;
-  gravidade?: 'informacao' | 'aviso' | 'grave';
-  desde?: string;
-  ate?: string;
 };
 
 export type Lacuna = { id: string; o_que: string; porque_importa: string; quantos?: number };
