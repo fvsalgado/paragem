@@ -386,3 +386,47 @@ def test_um_feed_de_outra_entidade_nao_se_apresenta_como_nosso():
         licenca = "ODbL-1.0"
 
     assert _termos(DeOsm(), "base-osm") == "odbl"
+
+
+# --- os termos de uma descarga ---------------------------------------------
+
+
+def _fonte(licenca: str = "", por_esclarecer: bool = False):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(licenca=licenca, licenca_por_esclarecer=por_esclarecer)
+
+
+def test_a_licenca_da_saida_ganha_a_da_fonte():
+    """A licença de uma obra derivada não é a da entrada principal.
+
+    O feed da rede sai de um caderno de horários que não declara licença, e por
+    isso ficava «para consulta». Mas 668 dos 903 traçados encaminham-se pelo
+    OpenStreetMap, e a partilha nos mesmos termos da ODbL ganha a tudo o que
+    entra. O ficheiro não estava por licenciar — estava mal rotulado, e o
+    rótulo era MAIS restritivo do que a realidade obriga.
+    """
+    from paragem.sitio import _termos
+
+    assert _termos(_fonte(""), "horarios") == "consulta"
+    assert _termos(_fonte(""), "horarios", "ODbL-1.0") == "odbl"
+
+
+def test_sem_licenca_em_lado_nenhum_fica_para_consulta():
+    from paragem.sitio import _termos
+
+    assert _termos(_fonte(""), None) == "consulta"
+    assert _termos(_fonte("termos por confirmar"), None) == "consulta"
+
+
+def test_o_que_e_nosso_leva_se_sem_perguntar():
+    from paragem.sitio import _termos
+
+    for nossa in ("AGPL-3.0-only", "CC-BY-4.0", "CC0-1.0", "MIT"):
+        assert _termos(_fonte(nossa), None) == "nosso"
+
+
+def test_a_licenca_da_fonte_continua_a_valer_quando_a_saida_nao_declara():
+    from paragem.sitio import _termos
+
+    assert _termos(_fonte("ODbL-1.0"), None) == "odbl"

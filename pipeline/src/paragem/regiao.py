@@ -92,6 +92,20 @@ class Saida:
     modo: str | None = None
     papel: str | None = None
     publica: bool = True
+    #: A LICENÇA DA SAÍDA, quando não é a da fonte.
+    #:
+    #: A de uma obra derivada não é a da entrada principal: é a soma de todas
+    #: as entradas mais o que lhe pusemos em cima, e a mais exigente ganha.
+    #: Um feed cujos traçados se encaminham pelo OpenStreetMap leva a partilha
+    #: nos mesmos termos da ODbL, mesmo que o caderno de horários de onde saem
+    #: as horas não declare licença nenhuma.
+    #:
+    #: NÃO SE INFERE, declara-se. Os leitores compostos puxam fontes por dentro
+    #: — camadas de um geoportal, um registo do regulador, o próprio
+    #: OpenStreetMap — e a declaração da receita só nomeia a principal. Inferir
+    #: a partir dela dava a licença errada com ar de automática, que é pior do
+    #: que não inferir. Quem constrói a região sabe o que lá entrou, e escreve-o.
+    licenca: str | None = None
     leitor_especifico_da_fonte: bool = False
     params: dict[str, Any] = field(default_factory=dict)
 
@@ -267,6 +281,7 @@ class Regiao:
                 modo=s.get("modo"),
                 papel=s.get("papel"),
                 publica=bool(s.get("publica", True)),
+                licenca=s.get("licenca"),
                 leitor_especifico_da_fonte=bool(s.get("leitor_especifico_da_fonte", False)),
                 params=s.get("params") or {},
             )

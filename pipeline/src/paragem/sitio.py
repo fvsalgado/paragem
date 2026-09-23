@@ -1884,8 +1884,17 @@ NOSSO = "nosso"
 GRUPOS = ("feeds", "catalogos", "bicicletas", "geometria", "decisoes", "relatorios")
 
 
-def _termos(fonte: Any, papel: str | None) -> str:
-    licenca = (fonte.licenca or "").upper()
+def _termos(fonte: Any, papel: str | None, licenca_da_saida: str | None = None) -> str:
+    """O rótulo sai da licença da SAÍDA quando ela a declara, e só então da fonte.
+
+    Era só da fonte, e isso estava errado na raiz: a licença de uma obra
+    derivada não é a da entrada principal. O feed da rede sai de um caderno de
+    horários que não declara licença — e por isso ficava «para consulta» — mas
+    74 % dos traçados dele encaminham-se pelo OpenStreetMap, cuja partilha nos
+    mesmos termos ganha a tudo o resto. O ficheiro não estava por licenciar:
+    estava mal rotulado, e o rótulo era mais restritivo do que a realidade.
+    """
+    licenca = (licenca_da_saida or fonte.licenca or "").upper()
     if licenca.startswith("ODBL"):
         return ODBL
     if licenca.startswith(("AGPL", "CC-BY", "CC0", "MIT")):
@@ -1957,6 +1966,7 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
         modo: str | None,
         papel: str | None,
         descricao: str,
+        licenca_da_saida: str | None = None,
     ) -> None:
         alvo = pasta / relativo
         alvo.parent.mkdir(parents=True, exist_ok=True)
@@ -1977,9 +1987,9 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
                 "gerado_em": hoje,
                 "fonte": fonte.nome,
                 "fonte_url": fonte.url,
-                "licenca": fonte.licenca,
+                "licenca": licenca_da_saida or fonte.licenca,
                 "licenca_por_esclarecer": fonte.licenca_por_esclarecer,
-                "termos": _termos(fonte, papel),
+                "termos": _termos(fonte, papel, licenca_da_saida),
                 "atribuicao": fonte.atribuicao,
                 "atribuicao_obrigatoria": fonte.exige_atribuicao,
                 "descricao": descricao,
@@ -1988,6 +1998,19 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
 
     for s in regiao.saidas:
         if not s.publica or not s.saida:
+            continue
+        # O FEED DE OUTRA ENTIDADE NÃO SE REDISTRIBUI AQUI.
+        #
+        # Estes feeds entram na construção e servem quem viaja: aparecem no
+        # mapa, nas páginas de paragem e nos itinerários do planeador, que é
+        # USAR os dados. Oferecê-los para descarga é outra coisa — é ser
+        # espelho do ficheiro de outra entidade, e nem é o nosso papel nem é o
+        # nosso direito. Quem quer o feed do operador ferroviário vai buscá-lo
+        # ao operador ferroviário, que é quem responde por ele estar certo.
+        #
+        # O que se distribui daqui é o que a autoridade de transportes desta
+        # região gere. Mais nada.
+        if s.papel == "feed-de-terceiro":
             continue
         caminho = Path(destino) / s.saida
         if not caminho.exists():
@@ -2004,6 +2027,7 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
             modo=s.modo,
             papel=s.papel,
             descricao=_descricao_da_saida(s),
+            licenca_da_saida=s.licenca,
         )
 
     # As DECISÕES, que não são saídas da receita e são o que torna a

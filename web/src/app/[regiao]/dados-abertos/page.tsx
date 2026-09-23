@@ -84,6 +84,7 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
   const l = await lacunas(rid);
   const porEsclarecer = ds.filter((d) => d.licenca_por_esclarecer);
   const abertos = ds.filter((d) => d.termos === 'odbl' || d.termos === 'nosso');
+  const soParaConsulta = ds.filter((d) => d.termos === 'consulta');
 
   return (
     <>
@@ -94,22 +95,44 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
         construção, cada um com os seus termos.
       </p>
 
-      {/* Publicá-los todos como abertos antes de a autoridade de transportes
-          autorizar a reutilização era prometer em nome dela. Escondê-los era
-          esconder o que o sítio já mostra página a página. */}
-      <div className="faixa alerta">
-        <p>
-          <strong>Nem todos estes ficheiros têm licença aberta declarada.</strong> Os que derivam do
-          OpenStreetMap saem sob ODbL e reutilizam-se com atribuição
-          {abertos.length ? ` (${abertos.length})` : ''}. Os que a construção faz a partir de
-          documentos cujos termos não nos autorizam a relicenciar estão aqui{' '}
-          <strong>para consulta</strong>: a publicação com licença aberta depende de autorização{' '}
-          {r.autoridade?.nome
-            ? `d${r.artigo === 'a' ? 'a' : 'o'} ${r.autoridade.nome}`
-            : 'da autoridade de transportes'}
-          .
-        </p>
-      </div>
+      {/* O AVISO MUDA CONFORME O QUE HÁ, e não é cosmética.
+
+          Enquanto houve ficheiros que a construção fazia de documentos cujos
+          termos não nos autorizavam a relicenciar, dizê-lo era honestidade.
+          Deixar o mesmo aviso depois de eles saírem seria o contrário: uma
+          página de dados abertos a pedir desculpa por dados que são abertos. */}
+      {soParaConsulta.length ? (
+        <div className="faixa alerta">
+          <p>
+            <strong>Nem todos estes ficheiros têm licença aberta declarada.</strong> Os que derivam
+            do OpenStreetMap saem sob ODbL e reutilizam-se com atribuição
+            {abertos.length ? ` (${abertos.length})` : ''}. Os que a construção faz a partir de
+            documentos cujos termos não nos autorizam a relicenciar estão aqui{' '}
+            <strong>para consulta</strong> ({soParaConsulta.length}): a publicação com licença
+            aberta depende de autorização{' '}
+            {r.autoridade?.nome
+              ? `d${r.artigo === 'a' ? 'a' : 'o'} ${r.autoridade.nome}`
+              : 'da autoridade de transportes'}
+            .
+          </p>
+        </div>
+      ) : (
+        <div className="faixa">
+          <p>
+            <strong>Estes ficheiros reutilizam-se.</strong> Saem sob <strong>ODbL</strong> — pode
+            levá-los, usá-los e redistribuí-los, com duas condições: atribuir a origem, e partilhar
+            nos mesmos termos o que deles derivar. A atribuição vai dentro do próprio ficheiro, em{' '}
+            <code>attributions.txt</code>, para não depender de ninguém se lembrar dela.
+          </p>
+          <p>
+            Aqui está <strong>o que {r.autoridade?.nome ?? 'a autoridade de transportes'} gere</strong>.
+            Os feeds de outros operadores — o ferroviário, os expressos, as carreiras de operadores
+            vizinhos que entram na região — alimentam o mapa, as páginas de paragem e o planeador
+            deste sítio, mas não se descarregam daqui: quem os distribui é quem os produz, que é
+            também quem responde por eles estarem certos.
+          </p>
+        </div>
+      )}
 
       {GRUPOS.map((g) => {
         const doGrupo = ds.filter((d) => d.grupo === g.id);
