@@ -188,14 +188,77 @@ declare
 begin
   select count(*) into n from pg_policies
    where schemaname = 'public'
-     and tablename in ('admin_actions', 'region_licenses', 'rate_limits');
+     and tablename in ('admin_actions', 'region_licenses', 'rate_limits', 'avisos');
   assert n = 0, format('%s policies em tabelas que deviam ser só da chave de serviço', n);
 
   -- E as públicas têm RLS ligada, sem exceção.
   select count(*) into n from pg_tables t
    where t.schemaname = 'public'
      and t.tablename in ('regions', 'region_domain_aliases', 'modulos', 'admin_actions',
-                         'region_licenses', 'rate_limits')
+                         'region_licenses', 'rate_limits', 'avisos')
      and not t.rowsecurity;
   assert n = 0, format('%s tabelas sem RLS', n);
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- OS AVISOS (0007). O que se afirma é o que custa caro se falhar: um aviso
+-- nasce por publicar, publicar é idempotente, e a forma é a do GTFS-RT.
+do $$
+declare
+  v_id uuid;
+  n    integer;
+begin
+  perform public.create_region('checks-avisos', 'Checks', 'a', 'checks-avisos', 98, 'schema-checks');
+
+  -- NASCE POR PUBLICAR. Quem redige a meio de uma ocorrência não devia ter de
+  -- escolher entre gravar a meio e mostrar a meio.
+  select public.upsert_aviso(
+    null, 'checks-avisos', 'Título', 'Texto', 'SEVERE', 'CONSTRUCTION', 'DETOUR',
+    null, null, '{}', '{}', '{}', null, 'schema-checks'
+  ) into v_id;
+  select count(*) into n from public.avisos where id = v_id and not publicado;
+  assert n = 1, 'um aviso devia nascer por publicar';
+
+  -- PUBLICAR DUAS VEZES REGISTA UMA. Senão o rasto conta gestos que ninguém
+  -- fez, e deixa de servir para responder «desde quando é que isto esteve no ar».
+  perform public.set_aviso_publicado(v_id, true, 'schema-checks');
+  perform public.set_aviso_publicado(v_id, true, 'schema-checks');
+  select count(*) into n from public.admin_actions
+   where entity_type = 'aviso' and action = 'aviso.publish' and entity_id = v_id::text;
+  assert n = 1, format('publicar duas vezes registou %s gestos', n);
+
+  -- A GRAVIDADE É A DO GTFS-RT, e um valor de fora rebenta na escrita — onde
+  -- há uma pessoa para o corrigir — e não na leitura, onde há uma aplicação
+  -- de outra gente.
+  begin
+    perform public.upsert_aviso(
+      null, 'checks-avisos', 'T', 'X', 'GRAVISSIMO', 'CONSTRUCTION', 'DETOUR',
+      null, null, '{}', '{}', '{}', null, 'schema-checks'
+    );
+    assert false, 'uma gravidade de fora do GTFS-RT devia ser recusada';
+  exception when check_violation then null;
+  end;
+
+  -- UM AVISO NÃO MUDA DE REGIÃO. Movê-lo por engano é publicar a greve de um
+  -- território no sítio de outro.
+  perform public.create_region('checks-avisos-2', 'Checks 2', 'a', 'checks-avisos-2', 97, 'schema-checks');
+  begin
+    perform public.upsert_aviso(
+      v_id, 'checks-avisos-2', 'T', 'X', 'INFO', 'CONSTRUCTION', 'DETOUR',
+      null, null, '{}', '{}', '{}', null, 'schema-checks'
+    );
+    assert false, 'um aviso não devia poder mudar de região';
+  exception when others then
+    assert sqlerrm like '%não muda de região%', format('a recusa devia falar da região: %s', sqlerrm);
+  end;
+
+  -- APAGAR GUARDA O QUE APAGOU. Apagar não é esquecer.
+  perform public.delete_aviso(v_id, 'schema-checks');
+  select count(*) into n from public.admin_actions
+   where action = 'aviso.delete' and entity_id = v_id::text
+     and before ->> 'titulo' = 'Título';
+  assert n = 1, 'o rasto de apagar devia guardar o aviso inteiro';
+
+  delete from public.regions where id in ('checks-avisos', 'checks-avisos-2');
+  delete from public.admin_actions where actor = 'schema-checks';
 end $$;
