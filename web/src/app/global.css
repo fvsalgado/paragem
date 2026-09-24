@@ -1058,11 +1058,20 @@ button.resumo-opcao:hover {
 }
 
 /* O botão da localização, em baixo à direita e grande — onde o polegar
-   chega, e onde toda a gente já o foi procurar mil vezes noutra aplicação. */
+   chega, e onde toda a gente já o foi procurar mil vezes noutra aplicação.
+
+   POR CIMA DA FOLHA, e não por baixo dela. O `--tapado-a-direita` e o
+   `--tapado-a-esquerda` são o que as folhas tapam de cada canto, medido pelo
+   `AppDoMapa`; sem folha valem zero e os cantos ficam onde sempre estiveram.
+   Com eles sobem também a escala e a atribuição do OpenStreetMap, que a ODbL
+   obriga a mostrar e que estava escondida atrás da folha de abertura. */
 .app-mapa .maplibregl-ctrl-bottom-right {
-  bottom: 0.6rem;
+  bottom: calc(var(--tapado-a-direita, 0px) + 0.6rem);
   right: 0.6rem;
   z-index: 5;
+}
+.app-mapa .maplibregl-ctrl-bottom-left {
+  bottom: var(--tapado-a-esquerda, 0px);
 }
 .app-mapa .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group {
   border-radius: 999px;
