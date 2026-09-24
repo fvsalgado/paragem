@@ -131,8 +131,10 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
                 {daCasa.length > 0 ? `${sobOdbl.length} ` : ''}saem sob <strong>ODbL</strong> — pode
                 levá-los, usá-los e redistribuí-los, com duas condições: atribuir a origem, e
                 partilhar nos mesmos termos o que deles derivar. A atribuição vai dentro do próprio
-                ficheiro, em <code>attributions.txt</code>, para não depender de ninguém se lembrar
-                dela.
+                ficheiro, para não depender de ninguém se lembrar dela: no{' '}
+                <code>attributions.txt</code> dos GTFS, num <code>ATRIBUICAO.txt</code> nos outros
+                zip, nos campos <code>attribution</code> e <code>license</code> dos JSON. Um CSV não
+                tem onde a guardar, e leva-a aqui, ao lado.
               </>
             ) : null}
             {daCasa.length > 0 ? (

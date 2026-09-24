@@ -59,7 +59,11 @@ body {
   overflow-x: hidden;
   background: var(--fundo);
   color: var(--texto);
-  font-family: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
+  /* A `--letra` é a Atkinson Hyperlegible servida pelo próprio sítio
+     (`app/layout.tsx`). O nome por extenso é a rede: um `var()` sem valor
+     anula a declaração inteira, e a página caía na letra de omissão do
+     navegador em vez de passar à seguinte da lista. */
+  font-family: var(--letra, 'Atkinson Hyperlegible'), 'Segoe UI', system-ui, sans-serif;
   font-size: 1.0625rem;
   line-height: 1.55;
 }
@@ -426,6 +430,10 @@ h3 {
   border: 1px solid transparent;
   min-width: 2.5em;
   text-align: center;
+  /* O NÚMERO DA LINHA NÃO SE PARTE. Dentro de uma célula de tabela com
+     `overflow-wrap: anywhere` partia: a 390 px, a «1002» saía «100» por cima
+     de «2», e lia-se como duas linhas que não existem. */
+  white-space: nowrap;
 }
 
 /* --- tabelas de horário -------------------------------------------------- */
@@ -450,6 +458,13 @@ table.horario td {
      a 320 px, um nome de paragem com rua, equipamento e concelho lá dentro
      fazia a página deslizar para o lado. */
   overflow-wrap: anywhere;
+}
+/* A HORA TAMBÉM NÃO. O `anywhere` de cima serve os nomes longos e deixava a
+   tabela encolher a coluna das horas até um carácter: a 390 px, 116 das 122
+   partidas de um terminal saíam «06:» numa linha e «45» na outra. A coluna
+   passa a ter pelo menos a largura de uma hora, e é o destino que dobra. */
+table.horario .hora {
+  white-space: nowrap;
 }
 
 /* Uma ligação dentro de uma tabela continua a ser um alvo tátil, e continua a
@@ -1058,11 +1073,20 @@ button.resumo-opcao:hover {
 }
 
 /* O botão da localização, em baixo à direita e grande — onde o polegar
-   chega, e onde toda a gente já o foi procurar mil vezes noutra aplicação. */
+   chega, e onde toda a gente já o foi procurar mil vezes noutra aplicação.
+
+   POR CIMA DA FOLHA, e não por baixo dela. O `--tapado-a-direita` e o
+   `--tapado-a-esquerda` são o que as folhas tapam de cada canto, medido pelo
+   `AppDoMapa`; sem folha valem zero e os cantos ficam onde sempre estiveram.
+   Com eles sobem também a escala e a atribuição do OpenStreetMap, que a ODbL
+   obriga a mostrar e que estava escondida atrás da folha de abertura. */
 .app-mapa .maplibregl-ctrl-bottom-right {
-  bottom: 0.6rem;
+  bottom: calc(var(--tapado-a-direita, 0px) + 0.6rem);
   right: 0.6rem;
   z-index: 5;
+}
+.app-mapa .maplibregl-ctrl-bottom-left {
+  bottom: var(--tapado-a-esquerda, 0px);
 }
 .app-mapa .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group {
   border-radius: 999px;

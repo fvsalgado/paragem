@@ -26,7 +26,9 @@ from __future__ import annotations
 
 import collections
 import contextlib
+import csv
 import hashlib
+import io
 import json
 import re
 import shutil
@@ -40,6 +42,8 @@ from typing import Any
 from .geo import distancia_km
 from .gtfs import Gtfs
 from .leitores import LEITORES_DE_HORARIO
+from .leitores.osm import ATRIBUICAO as ATRIBUICAO_OSM
+from .leitores.osm import LICENCA_URL as LICENCA_ODBL
 from .regiao import Regiao
 from .regiao import Saida as SaidaDaReceita
 
@@ -1899,7 +1903,7 @@ def _lacunas(raiz: Path, regiao: Regiao) -> dict[str, Any]:
 #
 #   odbl      deriva SÓ do OpenStreetMap. A ODbL é uma licença aberta com
 #             partilha nos mesmos termos, e a atribuição vai dentro do
-#             ficheiro.
+#             ficheiro (`_embutir_atribuicao`).
 #   consulta  construído por nós a partir de fontes SEM licença aberta
 #             declarada. Está aqui para se ver e conferir; a publicação com
 #             licença aberta depende da autoridade de transportes (Fase 5).
@@ -1979,6 +1983,136 @@ def _zipar(pasta: Path, destino: Path) -> None:
                 z.writestr(info, ficheiro.read_bytes())
 
 
+# --- a atribuição que a ODbL obriga, dentro do que se leva -----------------
+#
+# A página de dados abertos dizia que «a atribuição vai dentro do próprio
+# ficheiro», e ia dentro de um: o feed da rede, cujo leitor escreve a linha do
+# OpenStreetMap no `attributions.txt`. O do transporte a pedido tinha o
+# `attributions.txt` sem ela, e os GBFS das bicicletas e os catálogos em JSON
+# não a tinham em lado nenhum — ficheiros rotulados ODbL que, levados daqui,
+# deixavam de dizer de onde vinham. A ODbL não se contenta com a página de
+# onde se descarrega: a nota vai com os dados.
+#
+# Por isso a regra vive aqui, no único sítio por onde passa tudo o que se
+# descarrega, e não em cada leitor: um leitor novo que se esqueça dela não a
+# esquece por todos.
+
+COPYRIGHT_OSM = "https://www.openstreetmap.org/copyright"
+
+#: O nome do ficheiro com a nota, nos zip que não são GTFS. Os GTFS têm o seu
+#: lugar próprio para isto, que é o `attributions.txt`.
+NOTA_DA_ODBL = "ATRIBUICAO.txt"
+
+
+def _nomeia_osm(texto: str | bytes | None) -> bool:
+    if not texto:
+        return False
+    if isinstance(texto, bytes):
+        texto = texto.decode("utf-8", errors="replace")
+    return "openstreetmap" in texto.lower()
+
+
+def _atribuicao_da_descarga(fonte: Any, termos: str) -> tuple[str | None, bool]:
+    """A atribuição que a página escreve ao lado do ficheiro, e se é obrigatória.
+
+    A de um ficheiro sob ODbL leva sempre o OpenStreetMap: é dele que vem a
+    licença, mesmo quando a fonte principal é outra — o registo de fontes dá a
+    atribuição da ENTRADA, e o rótulo ODbL é da SAÍDA (`Saida.licenca`).
+    """
+    propria = fonte.atribuicao
+    if termos != ODBL:
+        return propria, fonte.exige_atribuicao
+    if _nomeia_osm(propria):
+        return propria, True
+    return (f"{ATRIBUICAO_OSM}; {propria}" if propria else ATRIBUICAO_OSM), True
+
+
+def _embutir_atribuicao(alvo: Path) -> None:
+    """Põe a nota da ODbL dentro do ficheiro, onde o formato a deixa pôr.
+
+    Num GTFS vai para o `attributions.txt`, que é onde o formato a quer; noutro
+    zip, num `ATRIBUICAO.txt`; num JSON, nos campos `attribution` e `license`,
+    como no GeoJSON que o leitor do OpenStreetMap escreve. Um CSV não tem onde a
+    guardar sem deixar de ser CSV — leva-a a página, ao lado dele.
+    """
+    if alvo.suffix == ".zip":
+        _atribuicao_no_zip(alvo)
+    elif alvo.suffix in (".json", ".geojson"):
+        _atribuicao_no_json(alvo)
+
+
+def _atribuicao_no_zip(alvo: Path) -> None:
+    with zipfile.ZipFile(alvo) as z:
+        membros = [(i.filename, z.read(i)) for i in z.infolist() if not i.is_dir()]
+    nomes = [n for n, _ in membros]
+    if "agency.txt" in nomes:
+        atual = dict(membros).get("attributions.txt")
+        if _nomeia_osm(atual):
+            return
+        novo = _com_linha_do_osm(atual)
+        if atual is None:
+            membros.append(("attributions.txt", novo))
+        else:
+            membros = [(n, novo if n == "attributions.txt" else b) for n, b in membros]
+    else:
+        if any(_nomeia_osm(b) for _, b in membros):
+            return
+        nota = (
+            f"Estes dados derivam do OpenStreetMap.\n"
+            f"{ATRIBUICAO_OSM} — {COPYRIGHT_OSM}\n"
+            f"Disponíveis sob a Open Database License (ODbL) 1.0 — {LICENCA_ODBL}\n"
+        )
+        membros.append((NOTA_DA_ODBL, nota.encode("utf-8")))
+    # Reescrito como o `_zipar` escreve: a mesma data fixa, para que o mesmo
+    # conteúdo dê sempre a mesma soma.
+    with zipfile.ZipFile(alvo, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+        for nome, dados in membros:
+            info = zipfile.ZipInfo(nome, date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            z.writestr(info, dados)
+
+
+def _com_linha_do_osm(atual: bytes | None) -> bytes:
+    """O `attributions.txt` de um GTFS com a linha do OpenStreetMap acrescentada.
+
+    As linhas que lá estavam ficam como estavam: acrescenta-se, não se reescreve.
+    """
+    colunas = ["attribution_id", "organization_name", "is_producer", "is_operator"]
+    colunas += ["is_authority", "attribution_url"]
+    texto = (atual or b"").decode("utf-8-sig")
+    if texto.strip():
+        colunas = next(csv.reader(io.StringIO(texto)))
+    else:
+        texto = ",".join(colunas) + "\n"
+    linha = {
+        "attribution_id": "osm",
+        "organization_name": f"{ATRIBUICAO_OSM}, sob ODbL",
+        "is_producer": "1",
+        "is_operator": "0",
+        "is_authority": "0",
+        "attribution_url": COPYRIGHT_OSM,
+    }
+    saida = io.StringIO(newline="")
+    csv.writer(saida, lineterminator="\n").writerow([linha.get(c, "") for c in colunas])
+    if not texto.endswith("\n"):
+        texto += "\n"
+    return (texto + saida.getvalue()).encode("utf-8")
+
+
+def _atribuicao_no_json(alvo: Path) -> None:
+    dados = json.loads(alvo.read_text(encoding="utf-8"))
+    if not isinstance(dados, dict) or _nomeia_osm(dados.get("attribution")):
+        return
+    atual = dados.get("attribution")
+    # À frente, e depois do `type` num GeoJSON — como os escreve o leitor do
+    # OpenStreetMap, para se ver sem descer o ficheiro.
+    novo: dict[str, Any] = {"type": dados["type"]} if "type" in dados else {}
+    novo["attribution"] = f"{ATRIBUICAO_OSM}; {atual}" if atual else ATRIBUICAO_OSM
+    novo["license"] = dados.get("license") or LICENCA_ODBL
+    novo.update({k: v for k, v in dados.items() if k not in novo})
+    alvo.write_text(json.dumps(novo, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
 def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> list[dict[str, Any]]:
     """O que se pode descarregar, com o ficheiro à frente e os termos ao lado.
 
@@ -2017,6 +2151,10 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
             _zipar(origem, alvo)
         else:
             shutil.copyfile(origem, alvo)
+        termos = _termos(fonte, papel, licenca_da_saida)
+        if termos == ODBL:
+            _embutir_atribuicao(alvo)
+        atribuicao, obrigatoria = _atribuicao_da_descarga(fonte, termos)
         dados = alvo.read_bytes()
         saida.append(
             {
@@ -2032,9 +2170,9 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
                 "fonte_url": fonte.url,
                 "licenca": licenca_da_saida or fonte.licenca,
                 "licenca_por_esclarecer": fonte.licenca_por_esclarecer,
-                "termos": _termos(fonte, papel, licenca_da_saida),
-                "atribuicao": fonte.atribuicao,
-                "atribuicao_obrigatoria": fonte.exige_atribuicao,
+                "termos": termos,
+                "atribuicao": atribuicao,
+                "atribuicao_obrigatoria": obrigatoria,
                 "descricao": descricao,
             }
         )

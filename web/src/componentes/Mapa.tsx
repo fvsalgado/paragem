@@ -40,6 +40,20 @@ import type { PercursoGeo } from '@/lib/otp';
 
 export type Marca = Ponto & { partidas?: number };
 
+/** O que o MapLibre escreve nos controlos que este mapa usa, em português. */
+const NOMES_DOS_CONTROLOS = {
+  'AttributionControl.ToggleAttribution': 'Mostrar ou esconder a atribuição',
+  'AttributionControl.MapFeedback': 'Corrigir o mapa',
+  'GeolocateControl.FindMyLocation': 'Mostrar onde estou',
+  'GeolocateControl.LocationNotAvailable': 'Localização indisponível',
+  'Map.Title': 'Mapa',
+  'Marker.Title': 'Marcador no mapa',
+  'NavigationControl.ResetBearing': 'Pôr o norte para cima',
+  'NavigationControl.ZoomIn': 'Aproximar',
+  'NavigationControl.ZoomOut': 'Afastar',
+  'Popup.Close': 'Fechar',
+};
+
 /** Quem liga «menos movimento» no sistema está a pedir que nada deslize. */
 const semMovimento = () =>
   typeof window !== 'undefined' &&
@@ -109,6 +123,10 @@ export default function Mapa({
           center: [centro[1], centro[0]],
           zoom,
           attributionControl: { compact: false },
+          // OS NOMES DOS CONTROLOS EM PORTUGUÊS. O MapLibre traz os seus em
+          // inglês: quem parava o rato no botão da localização lia «Find my
+          // location», numa página que é toda em português.
+          locale: NOMES_DOS_CONTROLOS,
           // O tipo de letra do sistema para as etiquetas — sem servidor de
           // glifos de terceiro. Ver `estilo-mapa.ts`.
           localIdeographFontFamily: "'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif",
