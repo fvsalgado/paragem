@@ -1,4 +1,7 @@
+import type { Viewport } from 'next';
 import Link from 'next/link';
+import { Assinatura } from '@/componentes/Marca';
+import { CORES_DA_FAIXA } from '@/lib/marca';
 import {
   regioesDisponiveis,
   regiao,
@@ -28,6 +31,14 @@ import {
  * e, mais tarde, pelo painel — desligar uma região tira-a daqui sem esperar.
  */
 export const revalidate = 3600;
+
+/** O azul-noite da montra, e não o azul das regiões (`lib/marca.ts`). */
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: CORES_DA_FAIXA.montra },
+    { media: '(prefers-color-scheme: dark)', color: CORES_DA_FAIXA.montra },
+  ],
+};
 
 export default async function Produto() {
   const ids = await regioesDisponiveis();
@@ -68,10 +79,12 @@ export default async function Produto() {
 
   return (
     <>
-      <header className="cabecalho">
+      {/* A faixa da montra é a outra cor da marca (`lib/marca.ts`): quem cai
+          aqui não está no sítio de nenhuma região, e percebe-o antes de ler. */}
+      <header className="cabecalho cabecalho-montra">
         <div className="interior">
           <span className="marca">
-            Paragem<span aria-hidden="true">.</span>pt
+            <Assinatura />
           </span>
         </div>
       </header>

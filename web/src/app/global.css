@@ -120,9 +120,29 @@ h3 {
   padding: 0 1rem 4rem;
 }
 
+/* A FAIXA DO CABEÇALHO veste uma de duas cores, como o toldo do Coreto: a da
+   marca nas regiões, e o azul-noite do texto na montra e no painel — para
+   quem cai na página do produto perceber, antes de ler, que não está no
+   sítio de nenhuma região. São as mesmas duas de `lib/marca.ts`, que é quem
+   as dá ao telemóvel e aos ícones.
+
+   Tudo o que está na faixa é branco ou `--linhas`, e está medido: o branco dá
+   7,4:1 sobre a marca e 14,4:1 sobre o azul-noite; `--linhas` dá 5,4:1 e
+   10,4:1. O foco amarelo dá 4,1:1 sobre a marca — acima dos 3:1 que a norma
+   pede a um indicador de foco. */
 .cabecalho {
-  border-bottom: 1px solid var(--linhas);
-  background: #fff;
+  background: var(--marca);
+  color: #fff;
+  /* Com a faixa pintada, o que vem a seguir precisa de ar: a caixa da
+     demonstração e os títulos encostavam-se a ela. */
+  margin-bottom: 1.25rem;
+}
+.cabecalho-montra {
+  background: var(--texto);
+}
+.cabecalho a,
+.cabecalho a:hover {
+  color: #fff;
 }
 .cabecalho .interior {
   max-width: var(--medida);
@@ -133,26 +153,51 @@ h3 {
   gap: 1rem;
   flex-wrap: wrap;
 }
-.cabecalho a.marca {
+.cabecalho .marca {
   font-weight: 700;
-  font-size: 1.1rem;
-  color: var(--marca);
+  font-size: 1.15rem;
   text-decoration: none;
   /* É uma ligação autónoma, não uma ligação no meio de uma frase: leva os
      44 px como qualquer outra. */
   display: inline-flex;
   align-items: center;
+  gap: 0.45rem;
   min-height: var(--alvo);
+}
+.cabecalho a.marca:hover .marca-nome {
+  text-decoration: underline;
+}
+/* A bandeirola ao tamanho da letra, um pouco acima dela: é o desenho que diz
+   «paragem» antes de se ler a palavra. Não encolhe — ao lado de um nome
+   comprido, num menu estreito, um `flex` à solta reduzia-a a metade. */
+.marca-desenho {
+  width: 1.6em;
+  height: 1.6em;
+  flex: none;
+}
+/* «.pt» faz parte do nome, mas o que se lê primeiro é «Paragem». */
+.marca-pt {
+  font-weight: 400;
+  color: var(--linhas);
 }
 /* O nome da região no cabeçalho era um `<span>` e passou a LIGAÇÃO quando o
    sítio começou a servir mais do que uma região — leva ao início dela. Uma
-   ligação autónoma leva os 44 px, e o teste apanhou-a a 25. */
-.cabecalho a.marca-dados {
+   ligação autónoma leva os 44 px, e o teste apanhou-a a 25.
+
+   Fora da faixa, `.marca-dados` é uma pastilha branca; aqui é texto, ao lado
+   da assinatura — uma pastilha branca de 44 px sobre a cor da marca
+   competia com ela. */
+.cabecalho .marca-dados {
   display: inline-flex;
   align-items: center;
   min-height: var(--alvo);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-size: 1rem;
+  color: #fff;
   text-decoration: none;
-  color: var(--marca);
 }
 .cabecalho a.marca-dados:hover,
 .cabecalho a.marca-dados:focus-visible {
@@ -417,11 +462,15 @@ h3 {
   background: #fff;
 }
 
+/* O NÚMERO DA LINHA É UMA TABULETA, como na placa da paragem: retângulo de
+   canto quase vivo, na cor que o feed dá à linha. É o único sítio onde a cor
+   da rede aparece com força, e a forma é a da sinalética de onde a marca
+   vem — um canto redondo de mais e parecia um botão. */
 .distintivo {
   display: inline-block;
   font-size: 0.78rem;
   font-weight: 700;
-  border-radius: 6px;
+  border-radius: 3px;
   padding: 0.1rem 0.45rem;
   border: 1px solid transparent;
   min-width: 2.5em;
@@ -1583,12 +1632,13 @@ main.pagina:has(.app-mapa) {
 }
 
 /* O NÚMERO DA LINHA COM A COR DELA, do `route_color` do feed. Sem cor
-   conhecida fica neutro — e um distintivo neutro continua a dizer o número. */
+   conhecida fica neutro — e um distintivo neutro continua a dizer o número.
+   A mesma tabuleta de canto quase vivo do `.distintivo`. */
 .linha-distintivo {
   flex: none;
   min-width: 2.9rem;
   padding: 0.2rem 0.45rem;
-  border-radius: 5px;
+  border-radius: 3px;
   background: var(--linhas);
   color: var(--texto);
   font-weight: 700;
@@ -1870,6 +1920,9 @@ dialog.menu-do-mapa::backdrop {
   border-bottom: 1px solid var(--linhas);
 }
 .menu-marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   font-weight: 700;
   color: var(--marca);
 }

@@ -1,10 +1,12 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { Assinatura } from '@/componentes/Marca';
 import { sair } from '@/lib/painel/acoes';
 import { sessaoAtual } from '@/lib/painel/autenticacao';
 import { CABECALHO_DO_CAMINHO, barreiraDoLayout } from '@/lib/painel/guarda';
+import { CORES_DA_FAIXA } from '@/lib/marca';
 
 /** Nada do painel pode ser servido de cache. */
 export const dynamic = 'force-dynamic';
@@ -18,6 +20,14 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: { default: 'Painel · Paragem.pt', template: '%s · Painel · Paragem.pt' },
   robots: { index: false, follow: false, noarchive: true },
+};
+
+/** O painel não é de nenhuma região: veste a cor da montra (`lib/marca.ts`). */
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: CORES_DA_FAIXA.montra },
+    { media: '(prefers-color-scheme: dark)', color: CORES_DA_FAIXA.montra },
+  ],
 };
 
 const NAV = [
@@ -56,10 +66,11 @@ export default async function LayoutDoPainel({ children }: { children: React.Rea
 
   return (
     <>
-      <header className="cabecalho painel-cabecalho">
+      {/* O painel não é de nenhuma região — veste a cor da montra. */}
+      <header className="cabecalho cabecalho-montra painel-cabecalho">
         <div className="interior">
           <Link href="/admin/" className="marca">
-            Paragem<span aria-hidden="true">.</span>pt
+            <Assinatura />
           </Link>
           <span className="marca-dados">Painel</span>
           {portao.ok ? (

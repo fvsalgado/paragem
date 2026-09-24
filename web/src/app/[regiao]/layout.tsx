@@ -1,5 +1,6 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { exigirRegiao } from '@/lib/dados';
+import { CORES_DA_FAIXA } from '@/lib/marca';
 import Cabecalho from '@/componentes/Cabecalho';
 import Rodape from '@/componentes/Rodape';
 import MarcaDeDemonstracao from '@/componentes/MarcaDeDemonstracao';
@@ -46,8 +47,30 @@ export async function generateMetadata({
       template: `%s · Paragem.pt`,
     },
     description: `Todos os transportes ${r.de}, num sítio só.`,
+    applicationName: 'Paragem.pt',
+    // O manifesto é por região (`manifest.webmanifest/route.ts`), e declara-se
+    // aqui porque a convenção só o poria na raiz. O caminho é de raiz e o
+    // middleware leva-o à região.
+    manifest: '/manifest.webmanifest',
+    // O que o iOS precisa de saber e não lê do manifesto. O Next escreve só a
+    // forma nova (`mobile-web-app-capable`); a com o prefixo `apple-` vai à
+    // mão, como no Coreto, para os iPhone que ainda só conhecem essa.
+    appleWebApp: { capable: true, title: 'Paragem.pt', statusBarStyle: 'default' },
+    other: { 'apple-mobile-web-app-capable': 'yes' },
   };
 }
+
+/**
+ * A cor que o telemóvel pinta à volta da página antes de haver CSS — a da
+ * faixa das regiões, por `lib/marca.ts`. Duas entradas com a mesma cor, como
+ * no Coreto: a faixa não muda com o tema do sistema.
+ */
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: CORES_DA_FAIXA.regiao },
+    { media: '(prefers-color-scheme: dark)', color: CORES_DA_FAIXA.regiao },
+  ],
+};
 
 export default async function LayoutDaRegiao({
   children,

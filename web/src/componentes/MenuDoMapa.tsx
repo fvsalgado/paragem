@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Fechar } from './Icones';
+import Marca from './Marca';
 import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
 
 /**
@@ -73,7 +74,10 @@ export default function MenuDoMapa({
     <dialog className="menu-do-mapa" ref={caixa} onClose={aoFechar} aria-label="Menu">
       <div className="menu-topo">
         <span className="menu-marca">
-          Paragem.pt <span className="secundario">· {nomeDaRegiao}</span>
+          <Marca className="marca-desenho" />
+          <span>
+            Paragem.pt <span className="secundario">· {nomeDaRegiao}</span>
+          </span>
         </span>
         <button type="button" className="redondo" onClick={aoFechar} aria-label="Fechar o menu">
           <Fechar />
