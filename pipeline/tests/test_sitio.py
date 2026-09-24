@@ -370,6 +370,9 @@ def test_o_que_se_descarrega_sai_com_o_ficheiro_e_os_termos(raiz, tmp_path):
     de_osm = [d for d in manifesto if d["termos"] == "odbl"]
     for d in de_osm:
         assert d["atribuicao"], f"{d['caminho']}: ODbL sem atribuição escrita"
+        # E a atribuição é a do OpenStreetMap, que é de onde vem a licença — não
+        # só a da fonte principal, que era o que a página escrevia.
+        assert "OpenStreetMap" in d["atribuicao"], f"{d['caminho']}: ODbL sem o OpenStreetMap"
 
 
 def test_um_feed_de_outra_entidade_nao_se_apresenta_como_nosso():
@@ -532,3 +535,178 @@ def test_o_relatorio_da_construcao_e_texto_nosso():
         licenca = ""
 
     assert _termos(CadernoSemLicenca(), "relatorio", LICENCA_DO_RELATORIO) == NOSSO
+
+
+# --- a atribuição da ODbL, dentro do que se descarrega ----------------------
+
+
+def _zip(caminho, membros: dict[str, str]):
+    import zipfile
+
+    with zipfile.ZipFile(caminho, "w") as z:
+        for nome, texto in membros.items():
+            z.writestr(nome, texto)
+    return caminho
+
+
+def _membros(caminho) -> dict[str, str]:
+    import zipfile
+
+    with zipfile.ZipFile(caminho) as z:
+        return {n: z.read(n).decode("utf-8") for n in z.namelist()}
+
+
+def test_um_gtfs_sob_odbl_leva_o_openstreetmap_no_attributions(tmp_path):
+    """O do transporte a pedido tinha `attributions.txt` e não tinha a linha.
+
+    A página dizia que a atribuição ia dentro do ficheiro, e num dos dois
+    feeds rotulados ODbL não ia. Acrescenta-se a linha; as que lá estavam
+    ficam como estavam.
+    """
+    import csv
+    import io
+
+    from paragem.sitio import _embutir_atribuicao
+
+    cabecalho = (
+        "attribution_id,organization_name,is_producer,is_operator,is_authority,attribution_url"
+    )
+    antes = f"{cabecalho}\nautoridade,Autoridade de Exemplo,0,1,1,https://exemplo.pt\n"
+    feed = _zip(
+        tmp_path / "a-pedido.zip", {"agency.txt": "agency_id\n1\n", "attributions.txt": antes}
+    )
+
+    _embutir_atribuicao(feed)
+
+    depois = _membros(feed)["attributions.txt"]
+    assert depois.startswith(antes), "as linhas que lá estavam ficam como estavam"
+    linha = next(csv.reader(io.StringIO(depois[len(antes) :])))
+    assert "OpenStreetMap" in linha[1]
+    assert linha[2] == "1", "o OpenStreetMap é produtor destes dados"
+    assert linha[5] == "https://www.openstreetmap.org/copyright"
+
+
+def test_um_gtfs_sem_attributions_ganha_um(tmp_path):
+    from paragem.sitio import _embutir_atribuicao
+
+    feed = _zip(tmp_path / "rede.zip", {"agency.txt": "agency_id\n1\n", "stops.txt": "stop_id\n"})
+    _embutir_atribuicao(feed)
+
+    membros = _membros(feed)
+    assert set(membros) == {"agency.txt", "stops.txt", "attributions.txt"}
+    linhas = membros["attributions.txt"].splitlines()
+    assert linhas[0].startswith("attribution_id,organization_name,")
+    assert "OpenStreetMap" in linhas[1]
+
+
+def test_um_gtfs_que_ja_a_leva_fica_byte_a_byte(tmp_path):
+    """O feed da rede já a escreve: reescrevê-lo mudava a soma por nada."""
+    from paragem.sitio import _embutir_atribuicao
+
+    feed = _zip(
+        tmp_path / "rede.zip",
+        {
+            "agency.txt": "agency_id\n1\n",
+            "attributions.txt": "organization_name,is_producer\n© OpenStreetMap contributors (ODbL),1\n",
+        },
+    )
+    antes = feed.read_bytes()
+    _embutir_atribuicao(feed)
+    assert feed.read_bytes() == antes
+
+
+def test_um_gbfs_sob_odbl_leva_a_nota_num_ficheiro_proprio(tmp_path):
+    """O GBFS das estações não tinha o OpenStreetMap em lado nenhum."""
+    from paragem.sitio import NOTA_DA_ODBL, _embutir_atribuicao
+
+    sistema = '{"data": {"attribution_organization_name": "Autoridade de Exemplo"}}'
+    gbfs = _zip(
+        tmp_path / "sistema.zip",
+        {"gbfs.json": "{}", "system_information.json": sistema, "station_information.json": "{}"},
+    )
+    _embutir_atribuicao(gbfs)
+
+    membros = _membros(gbfs)
+    assert membros["system_information.json"] == sistema, "o GBFS fica como estava"
+    assert "© contribuidores do OpenStreetMap" in membros[NOTA_DA_ODBL]
+    assert "opendatacommons.org/licenses/odbl" in membros[NOTA_DA_ODBL]
+
+
+def test_um_gbfs_do_openstreetmap_ja_a_diz(tmp_path):
+    """O leitor do OpenStreetMap escreve-a no `system_information`: não se repete."""
+    from paragem.sitio import NOTA_DA_ODBL, _embutir_atribuicao
+
+    gbfs = _zip(
+        tmp_path / "sistema.zip",
+        {
+            "system_information.json": '{"data": {"attribution_organization_name": "© contribuidores do OpenStreetMap"}}'
+        },
+    )
+    _embutir_atribuicao(gbfs)
+    assert NOTA_DA_ODBL not in _membros(gbfs)
+
+
+def test_um_json_sob_odbl_leva_a_atribuicao_nos_campos_do_geojson(tmp_path):
+    import json
+
+    from paragem.sitio import _embutir_atribuicao
+
+    catalogo = tmp_path / "circuito.json"
+    catalogo.write_text(json.dumps({"id": "c1", "quadros": []}), encoding="utf-8")
+    _embutir_atribuicao(catalogo)
+
+    dados = json.loads(catalogo.read_text(encoding="utf-8"))
+    assert dados["attribution"] == "© contribuidores do OpenStreetMap"
+    assert dados["license"] == "https://opendatacommons.org/licenses/odbl/1-0/"
+    assert dados["id"] == "c1" and dados["quadros"] == [], "o resto fica"
+
+
+def test_o_que_ja_a_leva_ou_nao_tem_onde_a_por_fica_como_estava(tmp_path):
+    """Um GeoJSON do leitor do OpenStreetMap já a traz; um CSV não tem onde a
+    guardar sem deixar de ser CSV — leva-a a página, ao lado dele."""
+    import json
+
+    from paragem.sitio import _embutir_atribuicao
+
+    geojson = tmp_path / "taxis.geojson"
+    geojson.write_text(
+        json.dumps(
+            {
+                "type": "FeatureCollection",
+                "attribution": "© contribuidores do OpenStreetMap",
+                "features": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    csv = tmp_path / "paragens.csv"
+    csv.write_text("nome,lat,lon\nLargo,39.1,-8.2\n", encoding="utf-8")
+    antes = {f: f.read_bytes() for f in (geojson, csv)}
+
+    for f in antes:
+        _embutir_atribuicao(f)
+        assert f.read_bytes() == antes[f], f.name
+
+
+def test_a_pagina_escreve_o_openstreetmap_ao_lado_de_cada_ficheiro_odbl():
+    """O registo dá a atribuição da ENTRADA; o rótulo ODbL é da SAÍDA.
+
+    Um GBFS cuja fonte principal é o sítio do sistema saía com «atribuição
+    obrigatória: <a autoridade>» e sem uma palavra sobre o OpenStreetMap — que
+    é de onde vem a licença que o rótulo lhe dá.
+    """
+    from types import SimpleNamespace
+
+    from paragem.sitio import CONSULTA, ODBL, _atribuicao_da_descarga
+
+    da_autoridade = SimpleNamespace(atribuicao="Autoridade de Exemplo", exige_atribuicao=False)
+    assert _atribuicao_da_descarga(da_autoridade, ODBL) == (
+        "© contribuidores do OpenStreetMap; Autoridade de Exemplo",
+        True,
+    )
+    do_osm = SimpleNamespace(atribuicao="© contribuidores do OpenStreetMap", exige_atribuicao=True)
+    assert _atribuicao_da_descarga(do_osm, ODBL) == ("© contribuidores do OpenStreetMap", True)
+    sem_nada = SimpleNamespace(atribuicao=None, exige_atribuicao=False)
+    assert _atribuicao_da_descarga(sem_nada, ODBL) == ("© contribuidores do OpenStreetMap", True)
+    # O que não é ODbL fica com o que o registo diz.
+    assert _atribuicao_da_descarga(da_autoridade, CONSULTA) == ("Autoridade de Exemplo", False)
