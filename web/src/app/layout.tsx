@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Atkinson_Hyperlegible } from 'next/font/google';
 import './global.css';
 import Medicao from '@/componentes/Medicao';
 
@@ -15,20 +16,27 @@ export const metadata: Metadata = {
   description: 'Todos os transportes de uma região, num sítio só.',
 };
 
+/**
+ * Atkinson Hyperlegible: desenhada para quem vê mal, que é meia razão para a
+ * escolher; a outra é que distingue o que se confunde num horário — 1/l/I e
+ * 0/O (§6).
+ *
+ * SERVE-SE DAQUI, E NÃO DO GOOGLE. Vinha de `fonts.googleapis.com` em cada
+ * visita: o navegador pedia-a ao Google, e o Google ficava com o endereço IP
+ * de quem abria uma página de horários — num sítio cuja página de
+ * privacidade diz que não o regista. O `next/font` vai buscá-la uma vez, na
+ * construção, e serve-a com o resto do sítio. A letra é a mesma.
+ */
+const letra = Atkinson_Hyperlegible({
+  weight: ['400', '700'],
+  subsets: ['latin', 'latin-ext'],
+  display: 'swap',
+  variable: '--letra',
+});
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-PT">
-      <head>
-        {/* Atkinson Hyperlegible: desenhada para quem vê mal, que é meia razão
-            para a escolher; a outra é que distingue o que se confunde num
-            horário — 1/l/I e 0/O (§8). */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="pt-PT" className={letra.variable}>
       <body>
         <a className="saltar" href="#conteudo">
           Saltar para o conteúdo
