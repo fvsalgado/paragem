@@ -26,6 +26,7 @@ inventário com origem, licença e data está em
 | Dados do OpenStreetMap, sob ODbL 1.0                     | tudo o que sai dos leitores `osm-*` |
 | GTFS de terceiros (CP, FlixBus, o feed arquivado do Meio) | `build/<regiao>/gtfs/`, e o que dele deriva |
 | Marcas das autoridades de transportes e dos operadores   | por região, quando existirem     |
+| A letra Atkinson Hyperlegible, sob SIL OFL 1.1           | `web/src/fontes/`, `web/public/glifos/` |
 
 ## Três licenças, e o que cada uma cobre
 

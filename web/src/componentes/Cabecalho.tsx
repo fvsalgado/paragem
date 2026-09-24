@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { exigirRegiao, url } from '@/lib/dados';
 import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
+import { Assinatura } from './Marca';
 
 /**
  * O cabeçalho, reduzido ao que não estorva.
@@ -13,6 +14,9 @@ import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
  * Ficam duas: **o mapa**, que é a aplicação, e **a rede**, que é o catálogo
  * onde tudo o resto continua a viver — e continua a ser o caminho de quem não
  * pode ou não quer usar um mapa.
+ *
+ * A faixa veste a cor da marca, que é a das regiões; a montra e o painel
+ * vestem a outra (`lib/marca.ts`).
  */
 export default async function Cabecalho({ regiao: id }: { regiao: string }) {
   const r = await exigirRegiao(id);
@@ -20,7 +24,7 @@ export default async function Cabecalho({ regiao: id }: { regiao: string }) {
     <header className="cabecalho">
       <div className="interior">
         <Link href={ORIGEM_DO_PRODUTO} className="marca">
-          Paragem<span aria-hidden="true">.</span>pt
+          <Assinatura />
         </Link>
         <Link href={url(id)} className="marca-dados">
           {r.nome}

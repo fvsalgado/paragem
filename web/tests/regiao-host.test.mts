@@ -88,7 +88,21 @@ test('a API e os ficheiros passam tal como estão, em qualquer anfitrião', () =
     assert.deepEqual(decidir(host, '/api/revalidate/', MAPA), { tipo: 'passar' });
     assert.deepEqual(decidir(host, '/robots.txt', MAPA), { tipo: 'passar' });
     assert.deepEqual(decidir(host, '/glifos/Atkinson.woff2', MAPA), { tipo: 'passar' });
+    // Os ícones são do produto, os mesmos em todos os anfitriões.
+    assert.deepEqual(decidir(host, '/icon.svg', MAPA), { tipo: 'passar' });
+    assert.deepEqual(decidir(host, '/icones/paragem-192.png', MAPA), { tipo: 'passar' });
   }
+});
+
+test('o manifesto é da região: vai para dentro dela, e na montra não existe', () => {
+  assert.deepEqual(decidir('prova.exemplo.pt', '/manifest.webmanifest', MAPA), {
+    tipo: 'reescrever',
+    para: '/prova/manifest.webmanifest',
+  });
+  assert.deepEqual(decidir('paragem-abc.vercel.app', '/manifest.webmanifest', MAPA), {
+    tipo: 'reescrever',
+    para: `${NAO_E_ENDERECO}/manifest.webmanifest`,
+  });
 });
 
 test('o mapa do ambiente lê «id=host» e ignora o que não é', () => {

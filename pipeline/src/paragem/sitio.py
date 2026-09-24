@@ -309,6 +309,9 @@ class Sitio:
             # O domínio canónico, declarado na região. É o que o middleware
             # por host vai comparar com a linha da base (docs/BASE-DE-DADOS.md).
             "dominio": r.dominio,
+            # A cor da faixa, quando a região tem cara própria; sem ela, o
+            # sítio usa a do produto.
+            "cor": r.cor,
             # Uma rede inventada apresentada como informação de transportes é o
             # que o §4.4 proíbe. O sítio marca-a em todas as páginas.
             "demonstracao": r.demonstracao,

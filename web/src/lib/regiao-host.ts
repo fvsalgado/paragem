@@ -242,13 +242,20 @@ export type Decisao =
  * têm região. **Lista fechada**: uma pasta nova em `public/` tem de entrar
  * aqui, senão passa pela resolução de região e acaba num 404 com o ficheiro à
  * espera. O `/_next/` fica de fora pelo `matcher` do middleware.
+ *
+ * Os ícones da aplicação são do produto e não de uma região (os mesmos em
+ * todos os anfitriões — `scripts/gerar-icones.mjs`), e o cartão de partilha
+ * da montra é o único cartão sem região: o de cada região é `/cartao.png` e
+ * vai para dentro dela como as páginas (`lib/partilha.ts`, que tem estes
+ * endereços escritos também — um teste confere que são os mesmos).
  */
-export const CAMINHOS_DE_FICHEIROS = ['/glifos/'] as const;
+export const CAMINHOS_DE_FICHEIROS = ['/glifos/', '/icones/'] as const;
 export const FICHEIROS_DE_RAIZ = [
   '/robots.txt',
   '/favicon.ico',
   '/icon.svg',
   '/apple-icon.png',
+  '/cartao-do-produto.png',
 ] as const;
 
 /**

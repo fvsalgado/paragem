@@ -45,6 +45,20 @@ O que é nosso e está nesta lista por completude: `prova-gtfs-rede-alta`,
 de fio a pavio, AGPL-3.0-only como o resto. São duas porque uma só não prova
 multi-região: não há com que a comparar.
 
+## O que não são dados
+
+| o quê | onde | de quem | licença |
+| --- | --- | --- | --- |
+| Atkinson Hyperlegible, normal e negrito | `web/src/fontes/`, inteira (versão 1.006), para os cartões de partilha; `web/public/glifos/`, em glifos, para as etiquetas do mapa | Braille Institute of America | **SIL OFL 1.1** — o texto vai ao lado, em `web/src/fontes/OFL.txt` |
+
+A letra foi tirada do repositório público das letras do Google
+(`github.com/google/fonts`, pasta `ofl/atkinsonhyperlegible`) a 24 de setembro
+de 2026. A OFL permite redistribuí-la com o software, desde que a licença vá
+com ela. Os glifos do mapa são, nos termos da OFL, uma **versão modificada** —
+a licença conta a mudança de formato como modificação —, e por isso continuam
+sob OFL; esta letra não declara nenhum nome reservado, e não há nome a
+mudar.
+
 ## As duas obrigações que não são negociáveis
 
 ### A atribuição do OpenStreetMap

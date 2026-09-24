@@ -14,6 +14,7 @@ ser contratado por uma câmara sozinha.
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -147,6 +148,12 @@ class Regiao:
     #: que as duas dizem o mesmo (docs/BASE-DE-DADOS.md). Opcional enquanto
     #: o encaminhamento por host não chegar: sem ele, nada muda.
     dominio: str | None = None
+    #: A cor da faixa da região, em `#rrggbb` — a cara da autoridade de
+    #: transportes, quando ela a tem. Opcional: sem ela, a região veste a cor do
+    #: produto (`web/src/lib/marca.ts`). A tinta por cima escolhe-a o sítio pelo
+    #: contraste, e não se declara — uma cor clara leva tinta escura, e é o
+    #: sítio que garante os 4,5:1, não quem escreveu o YAML.
+    cor: str | None = None
     #: Nomes de paragem que os feeds de terceiros escrevem noutra língua.
     #:
     #: A interface é em português europeu (CLAUDE.md, primeira linha) e o feed
@@ -296,6 +303,7 @@ class Regiao:
             rede=d.get("rede") or {},
             dominio_env=d.get("dominio_env"),
             dominio=(str(d["dominio"]).strip().lower() or None) if d.get("dominio") else None,
+            cor=str(d["cor"]).strip().lower() if d.get("cor") else None,
             demonstracao=bool(d.get("demonstracao", False)),
             municipios_membros=int(terr.get("municipios_membros", len(concelhos))),
             concelhos_servidos=int(terr.get("concelhos_servidos", len(concelhos))),
@@ -341,6 +349,12 @@ class Regiao:
             repetidos = sorted({i for i in ids if ids.count(i) > 1})
             raise ErroDeRegiao(f"{self.id}: concelhos repetidos — {', '.join(repetidos)}.")
 
+        if self.cor is not None and not _COR.fullmatch(self.cor):
+            raise ErroDeRegiao(
+                f"{self.id}: a cor «{self.cor}» não é `#rrggbb`. O sítio pinta a faixa com ela "
+                "e escolhe a tinta pelo contraste — e para isso precisa dos três canais."
+            )
+
         if self.caixa.lat_min >= self.caixa.lat_max or self.caixa.lon_min >= self.caixa.lon_max:
             raise ErroDeRegiao(f"{self.id}: a caixa geográfica está invertida ou vazia.")
 
@@ -352,6 +366,9 @@ class Regiao:
                 "na lista de modos da região. Um modo que se constrói e não se declara desenha "
                 "uma secção que o produto diz não ter."
             )
+
+
+_COR = re.compile(r"#[0-9a-f]{6}")
 
 
 def _ler_yaml(caminho: Path) -> dict[str, Any]:

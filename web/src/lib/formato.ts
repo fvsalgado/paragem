@@ -50,6 +50,8 @@ export type Regiao = {
   autoridade: { nome?: string; sigla?: string; tipo?: string; url?: string };
   rede: { nome?: string; url?: string; operador?: string; concessao_ate?: string };
   dominio_env: string | null;
+  /** A cor da faixa, quando a região tem cara própria (`lib/faixa.ts`). */
+  cor?: string | null;
   /** Os modos que a região declara — JÁ SEM os que o painel desligou (`dados.ts`). */
   modos: string[];
   /** Os que a região declara e o painel desligou. Vazio quando não há nenhum. */

@@ -91,6 +91,48 @@ def test_recusa_artigo_adivinhado(raiz, tmp_path):
         Regiao.carregar(pasta)
 
 
+def _regiao_minima(pasta, **extra):
+    pasta.mkdir()
+    (pasta / "regiao.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "id": pasta.name,
+                "nome": "Inventada",
+                "artigo": "a",
+                "territorio": {
+                    "municipios_membros": 1,
+                    "concelhos_servidos": 1,
+                    "caixa": {"lat_min": 1, "lat_max": 2, "lon_min": 1, "lon_max": 2},
+                },
+                "modos": ["autocarro"],
+                **extra,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (pasta / "concelhos.yaml").write_text(
+        yaml.safe_dump({"concelhos": [{"id": "a", "nome": "A", "membro": True}]}),
+        encoding="utf-8",
+    )
+
+
+def test_cor_e_opcional_e_vai_em_minusculas(tmp_path):
+    """Sem cor, a região veste a do produto; com ela, a faixa é a dela."""
+    _regiao_minima(tmp_path / "sem-cor")
+    assert Regiao.carregar(tmp_path / "sem-cor").cor is None
+    _regiao_minima(tmp_path / "com-cor", cor="#40C0C4")
+    assert Regiao.carregar(tmp_path / "com-cor").cor == "#40c0c4"
+
+
+def test_recusa_cor_que_nao_e_rrggbb(tmp_path):
+    """Uma cor com nome, ou de três letras, não deixa o sítio medir o contraste."""
+    for i, cor in enumerate(["turquesa", "#4cc", "40c0c4"]):
+        pasta = tmp_path / f"cor-{i}"
+        _regiao_minima(pasta, cor=cor)
+        with pytest.raises(ErroDeRegiao, match="rrggbb"):
+            Regiao.carregar(pasta)
+
+
 def test_caixas_nao_se_sobrepoem(raiz):
     """Uma coordenada trocada entre regiões tem de falhar, não cair nas duas."""
     mt, prova = regiao_ou_salta("medio-tejo"), regiao_ou_salta("prova")

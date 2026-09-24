@@ -35,6 +35,11 @@
   --alerta-fundo: #fbe9e6;
   --foco: #f2b705;
 
+  /* A faixa do cabeçalho: a cor do produto, que uma região pode trocar pela
+     sua (ver `.cabecalho`). É o valor de `COR_DO_PRODUTO` em `lib/marca.ts`. */
+  --faixa: #c2281c;
+  --sobre-faixa: #ffffff;
+
   --raio: 10px;
   --alvo: 44px;
   --medida: 38rem;
@@ -120,9 +125,33 @@ h3 {
   padding: 0 1rem 4rem;
 }
 
+/* A FAIXA DO CABEÇALHO veste a cor do produto — o vermelho do Coreto na
+   montra, que é da mesma casa — ou a da região, quando ela declara uma
+   (`cor:` no `regiao.yaml`). O invólucro da região escreve `--faixa` e
+   `--sobre-faixa` (`lib/faixa.ts`); a página do produto e o painel ficam com
+   os de omissão, que estão em `:root`.
+
+   A tinta não se declara: escolhe-se pelo contraste. O branco dá 5,8:1 sobre
+   o vermelho; uma cor clara, como o turquesa, leva o texto do sítio, que lhe
+   dá mais de 6:1. E o foco na faixa é da cor da tinta, e não o amarelo do
+   resto do sítio: o amarelo dá 3,1:1 sobre o vermelho e 1,2:1 sobre o
+   turquesa, e um anel de foco que não se vê é um anel de foco que não há. */
+.regiao {
+  display: contents;
+}
 .cabecalho {
-  border-bottom: 1px solid var(--linhas);
-  background: #fff;
+  background: var(--faixa);
+  color: var(--sobre-faixa);
+  /* Com a faixa pintada, o que vem a seguir precisa de ar: a caixa da
+     demonstração e os títulos encostavam-se a ela. */
+  margin-bottom: 1.25rem;
+}
+.cabecalho a,
+.cabecalho a:hover {
+  color: var(--sobre-faixa);
+}
+.cabecalho :focus-visible {
+  outline-color: var(--sobre-faixa);
 }
 .cabecalho .interior {
   max-width: var(--medida);
@@ -133,10 +162,7 @@ h3 {
   gap: 1rem;
   flex-wrap: wrap;
 }
-.cabecalho a.marca {
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: var(--marca);
+.cabecalho .marca {
   text-decoration: none;
   /* É uma ligação autónoma, não uma ligação no meio de uma frase: leva os
      44 px como qualquer outra. */
@@ -144,15 +170,37 @@ h3 {
   align-items: center;
   min-height: var(--alvo);
 }
+/* O logótipo por extenso, à altura da letra: a altura das maiúsculas do
+   desenho fica perto da do texto à volta, e cresce com ela. */
+.marca-assinatura {
+  height: 1.75em;
+  width: auto;
+  flex: none;
+}
+/* A bandeirola sozinha, ao tamanho da letra, onde não cabe o nome inteiro. */
+.marca-desenho {
+  width: 1.6em;
+  height: 1.6em;
+  flex: none;
+}
 /* O nome da região no cabeçalho era um `<span>` e passou a LIGAÇÃO quando o
    sítio começou a servir mais do que uma região — leva ao início dela. Uma
-   ligação autónoma leva os 44 px, e o teste apanhou-a a 25. */
-.cabecalho a.marca-dados {
+   ligação autónoma leva os 44 px, e o teste apanhou-a a 25.
+
+   Fora da faixa, `.marca-dados` é uma pastilha branca; aqui é texto, ao lado
+   da assinatura — uma pastilha branca de 44 px sobre a cor da marca
+   competia com ela. */
+.cabecalho .marca-dados {
   display: inline-flex;
   align-items: center;
   min-height: var(--alvo);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-size: 1rem;
+  color: var(--sobre-faixa);
   text-decoration: none;
-  color: var(--marca);
 }
 .cabecalho a.marca-dados:hover,
 .cabecalho a.marca-dados:focus-visible {
@@ -417,11 +465,15 @@ h3 {
   background: #fff;
 }
 
+/* O NÚMERO DA LINHA É UMA TABULETA, como na placa da paragem: retângulo de
+   canto quase vivo, na cor que o feed dá à linha. É o único sítio onde a cor
+   da rede aparece com força, e a forma é a da sinalética de onde a marca
+   vem — um canto redondo de mais e parecia um botão. */
 .distintivo {
   display: inline-block;
   font-size: 0.78rem;
   font-weight: 700;
-  border-radius: 6px;
+  border-radius: 3px;
   padding: 0.1rem 0.45rem;
   border: 1px solid transparent;
   min-width: 2.5em;
@@ -1583,12 +1635,13 @@ main.pagina:has(.app-mapa) {
 }
 
 /* O NÚMERO DA LINHA COM A COR DELA, do `route_color` do feed. Sem cor
-   conhecida fica neutro — e um distintivo neutro continua a dizer o número. */
+   conhecida fica neutro — e um distintivo neutro continua a dizer o número.
+   A mesma tabuleta de canto quase vivo do `.distintivo`. */
 .linha-distintivo {
   flex: none;
   min-width: 2.9rem;
   padding: 0.2rem 0.45rem;
-  border-radius: 5px;
+  border-radius: 3px;
   background: var(--linhas);
   color: var(--texto);
   font-weight: 700;
@@ -1869,7 +1922,18 @@ dialog.menu-do-mapa::backdrop {
   padding: 0 0.25rem 0.5rem 0.75rem;
   border-bottom: 1px solid var(--linhas);
 }
+.marca-azulejo {
+  display: inline-flex;
+  flex: none;
+  padding: 0.2rem;
+  border-radius: 6px;
+  background: var(--faixa);
+  color: var(--sobre-faixa);
+}
 .menu-marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
   font-weight: 700;
   color: var(--marca);
 }

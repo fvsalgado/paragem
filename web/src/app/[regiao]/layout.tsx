@@ -1,5 +1,7 @@
-import type { Metadata } from 'next';
-import { exigirRegiao } from '@/lib/dados';
+import type { Metadata, Viewport } from 'next';
+import { exigirRegiao, origemDaRegiao } from '@/lib/dados';
+import { estiloDaFaixa, faixaDaRegiao } from '@/lib/faixa';
+import { CARTAO_DA_REGIAO, partilha } from '@/lib/partilha';
 import Cabecalho from '@/componentes/Cabecalho';
 import Rodape from '@/componentes/Rodape';
 import MarcaDeDemonstracao from '@/componentes/MarcaDeDemonstracao';
@@ -46,6 +48,43 @@ export async function generateMetadata({
       template: `%s · Paragem.pt`,
     },
     description: `Todos os transportes ${r.de}, num sítio só.`,
+    applicationName: 'Paragem.pt',
+    // O manifesto é por região (`manifest.webmanifest/route.ts`), e declara-se
+    // aqui porque a convenção só o poria na raiz. O caminho é de raiz e o
+    // middleware leva-o à região.
+    manifest: '/manifest.webmanifest',
+    // O que o iOS precisa de saber e não lê do manifesto. O Next escreve só a
+    // forma nova (`mobile-web-app-capable`); a com o prefixo `apple-` vai à
+    // mão, como no Coreto, para os iPhone que ainda só conhecem essa.
+    appleWebApp: { capable: true, title: 'Paragem.pt', statusBarStyle: 'default' },
+    other: { 'apple-mobile-web-app-capable': 'yes' },
+    // O cartão de partilha da região. As páginas que têm o seu (a paragem)
+    // declaram-no por cima; as outras herdam este.
+    ...partilha(
+      await origemDaRegiao(id),
+      CARTAO_DA_REGIAO,
+      `Paragem.pt — todos os transportes ${r.de}, num sítio só.`,
+    ),
+  };
+}
+
+/**
+ * A cor que o telemóvel pinta à volta da página antes de haver CSS — a da
+ * faixa desta região (`lib/faixa.ts`). Duas entradas com a mesma cor, como no
+ * Coreto: a faixa não muda com o tema do sistema.
+ */
+export async function generateViewport({
+  params,
+}: {
+  params: Promise<{ regiao: string }>;
+}): Promise<Viewport> {
+  const { regiao: id } = await params;
+  const { fundo } = faixaDaRegiao(await exigirRegiao(id));
+  return {
+    themeColor: [
+      { media: '(prefers-color-scheme: light)', color: fundo },
+      { media: '(prefers-color-scheme: dark)', color: fundo },
+    ],
   };
 }
 
@@ -59,15 +98,18 @@ export default async function LayoutDaRegiao({
   const { regiao: id } = await params;
   // A região que não existe — ou que o painel desligou — é 404 aqui, antes de
   // qualquer página lá dentro tentar ler o que não há.
-  await exigirRegiao(id);
+  const r = await exigirRegiao(id);
+  // A cor da região vai num invólucro que não desenha caixa nenhuma
+  // (`display: contents`): o cabeçalho e o menu do mapa herdam as variáveis, e
+  // a arrumação da página fica igual à que era.
   return (
-    <>
+    <div className="regiao" style={estiloDaFaixa(faixaDaRegiao(r))}>
       <Cabecalho regiao={id} />
       <main id="conteudo" className="pagina">
         <MarcaDeDemonstracao regiao={id} />
         {children}
       </main>
       <Rodape regiao={id} />
-    </>
+    </div>
   );
 }
