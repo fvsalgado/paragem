@@ -36,7 +36,10 @@ Opcional ao nascer, sem bloquear nada:
 - tarifário — sem ele, não se anuncia preço nenhum;
 - calendário escolar e feriados municipais — sem eles, o gerador projeta só o
   que consegue e o relatório conta o resto;
-- marcas e cartaz social — sem ficheiros, a assinatura sai em texto.
+- marcas e cartaz social — sem ficheiros, a assinatura sai em texto;
+- a cor da região (`cor: "#rrggbb"` no `regiao.yaml`) — sem ela, a faixa do
+  cabeçalho, a barra do telemóvel e os cartões de partilha vestem o vermelho do
+  produto. A tinta por cima não se declara: o sítio escolhe-a pelo contraste.
 
 ## Passo 1 — a declaração
 
