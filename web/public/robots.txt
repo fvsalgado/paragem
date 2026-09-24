@@ -1,10 +1,16 @@
 # Este ficheiro não é um pormenor de configuração: é o §4.4 escrito para os
 # motores de busca.
 #
-# O que está aqui publicado tem horários de dezembro de 2025, nove dos quinze
-# preços marcados «por confirmar» e 19 viagens sem dias declarados. A interface
-# diz tudo isso a quem a lê — um resultado de pesquisa não diz nada disso a
-# quem só vê o título e a hora.
+# O que aqui se publica são horários planeados, com a data dos dados, e pode
+# ter preços marcados «por confirmar» e serviços cujas datas ninguém confirmou.
+# A interface diz tudo isso a quem a lê — um resultado de pesquisa não diz nada
+# disso a quem só vê o título e a hora.
+#
+# Quantos são, região a região, está no relatório de lacunas de cada construção,
+# e não aqui. Este parágrafo contava-os, e as contas envelheceram sem ninguém
+# lhes tocar: quando se foi ver, a maior parte dos preços que dava por confirmar
+# já estava confirmada. Um número sobre uma fonte viva não se crava num
+# comentário (CLAUDE.md §8).
 #
 # Enquanto for assim, não se indexa. Sai quando a autoridade de transportes
 # autorizar a publicação (CLAUDE.md §9, Fase 5), e não antes — e sai DAQUI, num
