@@ -59,7 +59,11 @@ body {
   overflow-x: hidden;
   background: var(--fundo);
   color: var(--texto);
-  font-family: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
+  /* A `--letra` é a Atkinson Hyperlegible servida pelo próprio sítio
+     (`app/layout.tsx`). O nome por extenso é a rede: um `var()` sem valor
+     anula a declaração inteira, e a página caía na letra de omissão do
+     navegador em vez de passar à seguinte da lista. */
+  font-family: var(--letra, 'Atkinson Hyperlegible'), 'Segoe UI', system-ui, sans-serif;
   font-size: 1.0625rem;
   line-height: 1.55;
 }
