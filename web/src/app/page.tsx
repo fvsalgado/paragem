@@ -1,7 +1,9 @@
-import type { Viewport } from 'next';
+import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import { Assinatura } from '@/componentes/Marca';
+import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
 import { CORES_DA_FAIXA } from '@/lib/marca';
+import { CARTAO_DO_PRODUTO, partilha } from '@/lib/partilha';
 import {
   regioesDisponiveis,
   regiao,
@@ -31,6 +33,19 @@ import {
  * e, mais tarde, pelo painel — desligar uma região tira-a daqui sem esperar.
  */
 export const revalidate = 3600;
+
+/**
+ * O cartão de partilha da montra, e a cor dela no telemóvel.
+ *
+ * A montra responde a qualquer anfitrião que não é de nenhuma região, mas o
+ * endereço dela é um só — o `NEXT_PUBLIC_PARAGEM_PRODUTO`. É por esse que o
+ * cartão se anuncia; sem ele, não há onde o pôr, e não se promete imagem.
+ */
+export const metadata: Metadata = partilha(
+  ORIGEM_DO_PRODUTO,
+  CARTAO_DO_PRODUTO,
+  'Paragem.pt — todos os transportes de uma região, num sítio só.',
+);
 
 /** O azul-noite da montra, e não o azul das regiões (`lib/marca.ts`). */
 export const viewport: Viewport = {

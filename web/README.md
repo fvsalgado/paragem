@@ -41,6 +41,23 @@ sem construção nenhuma — publica-se, liga-se, e a primeira visita rende-a.
 **Não fixa o domínio.** Cada região declara o nome da variável de ambiente em
 `regiao.yaml` (`dominio_env`); o valor vive no ambiente (§4.7).
 
+## A marca
+
+A bandeirola de uma paragem, desenhada uma vez em `src/lib/marca.ts`, com as
+duas cores da faixa: a das regiões (`--marca`) e o azul-noite da montra e do
+painel (`--texto`). O cabeçalho desenha-a inline (`componentes/Marca.tsx`); os
+cartões de partilha são rotas do sítio (`src/lib/cartao.tsx`); e os ícones —
+`favicon.ico`, `icon.svg`, `apple-icon.png` e os do manifesto em
+`public/icones/` — são ficheiros versionados, que se geram outra vez quando a
+marca ou a cor mudarem:
+
+```bash
+CHROMIUM_PATH=… node scripts/gerar-icones.mjs   # sem CHROMIUM_PATH, o do Playwright
+```
+
+O `tests/marca.test.mts` confere o `icon.svg` contra os traços, e as cores
+contra o CSS: quem mudar uma e se esquecer da outra fica a saber.
+
 ## O painel
 
 `/admin` é de quem responde pelo produto: liga e desliga regiões e módulos,

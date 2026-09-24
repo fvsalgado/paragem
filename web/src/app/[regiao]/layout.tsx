@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
-import { exigirRegiao } from '@/lib/dados';
+import { exigirRegiao, origemDaRegiao } from '@/lib/dados';
 import { CORES_DA_FAIXA } from '@/lib/marca';
+import { CARTAO_DA_REGIAO, partilha } from '@/lib/partilha';
 import Cabecalho from '@/componentes/Cabecalho';
 import Rodape from '@/componentes/Rodape';
 import MarcaDeDemonstracao from '@/componentes/MarcaDeDemonstracao';
@@ -57,6 +58,13 @@ export async function generateMetadata({
     // mão, como no Coreto, para os iPhone que ainda só conhecem essa.
     appleWebApp: { capable: true, title: 'Paragem.pt', statusBarStyle: 'default' },
     other: { 'apple-mobile-web-app-capable': 'yes' },
+    // O cartão de partilha da região. As páginas que têm o seu (a paragem)
+    // declaram-no por cima; as outras herdam este.
+    ...partilha(
+      await origemDaRegiao(id),
+      CARTAO_DA_REGIAO,
+      `Paragem.pt — todos os transportes ${r.de}, num sítio só.`,
+    ),
   };
 }
 

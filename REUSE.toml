@@ -31,6 +31,18 @@ precedence = "override"
 SPDX-FileCopyrightText = "os respetivos operadores e autoridades de transportes — ver data/sources.yaml"
 SPDX-License-Identifier = "LicenseRef-documento-de-terceiro"
 
+# A letra do sítio, Atkinson Hyperlegible, do Braille Institute of America,
+# sob SIL Open Font License 1.1 — que permite redistribuir, com a licença ao
+# lado (`web/src/fontes/OFL.txt`). Vem inteira em `web/src/fontes/`, para os
+# cartões de partilha, e cortada em glifos em `web/public/glifos/`, para as
+# etiquetas do mapa (`web/scripts/glifos.mjs`). A origem e a data estão em
+# docs/TERCEIROS.md.
+[[annotations]]
+path = ["web/src/fontes/**", "web/public/glifos/**"]
+precedence = "override"
+SPDX-FileCopyrightText = "2020 Braille Institute of America, Inc."
+SPDX-License-Identifier = "OFL-1.1"
+
 # A região de prova é inventada de fio a pavio, de propósito: é o que lhe
 # permite ser a demonstração pública sem pedir uma linha a ninguém.
 [[annotations]]

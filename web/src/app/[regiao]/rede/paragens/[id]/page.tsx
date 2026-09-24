@@ -8,9 +8,11 @@ import {
   linhas,
   horaLegivel,
   operadorCurto,
+  origemDaRegiao,
   url,
   urlRede,
 } from '@/lib/dados';
+import { cartaoDaParagem, partilha } from '@/lib/partilha';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import Distintivo from '@/componentes/Distintivo';
 
@@ -35,7 +37,17 @@ export async function generateMetadata({
   const { regiao: rid, id } = await params;
   await exigirModo(rid, 'autocarro');
   const ficha = await lerParagem(rid, id);
-  return { title: ficha ? ficha.paragem.nome : 'Paragem' };
+  if (!ficha) return { title: 'Paragem' };
+  // O cartão desta paragem, por cima do da região: partilhar uma paragem é
+  // dizer «apanha aqui», e o cartão mostra o nome e as linhas que lá param.
+  return {
+    title: ficha.paragem.nome,
+    ...partilha(
+      await origemDaRegiao(rid),
+      cartaoDaParagem(ficha.paragem.id),
+      `${ficha.paragem.nome} — as linhas que param lá.`,
+    ),
+  };
 }
 
 export default async function Paragem({
