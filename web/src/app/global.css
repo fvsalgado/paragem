@@ -426,6 +426,10 @@ h3 {
   border: 1px solid transparent;
   min-width: 2.5em;
   text-align: center;
+  /* O NÚMERO DA LINHA NÃO SE PARTE. Dentro de uma célula de tabela com
+     `overflow-wrap: anywhere` partia: a 390 px, a «1002» saía «100» por cima
+     de «2», e lia-se como duas linhas que não existem. */
+  white-space: nowrap;
 }
 
 /* --- tabelas de horário -------------------------------------------------- */
@@ -450,6 +454,13 @@ table.horario td {
      a 320 px, um nome de paragem com rua, equipamento e concelho lá dentro
      fazia a página deslizar para o lado. */
   overflow-wrap: anywhere;
+}
+/* A HORA TAMBÉM NÃO. O `anywhere` de cima serve os nomes longos e deixava a
+   tabela encolher a coluna das horas até um carácter: a 390 px, 116 das 122
+   partidas de um terminal saíam «06:» numa linha e «45» na outra. A coluna
+   passa a ter pelo menos a largura de uma hora, e é o destino que dobra. */
+table.horario .hora {
+  white-space: nowrap;
 }
 
 /* Uma ligação dentro de uma tabela continua a ser um alvo tátil, e continua a

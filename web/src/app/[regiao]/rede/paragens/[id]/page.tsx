@@ -108,7 +108,7 @@ export default async function Paragem({
                     return (
                       <tr key={`${d.linha}-${d.hora}-${i}`}>
                         <td>
-                          {h.texto}
+                          <span className="hora">{h.texto}</span>
                           {h.diaSeguinte && (
                             <>
                               {' '}
