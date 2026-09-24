@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { exigirRegiao, url } from '@/lib/dados';
+import { exigirRegiao, temMosaicos, url } from '@/lib/dados';
+import { motorDaRegiao } from '@/lib/enderecos';
 
 export const metadata: Metadata = { title: 'Privacidade' };
 
@@ -16,6 +17,11 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
   const { regiao: rid } = await params;
   const r = await exigirRegiao(rid);
   const identificada = process.env.NEXT_PUBLIC_PARAGEM_MEDICAO_IDENTIFICADA === '1';
+  // Com motor de viagens, a partida vai-lhe no pedido; sem ele, o planeador
+  // corre no navegador e a coordenada não sai de lá (`planeador.ts`).
+  const comMotor = motorDaRegiao(rid) !== '';
+  // Uma região sem recorte do OpenStreetMap não tem mapa, nem botão no mapa.
+  const comMapa = await temMosaicos(rid);
 
   return (
     <>
@@ -56,7 +62,19 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
       <h2>O que não se mede</h2>
       <ul>
         <li>o teu nome, o teu email, o teu telefone — nunca são pedidos;</li>
-        <li>a tua localização: o sítio não a pede ao navegador;</li>
+        {/* DIZIA «O SÍTIO NÃO A PEDE AO NAVEGADOR», e pede: o botão da
+            localização do mapa, o «Perto de ti» e o «A minha localização» das
+            direções perguntam-na, cada um quando se carrega nele. O que a
+            página tem de dizer é para que serve e para onde vai. */}
+        <li>
+          a tua localização. Só é pedida ao navegador quando carregas{' '}
+          {comMapa ? 'no botão da localização do mapa, em «Perto de ti»' : 'em «Perto de ti»'} ou em
+          «A minha localização», e serve para {comMapa ? 'te pôr no mapa, ' : ''}encontrar as
+          paragens mais perto ou partir dali.{' '}
+          {comMotor
+            ? 'Para calcular uma viagem que parta de onde estás, a coordenada vai no pedido ao motor de viagens deste sítio; nas medições, essa partida conta só como «A minha localização»;'
+            : 'A coordenada fica no teu navegador, e nas medições essa partida conta só como «A minha localização»;'}
+        </li>
         <li>
           o que escreves enquanto escreves — só a paragem que acabas por escolher, que é um nome
           público do horário da operadora;

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { exigirRegiao, url } from '@/lib/dados';
+import { exigirRegiao, temMosaicos, url } from '@/lib/dados';
 
 export const metadata: Metadata = { title: 'Acessibilidade' };
 
@@ -19,6 +19,7 @@ export const metadata: Metadata = { title: 'Acessibilidade' };
 export default async function Acessibilidade({ params }: { params: Promise<{ regiao: string }> }) {
   const { regiao: rid } = await params;
   const r = await exigirRegiao(rid);
+  const comMapa = await temMosaicos(rid);
   return (
     <>
       <h1>Declaração de acessibilidade</h1>
@@ -53,10 +54,18 @@ export default async function Acessibilidade({ params }: { params: Promise<{ reg
 
       <h2>O que não está conforme</h2>
       <ul>
-        <li>
-          <strong>Ainda não há mapa.</strong> Quando houver, precisa de uma alternativa em texto
-          para quem não o consegue usar.
-        </li>
+        {/* DIZIA «AINDA NÃO HÁ MAPA», e o mapa é hoje a página de entrada. O
+            que continua a ser verdade é que ele não serve a quem não vê — e o
+            que a declaração tem de dizer é onde está a alternativa. Uma região
+            sem recorte do OpenStreetMap não tem mapa, e aí não se fala dele. */}
+        {comMapa && (
+          <li>
+            <strong>O mapa não serve a quem não o vê.</strong> É um desenho numa tela, que um leitor
+            de ecrã não percorre. O que ele mostra está também em texto: a procura encontra as
+            paragens e os sítios pelo nome, as páginas de <a href={url(rid, '/rede/')}>A rede</a>{' '}
+            listam as paragens, as linhas e as estações, e a página de cada modo diz onde ele está.
+          </li>
+        )}
         <li>
           <strong>Os ficheiros PDF da operadora não são nossos e podem não ser acessíveis.</strong>{' '}
           Onde os ligamos, a informação está também em HTML.
