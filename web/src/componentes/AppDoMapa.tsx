@@ -44,6 +44,18 @@ import { enderecoDosDados } from '@/lib/dados-do-navegador';
  */
 const seguro = (s: string) => s.replace(/[^a-zA-Z0-9\-_]/g, '-');
 
+/** O que sobe do fundo por cima do mapa. A folha das direções numa página própria não conta. */
+const FOLHAS = '.folha-de-abertura, .cartao-de-baixo, .folha:not(.em-pagina)';
+
+/** O que flutua no alto do mapa: a procura, a fila das camadas, o cartão de cima das direções. */
+const NO_ALTO = '.app-procura, .app-camadas, .campos-viagem';
+
+/** Os dois cantos de baixo do MapLibre, e a variável que diz a cada um quanto subir. */
+const CANTOS = [
+  ['left', '--tapado-a-esquerda'],
+  ['right', '--tapado-a-direita'],
+] as const;
+
 /**
  * O que é este ponto, por extenso.
  *
@@ -197,6 +209,71 @@ export default function AppDoMapa({
     ajustar();
     window.addEventListener('resize', ajustar);
     return () => window.removeEventListener('resize', ajustar);
+  }, []);
+
+  // OS CONTROLOS DO MAPA SOBEM COM A FOLHA, como no Maps.
+  //
+  // A folha de abertura, o cartão de um ponto e a folha das direções sobem do
+  // fundo do ecrã, e é no fundo que o MapLibre põe a escala, o botão da
+  // localização e a atribuição do OpenStreetMap. Ficavam todos por baixo da
+  // folha: medido no ar, a 390 × 844 e a 1100 × 640, o que estava no centro da
+  // atribuição era a nota «Ou escreve na caixa de cima». Um botão tapado não
+  // se carrega, e a atribuição que a ODbL obriga não se lê.
+  //
+  // Mede-se, não se adivinha: a folha muda de altura com os modos da região,
+  // com a largura do ecrã e com o que se escolhe. E cada canto sobe só o que
+  // lhe tapam — numa janela larga o cartão de um ponto encosta à esquerda, e o
+  // canto direito fica onde estava.
+  //
+  // E SÓ SOBE SE COUBER. Esse cartão da janela larga chega a ocupar a altura
+  // quase toda, e a escala, empurrada para cima dele, ia parar atrás da barra
+  // da procura. Um canto que não cabe entre a folha e o que flutua no alto
+  // fica onde estava: tapado por uma folha que se fecha, e não perdido.
+  useEffect(() => {
+    const el = caixa.current;
+    if (!el) return;
+    let pedido = 0;
+    const medir = () => {
+      pedido = 0;
+      const base = el.getBoundingClientRect();
+      const folhas = [...el.querySelectorAll<HTMLElement>(FOLHAS)]
+        .map((f) => f.getBoundingClientRect())
+        .filter((q) => q.height > 0);
+      const emCima = [...el.querySelectorAll<HTMLElement>(NO_ALTO)]
+        .map((f) => f.getBoundingClientRect())
+        .filter((q) => q.height > 0);
+      for (const [lado, variavel] of CANTOS) {
+        const canto = el.querySelector<HTMLElement>(`.maplibregl-ctrl-bottom-${lado}`);
+        if (!canto) continue;
+        const c = canto.getBoundingClientRect();
+        const aoLado = (q: DOMRect) => q.left < c.right && q.right > c.left;
+        const tapa = Math.max(0, ...folhas.filter(aoLado).map((q) => base.bottom - q.top));
+        const teto = Math.max(base.top, ...emCima.filter(aoLado).map((q) => q.bottom));
+        const cabe = base.bottom - tapa - c.height >= teto;
+        el.style.setProperty(variavel, `${cabe ? Math.round(tapa) : 0}px`);
+      }
+    };
+    // Uma medição por imagem, por muitas mudanças que cheguem juntas.
+    const pedir = () => {
+      if (!pedido) pedido = requestAnimationFrame(medir);
+    };
+    // As folhas entram e saem, e mudam de altura; os cantos só existem quando
+    // o mapa acabar de carregar. Vê-se tudo isso daqui.
+    const tamanhos = new ResizeObserver(pedir);
+    const vigiar = () => {
+      tamanhos.disconnect();
+      tamanhos.observe(el);
+      el.querySelectorAll<HTMLElement>(FOLHAS).forEach((f) => tamanhos.observe(f));
+      pedir();
+    };
+    const entradas = new MutationObserver(vigiar);
+    entradas.observe(el, { childList: true, subtree: true });
+    vigiar();
+    return () => {
+      entradas.disconnect();
+      tamanhos.disconnect();
+      if (pedido) cancelAnimationFrame(pedido);
+    };
   }, []);
   function encolher(sim: boolean) {
     setEncolhido(sim);
