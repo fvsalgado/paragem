@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import { Assinatura } from '@/componentes/Marca';
 import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
-import { CORES_DA_FAIXA } from '@/lib/marca';
+import { COR_DO_PRODUTO } from '@/lib/marca';
 import { CARTAO_DO_PRODUTO, partilha } from '@/lib/partilha';
 import {
   regioesDisponiveis,
@@ -47,11 +47,11 @@ export const metadata: Metadata = partilha(
   'Paragem.pt — todos os transportes de uma região, num sítio só.',
 );
 
-/** O azul-noite da montra, e não o azul das regiões (`lib/marca.ts`). */
+/** A cor do produto (`lib/marca.ts`): a montra não é de nenhuma região. */
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: CORES_DA_FAIXA.montra },
-    { media: '(prefers-color-scheme: dark)', color: CORES_DA_FAIXA.montra },
+    { media: '(prefers-color-scheme: light)', color: COR_DO_PRODUTO },
+    { media: '(prefers-color-scheme: dark)', color: COR_DO_PRODUTO },
   ],
 };
 
@@ -94,9 +94,8 @@ export default async function Produto() {
 
   return (
     <>
-      {/* A faixa da montra é a outra cor da marca (`lib/marca.ts`): quem cai
-          aqui não está no sítio de nenhuma região, e percebe-o antes de ler. */}
-      <header className="cabecalho cabecalho-montra">
+      {/* A faixa da montra veste a cor do produto, que é a de omissão do CSS. */}
+      <header className="cabecalho">
         <div className="interior">
           <span className="marca">
             <Assinatura />

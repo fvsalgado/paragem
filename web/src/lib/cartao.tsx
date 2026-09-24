@@ -3,7 +3,8 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ImageResponse } from 'next/og';
 import { comContrasteSuficiente, normalizar, textoSobre } from '@/componentes/Distintivo';
-import { CORES_DA_FAIXA, MARCA_ESPESSURA, MARCA_GRELHA, MARCA_TRACOS } from './marca';
+import type { Faixa } from './faixa';
+import { LETRAS_ALTURA, LETRAS_ARAGEM, LETRAS_LARGURA, LETRAS_P, LETRAS_PT } from './marca-letras';
 import { CARTAO } from './partilha';
 
 /**
@@ -11,17 +12,16 @@ import { CARTAO } from './partilha';
  * cada paragem —, e só o desenho. Os endereços e os metadados estão em
  * `partilha.ts`; as rotas que servem isto são três ficheiros de uma função.
  *
- * É a marca grande, na faixa, com o nome ao lado: o mesmo que o cabeçalho
- * diz, na proporção que as redes recortam. Numa paragem, os números das
+ * É o logótipo na faixa, por cima do que a ligação é: o mesmo que o cabeçalho
+ * diz, na cor da região, na proporção que as redes recortam. Numa paragem, os números das
  * linhas vão como tabuletas, com a cor de cada uma — é o que quem recebe a
  * ligação reconhece primeiro. Numa região de demonstração, o cartão di-lo,
  * como todas as páginas dela: um cartão partilhado sai do sítio, e a faixa de
  * aviso não vai com ele.
  */
 
-/** O texto secundário sobre a faixa: `--linhas`, 5,4:1 sobre o azul e 10,4:1 sobre o azul-noite. */
-const SECUNDARIO = '#d5ddd9';
-const BRANCO = '#ffffff';
+/** O fundo de uma tabuleta de linha sem cor declarada: `--linhas`, com o texto do sítio. */
+const NEUTRO = '#d5ddd9';
 
 /**
  * A letra do sítio, lida do disco uma vez por instância.
@@ -85,14 +85,14 @@ export type Tabuleta = { codigo: string; cor: string | null };
 /** Quantas tabuletas cabem numa fila antes de se resumir o resto num «+N». */
 const MAXIMO_DE_TABULETAS = 8;
 
-function Tabuletas({ linhas }: { linhas: Tabuleta[] }) {
+function Tabuletas({ linhas, tinta }: { linhas: Tabuleta[]; tinta: string }) {
   const visiveis = linhas.slice(0, MAXIMO_DE_TABULETAS);
   const resto = linhas.length - visiveis.length;
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
       {visiveis.map(({ codigo, cor }) => {
         const original = normalizar(cor);
-        const fundo = original ? comContrasteSuficiente(original) : SECUNDARIO;
+        const fundo = original ? comContrasteSuficiente(original) : NEUTRO;
         return (
           <div
             key={codigo}
@@ -102,9 +102,9 @@ function Tabuletas({ linhas }: { linhas: Tabuleta[] }) {
               minWidth: 92,
               padding: '4px 18px',
               borderRadius: 5,
-              // A borda branca separa a tabuleta da faixa quando a linha tem
-              // a cor da marca — que é a cor mais provável de uma linha.
-              border: `3px solid ${BRANCO}`,
+              // A borda da cor da tinta separa a tabuleta da faixa quando a
+              // linha tem a cor da faixa — o que não é raro.
+              border: `3px solid ${tinta}`,
               background: fundo,
               color: original ? textoSobre(fundo) : '#102c3f',
               fontSize: 40,
@@ -116,9 +116,7 @@ function Tabuletas({ linhas }: { linhas: Tabuleta[] }) {
         );
       })}
       {resto > 0 ? (
-        <div style={{ display: 'flex', alignItems: 'center', fontSize: 36, color: SECUNDARIO }}>
-          +{resto}
-        </div>
+        <div style={{ display: 'flex', alignItems: 'center', fontSize: 36 }}>+{resto}</div>
       ) : null}
     </div>
   );
@@ -126,12 +124,15 @@ function Tabuletas({ linhas }: { linhas: Tabuleta[] }) {
 
 /** Tudo o que um cartão pode dizer. Só o título é obrigatório. */
 export type Cartao = {
-  faixa: keyof typeof CORES_DA_FAIXA;
+  faixa: Faixa;
   titulo: string;
   linhas?: Tabuleta[];
   subtitulo?: string;
   demonstracao?: boolean;
 };
+
+/** A altura do logótipo no cartão, em pixéis. */
+const ALTURA_DO_LOGOTIPO = 62;
 
 export async function desenharCartao({
   faixa,
@@ -150,49 +151,44 @@ export async function desenharCartao({
           width: '100%',
           height: '100%',
           display: 'flex',
-          alignItems: 'center',
-          gap: 64,
-          padding: '64px 80px',
-          background: CORES_DA_FAIXA[faixa],
-          color: BRANCO,
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          padding: '60px 80px 64px',
+          background: faixa.fundo,
+          color: faixa.tinta,
           fontFamily: fonts.length ? 'Atkinson Hyperlegible' : undefined,
         }}
       >
-        {/* A marca, com os mesmos traços do cabeçalho (`lib/marca.ts`). */}
-        <svg
-          width={250}
-          height={250}
-          viewBox={`0 0 ${MARCA_GRELHA} ${MARCA_GRELHA}`}
-          fill="none"
-          stroke={BRANCO}
-          strokeWidth={MARCA_ESPESSURA}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          style={{ flexShrink: 0 }}
-        >
-          {MARCA_TRACOS.map((traco) => (
-            <path key={traco} d={traco} />
-          ))}
-        </svg>
-
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 26 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* O logótipo, com os contornos do cabeçalho (`lib/marca-letras.ts`). */}
+          <svg
+            width={Math.round((ALTURA_DO_LOGOTIPO * LETRAS_LARGURA) / LETRAS_ALTURA)}
+            height={ALTURA_DO_LOGOTIPO}
+            viewBox={`0 0 ${LETRAS_LARGURA} ${LETRAS_ALTURA}`}
+            fill={faixa.tinta}
+          >
+            <path fillRule="evenodd" d={LETRAS_P} />
+            <path d={LETRAS_ARAGEM} />
+            <path d={LETRAS_PT} />
+          </svg>
           {demonstracao ? (
-            <div style={{ display: 'flex' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  padding: '6px 18px',
-                  borderRadius: 999,
-                  background: '#fbe9e6',
-                  color: '#a3261b',
-                  fontSize: 26,
-                  fontWeight: 700,
-                }}
-              >
-                Demonstração: esta região não existe
-              </div>
+            <div
+              style={{
+                display: 'flex',
+                padding: '6px 18px',
+                borderRadius: 999,
+                background: '#fbe9e6',
+                color: '#a3261b',
+                fontSize: 26,
+                fontWeight: 700,
+              }}
+            >
+              Demonstração: esta região não existe
             </div>
           ) : null}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
           <div
             style={{
               display: 'flex',
@@ -203,16 +199,12 @@ export async function desenharCartao({
           >
             {tituloCurto}
           </div>
-          {linhas.length > 0 ? <Tabuletas linhas={linhas} /> : null}
+          {linhas.length > 0 ? <Tabuletas linhas={linhas} tinta={faixa.tinta} /> : null}
           {subtitulo ? (
-            <div style={{ display: 'flex', fontSize: 32, lineHeight: 1.3, color: SECUNDARIO }}>
+            <div style={{ display: 'flex', fontSize: 32, lineHeight: 1.3 }}>
               {encurtar(subtitulo, 110)}
             </div>
           ) : null}
-          <div style={{ display: 'flex', marginTop: 10, fontSize: 36, fontWeight: 700 }}>
-            Paragem
-            <span style={{ fontWeight: 400, color: SECUNDARIO }}>.pt</span>
-          </div>
         </div>
       </div>
     ),

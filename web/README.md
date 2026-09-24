@@ -43,20 +43,25 @@ sem construção nenhuma — publica-se, liga-se, e a primeira visita rende-a.
 
 ## A marca
 
-A bandeirola de uma paragem, desenhada uma vez em `src/lib/marca.ts`, com as
-duas cores da faixa: a das regiões (`--marca`) e o azul-noite da montra e do
-painel (`--texto`). O cabeçalho desenha-a inline (`componentes/Marca.tsx`); os
-cartões de partilha são rotas do sítio (`src/lib/cartao.tsx`); e os ícones —
-`favicon.ico`, `icon.svg`, `apple-icon.png` e os do manifesto em
-`public/icones/` — são ficheiros versionados, que se geram outra vez quando a
-marca ou a cor mudarem:
+A placa de uma paragem a fazer de P, desenhada uma vez em `src/lib/marca.ts`.
+Sozinha é o ícone (`componentes/Marca.tsx`); à frente de «aragem.pt» é o
+logótipo por extenso, em contornos tirados da letra do sítio
+(`src/lib/marca-letras.ts`). Veste a cor do produto, o vermelho `#c2281c`, e
+uma região com cara própria troca-a pela sua — `cor:` no `regiao.yaml`, com a
+tinta escolhida pelo contraste em `src/lib/faixa.ts`.
+
+O logótipo, os ícones — `favicon.ico`, `icon.svg`, `apple-icon.png` e os do
+manifesto em `public/icones/` — são ficheiros versionados, que se geram outra
+vez quando a marca ou a cor mudarem; os cartões de partilha são rotas do sítio
+(`src/lib/cartao.tsx`):
 
 ```bash
-CHROMIUM_PATH=… node scripts/gerar-icones.mjs   # sem CHROMIUM_PATH, o do Playwright
+uv run --with fonttools python web/scripts/gerar-letras.py   # o logótipo por extenso
+CHROMIUM_PATH=… node scripts/gerar-icones.mjs                 # os ícones; sem CHROMIUM_PATH, o do Playwright
 ```
 
-O `tests/marca.test.mts` confere o `icon.svg` contra os traços, e as cores
-contra o CSS: quem mudar uma e se esquecer da outra fica a saber.
+O `tests/marca.test.mts` confere o `icon.svg` e o logótipo contra o desenho, e
+a cor contra o CSS: quem mudar uma e se esquecer da outra fica a saber.
 
 ## O painel
 

@@ -18,9 +18,9 @@
  * (`tests/marca.test.mts`) que confere o `icon.svg` contra os traços — quem
  * mudar a marca e se esquecer de correr isto fica a saber.
  *
- * Os ícones vestem a cor das REGIÕES, e não a da montra: são um ficheiro só
- * para todos os anfitriões, e quem instala a aplicação instala a de uma
- * região. A montra distingue-se pela faixa e pelo `theme-color`.
+ * Os ícones vestem a cor do PRODUTO em todas as regiões: são um ficheiro só
+ * para todos os anfitriões, e a marca que se instala é o Paragem.pt. A região
+ * que tem cara própria mostra-a na faixa, no `theme-color` e nos cartões.
  *
  * Levantado do `scripts/gerar-icones.mjs` do Coreto, que resolveu primeiro os
  * pormenores do `.ico` — ver os comentários de lá, que vieram com o código.
@@ -37,11 +37,10 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 import {
-  CORES_DA_FAIXA,
-  MARCA_ESPESSURA,
+  COR_DO_PRODUTO,
+  MARCA_P_TRACADO,
   MARCA_TINTA,
-  MARCA_TRACOS,
-  TINTA_SOBRE_A_FAIXA,
+  TINTA_DO_PRODUTO,
 } from '../src/lib/marca.ts';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -56,7 +55,7 @@ const TINTA_MEIO_Y = MARCA_TINTA.topo + TINTA_ALTURA / 2;
  * A marca numa caixa quadrada, centrada e com o fundo pintado.
  *
  * Os tamanhos pequenos dão a ESCALA e não a parte: meia, uma, uma e meia. É
- * o que faz cada traço cair em pixéis inteiros (ver `MARCA_TRACOS`), e para
+ * o que faz cada borda cair em pixéis inteiros (ver `MARCA_P`), e para
  * isso a deslocação também tem de ser inteira — arredonda-se, e a marca fica
  * no máximo meio pixel fora do meio, o que ninguém vê; um traço a meio pixel
  * vê-se, porque fica cinzento.
@@ -84,11 +83,9 @@ function svgDaMarca({ lado, parte, escala: aoPixel, passo = 1, raio = 0 }) {
   const cantos = raio > 0 ? ` rx="${(raio * lado).toFixed(2)}"` : '';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${lado} ${lado}" width="${lado}" height="${lado}">
-  <rect width="${lado}" height="${lado}"${cantos} fill="${CORES_DA_FAIXA.regiao}"/>
-  <g transform="translate(${x.toFixed(3)} ${y.toFixed(3)}) scale(${escala.toFixed(5)})"
-     fill="none" stroke="${TINTA_SOBRE_A_FAIXA}" stroke-width="${MARCA_ESPESSURA}"
-     stroke-linecap="round" stroke-linejoin="round">
-${MARCA_TRACOS.map((traco) => `    <path d="${traco}"/>`).join('\n')}
+  <rect width="${lado}" height="${lado}"${cantos} fill="${COR_DO_PRODUTO}"/>
+  <g transform="translate(${x.toFixed(3)} ${y.toFixed(3)}) scale(${escala.toFixed(5)})" fill="${TINTA_DO_PRODUTO}">
+    <path fill-rule="evenodd" d="${MARCA_P_TRACADO}"/>
   </g>
 </svg>
 `;
@@ -211,7 +208,7 @@ const browser = await chromium.launch(EXECUTAVEL ? { executablePath: EXECUTAVEL 
 
 try {
   // O separador do navegador: 16, 32 e 48 px, à escala de meio, um e um e
-  // meio — os três em que cada traço cai em pixéis inteiros.
+  // meio — os três em que cada borda cai em pixéis inteiros.
   const ico = empacotarIco(
     await Promise.all(
       [

@@ -74,7 +74,11 @@ export default function MenuDoMapa({
     <dialog className="menu-do-mapa" ref={caixa} onClose={aoFechar} aria-label="Menu">
       <div className="menu-topo">
         <span className="menu-marca">
-          <Marca className="marca-desenho" />
+          {/* A marca num azulejo da cor da região, como o ícone no ecrã do
+              telemóvel: é a mesma coisa, vista de perto. */}
+          <span className="marca-azulejo">
+            <Marca className="marca-desenho" />
+          </span>
           <span>
             Paragem.pt <span className="secundario">· {nomeDaRegiao}</span>
           </span>

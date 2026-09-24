@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { concelhos, exigirModo, exigirRegiao, linhas, paragem as lerParagem } from '@/lib/dados';
 import { desenharCartao } from '@/lib/cartao';
+import { faixaDaRegiao } from '@/lib/faixa';
 
 /**
  * `GET /cartao/paragens/<id>.png` — o cartão de partilha de uma paragem.
@@ -33,7 +34,7 @@ export async function GET(
   const cores = new Map(ls.map((l) => [l.codigo, l.cor]));
 
   return desenharCartao({
-    faixa: 'regiao',
+    faixa: faixaDaRegiao(r),
     titulo: p.nome,
     // Um número por tabuleta: duas linhas com o mesmo número (de operadores
     // diferentes) são uma tabuleta só na placa da paragem, e aqui também.

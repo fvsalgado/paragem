@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { exigirRegiao } from '@/lib/dados';
-import { COR_DO_PAPEL, CORES_DA_FAIXA } from '@/lib/marca';
+import { faixaDaRegiao } from '@/lib/faixa';
+import { COR_DO_PAPEL } from '@/lib/marca';
 
 /**
  * O manifesto que faz de uma região uma aplicação instalável.
@@ -24,10 +25,12 @@ import { COR_DO_PAPEL, CORES_DA_FAIXA } from '@/lib/marca';
  *   precisa das horas do telemóvel, que estão na barra de estado.
  * - Nada de `orientation`: prender a aplicação ao retrato parte o mapa num
  *   tablet e não serve ninguém. Manda o equipamento, como manda no navegador.
- * - `theme_color` é a cor da faixa das regiões, e `background_color` é o
- *   papel do sítio — o ecrã de arranque, que dura décimos de segundo. São os
- *   valores de `--marca` e `--fundo`, por `lib/marca.ts`, porque um manifesto
- *   é JSON e não lê CSS.
+ * - `theme_color` é a cor da faixa desta região — a dela, ou a do produto
+ *   (`lib/faixa.ts`) —, e `background_color` é o papel do sítio, o ecrã de
+ *   arranque, que dura décimos de segundo. Vêm do código e não do CSS porque
+ *   um manifesto é JSON e não lê variáveis.
+ * - Os ícones são os do produto, em todas as regiões: um ícone por região era
+ *   um ficheiro gerado por cada uma, e a marca que se instala é o Paragem.pt.
  * - Sem *service worker*, e é decisão e não esquecimento: o Chrome deixou de o
  *   exigir para instalar, e um horário guardado numa cache velha é pior do que
  *   uma página que não abre — uma página que não abre não manda ninguém para
@@ -57,7 +60,7 @@ export async function GET(
     scope: '/',
     display: 'standalone',
     background_color: COR_DO_PAPEL,
-    theme_color: CORES_DA_FAIXA.regiao,
+    theme_color: faixaDaRegiao(r).fundo,
     categories: ['travel', 'navigation'],
     icons: [
       { src: '/icones/paragem-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

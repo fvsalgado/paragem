@@ -1,4 +1,5 @@
 import { desenharCartao } from '@/lib/cartao';
+import { FAIXA_DO_PRODUTO } from '@/lib/faixa';
 
 /**
  * `GET /cartao-do-produto.png` — o cartão de partilha da montra.
@@ -12,7 +13,7 @@ export const dynamic = 'force-static';
 
 export async function GET(): Promise<Response> {
   return desenharCartao({
-    faixa: 'montra',
+    faixa: FAIXA_DO_PRODUTO,
     titulo: 'Todos os transportes de uma região, num sítio só',
     subtitulo:
       'Autocarros, comboios, transporte a pedido, bicicletas, expressos e táxis — seja quem for que os gere.',

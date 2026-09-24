@@ -35,6 +35,11 @@
   --alerta-fundo: #fbe9e6;
   --foco: #f2b705;
 
+  /* A faixa do cabeçalho: a cor do produto, que uma região pode trocar pela
+     sua (ver `.cabecalho`). É o valor de `COR_DO_PRODUTO` em `lib/marca.ts`. */
+  --faixa: #c2281c;
+  --sobre-faixa: #ffffff;
+
   --raio: 10px;
   --alvo: 44px;
   --medida: 38rem;
@@ -120,29 +125,33 @@ h3 {
   padding: 0 1rem 4rem;
 }
 
-/* A FAIXA DO CABEÇALHO veste uma de duas cores, como o toldo do Coreto: a da
-   marca nas regiões, e o azul-noite do texto na montra e no painel — para
-   quem cai na página do produto perceber, antes de ler, que não está no
-   sítio de nenhuma região. São as mesmas duas de `lib/marca.ts`, que é quem
-   as dá ao telemóvel e aos ícones.
+/* A FAIXA DO CABEÇALHO veste a cor do produto — o vermelho do Coreto na
+   montra, que é da mesma casa — ou a da região, quando ela declara uma
+   (`cor:` no `regiao.yaml`). O invólucro da região escreve `--faixa` e
+   `--sobre-faixa` (`lib/faixa.ts`); a página do produto e o painel ficam com
+   os de omissão, que estão em `:root`.
 
-   Tudo o que está na faixa é branco ou `--linhas`, e está medido: o branco dá
-   7,4:1 sobre a marca e 14,4:1 sobre o azul-noite; `--linhas` dá 5,4:1 e
-   10,4:1. O foco amarelo dá 4,1:1 sobre a marca — acima dos 3:1 que a norma
-   pede a um indicador de foco. */
+   A tinta não se declara: escolhe-se pelo contraste. O branco dá 5,8:1 sobre
+   o vermelho; uma cor clara, como o turquesa, leva o texto do sítio, que lhe
+   dá mais de 6:1. E o foco na faixa é da cor da tinta, e não o amarelo do
+   resto do sítio: o amarelo dá 3,1:1 sobre o vermelho e 1,2:1 sobre o
+   turquesa, e um anel de foco que não se vê é um anel de foco que não há. */
+.regiao {
+  display: contents;
+}
 .cabecalho {
-  background: var(--marca);
-  color: #fff;
+  background: var(--faixa);
+  color: var(--sobre-faixa);
   /* Com a faixa pintada, o que vem a seguir precisa de ar: a caixa da
      demonstração e os títulos encostavam-se a ela. */
   margin-bottom: 1.25rem;
 }
-.cabecalho-montra {
-  background: var(--texto);
-}
 .cabecalho a,
 .cabecalho a:hover {
-  color: #fff;
+  color: var(--sobre-faixa);
+}
+.cabecalho :focus-visible {
+  outline-color: var(--sobre-faixa);
 }
 .cabecalho .interior {
   max-width: var(--medida);
@@ -154,31 +163,25 @@ h3 {
   flex-wrap: wrap;
 }
 .cabecalho .marca {
-  font-weight: 700;
-  font-size: 1.15rem;
   text-decoration: none;
   /* É uma ligação autónoma, não uma ligação no meio de uma frase: leva os
      44 px como qualquer outra. */
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
   min-height: var(--alvo);
 }
-.cabecalho a.marca:hover .marca-nome {
-  text-decoration: underline;
+/* O logótipo por extenso, à altura da letra: a altura das maiúsculas do
+   desenho fica perto da do texto à volta, e cresce com ela. */
+.marca-assinatura {
+  height: 1.75em;
+  width: auto;
+  flex: none;
 }
-/* A bandeirola ao tamanho da letra, um pouco acima dela: é o desenho que diz
-   «paragem» antes de se ler a palavra. Não encolhe — ao lado de um nome
-   comprido, num menu estreito, um `flex` à solta reduzia-a a metade. */
+/* A bandeirola sozinha, ao tamanho da letra, onde não cabe o nome inteiro. */
 .marca-desenho {
   width: 1.6em;
   height: 1.6em;
   flex: none;
-}
-/* «.pt» faz parte do nome, mas o que se lê primeiro é «Paragem». */
-.marca-pt {
-  font-weight: 400;
-  color: var(--linhas);
 }
 /* O nome da região no cabeçalho era um `<span>` e passou a LIGAÇÃO quando o
    sítio começou a servir mais do que uma região — leva ao início dela. Uma
@@ -196,7 +199,7 @@ h3 {
   border-radius: 0;
   background: none;
   font-size: 1rem;
-  color: #fff;
+  color: var(--sobre-faixa);
   text-decoration: none;
 }
 .cabecalho a.marca-dados:hover,
@@ -1919,10 +1922,18 @@ dialog.menu-do-mapa::backdrop {
   padding: 0 0.25rem 0.5rem 0.75rem;
   border-bottom: 1px solid var(--linhas);
 }
+.marca-azulejo {
+  display: inline-flex;
+  flex: none;
+  padding: 0.2rem;
+  border-radius: 6px;
+  background: var(--faixa);
+  color: var(--sobre-faixa);
+}
 .menu-marca {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.55rem;
   font-weight: 700;
   color: var(--marca);
 }

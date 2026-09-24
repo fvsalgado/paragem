@@ -1,16 +1,23 @@
-import { MARCA_ESPESSURA, MARCA_GRELHA, MARCA_TRACOS } from '@/lib/marca';
+import { MARCA_GRELHA, MARCA_P_TRACADO } from '@/lib/marca';
+import {
+  LETRAS_ALTURA,
+  LETRAS_ARAGEM,
+  LETRAS_LARGURA,
+  LETRAS_P,
+  LETRAS_PT,
+} from '@/lib/marca-letras';
 
 /**
- * A marca do produto: a bandeirola de uma paragem, em traço.
+ * A marca sozinha: a placa da paragem a fazer de P.
  *
  * Desenhada inline para herdar a cor do texto e não custar um pedido; e
- * decorativa, porque anda sempre ao lado da palavra «Paragem.pt» — um leitor
- * de ecrã que dissesse «imagem» antes do nome estava a dizer o mesmo duas
- * vezes.
+ * decorativa, porque anda sempre ao lado do nome ou dentro de uma ligação que
+ * o diz — um leitor de ecrã que dissesse «imagem» antes estava a dizer o mesmo
+ * duas vezes.
  *
- * Os traços vêm de `lib/marca.ts`, que é de onde o gerador de ícones os lê
- * também: o que está no cabeçalho e o que está no ecrã do telemóvel são o
- * mesmo desenho, e não duas cópias a envelhecer cada uma para seu lado.
+ * O traçado vem de `lib/marca.ts`, que é de onde o gerador de ícones o lê
+ * também: o que está na página e o que está no ecrã do telemóvel são o mesmo
+ * desenho.
  */
 export default function Marca({
   tamanho = 24,
@@ -24,44 +31,45 @@ export default function Marca({
       width={tamanho}
       height={tamanho}
       viewBox={`0 0 ${MARCA_GRELHA} ${MARCA_GRELHA}`}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={MARCA_ESPESSURA}
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      fill="currentColor"
       aria-hidden="true"
       focusable="false"
       className={className}
     >
-      {MARCA_TRACOS.map((traco) => (
-        <path key={traco} d={traco} />
-      ))}
+      <path fillRule="evenodd" d={MARCA_P_TRACADO} />
     </svg>
   );
 }
 
 /**
- * A marca com o nome ao lado — a assinatura do cabeçalho, do painel e da
- * montra.
+ * O logótipo por extenso — «Paragem.pt», com a placa a fazer de P —, a
+ * assinatura do cabeçalho, do painel e da montra.
  *
- * Um componente, e não três cópias da mesma linha, pelas mesmas razões por
- * que os traços vivem num sítio só. O «.pt» vai num tom abaixo: faz parte do
- * nome, mas o que se lê primeiro é «Paragem». O ponto continua fora da
- * árvore de acessibilidade, como estava.
+ * É desenho e não texto (`lib/marca-letras.ts`, gerado da letra do sítio): o P
+ * desenhado tem de assentar na linha de base de «aragem» ao meio pixel, e isso
+ * só é certo se as letras também forem contorno. O nome continua a estar lá
+ * como texto, escondido à vista e lido pelo leitor de ecrã — com o ponto fora
+ * da árvore de acessibilidade, como sempre esteve.
  *
- * O nome vai numa caixa sua, e não solto ao lado do desenho: o cabeçalho
- * arruma a marca com `flex` e `gap`, e cada pedaço de texto solto seria um
- * item à parte — com um espaço a meio de «Paragem.pt».
+ * A altura mede-se em `em`, no CSS (`.marca-assinatura`): o logótipo cresce
+ * com a letra de quem a aumenta, como o texto à volta.
  */
 export function Assinatura() {
   return (
     <>
-      <Marca className="marca-desenho" />
-      <span className="marca-nome">
-        Paragem
-        <span className="marca-pt">
-          <span aria-hidden="true">.</span>pt
-        </span>
+      <svg
+        viewBox={`0 0 ${LETRAS_LARGURA} ${LETRAS_ALTURA}`}
+        fill="currentColor"
+        aria-hidden="true"
+        focusable="false"
+        className="marca-assinatura"
+      >
+        <path fillRule="evenodd" d={LETRAS_P} />
+        <path d={LETRAS_ARAGEM} />
+        <path d={LETRAS_PT} />
+      </svg>
+      <span className="so-para-leitores">
+        Paragem<span aria-hidden="true">.</span>pt
       </span>
     </>
   );

@@ -190,12 +190,21 @@ Por esta ordem, um PR de cada vez: (0) a base, provada num Postgres real;
 
 ## 6. Design
 
+- Marca: a placa de uma paragem a fazer de P — o poste é a haste, a placa é
+  a barriga, e a faixa do número da linha abre-se onde estaria o buraco do P.
+  Por extenso, «Paragem.pt»; sozinha, só o P. Desenhada uma vez em
+  `web/src/lib/marca.ts`.
 - Tipografia: **Atkinson Hyperlegible** (Google Fonts), fallback
   `'Segoe UI', system-ui, sans-serif`.
 - Cores:
   - fundo `#F5F7F4`, texto `#102C3F`, texto secundário `#4A5C66`;
   - linhas `#D5DDD9`, borda de campos `#6F858F`;
-  - marca / autocarros da rede `#0A5C7A` (hover `#063F54`);
+  - produto (a faixa do cabeçalho, a marca, os ícones) `#C2281C`, com branco
+    por cima — o vermelho do Coreto na montra. Uma região com cara própria
+    declara a sua (`cor:` no `regiao.yaml`); a tinta por cima escolhe-a o
+    sítio pelo contraste, e escurece a cor se nenhuma passar os 4,5:1;
+  - autocarros da rede, ligações e botões `#0A5C7A` (hover `#063F54`) — as
+    ligações não passam a vermelho, que no sítio quer dizer alerta;
   - a pedido `#8A5300` sobre `#FBF1E1`;
   - bicicletas `#2D6A3E` sobre `#E6F0E9`;
   - comboio `#3F4852`;

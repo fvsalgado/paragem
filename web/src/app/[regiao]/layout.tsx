@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { exigirRegiao, origemDaRegiao } from '@/lib/dados';
-import { CORES_DA_FAIXA } from '@/lib/marca';
+import { estiloDaFaixa, faixaDaRegiao } from '@/lib/faixa';
 import { CARTAO_DA_REGIAO, partilha } from '@/lib/partilha';
 import Cabecalho from '@/componentes/Cabecalho';
 import Rodape from '@/componentes/Rodape';
@@ -70,15 +70,23 @@ export async function generateMetadata({
 
 /**
  * A cor que o telemóvel pinta à volta da página antes de haver CSS — a da
- * faixa das regiões, por `lib/marca.ts`. Duas entradas com a mesma cor, como
- * no Coreto: a faixa não muda com o tema do sistema.
+ * faixa desta região (`lib/faixa.ts`). Duas entradas com a mesma cor, como no
+ * Coreto: a faixa não muda com o tema do sistema.
  */
-export const viewport: Viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: CORES_DA_FAIXA.regiao },
-    { media: '(prefers-color-scheme: dark)', color: CORES_DA_FAIXA.regiao },
-  ],
-};
+export async function generateViewport({
+  params,
+}: {
+  params: Promise<{ regiao: string }>;
+}): Promise<Viewport> {
+  const { regiao: id } = await params;
+  const { fundo } = faixaDaRegiao(await exigirRegiao(id));
+  return {
+    themeColor: [
+      { media: '(prefers-color-scheme: light)', color: fundo },
+      { media: '(prefers-color-scheme: dark)', color: fundo },
+    ],
+  };
+}
 
 export default async function LayoutDaRegiao({
   children,
@@ -90,15 +98,18 @@ export default async function LayoutDaRegiao({
   const { regiao: id } = await params;
   // A região que não existe — ou que o painel desligou — é 404 aqui, antes de
   // qualquer página lá dentro tentar ler o que não há.
-  await exigirRegiao(id);
+  const r = await exigirRegiao(id);
+  // A cor da região vai num invólucro que não desenha caixa nenhuma
+  // (`display: contents`): o cabeçalho e o menu do mapa herdam as variáveis, e
+  // a arrumação da página fica igual à que era.
   return (
-    <>
+    <div className="regiao" style={estiloDaFaixa(faixaDaRegiao(r))}>
       <Cabecalho regiao={id} />
       <main id="conteudo" className="pagina">
         <MarcaDeDemonstracao regiao={id} />
         {children}
       </main>
       <Rodape regiao={id} />
-    </>
+    </div>
   );
 }
