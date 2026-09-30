@@ -104,7 +104,122 @@ def test_a_construcao_produz_gbfs_sem_estado():
 
     estacoes = json.loads((pasta / "station_information.json").read_text(encoding="utf-8"))
     linhas = estacoes["data"]["stations"]
-    assert len(linhas) == 67
+    # Invariante e não número: o que sai é a lista da operadora (67, um
+    # instantâneo) menos as que o mapa não conhece — e o mapa muda todos os
+    # dias (CLAUDE.md §8). Nenhuma estação publicada vem de fora da lista.
+    assert 0 < len(linhas) <= 67
+    if INSTANTANEO.exists():
+        da_operadora = {
+            e["nome"] for e in leitor._do_instantaneo(INSTANTANEO) if e["cidade"] != "BUE"
+        }
+        assert {e["name"] for e in linhas} <= da_operadora
     # Nenhuma estação traz um número de bicicletas, nem sequer a zero: um zero
     # publicado é uma afirmação, e não sabemos nada disto.
     assert not any("num_bikes_available" in e or "num_docks_available" in e for e in linhas)
+
+
+# ---------------------------------------------------------------------------
+# a posição é do mapa, o nome é da operadora
+# ---------------------------------------------------------------------------
+#
+# Estes não precisam de região nenhuma: as estações são inventadas, a poucos
+# metros umas das outras, e o que se prova é a regra. O ponto é da Serra da
+# Pedra Alta, a região de prova, que também é inventada.
+_CENTRO = (41.35, -7.30)
+
+
+def _a_norte(ponto: tuple[float, float], metros: float) -> tuple[float, float]:
+    return (ponto[0] + metros / 111320, ponto[1])
+
+
+def _da_operadora(nome: str, ponto: tuple[float, float]) -> dict:
+    return {"nome": nome, "lat": ponto[0], "lon": ponto[1], "cidade": "Pedra Alta"}
+
+
+def _do_mapa(nome: str, ponto: tuple[float, float]) -> dict:
+    return {"station_id": nome, "name": nome, "lat": ponto[0], "lon": ponto[1]}
+
+
+def test_a_posicao_publicada_e_a_do_mapa_e_o_nome_o_da_operadora():
+    """A receita declara ODbL porque as coordenadas vêm do OpenStreetMap.
+
+    Este leitor escrevia as da página da operadora, e o ficheiro dizia uma
+    origem que não tinha. Casada a estação, a posição é a do mapa — a que se
+    pode distribuir — e o nome continua a ser o que está no poste.
+    """
+    estacao = _a_norte(_CENTRO, 500)
+    operadora = [
+        _da_operadora("Pedra Alta - Estação Ferroviária", _CENTRO),
+        _da_operadora("Pedra Alta - Mercado", estacao),
+    ]
+    no_mapa_1 = _a_norte(_CENTRO, 20)
+    no_mapa_2 = _a_norte(estacao, 35)
+    mapa = [
+        _do_mapa("Bicicletas - Mercado", no_mapa_2),
+        _do_mapa("Bicicletas - Estação Ferroviária", no_mapa_1),
+    ]
+
+    casamento = leitor._casar(operadora, mapa)
+    assert casamento == [1, 0]
+
+    publicadas = leitor._nas_posicoes_do_mapa(operadora, mapa, casamento)
+    assert [e["nome"] for e in publicadas] == [
+        "Pedra Alta - Estação Ferroviária",
+        "Pedra Alta - Mercado",
+    ]
+    assert [(e["lat"], e["lon"]) for e in publicadas] == [no_mapa_1, no_mapa_2]
+
+
+def test_a_que_o_mapa_nao_conhece_fica_fora_do_ficheiro():
+    """A posição dela é só da operadora, e essa não é nossa para distribuir.
+
+    Não se perde em silêncio: a lacuna do confronto nomeia-a, e quando entrar
+    no OpenStreetMap entra no ficheiro na construção seguinte.
+    """
+    operadora = [
+        _da_operadora("Pedra Alta - Estação Ferroviária", _CENTRO),
+        _da_operadora("Pedra Alta - Nova", _a_norte(_CENTRO, 2000)),
+    ]
+    mapa = [_do_mapa("Bicicletas - Estação Ferroviária", _a_norte(_CENTRO, 10))]
+
+    casamento = leitor._casar(operadora, mapa)
+    assert casamento == [0, None]
+    publicadas = leitor._nas_posicoes_do_mapa(operadora, mapa, casamento)
+    assert [e["nome"] for e in publicadas] == ["Pedra Alta - Estação Ferroviária"]
+
+
+def test_duas_da_operadora_nao_levam_a_mesma_do_mapa():
+    """Uma estação do mapa é uma estação só.
+
+    Duas da operadora a vinte metros uma da outra caem as duas perto da mesma
+    do mapa. A primeira leva-a; a segunda fica por casar, e é nomeada — em vez
+    de saírem duas estações publicadas no mesmo ponto.
+    """
+    operadora = [
+        _da_operadora("Pedra Alta - Norte", _a_norte(_CENTRO, 10)),
+        _da_operadora("Pedra Alta - Sul", _a_norte(_CENTRO, -10)),
+    ]
+    mapa = [_do_mapa("Bicicletas", _CENTRO)]
+    assert leitor._casar(operadora, mapa) == [0, None]
+
+
+def test_um_mapa_declarado_e_por_construir_para_a_construcao(tmp_path):
+    """Antes calava o confronto; agora é dele que vêm as posições.
+
+    Sem o mapa, sairiam as da operadora num ficheiro cuja licença diz que são
+    do mapa — que é exatamente o defeito que isto corrige. Rebenta, e diz qual
+    é a saída que falta e onde tem de estar.
+    """
+    from types import SimpleNamespace
+
+    saida = SimpleNamespace(fonte="meiob-estacoes", saida="gbfs/meiob/")
+    ctx = SimpleNamespace(caminho_de_saida=lambda s: tmp_path / "gbfs" / "meiob")
+    with pytest.raises(ValueError, match="gbfs/osm/meiob/"):
+        leitor._do_mapa(ctx, saida, "gbfs/osm/meiob/")
+
+    mapa = tmp_path / "gbfs" / "osm" / "meiob"
+    mapa.mkdir(parents=True)
+    (mapa / "station_information.json").write_text(
+        json.dumps({"data": {"stations": [_do_mapa("Uma", _CENTRO)]}}), encoding="utf-8"
+    )
+    assert [e["name"] for e in leitor._do_mapa(ctx, saida, "gbfs/osm/meiob/")] == ["Uma"]
