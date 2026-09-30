@@ -11,6 +11,14 @@ lê a lista da operadora e CONFRONTA-A com a do mapa. Uma estação que só um d
 dois conheça é uma lacuna nomeada, não uma escolha silenciosa — pode ter
 aberto, pode ter fechado, e nenhuma das duas fontes sabe qual.
 
+**Com mapa declarado, o nome é da operadora e a posição é do mapa.** Cada um
+dá o que sabe melhor, e é isso que a receita escreve ao declarar a licença: as
+coordenadas vêm do OpenStreetMap, e por isso o conjunto é ODbL. Este leitor
+escrevia as da página da operadora — que ninguém nos licenciou — num ficheiro
+rotulado ODbL, e o rótulo afirmava uma origem que o ficheiro não tinha. Uma
+estação que só a operadora conheça fica de fora do ficheiro até entrar no mapa:
+a posição dela não é nossa para distribuir, e a lacuna diz qual é.
+
 **Disponibilidade, não.** Nem bicicletas nem docas livres. A página do sistema
 não a tem em lado nenhum (o mapa dela é Leaflet com marcadores gerados no
 servidor), não há `gbfs.json`, e o sistema não consta do catálogo público da
@@ -80,20 +88,36 @@ def ler(ctx: Contexto, saida: Saida) -> Resultado:
             "Ou o filtro está errado, ou a página mudou de forma."
         )
 
+    # Com o mapa declarado, o que se publica é o nome da operadora na posição
+    # do mapa — ver o cimo deste ficheiro. Sem ele, fica tudo como a página diz,
+    # e a licença que a receita declarar tem de o saber.
+    outra = p.get("confrontar_com")
+    mapa = _do_mapa(ctx, saida, outra) if outra else None
+    casamento = _casar(estacoes, mapa) if mapa is not None else None
+    publicadas = (
+        _nas_posicoes_do_mapa(estacoes, mapa, casamento)
+        if mapa is not None and casamento is not None
+        else estacoes
+    )
+
     pasta = ctx.caminho_de_saida(saida)
     pasta.mkdir(parents=True, exist_ok=True)
-    _escrever(pasta, id_sistema, sistema, estacoes, p)
+    _escrever(pasta, id_sistema, sistema, publicadas, p)
 
-    _confrontar(ctx, saida, id_sistema, estacoes, p.get("confrontar_com"))
-    _pedir_disponibilidade(ctx, saida, id_sistema, sistema, len(estacoes))
+    if mapa is not None and casamento is not None:
+        _confrontar(ctx, id_sistema, estacoes, mapa, casamento)
+    _pedir_disponibilidade(ctx, saida, id_sistema, sistema, len(publicadas))
+    # O esperado é da página, que é um instantâneo e não muda sozinho; o que
+    # sai publicado depende também do mapa, que muda todos os dias (§8).
     verificar_esperado(ctx, saida, id_sistema, len(estacoes), p.get("esperado"))
 
+    posicoes = "as posições do mapa" if mapa is not None else "as posições da operadora"
     return Resultado(
-        contagens={f"gbfs.{id_sistema}.estacoes": len(estacoes)},
+        contagens={f"gbfs.{id_sistema}.estacoes": len(publicadas)},
         saidas={saida.saida or "": str(pasta.relative_to(ctx.raiz))},
         notas=[
-            f"{id_sistema}: {len(estacoes)} estações com os nomes da operadora. "
-            "Sem station_status: a disponibilidade não é pública."
+            f"{id_sistema}: {len(publicadas)} estações com os nomes da operadora e "
+            f"{posicoes}. Sem station_status: a disponibilidade não é pública."
         ],
     )
 
@@ -233,12 +257,67 @@ def _metros(a: tuple[float, float], b: tuple[float, float]) -> float:
     return math.hypot((a[0] - b[0]) * 111320, (a[1] - b[1]) * 111320 * math.cos(math.radians(a[0])))
 
 
+def _do_mapa(ctx: Contexto, saida: Saida, outra: str) -> list[dict[str, Any]]:
+    """As estações do GBFS que a receita declara como o mapa deste sistema.
+
+    Tem de existir. Antes, um mapa em falta calava o confronto e mais nada;
+    agora é dele que vêm as posições, e sem ele sairiam as da operadora num
+    ficheiro cuja licença diz que são do mapa.
+    """
+    caminho = ctx.caminho_de_saida(saida).parent.parent / outra.strip("/")
+    ficheiro = caminho / "station_information.json"
+    if not ficheiro.exists():
+        raise ValueError(
+            f"{saida.fonte} → {saida.saida}: declara `confrontar_com: {outra}` e esse GBFS "
+            "não foi construído. A saída do mapa tem de vir antes desta na receita."
+        )
+    estacoes: list[dict[str, Any]] = json.loads(ficheiro.read_text(encoding="utf-8"))["data"][
+        "stations"
+    ]
+    return estacoes
+
+
+def _casar(estacoes: list[dict[str, Any]], mapa: list[dict[str, Any]]) -> list[int | None]:
+    """Para cada estação da operadora, a do mapa que é a mesma — ou `None`.
+
+    A mais perto, se estiver a menos de `RAIO_DE_CONFRONTO_M` e nenhuma outra a
+    tiver levado antes, pela ordem da página. Duas da operadora que caiam na
+    mesma do mapa não passam a ser uma estação só.
+    """
+    casadas: set[int] = set()
+    casamento: list[int | None] = []
+    for e in estacoes:
+        perto = [
+            (_metros((e["lat"], e["lon"]), (o["lat"], o["lon"])), i) for i, o in enumerate(mapa)
+        ]
+        d, i = min(perto) if perto else (float("inf"), -1)
+        if d <= RAIO_DE_CONFRONTO_M and i not in casadas:
+            casadas.add(i)
+            casamento.append(i)
+        else:
+            casamento.append(None)
+    return casamento
+
+
+def _nas_posicoes_do_mapa(
+    estacoes: list[dict[str, Any]],
+    mapa: list[dict[str, Any]],
+    casamento: list[int | None],
+) -> list[dict[str, Any]]:
+    """As da operadora que o mapa conhece: o nome delas, a posição dele."""
+    return [
+        {**e, "lat": float(mapa[i]["lat"]), "lon": float(mapa[i]["lon"])}
+        for e, i in zip(estacoes, casamento, strict=True)
+        if i is not None
+    ]
+
+
 def _confrontar(
     ctx: Contexto,
-    saida: Saida,
     id_sistema: str,
     estacoes: list[dict[str, Any]],
-    outra: str | None,
+    mapa: list[dict[str, Any]],
+    casamento: list[int | None],
 ) -> None:
     """Duas fontes para a mesma rede, e o que só uma delas conhece.
 
@@ -247,25 +326,12 @@ def _confrontar(
     indistinguíveis daqui. O que se faz é NOMEÁ-LA, para quem conhece o
     terreno poder dizer qual é.
     """
-    if not outra:
-        return
-    caminho = ctx.caminho_de_saida(saida).parent.parent / outra.strip("/")
-    ficheiro = caminho / "station_information.json"
-    if not ficheiro.exists():
-        return
-    mapa = json.loads(ficheiro.read_text(encoding="utf-8"))["data"]["stations"]
-
-    casadas: set[int] = set()
-    so_na_operadora = []
-    for e in estacoes:
-        perto = [
-            (_metros((e["lat"], e["lon"]), (o["lat"], o["lon"])), i) for i, o in enumerate(mapa)
-        ]
-        d, i = min(perto) if perto else (float("inf"), -1)
-        if d <= RAIO_DE_CONFRONTO_M and i not in casadas:
-            casadas.add(i)
-        else:
-            so_na_operadora.append(f"{e['nome']} ({e['cidade']})")
+    so_na_operadora = [
+        f"{e['nome']} ({e['cidade']})"
+        for e, i in zip(estacoes, casamento, strict=True)
+        if i is None
+    ]
+    casadas = {i for i in casamento if i is not None}
     so_no_mapa = [o["name"] for i, o in enumerate(mapa) if i not in casadas]
 
     if not so_na_operadora and not so_no_mapa:
@@ -279,15 +345,17 @@ def _confrontar(
             "não concordam, não há como saber daqui qual tem razão: uma estação nova "
             "ainda não mapeada e uma estação fechada que ninguém apagou do mapa são a "
             "mesma coisa vista de longe. Escolher uma em silêncio era mandar alguém a "
-            "um sítio onde talvez não haja bicicletas."
+            "um sítio onde talvez não haja bicicletas. As que só a operadora conhece "
+            "ficam FORA do ficheiro publicado: a posição que ele publica é a do mapa, "
+            "e para essas o mapa não tem nenhuma."
         ),
         o_que_fazer=(
             "Confirmar no terreno ou com a operadora. As que só a operadora tem entram "
-            "no OpenStreetMap; as que só o mapa tem, ou se apagam ou se percebe porque "
-            "é que a operadora não as lista."
+            "no OpenStreetMap — e na construção seguinte entram no ficheiro; as que só "
+            "o mapa tem, ou se apagam ou se percebe porque é que a operadora não as lista."
         ),
         quantos=len(so_na_operadora) + len(so_no_mapa),
-        quais=[f"só a operadora: {x}" for x in so_na_operadora]
+        quais=[f"só a operadora (fica de fora): {x}" for x in so_na_operadora]
         + [f"só o mapa: {x}" for x in so_no_mapa],
     )
 
