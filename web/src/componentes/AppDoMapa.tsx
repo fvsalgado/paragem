@@ -48,7 +48,22 @@ const seguro = (s: string) => s.replace(/[^a-zA-Z0-9\-_]/g, '-');
 const FOLHAS = '.folha-de-abertura, .cartao-de-baixo, .folha:not(.em-pagina)';
 
 /** O que flutua no alto do mapa: a procura, a fila das camadas, o cartão de cima das direções. */
-const NO_ALTO = '.app-procura, .app-camadas, .campos-viagem';
+const NO_ALTO = '.app-procura, .app-camadas, .cartao-de-cima';
+
+/**
+ * A caixa do que flutua no alto — e, da fila das camadas, só o troço com pílulas.
+ *
+ * A fila tem a largura toda, mas é transparente e deixa passar o dedo
+ * (`pointer-events: none`): o que tapa são as pílulas. Numa janela larga
+ * acabam a meio, e o canto da direita não tem nada por cima; num telemóvel
+ * não cabem e seguem até à borda, e aí a fila tapa-a toda.
+ */
+function caixaNoAlto(e: HTMLElement): DOMRect {
+  const q = e.getBoundingClientRect();
+  if (!e.classList.contains('app-camadas') || !e.children.length) return q;
+  const fim = Math.max(...[...e.children].map((f) => f.getBoundingClientRect().right));
+  return new DOMRect(q.left, q.top, Math.min(q.right, fim) - q.left, q.height);
+}
 
 /** Os dois cantos de baixo do MapLibre, e a variável que diz a cada um quanto subir. */
 const CANTOS = [
@@ -229,6 +244,15 @@ export default function AppDoMapa({
   // quase toda, e a escala, empurrada para cima dele, ia parar atrás da barra
   // da procura. Um canto que não cabe entre a folha e o que flutua no alto
   // fica onde estava: tapado por uma folha que se fecha, e não perdido.
+  //
+  // E O CANTO DE CIMA DESCE. O MapLibre põe os botões de aproximar e afastar
+  // no alto à direita, e num telemóvel a barra da procura vai de uma borda à
+  // outra: medido no ar a 390 × 844, o de aproximar estava inteiro por baixo
+  // dela e o de afastar quase todo. Num ecrã de mapa, com um dedo, são a única
+  // maneira de afastar sem os dois dedos do gesto de pinça (WCAG 2.5.1). O
+  // canto desce para baixo do que lhe fica por cima — a procura, a fila das
+  // camadas, o cartão das direções — e só disso: numa janela larga nada lhe
+  // toca, e fica onde sempre esteve.
   useEffect(() => {
     const el = caixa.current;
     if (!el) return;
@@ -240,8 +264,30 @@ export default function AppDoMapa({
         .map((f) => f.getBoundingClientRect())
         .filter((q) => q.height > 0);
       const emCima = [...el.querySelectorAll<HTMLElement>(NO_ALTO)]
-        .map((f) => f.getBoundingClientRect())
+        .map(caixaNoAlto)
         .filter((q) => q.height > 0);
+      const alto = el.querySelector<HTMLElement>('.maplibregl-ctrl-top-right');
+      if (alto) {
+        // A posição de partida é a de sempre, encostada ao alto; desce até ao
+        // fundo do que a cruzar, e volta a ver — por baixo da procura pode
+        // estar a fila das camadas.
+        const c = alto.getBoundingClientRect();
+        const aoLado = (q: DOMRect) => q.left < c.right && q.right > c.left;
+        let desce = 0;
+        for (;;) {
+          const topo = base.top + desce;
+          const cruza = emCima.filter(
+            (q) => aoLado(q) && q.top < topo + c.height && q.bottom > topo,
+          );
+          const abaixo = Math.max(0, ...cruza.map((q) => q.bottom - base.top));
+          if (abaixo <= desce) break;
+          desce = abaixo;
+        }
+        el.style.setProperty('--tapado-no-alto', `${Math.round(desce)}px`);
+        // Para os cantos de baixo, o de cima passa a ser mais uma coisa no
+        // alto: o da direita sobe com a folha até ele, e não por cima dele.
+        emCima.push(new DOMRect(c.left, base.top + desce, c.width, c.height));
+      }
       for (const [lado, variavel] of CANTOS) {
         const canto = el.querySelector<HTMLElement>(`.maplibregl-ctrl-bottom-${lado}`);
         if (!canto) continue;
@@ -257,13 +303,15 @@ export default function AppDoMapa({
     const pedir = () => {
       if (!pedido) pedido = requestAnimationFrame(medir);
     };
-    // As folhas entram e saem, e mudam de altura; os cantos só existem quando
-    // o mapa acabar de carregar. Vê-se tudo isso daqui.
+    // As folhas entram e saem, e mudam de altura — e o cartão das direções,
+    // no alto, também; os cantos só existem quando o mapa acabar de
+    // carregar. Vê-se tudo isso daqui.
     const tamanhos = new ResizeObserver(pedir);
     const vigiar = () => {
       tamanhos.disconnect();
       tamanhos.observe(el);
       el.querySelectorAll<HTMLElement>(FOLHAS).forEach((f) => tamanhos.observe(f));
+      el.querySelectorAll<HTMLElement>(NO_ALTO).forEach((f) => tamanhos.observe(f));
       pedir();
     };
     const entradas = new MutationObserver(vigiar);

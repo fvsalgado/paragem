@@ -131,6 +131,44 @@ test('cada modo tem a sua cor, e nenhuma se repete', async ({ page }) => {
   expect(new Set(cores).size, `cores repetidas: ${cores.join(', ')}`).toBe(cores.length);
 });
 
+test('os botões de aproximar e afastar ficam à vista e ao alcance do dedo', async ({ page }) => {
+  // O MapLibre põe-nos no alto à direita, e num telemóvel a barra da procura
+  // vai de uma borda à outra: estavam por baixo dela, o de aproximar inteiro.
+  // Com um dedo, são a única maneira de afastar o mapa sem o gesto de pinça
+  // (WCAG 2.5.1) — e tinham 29 px, abaixo do alvo do §4.5.
+  //
+  // O que se mede é o que o dedo apanha no meio de cada um. `toBeVisible` não
+  // chegava: um botão tapado por outra coisa continua «visível» para ele.
+  //
+  // Pela classe e não pelo papel: o mapa inteiro está `aria-hidden` (ver
+  // `Mapa.tsx`), e o que a árvore de acessibilidade não tem não se encontra
+  // pelo nome.
+  await page.goto(`/`);
+  await mapaPronto(page);
+  for (const [nome, classe] of [
+    ['Aproximar', '.maplibregl-ctrl-zoom-in'],
+    ['Afastar', '.maplibregl-ctrl-zoom-out'],
+  ]) {
+    const botao = page.locator(classe);
+    await expect(botao).toBeVisible();
+    // A descida mede-se depois de o controlo existir, na imagem seguinte.
+    await expect
+      .poll(
+        () =>
+          botao.evaluate((b) => {
+            const q = b.getBoundingClientRect();
+            const aqui = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2);
+            return !!aqui && b.contains(aqui);
+          }),
+        { message: `há alguma coisa por cima do botão «${nome}»` },
+      )
+      .toBe(true);
+    const caixa = await botao.boundingBox();
+    expect(caixa!.height, `«${nome}» mais baixo do que o alvo mínimo`).toBeGreaterThanOrEqual(44);
+    expect(caixa!.width, `«${nome}» mais estreito do que o alvo mínimo`).toBeGreaterThanOrEqual(44);
+  }
+});
+
 test('uma estação de bicicletas abre o cartão dela, e não o de uma paragem', async ({ page }) => {
   // Pelo nome, que é o caminho que uma pessoa faz — e que prova de caminho a
   // caminho que o ponto existe no índice, abre cartão, e que o cartão sabe o

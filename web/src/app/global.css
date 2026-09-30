@@ -1098,6 +1098,22 @@ button.resumo-opcao:hover {
   height: 3rem;
 }
 
+/* OS BOTÕES DE APROXIMAR E AFASTAR, POR BAIXO DO QUE FLUTUA NO ALTO.
+   Num telemóvel a barra da procura vai de uma borda à outra e tapava-os; o
+   `--tapado-no-alto` é o que a procura, a fila das camadas e o cartão das
+   direções lhes tapam, medido pelo `AppDoMapa`. Numa janela larga vale zero.
+
+   E com o alvo do §4.5: o MapLibre desenha-os com 29 px, e são o que resta a
+   quem afasta o mapa sem o gesto de dois dedos. */
+.app-mapa .maplibregl-ctrl-top-right {
+  top: var(--tapado-no-alto, 0px);
+}
+.app-mapa .maplibregl-ctrl button.maplibregl-ctrl-zoom-in,
+.app-mapa .maplibregl-ctrl button.maplibregl-ctrl-zoom-out {
+  width: var(--alvo);
+  height: var(--alvo);
+}
+
 .so-para-leitores {
   position: absolute;
   width: 1px;
