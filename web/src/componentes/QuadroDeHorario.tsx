@@ -26,13 +26,16 @@ import type { QuadroDeCartaz, ViagemDeCartaz } from '@/lib/formato';
 export default function QuadroDeHorario({
   quadro,
   titulo,
+  id,
 }: {
   quadro: QuadroDeCartaz;
   /** O nome da linha ou do circuito. Vai para a legenda da tabela. */
   titulo: string;
+  /** Para uma ligação poder apontar este quadro (`#q-…`). */
+  id?: string;
 }) {
   const nome = quadro.nome ? `${titulo} — ${quadro.nome}` : titulo;
-  if (quadro.tipo === 'partidas') return <Partidas quadro={quadro} titulo={nome} />;
+  if (quadro.tipo === 'partidas') return <Partidas quadro={quadro} titulo={nome} id={id} />;
 
   const viagens = quadro.viagens;
   if (viagens.length === 0) return null;
@@ -40,7 +43,7 @@ export default function QuadroDeHorario({
   const rotulo = rotuloComum(viagens);
 
   return (
-    <details className="quadro-de-horario">
+    <details className="quadro-de-horario" id={id}>
       <summary>
         {quadro.nome ? `${quadro.nome} · ` : ''}
         {viagens.length} {viagens.length === 1 ? 'viagem' : 'viagens'}
@@ -89,13 +92,13 @@ export default function QuadroDeHorario({
  * quer saber a que horas pode sair da terra onde está, e é isso que a linha
  * dela diz.
  */
-function Partidas({ quadro, titulo }: { quadro: QuadroDeCartaz; titulo: string }) {
+function Partidas({ quadro, titulo, id }: { quadro: QuadroDeCartaz; titulo: string; id?: string }) {
   const horas = quadro.horas ?? [];
   if (quadro.paragens.length === 0) return null;
   const colunas = Math.max(0, ...horas.map((h) => h.length));
 
   return (
-    <details className="quadro-de-horario">
+    <details className="quadro-de-horario" id={id}>
       <summary>
         {quadro.paragens.length} {quadro.paragens.length === 1 ? 'local' : 'locais'} · {colunas}{' '}
         {colunas === 1 ? 'partida por dia' : 'partidas por dia'}

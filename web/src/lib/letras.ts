@@ -27,3 +27,15 @@ export function letraDe(nome: string): string {
 export const paraUrl = (letra: string): string => (letra === '#' ? 'numero' : letra.toLowerCase());
 
 export const daUrl = (pedaco: string): string => (pedaco === 'numero' ? '#' : pedaco.toUpperCase());
+
+/**
+ * Para procurar: sem acentos, em minúsculas. Quem escreve «serta» procura a
+ * Sertã, e num telemóvel o til é o que menos se escreve.
+ */
+export function simples(s: string): string {
+  return (s ?? '')
+    .normalize('NFD')
+    .replace(/\p{Mn}/gu, '')
+    .toLowerCase()
+    .trim();
+}

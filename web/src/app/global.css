@@ -268,10 +268,42 @@ h3 {
 }
 .quadro-de-horario > summary {
   cursor: pointer;
-  padding: 0.75rem;
+  padding: 0.75rem 2.25rem 0.75rem 0.75rem;
   min-height: var(--alvo);
   display: flex;
   align-items: center;
+  position: relative;
+  list-style: none;
+  font-weight: 700;
+  color: var(--marca);
+}
+/* A SETA QUE O `display: flex` TIRAVA. Com ele, o Chromium deixa de desenhar
+   o triângulo do `<details>`, e o resumo («26 viagens — da Centro de Saúde às
+   07:00») parecia um cartão estático com uma frase: a tabela de horas, que é a
+   razão de ser da secção, ficava escondida atrás de uma coisa que não parecia
+   tocável. A seta é desenhada, a cor é a das ligações. */
+.quadro-de-horario > summary::-webkit-details-marker {
+  display: none;
+}
+.quadro-de-horario > summary::after,
+details.zona-a-pedido > summary::after,
+details.lista-fechada > summary::after {
+  content: '';
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-top: -0.4rem;
+  border-right: 2px solid var(--marca);
+  border-bottom: 2px solid var(--marca);
+  transform: rotate(45deg);
+}
+.quadro-de-horario[open] > summary::after,
+details.zona-a-pedido[open] > summary::after,
+details.lista-fechada[open] > summary::after {
+  transform: rotate(-135deg);
+  margin-top: -0.1rem;
 }
 .quadro-de-horario > summary:focus-visible {
   outline: 3px solid var(--foco);
@@ -901,6 +933,142 @@ details.paragens-do-concelho > summary {
 }
 .lista.paragens-com-linhas a > .nome {
   overflow-wrap: break-word;
+}
+
+/* --- o transporte a pedido --------------------------------------------------- */
+
+/* «Há na tua terra?»: o campo, e por baixo as terras encontradas, cada uma
+   com os circuitos que lá passam e a ligação para o horário. */
+.procurar-terra {
+  background: #fff;
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  padding: 0.25rem 1rem 0.75rem;
+}
+.procurar-terra .sem-resposta {
+  margin: 0.75rem 0 0;
+}
+ul.terras-encontradas {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+}
+ul.terras-encontradas > li + li {
+  border-top: 1px solid var(--linhas);
+}
+ul.terras-encontradas .terra {
+  margin: 0.5rem 0 0;
+}
+ul.terras-encontradas ul,
+ul.circuitos-da-zona {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+ul.terras-encontradas ul > li,
+ul.circuitos-da-zona > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+  min-height: var(--alvo);
+}
+ul.circuitos-da-zona > li + li {
+  border-top: 1px solid var(--linhas);
+}
+/* «Ver horário» COM ASPETO DE LIGAÇÃO, e com 44 px: era «Horário» em texto
+   escuro, sem sublinhado, igual a texto corrido — a ação principal da página
+   camuflada. */
+ul.terras-encontradas ul a,
+ul.circuitos-da-zona a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Cada zona fechada, com os circuitos (que são as terras) no resumo. */
+details.zona-a-pedido {
+  border-top: 1px solid var(--linhas);
+}
+details.zona-a-pedido:last-of-type {
+  border-bottom: 1px solid var(--linhas);
+}
+details.zona-a-pedido > summary {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.15rem;
+  min-height: 3.25rem;
+  padding: 0.5rem 2.25rem 0.5rem 0.25rem;
+  position: relative;
+  cursor: pointer;
+  list-style: none;
+}
+details.zona-a-pedido > summary::-webkit-details-marker {
+  display: none;
+}
+details.zona-a-pedido > summary:hover {
+  background: #fff;
+}
+details.zona-a-pedido .nome-da-zona {
+  font-weight: 700;
+}
+details.zona-a-pedido .circuitos-no-resumo {
+  font-size: 0.9rem;
+  color: var(--texto-secundario);
+}
+details.zona-a-pedido[open] {
+  padding-bottom: 0.5rem;
+}
+details.zona-a-pedido .circuitos-da-zona {
+  padding-left: 0.25rem;
+}
+
+/* Uma lista comprida, fechada, com o nome à vista: o catálogo dos circuitos. */
+details.lista-fechada > summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--alvo);
+  padding-right: 2.25rem;
+  position: relative;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 700;
+  color: var(--marca);
+}
+details.lista-fechada > summary::-webkit-details-marker {
+  display: none;
+}
+/* Os circuitos do catálogo: 44 px por ligação, que era 21. */
+.circuitos-do-catalogo a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+  min-width: var(--alvo);
+}
+.circuitos-do-catalogo .sem-horario {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+}
+/* A nota à direita de cada zona não se parte («o / concelh / o»): o nome
+   da zona é que dobra. */
+.lista-de-zonas .secundario {
+  white-space: nowrap;
+  flex-shrink: 0;
+  overflow-wrap: normal;
+}
+/* Uma linha de lista sem ligação, com o mesmo desenho das que a têm. */
+.lista .sem-ligacao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: var(--alvo);
+  padding: 0.6rem 0.25rem;
 }
 
 /* Uma faixa de INFORMAÇÃO: o que é assim e vai continuar assim. O vermelho

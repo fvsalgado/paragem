@@ -2,8 +2,8 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { aPedido, exigirRegiao, url, urlRede } from '@/lib/dados';
-import QuadroDeHorario from '@/componentes/QuadroDeHorario';
-import Transcricao from '@/componentes/Transcricao';
+import ProcurarTerra from '@/componentes/ProcurarTerra';
+import { caminhoDoHorario, idDoQuadro, indiceDasTerras } from '@/lib/a-pedido';
 import { plural } from '@/lib/prosa';
 
 export const metadata: Metadata = { title: 'Transporte a pedido' };
@@ -89,44 +89,78 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
         )}
       </section>
 
+      {/* A PERGUNTA DE QUEM CHEGA AQUI, logo a seguir à regra: «há na minha
+          terra?». Escreve-se o nome da aldeia e a resposta diz qual circuito
+          lá passa — em vez de 24 ecrãs de zonas com nomes de contrato. */}
+      <section aria-labelledby="procurar">
+        <h2 id="procurar">Há na tua terra?</h2>
+        <ProcurarTerra
+          indice={indiceDasTerras(d, (c) => url(rid, c))}
+          telefone={v.telefone}
+          telefoneApresentado={v.telefone_apresentado}
+        />
+      </section>
+
       <section aria-labelledby="zonas">
         <h2 id="zonas">As zonas</h2>
+        <p className="secundario">
+          Toca numa zona para ver os circuitos dela e o horário de cada um.
+        </p>
 
+        {/* CADA ZONA FECHADA, com os circuitos no resumo. Abertas, eram 24
+            ecrãs; e o nome de contrato de uma zona («Lote 1 e 3») não diz a
+            ninguém se é a dele — os nomes dos circuitos, que são as terras,
+            dizem. */}
         {comCircuitos.map((z) => (
-          <section key={z.id} aria-labelledby={`z-${z.id}`}>
-            <h3 id={`z-${z.id}`}>
-              {z.nome}
-              {z.servico ? <span className="secundario"> · {z.servico}</span> : null}
-            </h3>
-            <ul className="lista">
+          <details key={z.id} className="zona-a-pedido" id={`z-${z.id}`}>
+            <summary>
+              <span className="nome-da-zona">
+                {z.nome}
+                {z.servico ? <span className="secundario"> · {z.servico}</span> : null}
+              </span>
+              <span className="circuitos-no-resumo">
+                {plural(z.circuitos.length, 'circuito', 'circuitos')}:{' '}
+                {z.circuitos.map((c) => c.nome).join(', ')}
+              </span>
+            </summary>
+            <ul className="circuitos-da-zona">
               {z.circuitos.map((c) => (
                 <li key={c.nome}>
                   <span>{c.nome}</span>
                   {/* O HORÁRIO PRIMEIRO, o folheto depois. Quem está a olhar
                       para a zona onde mora quer a hora, e o folheto é o PDF
                       da autoridade — vale por ser a fonte, não por ser o
-                      caminho mais curto até às horas. */}
+                      caminho mais curto até às horas. E uma ligação com
+                      aspeto de ligação: «Horário» em texto escuro, sem
+                      sublinhado, lia-se como texto corrido. */}
                   {c.horario ? (
-                    <a href={`#tap-${c.horario.grupo}`}>Horário</a>
+                    <Link
+                      href={url(
+                        rid,
+                        `${caminhoDoHorario(c.horario.grupo)}#${idDoQuadro(c.horario.quadro)}`,
+                      )}
+                    >
+                      Ver horário
+                    </Link>
                   ) : c.folheto ? (
                     <a href={c.folheto} rel="noreferrer">
-                      Folheto
+                      Ver folheto
                     </a>
                   ) : (
-                    <span className="secundario">horário por levantar</span>
+                    <span className="secundario">horário por publicar</span>
                   )}
                 </li>
               ))}
             </ul>
             {z.mapa && (
-              <p>
+              <p className="cartao-accoes">
                 <a href={z.mapa} rel="noreferrer">
                   Mapa da zona {z.nome}
-                </a>{' '}
-                <span className="secundario">(no sítio da autoridade de transportes)</span>
+                </a>
+                <span className="secundario">no sítio da autoridade de transportes</span>
               </p>
             )}
-          </section>
+          </details>
         ))}
 
         {/* O QUE FALTA, ESCRITO — e não uma lista curta a fingir-se de
@@ -134,7 +168,7 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
             separador só quando alguém lhe toca, por isso o instantâneo
             guardado à mão só apanhou um. */}
         {semCircuitos.length > 0 && (
-          <div className="faixa">
+          <div className="faixa informacao">
             <h3>
               {semCircuitos.length === 1
                 ? 'Uma zona sem os circuitos atribuídos'
@@ -145,20 +179,27 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
               —, o que não se sabe é qual deles serve qual zona, nem a que horas passa. Reservam-se
               pelo telefone acima, que serve todas.
             </p>
-            <ul className="lista">
+            <ul className="lista lista-de-zonas">
               {semCircuitos.map((z) => (
                 <li key={z.id}>
-                  <span>
-                    {z.nome}
-                    {z.servico ? <span className="secundario"> · {z.servico}</span> : null}
-                  </span>
                   {/* A NOTA SEPARADA DO NOME, e não colada: lia-se «LINK
-                      Cidadesentre concelhos», no ecrã e no leitor de ecrã. A
-                      ligação não precisa: desenha-se numa linha sua. */}
+                      Cidadesentre concelhos», no ecrã e no leitor de ecrã. */}
                   {z.concelho ? (
-                    <Link href={urlRede(rid, `concelhos/${z.concelho}/`)}>o concelho</Link>
+                    <Link href={urlRede(rid, `concelhos/${z.concelho}/`)}>
+                      <span>
+                        {z.nome}
+                        {z.servico ? ` · ${z.servico}` : ''}
+                      </span>
+                      <span className="secundario">ver o concelho</span>
+                    </Link>
                   ) : (
-                    <span className="secundario"> · entre concelhos</span>
+                    <span className="sem-ligacao">
+                      <span>
+                        {z.nome}
+                        {z.servico ? ` · ${z.servico}` : ''}
+                      </span>
+                      <span className="secundario">entre concelhos</span>
+                    </span>
                   )}
                 </li>
               ))}
@@ -177,9 +218,11 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
 
       {/* OS HORÁRIOS, que são o que muda a página de «existe» para «passa às».
 
-          Vêm das brochuras que a própria autoridade publica, uma por concelho
-          ou por circuito. Estão agrupados por CONCELHO e não por zona: a
-          brochura diz de que concelho é, e a zona é outra divisão. */}
+          Cada grupo — uma brochura, um folheto — tem a sua página: aqui
+          estavam todos, com as tabelas todas, e a página chegava aos 833 kB
+          e a dez mil elementos, a pintar em cinco segundos num telemóvel.
+          Agrupados por CONCELHO e não por zona: a brochura diz de que
+          concelho é, e a zona é outra divisão. */}
       {d.horarios.length > 0 && (
         <section aria-labelledby="horarios">
           <h2 id="horarios">
@@ -195,56 +238,41 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
             Continuam a ser <strong>a pedido</strong>: estas horas só se cumprem se alguém reservar.
             A regra está em cima.
           </p>
-          {d.horarios.map((h) => (
-            <section key={h.id} aria-labelledby={`tap-${h.id}`}>
-              {/* O TÍTULO É O CONCELHO, porque é por aí que se procura — mas
-                  nem tudo é de um concelho. O LINK atravessa-os, e a
-                  declaração dele traz o concelho vazio de propósito: sem esta
-                  alternativa, o cabeçalho dele saía em branco. */}
-              <h3 id={`tap-${h.id}`}>
-                {h.concelho_nome
-                  ? `${h.concelho_nome}${h.circuito_de ? ` — ${h.circuito_de}` : ''}`
-                  : h.nome}
-              </h3>
-              <p className="secundario">
-                {[
-                  plural(h.paragens.length, 'paragem', 'paragens'),
-                  // A TABELA DE PARTIDAS NÃO TEM VIAGENS, e dizer «0 viagens»
-                  // era anunciar um serviço que não existe. O folheto do LINK
-                  // lista as horas a que se parte de cada cidade, não a ordem
-                  // por que um autocarro lhes passa.
-                  h.viagens > 0 ? plural(h.viagens, 'viagem', 'viagens') : 'tabela de partidas',
-                ].join(' · ')}
-              </p>
-              {h.regras.map((regra) => (
-                <p key={regra}>{regra}</p>
-              ))}
-              {h.quadros.map((q, iq) => (
-                <QuadroDeHorario key={iq} quadro={q} titulo={h.nome} />
-              ))}
-              <Transcricao por={h.transcrito_por} em={h.transcrito_em} de="da brochura" />
-              {h.concelho && (
-                <p>
-                  <Link href={urlRede(rid, `concelhos/${h.concelho}/`)}>
-                    O concelho {h.concelho_nome}
-                  </Link>
-                </p>
-              )}
-            </section>
-          ))}
+          <ul className="lista">
+            {d.horarios.map((h) => (
+              <li key={h.id}>
+                <Link href={url(rid, caminhoDoHorario(h.id))}>
+                  {/* O TÍTULO É O CONCELHO, porque é por aí que se procura —
+                      mas nem tudo é de um concelho: o LINK atravessa-os, e
+                      sem esta alternativa o nome dele saía em branco. */}
+                  <span>
+                    {h.concelho_nome
+                      ? `${h.concelho_nome}${h.circuito_de ? ` — ${h.circuito_de}` : ''}`
+                      : h.nome}
+                  </span>
+                  <span className="secundario">
+                    {/* A TABELA DE PARTIDAS NÃO TEM VIAGENS, e dizer «0
+                        viagens» era anunciar um serviço que não existe. */}
+                    {h.viagens > 0 ? plural(h.viagens, 'viagem', 'viagens') : 'tabela de partidas'}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
       {/* O CATÁLOGO. Sem horas e sem zona, e mesmo assim útil: quem mora numa
-          aldeia quer saber se há circuito com o nome dela antes de ligar. */}
+          aldeia quer saber se há circuito com o nome dela antes de ligar. A
+          procura de cima faz o mesmo mais depressa; a lista fica para quem
+          prefere ler. */}
       {d.circuitos.length > 0 && (
         <section aria-labelledby="circuitos">
           <h2 id="circuitos">
             {d.circuitos.length === 1 ? 'O circuito' : `Os ${d.circuitos.length} circuitos`}
           </h2>
           <p>
-            São os nomes que o sistema de reservas usa — é por aqui que se procura o nome da própria
-            terra antes de ligar.{' '}
+            São os nomes que o sistema de reservas usa.{' '}
             {(() => {
               const com = d.circuitos.filter((c) => c.horario).length;
               return com > 0 ? (
@@ -257,23 +285,33 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
               ) : null;
             })()}
           </p>
-          <ul className="colunas">
-            {d.circuitos.map((c) => (
-              <li key={c.nome}>
-                {/* A LIGAÇÃO É PARA O HORÁRIO, e não para o nome do quadro:
+          <details className="lista-fechada">
+            <summary>A lista toda, por ordem alfabética</summary>
+            <ul className="colunas circuitos-do-catalogo">
+              {d.circuitos.map((c) => (
+                <li key={c.nome}>
+                  {/* A LIGAÇÃO É PARA O HORÁRIO, e não para o nome do quadro:
                     quem procura «Constância Sul» não sabe nem tem de saber
                     que na folha ele se chama «Constância – Constância-Sul e
                     Santa Margarida da Coutada». Chega lá à mesma. */}
-                {c.horario ? (
-                  <a href={`#tap-${c.horario.grupo}`}>{c.nome}</a>
-                ) : (
-                  <>
-                    {c.nome} <span className="secundario">· sem horário publicado</span>
-                  </>
-                )}
-              </li>
-            ))}
-          </ul>
+                  {c.horario ? (
+                    <Link
+                      href={url(
+                        rid,
+                        `${caminhoDoHorario(c.horario.grupo)}#${idDoQuadro(c.horario.quadro)}`,
+                      )}
+                    >
+                      {c.nome}
+                    </Link>
+                  ) : (
+                    <span className="sem-horario">
+                      {c.nome} <span className="secundario">· sem horário publicado</span>
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </details>
         </section>
       )}
 
