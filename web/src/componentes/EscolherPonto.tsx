@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
 // O `Ponto` é o do `formato.ts`, e não um local com os campos que davam
 // jeito aqui. Dois tipos com o mesmo nome e campos diferentes divergem, e
@@ -108,11 +108,29 @@ export default function EscolherPonto({
   // É o padrão que o React recomenda para ajustar estado quando uma prop muda:
   // compara-se durante a renderização, sem `useEffect`, e volta a renderizar
   // logo a seguir em vez de piscar o valor errado no ecrã.
+  //
+  // E O VAZIO TAMBÉM VEM DE FORA. Trocar com um dos lados por preencher manda
+  // `null` a um campo que tinha um nome — e o campo continuava a mostrá-lo: os
+  // dois lados com o mesmo nome, um deles vazio por dentro, e o leitor de ecrã
+  // a ler o nome que lá não está. O único `null` que não apaga o texto é o
+  // que o PRÓPRIO campo manda quando se começa a escrever — esse é o texto
+  // novo a chegar, e apagá-lo comia a primeira letra.
+  //
+  // A marca liga-se no `onChange` e desliga-se depois de cada renderização
+  // assente; durante a renderização só se lê.
+  const limpeiEu = useRef(false);
+  useEffect(() => {
+    limpeiEu.current = false;
+  });
   const [valorAnterior, setValorAnterior] = useState(valor);
   if (valor !== valorAnterior) {
     setValorAnterior(valor);
     if (valor) {
       setTexto(valor.nome);
+      setAberto(false);
+      setActivo(-1);
+    } else if (!limpeiEu.current) {
+      setTexto('');
       setAberto(false);
       setActivo(-1);
     }
@@ -267,6 +285,7 @@ export default function EscolherPonto({
           setTexto(e.target.value);
           setAberto(true);
           setActivo(-1);
+          limpeiEu.current = true;
           aoEscolher(null);
         }}
         onKeyDown={aoTeclar}

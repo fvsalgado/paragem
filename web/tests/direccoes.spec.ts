@@ -104,6 +104,25 @@ test('os campos de dia e de hora têm o tamanho de um campo, e não o de um rád
   await expect(page.locator('#hora')).toHaveValue(/^\d{2}:\d{2}$/);
 });
 
+test('trocar com um dos lados vazio deixa esse lado vazio, e com o foco', async ({ page }) => {
+  // Trocava o nome para cima e deixava-o também em baixo: os dois campos com o
+  // mesmo nome, um deles vazio por dentro — a folha continuava a pedir o
+  // destino —, e escrever por cima colava as letras ao nome antigo.
+  await page.goto(`/viagem/?para=${encodeURIComponent(PARAGEM.nome)}`);
+  const de = page.getByRole('combobox', { name: 'De', exact: true });
+  const para = page.getByRole('combobox', { name: 'Para', exact: true });
+  await expect(para).toHaveValue(PARAGEM.nome);
+  await expect(de).toHaveValue('');
+
+  await page.getByRole('button', { name: 'Trocar de e para' }).click();
+  await expect(de).toHaveValue(PARAGEM.nome);
+  await expect(para).toHaveValue('');
+  // O foco vai para o campo que falta: é o que se escreve a seguir.
+  await expect(para).toBeFocused();
+  await para.pressSequentially('ab');
+  await expect(para).toHaveValue('ab');
+});
+
 test('«A minha localização» é a primeira sugestão, e não um botão ao lado', async ({ page }) => {
   // É onde o Maps a põe, e é onde ela pertence. E continua a EXIGIR um
   // toque: a página não pede a localização a ninguém sozinha.
