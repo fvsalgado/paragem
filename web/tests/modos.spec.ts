@@ -152,7 +152,9 @@ test('a página do concelho conta os outros modos que há ali', async ({ page })
   const onde = concelhoComOutroModo();
   test.skip(!onde, SEM.modo('nenhum outro num concelho'));
   await page.goto(`/rede/concelhos/${onde!.concelho}/`);
-  const outros = page.getByRole('region', { name: 'Outros modos aqui' });
+  // Só com os modos que HÁ aqui: um cartão a dizer «nenhum aqui» ocupava o
+  // mesmo espaço que um cheio.
+  const outros = page.getByRole('region', { name: 'Outros transportes' });
   await expect(outros).toBeVisible();
   // E o cartão leva à página do modo.
   await outros.getByRole('link', { name: ROTULO[onde!.modo] }).click();
