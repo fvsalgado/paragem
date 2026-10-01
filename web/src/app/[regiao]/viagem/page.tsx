@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { motorDaRegiao } from '@/lib/enderecos';
 import DireccoesDaPagina from '@/componentes/DireccoesDaPagina';
-import { exigirRegiao, procura } from '@/lib/dados';
+import { exigirRegiao, lacunas, procura, servicosSemDatas } from '@/lib/dados';
 
 export const metadata: Metadata = { title: 'Como chegar' };
 
@@ -17,6 +17,7 @@ export default async function Viagem({ params }: { params: Promise<{ regiao: str
   const { regiao: rid } = await params;
   const r = await exigirRegiao(rid);
   const pontos = await procura(rid);
+  const l = await lacunas(rid);
 
   return (
     <>
@@ -29,6 +30,7 @@ export default async function Viagem({ params }: { params: Promise<{ regiao: str
         regiao={rid}
         modosDesligados={r.modos_desligados ?? []}
         motorDaRegiao={motorDaRegiao(rid)}
+        servicosSemDatas={servicosSemDatas(l)}
       />
     </>
   );

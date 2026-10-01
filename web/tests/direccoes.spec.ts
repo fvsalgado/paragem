@@ -220,8 +220,10 @@ test.describe('as viagens de prova da região, pela interface', () => {
       // uma lacuna do calendário de um defeito nosso; o que se mede aqui é a
       // interface, e a interface tem de explicar-se em vez de ficar calada.
       if ((await opcoes.count()) === 0) {
-        await expect(page.getByText('Sem viagem neste dia')).toBeVisible();
-        await expect(resposta).toContainText(/calendário escolar/);
+        await expect(
+          resposta.getByRole('heading', { name: 'Sem viagem a partir desta hora' }),
+        ).toBeVisible();
+        await expect(resposta).toContainText(/nem todos os sítios têm ligação/);
         return;
       }
 
@@ -249,10 +251,56 @@ test.describe('as viagens de prova da região, pela interface', () => {
     const resposta = page.locator('[aria-live="polite"]').last();
     await expect(resposta).toContainText(/opção|opções|Sem viagem/, { timeout: 30_000 });
 
-    if (await page.getByText('Sem viagem neste dia').isVisible()) {
-      await expect(resposta).toContainText(/calendário escolar/);
-      await expect(resposta.getByRole('link', { name: /horário de cada paragem/ })).toBeVisible();
+    // E o vazio manda para as páginas das DUAS pontas — e não para o índice
+    // por letra, onde era preciso procurar outra vez a paragem que estava
+    // escrita no campo de cima. Já não culpa o calendário escolar: está
+    // transcrito, e a frase envelheceu a mentir.
+    if (await page.getByRole('heading', { name: 'Sem viagem a partir desta hora' }).isVisible()) {
+      await expect(resposta).toContainText(/nem todos os sítios têm ligação/);
+      await expect(resposta).not.toContainText(/calendário escolar/);
+      await expect(resposta.getByRole('link', { name: /^Horário de / }).first()).toBeVisible();
     }
+  });
+
+  test('um dia fora dos horários carregados diz isso, e não «sem viagem»', async ({ page }) => {
+    // «Não há autocarro» e «não temos o horário desse dia» são respostas
+    // opostas para quem planeia: a primeira faz desistir. E o campo do dia
+    // traz os limites do período, para o seletor nem os oferecer.
+    test.skip(!DUAS, 'a região não tem duas paragens para uma viagem');
+    await page.goto('/viagem/');
+    await escolher(page, 'De', DUAS![1].nome);
+    await escolher(page, 'Para', DUAS![0].nome);
+    await marcarHora(page, '2099-01-05', '09:00');
+    const resposta = page.locator('[aria-live="polite"]').last();
+    await expect(
+      resposta.getByRole('heading', { name: 'Não temos os horários desse dia' }),
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(resposta).toContainText(/Os horários carregados vão de \d{2}\/\d{2}\/\d{4} a/);
+    await page.getByRole('button', { name: /^Partir/ }).click();
+    await expect(page.locator('#data')).toHaveAttribute('max', /^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  test('sem rede, a grelha que não chegou não passa por «não há horários»', async ({ page }) => {
+    // Com os dados móveis a falhar — o caso normal no interior —, a página
+    // dizia «esta região ainda não tem horários». Não era verdade: o que
+    // faltava era a ligação, e a resposta certa é deixar tentar outra vez.
+    test.skip(!DUAS, 'a região não tem duas paragens para uma viagem');
+    let cortar = true;
+    await page.route('**/viagens.json', (r) => (cortar ? r.abort() : r.continue()));
+    await page.goto('/viagem/');
+    await escolher(page, 'De', DUAS![1].nome);
+    await escolher(page, 'Para', DUAS![0].nome);
+    await marcarHora(page, DIA, '09:00');
+    await expect(page.getByText('Não foi possível descarregar os horários')).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByText(/ainda não tem horários/)).toHaveCount(0);
+
+    cortar = false;
+    await page.getByRole('button', { name: 'Tentar de novo' }).click();
+    const resposta = page.locator('[aria-live="polite"]').last();
+    await expect(resposta).toContainText(/opção|opções|Sem viagem/, { timeout: 30_000 });
+    await expect(page.getByText('Não foi possível descarregar os horários')).toHaveCount(0);
   });
 
   test('no mapa, a primeira opção fica logo desenhada', async ({ page }) => {

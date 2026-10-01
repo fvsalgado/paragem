@@ -188,12 +188,21 @@ export default function Mapa({
 
         // O erro vai para a consola: um mapa que falha em silêncio é uma
         // caixa cinzenta que ninguém consegue diagnosticar.
+        //
+        // E SÓ O ERRO QUE IMPEDE O MAPA DE NASCER esconde o mapa. O MapLibre
+        // emite `error` também por UM mosaico que não chegou — e a página
+        // trocava por um aviso de falha um mapa que podia estar quase todo
+        // bom. Um mosaico perdido (traz `tile` ou `sourceId`) fica na consola;
+        // depois de o mapa ter carregado, nenhum erro o tira do ecrã.
+        let carregou = false;
         criado.on('error', (e) => {
           console.error('mapa:', e.error?.message ?? e);
-          setEstado('falhou');
+          const deUmMosaico = 'tile' in e || 'sourceId' in e;
+          if (!carregou && !deUmMosaico) setEstado('falhou');
         });
         criado.on('load', () => {
           if (!vivo) return;
+          carregou = true;
           // O PERCURSO ENTRA PRIMEIRO, para os pontos das paragens ficarem
           // por cima dele. A ordem de `addLayer` é a ordem de desenho, e um
           // traço de 6 px por cima de um ponto de 6 px apaga-o.
@@ -499,9 +508,13 @@ export default function Mapa({
           lista, que é HTML a sério. */}
       <div ref={caixa} className="mapa" aria-hidden="true" />
       {estado === 'a-carregar' && <p className="mapa-aviso">A carregar o mapa…</p>}
+      {/* O AVISO MANDA PARA ONDE HÁ RESPOSTA. Prometia «a lista de paragens
+          em baixo», e não há lista nenhuma por baixo do mapa: quem a ia
+          procurar ficava sem caminho no momento em que precisava dele. */}
       {estado === 'falhou' && (
         <p className="mapa-aviso alerta">
-          O mapa não carregou. A lista de paragens em baixo funciona à mesma.
+          O mapa não carregou. A procura e as direções funcionam na mesma, e a lista de todas as
+          paragens está em <a href="/rede/">A rede</a>.
         </p>
       )}
     </div>

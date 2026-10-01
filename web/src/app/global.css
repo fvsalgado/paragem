@@ -1394,7 +1394,11 @@ main.pagina:has(.app-mapa) {
   border-radius: var(--raio);
   padding: 0.75rem 1rem;
   margin: 0;
-  max-width: 20rem;
+  /* A LARGURA É A DO TEXTO, até ao limite. Com `left: 50%` e sem largura, a
+     caixa só podia ocupar a metade da direita do mapa, e o aviso de falha —
+     duas frases — saía numa coluna de seis palavras por cima da atribuição. */
+  width: max-content;
+  max-width: min(20rem, calc(100% - 2rem));
   text-align: center;
 }
 .mapa-aviso.alerta {

@@ -31,8 +31,28 @@ import { enderecoDosDados } from './dados-do-navegador.ts';
 export type { Itinerario, Modo };
 export { MODOS };
 
-/** O que uma região consegue responder, para a interface não oferecer o que não há. */
-export type Capacidade = { modos: Modo[]; aPeExato: boolean; porque: string | null };
+/**
+ * O que uma região consegue responder, para a interface não oferecer o que não há.
+ *
+ * `falta` diz PORQUE é que não responde, quando não responde — e são duas
+ * coisas que pedem frases opostas. `sem-horarios`: a região não publica a
+ * grelha (o ficheiro não existe). `sem-ligacao`: a grelha existe e não chegou
+ * — a rede caiu, o servidor tropeçou —, e a resposta certa é «tenta outra
+ * vez», nunca «esta região não tem horários».
+ */
+export type Capacidade = {
+  modos: Modo[];
+  aPeExato: boolean;
+  porque: string | null;
+  falta?: 'sem-horarios' | 'sem-ligacao';
+};
+
+/**
+ * A grelha existe e NÃO CHEGOU: uma falha de rede, ou o servidor a responder
+ * com outra coisa que não «aqui está» ou «não existe». Quem a apanha diz que
+ * não conseguiu, e oferece-se para tentar outra vez.
+ */
+export class SemLigacao extends Error {}
 
 const redes = new Map<string, Promise<Rede | null>>();
 
@@ -49,19 +69,31 @@ function redeDe(regiao: string, semModos: readonly string[] = []): Promise<Rede 
   let p = redes.get(chave);
   if (!p) {
     p = (async () => {
-      try {
-        const [g, t] = await Promise.all([
-          fetch(enderecoDosDados(regiao, `viagens.json`)).then((r) => (r.ok ? r.json() : null)),
-          fetch(enderecoDosDados(regiao, `transbordos.json`)).then((r) => (r.ok ? r.json() : null)),
-        ]);
-        if (!g) return null;
-        // Sem transbordos ainda se responde: perde-se a mudança de autocarro,
-        // não a viagem direta. É melhor do que não responder nada.
-        return prepararRede(g as GrelhaCrua, (t ?? { pares: [] }) as TransbordosCrus, semModos);
-      } catch {
-        return null;
-      }
-    })();
+      // «NÃO EXISTE» E «NÃO CHEGOU» SÃO RESPOSTAS DIFERENTES. As duas davam
+      // `null`, e a página dizia «esta região ainda não tem horários» a quem
+      // só tinha perdido a rede por um momento. O que não existe responde 404
+      // num servidor de ficheiros e 400 na porta pública do armazém
+      // (`dados.ts`); o resto — rede em baixo, um 500 — é falta de resposta.
+      const [g, t] = await Promise.all([
+        fetch(enderecoDosDados(regiao, `viagens.json`)).then((r) => {
+          if (r.ok) return r.json();
+          if (r.status === 404 || r.status === 400) return null;
+          throw new SemLigacao(`viagens.json: HTTP ${r.status}`);
+        }),
+        fetch(enderecoDosDados(regiao, `transbordos.json`))
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null),
+      ]);
+      if (!g) return null;
+      // Sem transbordos ainda se responde: perde-se a mudança de autocarro,
+      // não a viagem direta. É melhor do que não responder nada.
+      return prepararRede(g as GrelhaCrua, (t ?? { pares: [] }) as TransbordosCrus, semModos);
+    })().catch((e) => {
+      // Uma falha NÃO fica guardada: guardá-la era responder «não chegou» a
+      // todas as perguntas seguintes, mesmo depois de a rede voltar.
+      redes.delete(chave);
+      throw e instanceof SemLigacao ? e : new SemLigacao(String(e));
+    });
     redes.set(chave, p);
   }
   return p;
@@ -77,9 +109,24 @@ function redeDe(regiao: string, semModos: readonly string[] = []): Promise<Rede 
  */
 export async function capacidadeDe(regiao: string, motor = ''): Promise<Capacidade> {
   if (motor) return { modos: ['transporte', 'a-pe', 'bicicleta'], aPeExato: true, porque: null };
-  const rede = await redeDe(regiao);
+  let rede: Rede | null;
+  try {
+    rede = await redeDe(regiao);
+  } catch {
+    return {
+      modos: [],
+      aPeExato: false,
+      porque: 'Não foi possível descarregar os horários.',
+      falta: 'sem-ligacao',
+    };
+  }
   if (!rede) {
-    return { modos: [], aPeExato: false, porque: 'Não há horários carregados para esta região.' };
+    return {
+      modos: [],
+      aPeExato: false,
+      porque: 'Não há horários carregados para esta região.',
+      falta: 'sem-horarios',
+    };
   }
   return {
     modos: ['transporte'],

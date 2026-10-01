@@ -1,4 +1,4 @@
-import { lacunas } from '@/lib/dados';
+import { lacunas, servicosSemDatas } from '@/lib/dados';
 
 /**
  * A frase que impede alguém de confundir isto com tempo real.
@@ -14,8 +14,7 @@ export default async function MarcaDeDados({
   regiao: string;
   detalhe?: boolean;
 }) {
-  const l = await lacunas(regiao);
-  const semDatas = Number(l.contagens?.['calendario.servicos_sem_datas'] ?? 0);
+  const semDatas = servicosSemDatas(await lacunas(regiao));
   return (
     <p className="marca-dados" role="note">
       Horários planeados, não em tempo real.
