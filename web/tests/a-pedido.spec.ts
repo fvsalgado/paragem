@@ -77,6 +77,9 @@ test('o catálogo dos circuitos está lá, com os nomes todos', async ({ page })
   // tenha brochura tem o mesmo nome na grelha dela — que é o que se queria,
   // mas não é o que aqui se mede.
   const catalogo = page.locator('section[aria-labelledby="circuitos"]');
+  // A lista está fechada: a procura de cima responde mais depressa, e a lista
+  // fica para quem prefere ler. Abre-se como quem a quer ler.
+  await catalogo.locator('summary').click();
   for (const c of TAP!.circuitos.slice(0, 3)) {
     await expect(catalogo.getByText(c.nome, { exact: false }).first()).toBeVisible();
   }
@@ -116,7 +119,11 @@ test('cada concelho com zona leva o telefone na sua própria página', async ({ 
     'href',
     `tel:${TELEFONE}`,
   );
-  await expect(seccao).toContainText(`circuitos na zona ${ZONA!.nome}`);
+  // «1 circuito na zona …» ou «3 circuitos na zona …»: a primeira zona com
+  // circuitos pode ter só um, e o plural fixo reprovava a página certa.
+  await expect(seccao).toContainText(
+    `${ZONA!.circuitos.length === 1 ? '1 circuito' : `${ZONA!.circuitos.length} circuitos`} na zona ${ZONA!.nome}`,
+  );
 });
 
 test('a demonstração não ganha uma secção vazia', async ({ page }) => {
@@ -140,7 +147,12 @@ test('os circuitos com horário mostram a que horas passam', async ({ page }) =>
 test('a grelha de um circuito abre e tem as horas', async ({ page }) => {
   test.skip(!TAP, SEM.aPedido);
   test.skip(!COM_VIAGENS, 'nenhum circuito desta região tem grelha de viagens');
+  // Cada grupo de circuitos tem a sua página: todas as tabelas juntas eram
+  // 833 kB e dez mil elementos.
   await page.goto(`/a-pedido/`);
+  await page.locator('section[aria-labelledby="horarios"]').getByRole('link').first().click();
+  await expect(page).toHaveURL(/\/a-pedido\/[^/]+\/$/);
+  await page.goto(`/a-pedido/${COM_VIAGENS!.id}/`);
   const resumo = page.getByText(/viagens? — da .* às \d{2}:\d{2}/).first();
   await resumo.click();
   await expect(page.getByRole('table').first()).toBeVisible();
@@ -153,12 +165,10 @@ test('uma tabela de partidas não se faz passar por um percurso', async ({ page 
   // davam um autocarro que faz catorze terras seguidas, e não existe tal
   // autocarro. A página tem de dizer o que a tabela é.
   test.skip(!COM_PARTIDAS, 'nenhum folheto desta região é uma tabela de partidas');
-  await page.goto(`/a-pedido/`);
-  const seccao = page.locator('section', {
-    has: page.getByRole('heading', { name: COM_PARTIDAS!.nome, exact: true }),
-  });
-  await expect(seccao.first()).toContainText('tabela de partidas');
-  await seccao
+  await page.goto(`/a-pedido/${COM_PARTIDAS!.id}/`);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(COM_PARTIDAS!.nome);
+  await expect(page.locator('main')).toContainText('tabela de partidas');
+  await page
     .getByText(/partidas por dia/)
     .first()
     .click();
@@ -175,12 +185,45 @@ test('uma folha transcrita à mão di-lo numa nota neutra, sem dizer quem', asyn
   // produção a chegar a quem só quer apanhar o autocarro.
   const transcritos = (TAP?.horarios ?? []).filter((h) => h.transcrito_por);
   test.skip(!transcritos.length, 'nenhum circuito desta região foi transcrito à mão');
-  await page.goto(`/a-pedido/`);
-  const notas = page.getByText(/Transcrito da brochura.*por confirmar com a operadora/);
-  await expect(notas.first()).toBeVisible();
-  await expect(notas).toHaveCount(transcritos.length);
-  for (const quem of new Set(transcritos.map((h) => h.transcrito_por!))) {
-    await expect(page.locator('main')).not.toContainText(quem);
+  // Cada grupo na sua página, e a nota em cada uma das que foram transcritas.
+  for (const h of transcritos) {
+    await page.goto(`/a-pedido/${h.id}/`);
+    const notas = page.getByText(/Transcrito da brochura.*por confirmar com a operadora/);
+    await expect(notas).toHaveCount(1);
+    await expect(page.locator('main')).not.toContainText(h.transcrito_por!);
+    await expect(page.getByText(/Transcrito da brochura por/)).toHaveCount(0);
   }
-  await expect(page.getByText(/Transcrito da brochura por/)).toHaveCount(0);
+});
+
+test('escreve-se o nome da terra e a página diz que circuito lá passa', async ({ page }) => {
+  // «Há transporte a pedido na minha terra?» obrigava a ler 24 ecrãs de zonas
+  // com nomes de contrato. A terra procura-se sem acentos, e a resposta leva
+  // ao horário do circuito, já aberto.
+  test.skip(!COM_VIAGENS, 'nenhum circuito desta região tem grelha de viagens');
+  const quadro = COM_VIAGENS!.quadros.find((q) => q.viagens?.length && q.paragens.length)!;
+  const terra = quadro.paragens[quadro.paragens.length - 1];
+  await page.goto(`/a-pedido/`);
+  const campo = page.getByLabel('Escreve o nome da tua terra');
+  await campo.fill(
+    terra
+      .normalize('NFD')
+      .replace(/\p{Mn}/gu, '')
+      .toLowerCase(),
+  );
+  const resposta = page.locator('ul.terras-encontradas > li', {
+    has: page.getByText(terra, { exact: true }),
+  });
+  await expect(resposta.first()).toBeVisible();
+  await resposta.first().getByRole('link', { name: 'Ver horário' }).first().click();
+  await expect(page).toHaveURL(new RegExp(`/a-pedido/[^/]+/`));
+  await expect(page.locator('details.quadro-de-horario[open]').first()).toBeVisible();
+});
+
+test('uma terra que não está nos dados diz que não está, e dá o telefone', async ({ page }) => {
+  test.skip(!TAP, SEM.aPedido);
+  await page.goto(`/a-pedido/`);
+  await page.getByLabel('Escreve o nome da tua terra').fill('Terra Que Não Existe');
+  const resposta = page.getByText(/Não encontrámos «Terra Que Não Existe»/);
+  await expect(resposta).toBeVisible();
+  if (TELEFONE) await expect(resposta.getByRole('link')).toHaveAttribute('href', `tel:${TELEFONE}`);
 });

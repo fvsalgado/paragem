@@ -143,7 +143,13 @@ export type APedido = {
     id: string;
     nome: string;
     concelho: string;
-    quadros: { tipo?: string; horas?: string[][]; viagens?: Viagem[] }[];
+    quadros: {
+      nome?: string;
+      paragens: string[];
+      tipo?: string;
+      horas?: string[][];
+      viagens?: Viagem[];
+    }[];
     /** Quem a transcreveu à mão — nunca se mostra; diz só que houve transcrição. */
     transcrito_por?: string;
   }[];
