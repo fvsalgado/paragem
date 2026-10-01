@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
-import { tarifas, exigirRegiao } from '@/lib/dados';
+import { tarifas, exigirRegiao, type Titulo } from '@/lib/dados';
 import { redeEQuemAGere } from '@/lib/prosa';
+import { ajudaParaEscolher, porPeriodo } from '@/lib/tarifario';
 
 export const metadata: Metadata = { title: 'Tarifário' };
 
@@ -18,15 +19,32 @@ export default async function Tarifario({ params }: { params: Promise<{ regiao: 
     style: 'currency',
     currency: t.moeda,
   });
+  const ajuda = ajudaParaEscolher(t.titulos);
+
+  // O nome e o preço de um título, com o período e a marca de por confirmar.
+  const NomeEPreco = ({ t: x }: { t: Titulo }) => (
+    <>
+      <strong>{x.nome}</strong>:{' '}
+      <span className="preco-em-linha">
+        {moeda.format(x.valor ?? 0)}
+        {porPeriodo(x.periodo) && ` ${porPeriodo(x.periodo)}`}
+      </span>
+      {!x.confirmado && <span className="secundario"> (por confirmar)</span>}
+    </>
+  );
+  const Nota = ({ t: x }: { t: Titulo }) =>
+    x.nota ? <span className="secundario nota-do-titulo">{semMaiusculas(x.nota)}</span> : null;
 
   return (
     <>
       <h1>Tarifário</h1>
 
       {/* Um preço errado é dito a alguém que o vai pagar. Enquanto não estiver
-          conferido na fonte, diz-se que não está — em cima, e não em rodapé. */}
+          conferido na fonte, diz-se que não está — em cima, e não em rodapé.
+          Numa faixa de informação: é um estado dos dados, e o vermelho é para
+          o que mudou hoje. */}
       {t.por_confirmar > 0 && (
-        <div className="faixa alerta">
+        <div className="faixa informacao">
           <p>
             <strong>
               {t.por_confirmar === 1
@@ -37,6 +55,69 @@ export default async function Tarifario({ params }: { params: Promise<{ regiao: 
             Estão marcados abaixo. Confirma antes de contar com eles.
           </p>
         </div>
+      )}
+
+      {/* «QUE TÍTULO ME SERVE?» antes das tabelas, com o que o tarifário
+          declara e mais nada (`lib/tarifario.ts`): o que se paga a cada uso,
+          o que vale por um período — e quantos bilhetes se compram pelo
+          mesmo preço —, e o que não se paga, com as condições escritas na
+          fonte. Que linhas cobre uma assinatura, ou quem tem direito a um
+          passe, não está nos dados, e não se adivinha. */}
+      {ajuda.length > 0 && (
+        <section aria-labelledby="qual">
+          <h2 id="qual">Que título me serve?</h2>
+          {ajuda.map((a) => (
+            <div key={a.rede} className="ajuda-da-rede">
+              {ajuda.length > 1 && <h3>{a.rede}</h3>}
+              <dl className="qual-titulo">
+                {a.aCadaUso.length > 0 && (
+                  <>
+                    <dt>Pagar só quando viajas</dt>
+                    {a.aCadaUso.map((x) => (
+                      <dd key={x.id}>
+                        <NomeEPreco t={x} /> <Nota t={x} />
+                      </dd>
+                    ))}
+                  </>
+                )}
+                {a.porPeriodo.length > 0 && (
+                  <>
+                    <dt>Pagar uma vez, por um período</dt>
+                    {a.porPeriodo.map((x) => (
+                      <dd key={x.id}>
+                        <NomeEPreco t={x} />
+                        {x.equivale && (
+                          <>
+                            {' '}
+                            — pelo mesmo preço compram-se {x.equivale.vezes} «{x.equivale.de.nome}».
+                          </>
+                        )}{' '}
+                        <Nota t={x} />
+                      </dd>
+                    ))}
+                  </>
+                )}
+                {a.semPagar.length > 0 && (
+                  <>
+                    <dt>Sem pagar</dt>
+                    {a.semPagar.map((x) => (
+                      <dd key={x.id}>
+                        <strong>{x.nome}</strong>
+                        {!x.confirmado && <span className="secundario"> (por confirmar)</span>}
+                        {x.nota ? (
+                          <> — {semMaiusculas(x.nota)}</>
+                        ) : (
+                          <span className="secundario"> — a fonte não escreve condições.</span>
+                        )}
+                      </dd>
+                    ))}
+                  </>
+                )}
+              </dl>
+            </div>
+          ))}
+          <p className="secundario">Os preços, um a um, estão nas tabelas de cada rede, abaixo.</p>
+        </section>
       )}
 
       {[...porRede.entries()].map(([rede, titulos]) => (
@@ -73,7 +154,7 @@ export default async function Tarifario({ params }: { params: Promise<{ regiao: 
                     {x.nota && (
                       <>
                         <br />
-                        <span className="secundario">{x.nota}</span>
+                        <span className="secundario">{semMaiusculas(x.nota)}</span>
                       </>
                     )}
                   </td>
@@ -97,4 +178,14 @@ export default async function Tarifario({ params }: { params: Promise<{ regiao: 
       <p>{redeEQuemAGere(r)}. Os preços são os que a operadora publica.</p>
     </>
   );
+}
+
+/**
+ * SEM RÓTULOS EM MAIÚSCULAS (§6), também no que vem dos dados: uma nota que
+ * escreve «Condições POR CONFIRMAR» grita a quem a lê, e um leitor de ecrã
+ * soletra-a. Só as sequências de duas ou mais palavras inteiras em
+ * maiúsculas passam a minúsculas — as siglas («CP», «LINK») ficam.
+ */
+function semMaiusculas(texto: string): string {
+  return texto.replace(/\b[A-ZÀ-Ý]{2,}(?:\s+[A-ZÀ-Ý]{2,})+\b/g, (m) => m.toLowerCase());
 }

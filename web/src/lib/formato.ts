@@ -305,6 +305,8 @@ export type Titulo = {
   rede: string;
   nome: string;
   valor: number | null;
+  /** `mes`, `ano`… quando o título vale por um período; ausente quando se paga a cada uso. */
+  periodo?: string;
   confirmado: boolean;
   confirmado_em?: string | null;
   fonte?: string;
