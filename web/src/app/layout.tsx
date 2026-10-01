@@ -1,7 +1,8 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Atkinson_Hyperlegible } from 'next/font/google';
 import './global.css';
 import Medicao from '@/componentes/Medicao';
+import { COR_DO_TEMA } from '@/lib/manifesto';
 
 /**
  * O invólucro de TUDO — do produto e de cada região.
@@ -10,11 +11,20 @@ import Medicao from '@/componentes/Medicao';
  * `[regiao]/layout.tsx`. Este ficheiro deixou de saber o que é uma região, e é
  * essa a mudança: o sítio serve várias ao mesmo tempo, e a página de produto
  * não é de nenhuma.
+ *
+ * O manifesto é o mesmo endereço em todos os anfitriões, e cada um responde o
+ * seu (`regiao-host.ts`): o de uma região chama-se como ela. Os ícones são
+ * convenções do Next nesta pasta — `icon.svg`, `apple-icon.png`,
+ * `favicon.ico` —, e o Next põe as ligações para eles sozinho.
  */
 export const metadata: Metadata = {
   title: { default: 'Paragem.pt', template: '%s · Paragem.pt' },
   description: 'Todos os transportes de uma região, num sítio só.',
+  manifest: '/manifest.webmanifest',
 };
+
+/** A barra do navegador na cor da marca, no Android e no ecrã de arranque. */
+export const viewport: Viewport = { themeColor: COR_DO_TEMA };
 
 /**
  * Atkinson Hyperlegible: desenhada para quem vê mal, que é meia razão para a

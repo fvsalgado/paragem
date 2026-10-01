@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- O símbolo do Paragem.pt: um P que é uma placa de paragem — o poste é a
+       haste, a placa redonda é o bojo. A fonte de todos os ícones: os PNG e o
+       favicon.ico saem daqui (`scripts/imagens-do-produto.mjs icones`). -->
+  <rect width="64" height="64" rx="14" fill="#F5F7F4"/>
+  <rect x="15" y="8" width="8" height="48" rx="4" fill="#102C3F"/>
+  <circle cx="32" cy="23" r="15" fill="#0A5C7A"/>
+  <circle cx="32" cy="23" r="5.5" fill="#F5F7F4"/>
+</svg>

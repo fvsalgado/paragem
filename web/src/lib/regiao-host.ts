@@ -269,10 +269,14 @@ export const FICHEIROS_DE_RAIZ = ['/favicon.ico', '/icon.svg', '/apple-icon.png'
  * fechava também a página do produto, que não tem horários nenhuns. Agora a
  * região responde o dela (`app/[regiao]/robots.txt`, a mesma regra de
  * sempre) e o produto responde o seu (`app/-produto/robots.txt`). O mesmo
- * para o mapa do sítio: o de uma região lista as páginas dela, no domínio
- * dela.
+ * para o mapa do sítio — o de uma região lista as páginas dela, no domínio
+ * dela — e para o manifesto, que se chama como a região e abre nela.
  */
-export const FICHEIROS_DE_CADA_ANFITRIAO = ['/robots.txt', '/sitemap.xml'] as const;
+export const FICHEIROS_DE_CADA_ANFITRIAO = [
+  '/robots.txt',
+  '/sitemap.xml',
+  '/manifest.webmanifest',
+] as const;
 
 /**
  * As páginas do PRODUTO: a montra, o contacto, a privacidade e a

@@ -100,8 +100,8 @@ test('o segmento do produto não se alcança de fora, nem numa região nem fora 
   });
 });
 
-test('o robots.txt e o mapa do sítio são de cada anfitrião', () => {
-  for (const ficheiro of ['/robots.txt', '/sitemap.xml']) {
+test('o robots.txt, o mapa do sítio e o manifesto são de cada anfitrião', () => {
+  for (const ficheiro of ['/robots.txt', '/sitemap.xml', '/manifest.webmanifest']) {
     // O da região diz o que ela diz — o robots.txt dela continua a fechar a porta.
     assert.deepEqual(decidir('prova.exemplo.pt', ficheiro, MAPA), {
       tipo: 'reescrever',
