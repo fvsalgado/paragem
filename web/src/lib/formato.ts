@@ -54,11 +54,38 @@ export type Regiao = {
   artigo: string;
   /** «a Serra da Pedra Alta», «o Baixo Sável» — escrito, não adivinhado. */
   nome_com_artigo: string;
+  /**
+   * «A Serra da Pedra Alta» — para abrir uma frase. Opcional: dados
+   * construídos antes de existir não o trazem (`prosa.ts`, `regiaoNoInicio`).
+   */
+  nome_com_artigo_no_inicio?: string;
   de: string;
   em: string;
   a: string;
-  autoridade: { nome?: string; sigla?: string; tipo?: string; url?: string };
-  rede: { nome?: string; url?: string; operador?: string; concessao_ate?: string };
+  /**
+   * A autoridade como a região a declara. `com_artigo`, `de` e `por` («a …»,
+   * «da …», «pela …») só vêm quando a região declara o `artigo` dela — e
+   * nunca se adivinham (`prosa.ts`, `aAutoridade`).
+   */
+  autoridade: {
+    nome?: string;
+    sigla?: string;
+    tipo?: string;
+    url?: string;
+    artigo?: string;
+    com_artigo?: string;
+    de?: string;
+    por?: string;
+  };
+  /** A rede; `operador_por` («pela Alta Transportes») só com o artigo do operador declarado. */
+  rede: {
+    nome?: string;
+    url?: string;
+    operador?: string;
+    concessao_ate?: string;
+    operador_artigo?: string;
+    operador_por?: string;
+  };
   dominio_env: string | null;
   /** Os modos que a região declara — JÁ SEM os que o painel desligou (`dados.ts`). */
   modos: string[];

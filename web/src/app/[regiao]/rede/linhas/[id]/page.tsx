@@ -10,6 +10,7 @@ import {
   NAO_ENCONTRADA,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
+import { plural } from '@/lib/prosa';
 import Distintivo from '@/componentes/Distintivo';
 
 /**
@@ -54,7 +55,7 @@ export default async function Linha({
         <Distintivo codigo={l.codigo} cor={l.cor} /> {l.nome}
       </h1>
       <p>
-        {l.viagens} viagens no horário.
+        {plural(l.viagens, 'viagem', 'viagens')} no horário.
         {/* «GERIDO POR …», que é o §1 por extenso: quem viaja não precisa de
           saber quem gere cada serviço para o encontrar, mas precisa de o saber
           para comprar o título certo. Só aparece nas linhas que NÃO são da
@@ -63,7 +64,7 @@ export default async function Linha({
         {l.operador && (
           <>
             {' '}
-            <span className="secundario">Gerido por {l.operador}.</span>
+            <span className="secundario">Quem gere: {l.operador}.</span>
           </>
         )}
       </p>
@@ -73,12 +74,12 @@ export default async function Linha({
         <section key={s.sentido}>
           <h2>{NOME_DO_SENTIDO[s.sentido] ?? `Sentido ${s.sentido}`}</h2>
           <p className="secundario">
-            {s.viagens} viagens
+            {plural(s.viagens, 'viagem', 'viagens')}
             {s.variantes > 1 && (
               <>
                 {' '}
                 em {s.variantes} percursos diferentes. Mostra-se o mais servido (
-                {s.viagens_deste_percurso} viagens) —{' '}
+                {plural(s.viagens_deste_percurso, 'viagem', 'viagens')}) —{' '}
                 <strong>há viagens que não param em todas estas paragens</strong>.
               </>
             )}

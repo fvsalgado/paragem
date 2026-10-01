@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { aPedido, exigirRegiao, url, urlRede } from '@/lib/dados';
 import QuadroDeHorario from '@/componentes/QuadroDeHorario';
 import Transcricao from '@/componentes/Transcricao';
+import { plural } from '@/lib/prosa';
 
 export const metadata: Metadata = { title: 'Transporte a pedido' };
 
@@ -41,8 +42,9 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
     <>
       <h1>Transporte a pedido</h1>
       <p>
-        Há circuitos {r.em} que só circulam se alguém os reservar. São {d.zonas.length} zonas — e em
-        boa parte das freguesias são o único transporte público que há.
+        Há circuitos {r.em} que só circulam se alguém os reservar, em{' '}
+        {plural(d.zonas.length, 'zona', 'zonas')} — e em boa parte das freguesias são o único
+        transporte público que há.
       </p>
 
       {/* PRIMEIRO A REGRA, e só depois tudo o resto. */}
@@ -133,7 +135,11 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
             guardado à mão só apanhou um. */}
         {semCircuitos.length > 0 && (
           <div className="faixa">
-            <h3>{semCircuitos.length} zonas sem os circuitos atribuídos</h3>
+            <h3>
+              {semCircuitos.length === 1
+                ? 'Uma zona sem os circuitos atribuídos'
+                : `${semCircuitos.length} zonas sem os circuitos atribuídos`}
+            </h3>
             <p>
               Existem e têm serviço. Os circuitos também se conhecem — estão todos na lista abaixo
               —, o que não se sabe é qual deles serve qual zona, nem a que horas passa. Reservam-se
@@ -146,10 +152,13 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
                     {z.nome}
                     {z.servico ? <span className="secundario"> · {z.servico}</span> : null}
                   </span>
+                  {/* A NOTA SEPARADA DO NOME, e não colada: lia-se «LINK
+                      Cidadesentre concelhos», no ecrã e no leitor de ecrã. A
+                      ligação não precisa: desenha-se numa linha sua. */}
                   {z.concelho ? (
                     <Link href={urlRede(rid, `concelhos/${z.concelho}/`)}>o concelho</Link>
                   ) : (
-                    <span className="secundario">entre concelhos</span>
+                    <span className="secundario"> · entre concelhos</span>
                   )}
                 </li>
               ))}
@@ -174,7 +183,13 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
       {d.horarios.length > 0 && (
         <section aria-labelledby="horarios">
           <h2 id="horarios">
-            Os circuitos com horário ({d.horarios.reduce((n, h) => n + h.viagens, 0)} viagens)
+            Os circuitos com horário (
+            {plural(
+              d.horarios.reduce((n, h) => n + h.viagens, 0),
+              'viagem',
+              'viagens',
+            )}
+            )
           </h2>
           <p>
             Continuam a ser <strong>a pedido</strong>: estas horas só se cumprem se alguém reservar.
@@ -193,14 +208,12 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
               </h3>
               <p className="secundario">
                 {[
-                  `${h.paragens.length} paragens`,
+                  plural(h.paragens.length, 'paragem', 'paragens'),
                   // A TABELA DE PARTIDAS NÃO TEM VIAGENS, e dizer «0 viagens»
                   // era anunciar um serviço que não existe. O folheto do LINK
                   // lista as horas a que se parte de cada cidade, não a ordem
                   // por que um autocarro lhes passa.
-                  h.viagens > 0
-                    ? `${h.viagens} ${h.viagens === 1 ? 'viagem' : 'viagens'}`
-                    : 'tabela de partidas',
+                  h.viagens > 0 ? plural(h.viagens, 'viagem', 'viagens') : 'tabela de partidas',
                 ].join(' · ')}
               </p>
               {h.regras.map((regra) => (
@@ -226,7 +239,9 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
           aldeia quer saber se há circuito com o nome dela antes de ligar. */}
       {d.circuitos.length > 0 && (
         <section aria-labelledby="circuitos">
-          <h2 id="circuitos">Os {d.circuitos.length} circuitos</h2>
+          <h2 id="circuitos">
+            {d.circuitos.length === 1 ? 'O circuito' : `Os ${d.circuitos.length} circuitos`}
+          </h2>
           <p>
             São os nomes que o sistema de reservas usa — é por aqui que se procura o nome da própria
             terra antes de ligar.{' '}

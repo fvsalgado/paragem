@@ -19,6 +19,7 @@ import DisponibilidadeBicicletas, {
 import type { HorarioDeModo, ModoDetalhe, PontoDeModo } from '@/lib/formato';
 import PrecosDeExpresso from '@/componentes/PrecosDeExpresso';
 import { disponibilidadeDaRegiao, expressosDaRegiao } from '@/lib/enderecos';
+import { lista, plural } from '@/lib/prosa';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -55,15 +56,50 @@ function porConcelho<T extends { concelho: string | null }>(
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt'));
 }
 
+/**
+ * O que um modo tem, numa frase: «Há 3 estações na Serra da Pedra Alta.»
+ *
+ * Era «a Serra da Pedra Alta tem 3 estações», com o nome da região a abrir a
+ * frase em minúscula — e «4 sítios levantados», que é a palavra de quem levanta os
+ * dados e não a de quem os lê. E conta cada forma pelo seu nome: nos urbanos
+ * municipais há linhas com horário E percursos só com traçado, e somá-los
+ * como «7 linhas com horário» dizia que havia horário onde não há.
+ */
+function oQueHa(m: ModoDetalhe, em: string): string {
+  const partes = [
+    m.sistemas.length
+      ? plural(
+          m.sistemas.reduce((n, s) => n + s.estacoes.length, 0),
+          'estação',
+          'estações',
+        )
+      : '',
+    m.horarios?.length ? plural(m.horarios.length, 'linha com horário', 'linhas com horário') : '',
+    m.percursos.length
+      ? plural(m.percursos.length, 'percurso conhecido', 'percursos conhecidos')
+      : '',
+    m.paragens.length ? plural(m.paragens.length, 'paragem', 'paragens') : '',
+    m.pontos.length
+      ? m.modo === 'taxi'
+        ? plural(m.pontos.length, 'praça de táxis conhecida', 'praças de táxis conhecidas')
+        : plural(m.pontos.length, 'local conhecido', 'locais conhecidos')
+      : '',
+  ].filter(Boolean);
+  return partes.length ? `Há ${lista(partes)} ${em}.` : '';
+}
+
 function Ponto({ p }: { p: PontoDeModo }) {
+  // O NOME E A NOTA SEPARADOS, e não colados: dois `<span>` seguidos liam-se
+  // como uma palavra só, no ecrã e no leitor de ecrã. O telefone é uma
+  // ligação, e numa lista as ligações desenham-se numa linha sua.
   return (
     <li>
       <span>{p.nome ?? 'Sem nome no mapa'}</span>
       {p.telefone ? (
         <a href={`tel:${p.telefone}`}>{p.telefone}</a>
-      ) : (
-        <span className="secundario">{p.operador ?? ''}</span>
-      )}
+      ) : p.operador ? (
+        <span className="secundario"> · {p.operador}</span>
+      ) : null}
     </li>
   );
 }
@@ -98,17 +134,13 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
   return (
     <>
       <h1>{nome}</h1>
+      {/* «Quem gere:» e não «Gerido por»: os nomes vêm dos dados de quem opera
+          — «Câmara Municipal de Pedra Alta», a marca de um operador de
+          expressos — e nenhum traz o artigo. «Gerido por Câmara Municipal» é o
+          que se lia. */}
       {m.gerido_por.length > 0 && (
         <p>
-          Gerido por {m.gerido_por.join(', ')}. {r.nome_com_artigo} tem {m.quantos}{' '}
-          {m.sistemas.length
-            ? 'estações'
-            : m.horarios?.length
-              ? 'linhas levantadas'
-              : m.percursos.length
-                ? 'percursos levantados'
-                : 'sítios levantados'}
-          .
+          Quem gere: {lista(m.gerido_por)}. {oQueHa(m, r.em)}
         </p>
       )}
 
@@ -149,8 +181,8 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
             <section key={s.id} aria-labelledby={`s-${s.id}`}>
               <h2 id={`s-${s.id}`}>{s.nome}</h2>
               <p>
-                {s.operador && <>Gerido por {s.operador}. </>}
-                {s.estacoes.length} estações.
+                {s.operador && <>Quem gere: {s.operador}. </>}
+                {plural(s.estacoes.length, 'estação', 'estações')}.
               </p>
               <ResumoDoSistema ids={s.estacoes.map((e) => e.id)} />
               {s.estado === 'por-confirmar' && (
@@ -190,7 +222,11 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
         <section key={h.id} aria-labelledby={`h-${h.id}`}>
           <h2 id={`h-${h.id}`}>{h.nome}</h2>
           <p className="secundario">
-            {[h.operador, `${h.paragens.length} paragens`, `${h.viagens} viagens por dia`]
+            {[
+              h.operador,
+              plural(h.paragens.length, 'paragem', 'paragens'),
+              `${plural(h.viagens, 'viagem', 'viagens')} por dia`,
+            ]
               .filter(Boolean)
               .join(' · ')}
           </p>
@@ -260,10 +296,12 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
                 )}
               </h3>
               <ul className="lista">
+                {/* A linha e o destino SEPARADOS: colados, o número da linha e
+                    a primeira terra do destino liam-se como uma palavra só. */}
                 {p.linhas.map((l) => (
                   <li key={l.nome}>
                     <span>{l.nome}</span>
-                    <span className="secundario">{l.destino}</span>
+                    {l.destino && <span className="secundario"> · {l.destino}</span>}
                   </li>
                 ))}
               </ul>

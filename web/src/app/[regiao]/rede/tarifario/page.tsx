@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { tarifas, exigirRegiao } from '@/lib/dados';
+import { redeEQuemAGere } from '@/lib/prosa';
 
 export const metadata: Metadata = { title: 'Tarifário' };
 
@@ -28,8 +29,10 @@ export default async function Tarifario({ params }: { params: Promise<{ regiao: 
         <div className="faixa alerta">
           <p>
             <strong>
-              {t.por_confirmar} {t.por_confirmar === 1 ? 'destes preços' : 'destes preços'} ainda
-              não {t.por_confirmar === 1 ? 'foi confirmado' : 'foram confirmados'} na fonte.
+              {t.por_confirmar === 1
+                ? 'Um destes preços ainda não foi confirmado'
+                : `${t.por_confirmar} destes preços ainda não foram confirmados`}{' '}
+              na fonte.
             </strong>{' '}
             Estão marcados abaixo. Confirma antes de contar com eles.
           </p>
@@ -91,12 +94,7 @@ export default async function Tarifario({ params }: { params: Promise<{ regiao: 
       ))}
 
       <h2>Quem gere</h2>
-      <p>
-        {r.rede?.nome ? `A rede ${r.rede.nome} é gerida por ` : 'A rede é gerida por '}
-        {r.autoridade?.nome}
-        {r.rede?.operador ? `, com operação de ${r.rede.operador}` : ''}. Os preços são os que a
-        operadora publica.
-      </p>
+      <p>{redeEQuemAGere(r)}. Os preços são os que a operadora publica.</p>
     </>
   );
 }

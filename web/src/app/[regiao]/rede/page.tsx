@@ -17,6 +17,14 @@ import FaixaDeAvisos from '@/componentes/Avisos';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import PertoDeTi from '@/componentes/PertoDeTi';
 import { avisosEmVigor } from '@/lib/avisos';
+import { plural } from '@/lib/prosa';
+import type { Metadata } from 'next';
+
+/**
+ * O título próprio da rede. Tinha o mesmo do mapa — «Paragem.pt — <a região>
+ * · Paragem.pt» —, e dois separadores iguais não se distinguem.
+ */
+export const metadata: Metadata = { title: 'A rede' };
 
 /**
  * O CATÁLOGO: todas as paragens, linhas, estações e concelhos, em listas.
@@ -46,9 +54,9 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
     return caminho ? url(r, caminho) : null;
   };
   const quantosNoModo: Record<string, string> = {
-    autocarro: `${ls.length} linhas`,
-    comboio: `${es.length} estações`,
-    ...(pedido ? { 'a-pedido': `${pedido.zonas.length} zonas` } : {}),
+    autocarro: plural(ls.length, 'linha', 'linhas'),
+    comboio: plural(es.length, 'estação', 'estações'),
+    ...(pedido ? { 'a-pedido': plural(pedido.zonas.length, 'zona', 'zonas') } : {}),
     ...Object.fromEntries(
       Object.entries(dosModos).map(([m, d]) => [m, d.quantos ? String(d.quantos) : 'por levantar']),
     ),
@@ -57,10 +65,13 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
   return (
     <>
       <h1>A rede {r.de}</h1>
+      {/* Para quem viaja, e não para quem o programou: «as páginas que
+          funcionam sem JavaScript» era a razão técnica, escrita no lugar da
+          razão de quem lê. */}
       <p>
-        Todas as paragens, linhas, estações e concelhos, em listas. É daqui que saem as páginas que
-        funcionam sem mapa e sem JavaScript — e é o caminho de quem não pode ou não quer usar um
-        mapa. Para planear uma viagem, o <Link href={url(rid)}>mapa</Link> é mais rápido.
+        Todas as paragens, linhas, estações e concelhos, em listas — o caminho de quem não pode ou
+        não quer usar um mapa. Para planear uma viagem, o <Link href={url(rid)}>mapa</Link> é mais
+        rápido.
       </p>
       <MarcaDeDados regiao={rid} detalhe />
 
@@ -85,8 +96,8 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
           <h2 id="a-pedido">Transporte a pedido</h2>
           <div className="faixa a-pedido">
             <p>
-              Há circuitos que só circulam se alguém os reservar, em {pedido.zonas.length} zonas.{' '}
-              {pedido.reservas.prazo}.
+              Há circuitos que só circulam se alguém os reservar, em{' '}
+              {plural(pedido.zonas.length, 'zona', 'zonas')}. {pedido.reservas.prazo}.
             </p>
             <p className="cartao-accoes">
               {pedido.reservas.telefone && (
@@ -165,9 +176,21 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
 
       <section aria-labelledby="concelhos">
         <h2 id="concelhos">Concelhos</h2>
+        {/* «da <sigla>» cravava a contração no feminino, e «e 0 também servidos»
+            dizia-se de uma região sem nenhum. Uma autoridade que é um
+            município não tem municípios membros: diz quantos concelhos serve. */}
         <p>
-          {r.municipios_membros} municípios {r.autoridade?.sigla ? `da ${r.autoridade.sigla}` : ''},
-          e {r.concelhos_servidos - r.municipios_membros} também servidos pela rede.
+          {r.autoridade?.tipo === 'municipio'
+            ? `A rede serve ${plural(r.concelhos_servidos, 'concelho', 'concelhos')}.`
+            : `${plural(r.municipios_membros, 'município membro', 'municípios membros')}${
+                r.concelhos_servidos > r.municipios_membros
+                  ? ` e ${plural(
+                      r.concelhos_servidos - r.municipios_membros,
+                      'concelho também servido',
+                      'concelhos também servidos',
+                    )} pela rede`
+                  : ''
+              }.`}
         </p>
         <ul className="lista">
           {cs.map((c) => (
@@ -175,7 +198,7 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
               <Link href={urlRede(rid, `concelhos/${c.id}/`)}>
                 <span>{c.nome}</span>
                 <span className="secundario">
-                  {c.paragens} paragens
+                  {plural(c.paragens, 'paragem', 'paragens')}
                   {!c.membro && (
                     <>
                       <br />

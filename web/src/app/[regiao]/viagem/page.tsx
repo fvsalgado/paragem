@@ -22,9 +22,10 @@ export default async function Viagem({ params }: { params: Promise<{ regiao: str
   return (
     <>
       <h1>Como chegar</h1>
-      <p>
-        Escreve de onde partes e para onde vais. São {pontos.length} sítios {r.em}.
-      </p>
+      {/* Sem contagem: «São 2573 sítios» contava paragens, docas e praças, e
+          não os sítios que a procura também conhece — o mesmo sítio dava dois
+          números diferentes para a mesma coisa. */}
+      <p>Escreve de onde partes e para onde vais: uma paragem, uma estação ou um sítio {r.em}.</p>
       <DireccoesDaPagina
         pontos={pontos}
         regiao={rid}

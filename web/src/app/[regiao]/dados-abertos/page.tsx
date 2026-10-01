@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { dadosAbertos, exigirRegiao, lacunas } from '@/lib/dados';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { tamanho, type Descarga } from '@/lib/formato';
+import { aAutoridade } from '@/lib/prosa';
 
 export const metadata: Metadata = { title: 'Dados e licenças' };
 
@@ -128,29 +129,33 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
             <strong>Estes ficheiros reutilizam-se.</strong>{' '}
             {sobOdbl.length > 0 ? (
               <>
-                {daCasa.length > 0 ? `${sobOdbl.length} ` : ''}saem sob <strong>ODbL</strong> — pode
-                levá-los, usá-los e redistribuí-los, com duas condições: atribuir a origem, e
-                partilhar nos mesmos termos o que deles derivar. A atribuição vai dentro do próprio
-                ficheiro, para não depender de ninguém se lembrar dela: no{' '}
-                <code>attributions.txt</code> dos GTFS, num <code>ATRIBUICAO.txt</code> nos outros
-                zip, nos campos <code>attribution</code> e <code>license</code> dos JSON. Um CSV não
-                tem onde a guardar, e leva-a aqui, ao lado.
+                {daCasa.length > 0 ? `${sobOdbl.length} ` : ''}
+                {sobOdbl.length === 1 && daCasa.length > 0 ? 'sai' : 'saem'} sob{' '}
+                <strong>ODbL</strong> — pode levá-los, usá-los e redistribuí-los, com duas
+                condições: atribuir a origem, e partilhar nos mesmos termos o que deles derivar. A
+                atribuição vai dentro do próprio ficheiro, para não depender de ninguém se lembrar
+                dela: no <code>attributions.txt</code> dos GTFS, num <code>ATRIBUICAO.txt</code> nos
+                outros zip, nos campos <code>attribution</code> e <code>license</code> dos JSON. Um
+                CSV não tem onde a guardar, e leva-a aqui, ao lado.
               </>
             ) : null}
             {daCasa.length > 0 ? (
               <>
-                {sobOdbl.length > 0 ? ` Os outros ${daCasa.length} são ` : 'São '}obra da casa, sob
-                a licença do código — levam-se sem perguntar nada a ninguém.
+                {sobOdbl.length > 0
+                  ? daCasa.length === 1
+                    ? ' O outro é '
+                    : ` Os outros ${daCasa.length} são `
+                  : 'São '}
+                obra da casa, sob a licença do código — levam-se sem perguntar nada a ninguém.
               </>
             ) : null}
           </p>
           <p>
-            Aqui está{' '}
-            <strong>o que {r.autoridade?.nome ?? 'a autoridade de transportes'} gere</strong>. Os
-            feeds de outros operadores — o ferroviário, os expressos, as carreiras de operadores
-            vizinhos que entram na região — alimentam o mapa, as páginas de paragem e o planeador
-            deste sítio, mas não se descarregam daqui: quem os distribui é quem os produz, que é
-            também quem responde por eles estarem certos.
+            Aqui está <strong>o que {aAutoridade(r, 'com_artigo')} gere</strong>. Os feeds de outros
+            operadores — o ferroviário, os expressos, as carreiras de operadores vizinhos que entram
+            na região — alimentam o mapa, as páginas de paragem e o planeador deste sítio, mas não
+            se descarregam daqui: quem os distribui é quem os produz, que é também quem responde por
+            eles estarem certos.
           </p>
         </div>
       )}

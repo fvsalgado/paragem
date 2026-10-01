@@ -1089,8 +1089,11 @@ function meioDe(
 export function emPalavras(it: Itinerario): string {
   const pernas = it.legs.map((p) => {
     const nome = NOME_DO_MODO[p.mode] ?? p.mode;
-    if (p.mode === 'WALK') return `a pé ${minutos(p.duration)} minutos`;
-    if (p.mode === 'BICYCLE') return `de bicicleta ${minutos(p.duration)} minutos`;
+    // «a pé 1 minutos» era o que se ouvia em cada opção com uma perna curta.
+    const min = minutos(p.duration);
+    const quanto = `${min} ${min === 1 ? 'minuto' : 'minutos'}`;
+    if (p.mode === 'WALK') return `a pé ${quanto}`;
+    if (p.mode === 'BICYCLE') return `de bicicleta ${quanto}`;
     const linha = p.route?.shortName ? ` ${p.route.shortName}` : '';
     return `${nome.toLowerCase()}${linha} até ${p.to.name}`;
   });

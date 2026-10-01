@@ -114,6 +114,7 @@ export default function AppDoMapa({
   mosaicos,
   temMapa,
   nomeDaRegiao,
+  deDaRegiao,
   emDaRegiao,
   modos,
   temAPedido,
@@ -123,7 +124,10 @@ export default function AppDoMapa({
   servicosSemDatas = 0,
 }: {
   regiao: string;
+  /** «Serra da Pedra Alta», sem artigo — o que o menu põe ao lado da marca. */
   nomeDaRegiao: string;
+  /** «da Serra da Pedra Alta», «do Baixo Sável» — para o título do mapa. */
+  deDaRegiao: string;
   /** «na Serra da Pedra Alta», «no Baixo Sável» — escrito pela região, não colado aqui. */
   emDaRegiao: string;
   centro: [number, number];
@@ -421,8 +425,11 @@ export default function AppDoMapa({
           O Maps também não tem, e o Maps não é um serviço de uma autoridade
           pública portuguesa. Uma página sem h1 deixa quem usa leitor de ecrã
           sem saber onde está; um h1 que só se lê com leitor de ecrã resolve
-          isso sem roubar ecrã ao mapa. O teste apanhou a falta. */}
-        <h1 className="so-para-leitores">Mapa {nomeDaRegiao}</h1>
+          isso sem roubar ecrã ao mapa. O teste apanhou a falta.
+
+          E é a primeira frase que quem usa leitor de ecrã ouve: dizia «Mapa a
+          Serra da Pedra Alta». A contração vem feita da região. */}
+        <h1 className="so-para-leitores">Mapa {deDaRegiao}</h1>
 
         {/* A procura por cima do mapa, como no Maps. É o mesmo combobox das
           direções — teclado, região viva, Escape e Enter incluídos. Com as

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { estacoes, exigirModo, urlRede } from '@/lib/dados';
+import { plural } from '@/lib/prosa';
 
 export const metadata: Metadata = { title: 'Estações de comboio' };
 
@@ -12,12 +13,14 @@ export default async function Estacoes({ params }: { params: Promise<{ regiao: s
   return (
     <>
       <h1>Estações de comboio</h1>
-      <p>{es.length} estações na região.</p>
+      <p>{plural(es.length, 'estação', 'estações')} na região.</p>
       {sozinhas.length > 0 && (
         <div className="faixa alerta">
           <p>
             <strong>
-              {sozinhas.length} destas estações não têm paragem de autocarro a menos de 300 m.
+              {sozinhas.length === 1
+                ? 'Uma destas estações não tem paragem de autocarro a menos de 300 m.'
+                : `${sozinhas.length} destas estações não têm paragem de autocarro a menos de 300 m.`}
             </strong>{' '}
             Quem lá chegar de comboio tem de arranjar outra maneira de sair — e é melhor saber isso
             antes de apanhar o comboio do que depois.
@@ -32,7 +35,7 @@ export default async function Estacoes({ params }: { params: Promise<{ regiao: s
               <span className="secundario">
                 {e.sem_ligacao
                   ? 'sem autocarro perto'
-                  : `${e.paragens_perto.length} paragens perto`}
+                  : plural(e.paragens_perto.length, 'paragem perto', 'paragens perto')}
               </span>
             </Link>
           </li>

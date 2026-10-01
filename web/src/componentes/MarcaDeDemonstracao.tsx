@@ -1,4 +1,5 @@
 import { exigirRegiao } from '@/lib/dados';
+import { regiaoNoInicio } from '@/lib/prosa';
 
 /**
  * A faixa que diz que a rede não existe.
@@ -18,7 +19,9 @@ export default async function MarcaDeDemonstracao({ regiao: id }: { regiao: stri
   if (!r.demonstracao) return null;
   return (
     <p className="marca-demonstracao" role="note">
-      <strong>Demonstração.</strong> {r.nome_com_artigo} não existe: as paragens, as linhas e os
+      {/* O NOME ABRE A FRASE, e com maiúscula: era a primeira frase de todas
+          as páginas da demonstração, e começava por «Demonstração. a Serra». */}
+      <strong>Demonstração.</strong> {regiaoNoInicio(r)} não existe: as paragens, as linhas e os
       horários desta região são inventados, para mostrar o produto sem usar dados de ninguém.
     </p>
   );

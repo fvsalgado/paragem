@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { CartaoDeAviso } from '@/componentes/Avisos';
 import { avisosEmVigor } from '@/lib/avisos';
 import { exigirRegiao } from '@/lib/dados';
+import { aAutoridade } from '@/lib/prosa';
 
 export const metadata: Metadata = { title: 'Avisos' };
 
@@ -52,10 +53,8 @@ export default async function Avisos({ params }: { params: Promise<{ regiao: str
           avisos sem avisos nenhuns tem direito a saber se isso quer dizer «não
           há» ou «não é aqui que se sabe». */}
       <p className="secundario">
-        São os avisos dos serviços que{' '}
-        {r.autoridade.sigla || r.autoridade.nome || 'a autoridade de transportes'} gere. Para
-        alterações noutros serviços que aparecem neste sítio, o aviso é de quem os opera, e é no
-        sítio dele que sai a tempo.
+        São os avisos dos serviços geridos {aAutoridade(r, 'por')}. Para alterações noutros serviços
+        que aparecem neste sítio, o aviso é de quem os opera, e é no sítio dele que sai a tempo.
       </p>
       <p className="secundario">
         Os avisos publicados saem também em <a href="gtfs-rt/alerts.pb">GTFS-RT Service Alerts</a>,

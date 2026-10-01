@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { exigirRegiao, temMosaicos, url } from '@/lib/dados';
+import { aAutoridade } from '@/lib/prosa';
 import { motorDaRegiao } from '@/lib/enderecos';
 
 export const metadata: Metadata = { title: 'Privacidade' };
@@ -97,12 +98,8 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
       <p>
         A declaração de acessibilidade está em{' '}
         <Link href={url(rid, '/acessibilidade/')}>Acessibilidade</Link>. O contacto para questões de
-        privacidade é{' '}
-        {r.autoridade?.nome
-          ? `d${r.artigo === 'a' ? 'a' : 'o'} ${r.autoridade.nome}`
-          : 'da entidade que publica o sítio'}
-        , e ainda está por definir — como o de acessibilidade. Um contacto inventado é pior do que
-        nenhum.
+        privacidade é o {aAutoridade(r, 'de')}, e ainda está por definir — como o de acessibilidade.
+        Um contacto inventado é pior do que nenhum.
       </p>
     </>
   );

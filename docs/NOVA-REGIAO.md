@@ -33,6 +33,11 @@ e o guia é que está errado.
 
 Opcional ao nascer, sem bloquear nada:
 
+- os **artigos da autoridade e do operador** (`autoridade_de_transportes.artigo`
+  e `rede.operador_artigo`) — com eles, a frase que nomeia o cliente em todas
+  as páginas diz «gerida **pela** Comunidade Intermunicipal… e operada **pela**
+  …»; sem eles, diz o mesmo sem contração nenhuma («gestão: …; operação: …»,
+  «a autoridade de transportes (…)»). Não se adivinham, como o da região;
 - tarifário — sem ele, não se anuncia preço nenhum;
 - calendário escolar e feriados municipais — sem eles, o gerador projeta só o
   que consegue e o relatório conta o resto;

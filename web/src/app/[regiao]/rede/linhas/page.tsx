@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { exigirModo, linhas, operadorCurto, urlRede } from '@/lib/dados';
+import { plural } from '@/lib/prosa';
 import Distintivo from '@/componentes/Distintivo';
 
 export const metadata: Metadata = { title: 'Linhas' };
@@ -26,7 +27,7 @@ export default async function Linhas({ params }: { params: Promise<{ regiao: str
   return (
     <>
       <h1>Linhas</h1>
-      <p>{ls.length} linhas.</p>
+      <p>{plural(ls.length, 'linha', 'linhas')}.</p>
       <ul className="lista">
         {ls.map((l) => (
           <li key={l.id}>
@@ -37,7 +38,7 @@ export default async function Linhas({ params }: { params: Promise<{ regiao: str
                   <span className="secundario"> · {operadorCurto(l.operador)}</span>
                 )}
               </span>
-              <span className="secundario">{l.viagens} viagens</span>
+              <span className="secundario">{plural(l.viagens, 'viagem', 'viagens')}</span>
             </Link>
           </li>
         ))}
