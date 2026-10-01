@@ -22,6 +22,11 @@ node_modules/
 out/
 .vercel/
 
+# O processador do MapLibre, copiado do pacote instalado pelo
+# `web/scripts/copiar-maplibre.mjs`. Nunca se comete: a versão é a do
+# ficheiro de bloqueio, e uma cópia guardada ficava para trás na subida seguinte.
+web/public/maplibre/
+
 # Segredos — nunca commitar
 .env
 .env.local

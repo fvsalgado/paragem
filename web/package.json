@@ -5,9 +5,10 @@
   "description": "Paragem.pt — o sítio. Uma região por domínio; o que muda são os dados, não o código.",
   "scripts": {
     "dados": "node scripts/servir-dados.mjs ../build 4322",
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node scripts/copiar-maplibre.mjs && next dev",
+    "build": "node scripts/copiar-maplibre.mjs && next build",
     "servir": "next start -p 4321",
+    "postinstall": "node scripts/copiar-maplibre.mjs",
     "typecheck": "tsc --noEmit",
     "test:unidade": "node --test tests/*.test.mts",
     "test:a11y": "playwright test",
@@ -17,7 +18,7 @@
     "ligacoes": "node tests/ligacoes.mjs"
   },
   "dependencies": {
-    "maplibre-gl": "5.9.0",
+    "maplibre-gl": "6.11.2",
     "next": "15.5.25",
     "pmtiles": "4.4.0",
     "posthog-js": "^1.434.2",

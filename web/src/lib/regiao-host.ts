@@ -242,8 +242,13 @@ export type Decisao =
  * têm região. **Lista fechada**: uma pasta nova em `public/` tem de entrar
  * aqui, senão passa pela resolução de região e acaba num 404 com o ficheiro à
  * espera. O `/_next/` fica de fora pelo `matcher` do middleware.
+ *
+ * O `/maplibre/` é o processador do mapa, que a versão 6 do MapLibre pede à
+ * parte (`scripts/copiar-maplibre.mjs`). Fora desta lista, o pedido dele era
+ * reescrito para dentro de uma região e dava 404, e o mapa não desenhava nada
+ * em região nenhuma.
  */
-export const CAMINHOS_DE_FICHEIROS = ['/glifos/'] as const;
+export const CAMINHOS_DE_FICHEIROS = ['/glifos/', '/maplibre/'] as const;
 export const FICHEIROS_DE_RAIZ = [
   '/robots.txt',
   '/favicon.ico',

@@ -25,6 +25,11 @@ import type { PercursoGeo } from '@/lib/otp';
  * Node na construção, e a biblioteca toca no `window` ao ser importada. Um
  * `import` no topo deste ficheiro parte a construção inteira.
  *
+ * **E o processador é servido por nós.** Desde a versão 6, o trabalho pesado
+ * do mapa corre num Web Worker que é um módulo à parte, e a biblioteca não o
+ * encontra sozinha dentro de um pacote do Next. O `carregarMapLibre` diz-lhe
+ * onde está, e o `scripts/copiar-maplibre.mjs` põe-no lá.
+ *
  * **E os mosaicos são nossos.** `pmtiles://` é um protocolo que o MapLibre
  * aprende em execução: o ficheiro está no nosso servidor e o navegador pede-lhe
  * pedaços por intervalos de bytes. Não há servidor de mosaicos, não há chave
@@ -53,6 +58,26 @@ const NOMES_DOS_CONTROLOS = {
   'NavigationControl.ZoomOut': 'Afastar',
   'Popup.Close': 'Fechar',
 };
+
+/**
+ * A biblioteca, carregada uma vez e guardada.
+ *
+ * O `setWorkerUrl` tem de acontecer antes do primeiro `new Map` e nunca mais.
+ * Amarrá-lo ao carregamento garante isso sem uma bandeira à parte, e deixa
+ * dito num sítio só que isto se carrega uma vez.
+ *
+ * A versão vai no caminho, como a pasta onde o `copiar-maplibre.mjs` a põe:
+ * um processador antigo em cache nunca fala com um módulo principal novo.
+ */
+let biblioteca: Promise<typeof import('maplibre-gl')> | null = null;
+
+function carregarMapLibre(): Promise<typeof import('maplibre-gl')> {
+  biblioteca ??= import('maplibre-gl').then((modulo) => {
+    modulo.setWorkerUrl(`/maplibre/${modulo.getVersion()}/maplibre-gl-worker.mjs`);
+    return modulo;
+  });
+  return biblioteca;
+}
 
 /** Quem liga «menos movimento» no sistema está a pedir que nada deslize. */
 const semMovimento = () =>
@@ -110,7 +135,7 @@ export default function Mapa({
     (async () => {
       try {
         const [{ Map, NavigationControl, GeolocateControl, ScaleControl, addProtocol }, pm] =
-          await Promise.all([import('maplibre-gl'), import('pmtiles')]);
+          await Promise.all([carregarMapLibre(), import('pmtiles')]);
         if (!vivo || !caixa.current) return;
 
         // O protocolo `pmtiles://` ensina-se ao MapLibre uma vez por página.
@@ -434,7 +459,7 @@ export default function Mapa({
     let vivo = true;
     let marca: import('maplibre-gl').Marker | null = null;
     if (etiqueta) {
-      import('maplibre-gl').then(({ Marker }) => {
+      carregarMapLibre().then(({ Marker }) => {
         if (!vivo) return;
         const el = document.createElement('div');
         el.className = 'bolha-tempo';

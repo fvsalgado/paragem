@@ -18,6 +18,18 @@ const config = {
   poweredByHeader: false,
   trailingSlash: true,
   images: { unoptimized: true },
+  async headers() {
+    return [
+      // O processador do mapa leva a versão no caminho
+      // (`scripts/copiar-maplibre.mjs`): um caminho que muda com a versão pode
+      // ser imutável, e um Worker que não se volta a pedir é um mapa que abre
+      // mais depressa na segunda visita.
+      {
+        source: '/maplibre/:versao/:ficheiro',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+    ];
+  },
 };
 
 export default config;

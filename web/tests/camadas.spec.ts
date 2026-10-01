@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import type { Map as MapaLibre } from 'maplibre-gl';
 
 import { camadasDe } from '../src/lib/pontos-no-mapa.ts';
 import {
@@ -92,7 +93,7 @@ test('o botão desliga MESMO a camada do mapa', async ({ page }) => {
   const camada = CAMADAS[0];
   const visibilidade = () =>
     page.evaluate((tipo) => {
-      const m = (window as unknown as { __mapa?: maplibregl.Map }).__mapa;
+      const m = (window as unknown as { __mapa?: MapaLibre }).__mapa;
       return m?.getLayoutProperty(`pontos-${tipo}`, 'visibility') ?? null;
     }, camada.tipo);
 
@@ -120,7 +121,7 @@ test('cada modo tem a sua cor, e nenhuma se repete', async ({ page }) => {
   const tipos = CAMADAS.map((c) => c.tipo);
   const lerCores = () =>
     page.evaluate((tipos) => {
-      const m = (window as unknown as { __mapa?: maplibregl.Map }).__mapa;
+      const m = (window as unknown as { __mapa?: MapaLibre }).__mapa;
       if (!m) return [];
       return tipos
         .filter((t) => m.getLayer(`pontos-${t}`))

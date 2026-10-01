@@ -88,6 +88,9 @@ test('a API e os ficheiros passam tal como estão, em qualquer anfitrião', () =
     assert.deepEqual(decidir(host, '/api/revalidate/', MAPA), { tipo: 'passar' });
     assert.deepEqual(decidir(host, '/robots.txt', MAPA), { tipo: 'passar' });
     assert.deepEqual(decidir(host, '/glifos/Atkinson.woff2', MAPA), { tipo: 'passar' });
+    assert.deepEqual(decidir(host, '/maplibre/6.11.2/maplibre-gl-worker.mjs', MAPA), {
+      tipo: 'passar',
+    });
   }
 });
 
