@@ -184,6 +184,15 @@ export type Lacunas = {
   contagens: Record<string, number | string>;
 };
 
+/**
+ * Quantos serviços ainda não têm os dias em que circulam, do relatório de
+ * lacunas. Uma leitura só para a marca dos dados e para o planeador: os dois
+ * dizem a mesma coisa, e só a podem dizer quando ela é verdade.
+ */
+export function servicosSemDatas(l: Lacunas): number {
+  return Number(l.contagens?.['calendario.servicos_sem_datas'] ?? 0) || 0;
+}
+
 export type Descarga = {
   /** O caminho dentro de `descargas/`, que é o que a ligação usa. */
   caminho: string;

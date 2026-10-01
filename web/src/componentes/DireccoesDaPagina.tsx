@@ -23,11 +23,13 @@ export default function DireccoesDaPagina({
   regiao,
   modosDesligados = [],
   motorDaRegiao = '',
+  servicosSemDatas = 0,
 }: {
   pontos: Ponto[];
   regiao: string;
   modosDesligados?: string[];
   motorDaRegiao?: string;
+  servicosSemDatas?: number;
 }) {
   const [de, setDe] = useState<Ponto | null>(null);
   const [para, setPara] = useState<Ponto | null>(null);
@@ -53,6 +55,7 @@ export default function DireccoesDaPagina({
       paraInicial={para}
       modosDesligados={modosDesligados}
       motorDaRegiao={motorDaRegiao}
+      servicosSemDatas={servicosSemDatas}
     />
   );
 }

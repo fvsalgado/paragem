@@ -258,9 +258,9 @@ export function diaDaSemana(chave: string): string {
   return DIAS_DA_SEMANA[d.getUTCDay()];
 }
 
-/** «14/12/2025» — a data inteira, para os limites do período. */
+/** «14/12/2025», «01/01/2025» — a data inteira, para os limites do período. */
 export function dataCompleta(chave: string): string {
-  return `${+chave.slice(6, 8)}/${+chave.slice(4, 6)}/${chave.slice(0, 4)}`;
+  return `${chave.slice(6, 8)}/${chave.slice(4, 6)}/${chave.slice(0, 4)}`;
 }
 
 /** «5/10», ou «5/10/2027» quando o ano não é o de `referencia`. */

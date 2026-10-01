@@ -6,6 +6,8 @@ import {
   modos as lerModos,
   aPedido,
   caminhoDoModo,
+  lacunas,
+  servicosSemDatas,
   url,
   NOME_DOS_MODOS,
 } from '@/lib/dados';
@@ -87,6 +89,7 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
       modosDesligados={r.modos_desligados ?? []}
       motorDaRegiao={motorDaRegiao(rid)}
       disponibilidadeDaRegiao={disponibilidadeDaRegiao(rid)}
+      servicosSemDatas={servicosSemDatas(await lacunas(rid))}
     />
   );
 }

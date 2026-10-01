@@ -16,9 +16,19 @@ import {
   Trocar,
 } from './Icones';
 import { viagemProcurada, viagemSemResposta, motorIndisponivel } from '@/lib/medicao';
-import { dataDoCampo, horaDoRelogio } from '@/lib/dias';
-import type { Ponto } from '@/lib/formato';
-import { planear, capacidadeDe } from '@/lib/planeador';
+import {
+  calendarioDe,
+  chaveDoDia,
+  chaveMais,
+  dataCompleta,
+  dataDoCampo,
+  diaCurto,
+  diaDaSemana,
+  horaDoRelogio,
+  periodoDe,
+} from '@/lib/dias';
+import { seguro, type Ponto } from '@/lib/formato';
+import { planear, capacidadeDe, SemLigacao, type Capacidade } from '@/lib/planeador';
 import {
   MotorIndisponivel,
   minutos,
@@ -62,8 +72,16 @@ import {
 type Estado =
   | { tipo: 'parado' }
   | { tipo: 'a-procurar' }
-  | { tipo: 'resultados' }
-  | { tipo: 'erro'; mensagem: string };
+  /** `data` e `hora`: o que se perguntou, para o vazio poder dizer de quando é. */
+  | { tipo: 'resultados'; data: string; hora: string }
+  /**
+   * PORQUE é que não se procurou — e cada razão pede uma frase diferente.
+   * `sem-ligacao`: a grelha não chegou; `motor`: o motor de viagens não
+   * respondeu; `outro`: o resto. Nenhuma delas mostra ao público o código
+   * HTTP nem a mensagem do motor, em inglês: isso vai para a consola e para a
+   * medição, que é onde serve a alguém.
+   */
+  | { tipo: 'erro'; motivo: 'sem-ligacao' | 'motor' | 'outro' };
 
 type PorModo = Record<Modo, Itinerario[] | null>;
 const VAZIO: PorModo = { transporte: null, 'a-pe': null, bicicleta: null };
@@ -108,9 +126,16 @@ export default function Direccoes({
   aoEncolher,
   modosDesligados = [],
   motorDaRegiao = '',
+  servicosSemDatas = 0,
 }: {
   pontos: Ponto[];
   regiao: string;
+  /**
+   * Quantos serviços desta região ainda não têm os dias em que circulam
+   * (`lacunas.json`). O planeador não os conta — e só quando há algum é que
+   * o vazio o pode dizer. Dizê-lo sempre culpava um calendário já transcrito.
+   */
+  servicosSemDatas?: number;
   /** Os módulos que o painel desligou: o planeador não propõe as linhas deles. */
   modosDesligados?: string[];
   /** O endereço do motor desta região, lido no servidor. '' quando não há. */
@@ -246,7 +271,7 @@ export default function Direccoes({
       if (meu !== daVez.current) return;
       setPorModo((v) => ({ ...v, transporte: its }));
       setModo('transporte');
-      setEstado({ tipo: 'resultados' });
+      setEstado({ tipo: 'resultados', data: d, hora: h });
       // A primeira opção desenha-se logo: mostrar cinco cartões e um mapa
       // vazio é fazer a pergunta outra vez.
       desenhar(its, 0, 'automatico');
@@ -269,17 +294,27 @@ export default function Direccoes({
         transbordosMelhor: melhor ? transbordos(melhor) : null,
         linhas: melhor ? melhor.legs.map((p) => p.route?.shortName ?? '').filter(Boolean) : [],
       });
-      if (its.length === 0) {
+      // UMA PERGUNTA FORA DOS HORÁRIOS NÃO É UMA VIAGEM SEM RESPOSTA. O que
+      // se mede aqui é para quem planeia a rede saber que ligações faltam; um
+      // dia que já passou, ou para lá do que está carregado, não diz nada
+      // sobre a rede.
+      if (its.length === 0 && !foraDosHorarios(d)) {
         viagemSemResposta({ de: de.nome, para: para.nome, data: d, hora: h });
       }
     } catch (err) {
       if (meu !== daVez.current) return;
+      if (err instanceof SemLigacao) {
+        setEstado({ tipo: 'erro', motivo: 'sem-ligacao' });
+        return;
+      }
       const doMotor = err instanceof MotorIndisponivel;
-      setEstado({
-        tipo: 'erro',
-        mensagem: doMotor ? err.message : 'Não se conseguiu procurar a viagem.',
-      });
+      // O DETALHE VAI PARA QUEM O LÊ. «O motor de viagens respondeu 502» ou a
+      // mensagem do GraphQL em inglês não dizem nada a quem está na paragem;
+      // a quem mantém o motor dizem tudo — e chegam-lhe pela consola e pela
+      // medição.
+      console.error('planeador:', err instanceof Error ? err.message : err);
       if (doMotor) motorIndisponivel(err.message);
+      setEstado({ tipo: 'erro', motivo: doMotor ? 'motor' : 'outro' });
       return;
     }
 
@@ -344,22 +379,68 @@ export default function Direccoes({
   // no navegador: o protocolo da página — um endereço `http://` numa página
   // `https://` é bloqueado antes de ser tentado — e a grelha, que se vai
   // buscar.
-  const [semMotor, setSemMotor] = useState(false);
+  //
+  // E «não há resposta» tem duas causas que se dizem de maneira oposta (ver
+  // `Capacidade.falta`): a região não publica a grelha, ou a grelha não
+  // chegou. A segunda dizia-se como a primeira — «esta região ainda não tem
+  // horários» a quem só tinha perdido a rede um momento.
+  const [falta, setFalta] = useState<Capacidade['falta'] | null>(null);
   const [porqueEstimado, setPorqueEstimado] = useState<string | null>(null);
+  const [tentativa, setTentativa] = useState(0);
   useEffect(() => {
     let vivo = true;
     capacidadeDe(regiao, motor).then((c) => {
       if (!vivo) return;
-      setSemMotor(!c.modos.length);
+      setFalta(c.falta ?? null);
       setPorqueEstimado(c.aPeExato ? null : c.porque);
+      // Voltou: a pergunta que ficou por responder faz-se agora.
+      if (tentativa > 0 && !c.falta) procurar(true);
     });
     return () => {
       vivo = false;
     };
-  }, [regiao, motor]);
+    // `procurar` muda a cada renderização; o que decide é a tentativa.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regiao, motor, tentativa]);
+
+  /** Outra vez, com um toque: a grelha, o calendário e a procura. */
+  function tentarDeNovo() {
+    setFalta(null);
+    setEstado({ tipo: 'parado' });
+    setTentativa((n) => n + 1);
+  }
+
+  // O PERÍODO DOS HORÁRIOS, da mesma tabela de dias que as paragens usam. É
+  // o que distingue «não há ligação neste dia» de «não temos os horários
+  // desse dia» — duas respostas opostas para quem está a planear, que até
+  // aqui eram a mesma.
+  const [periodo, setPeriodo] = useState<{ inicio: string; fim: string } | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    calendarioDe(regiao).then((c) => vivo && setPeriodo(c ? periodoDe(c) : null));
+    return () => {
+      vivo = false;
+    };
+  }, [regiao, tentativa]);
+
+  /** `AAAA-MM-DD` fora do período carregado — antes do princípio ou depois do fim. */
+  function foraDosHorarios(dia: string): boolean {
+    const k = dia.replace(/-/g, '');
+    return !!periodo && (k < periodo.inicio || k > periodo.fim);
+  }
+
   const quandoLegivel =
     quando === 'agora' ? 'Partir agora' : `Partir às ${hora}, ${diaLegivel(data)}`;
   const noMapa = variante === 'mapa';
+
+  /**
+   * O que a folha tem para dizer quando não há opções para mostrar — UMA
+   * frase, e não duas. Com a grelha a falhar, a folha dizia ao mesmo tempo
+   * «esta região ainda não tem horários» e «não deu para procurar», e as duas
+   * estavam erradas.
+   */
+  const problema: 'sem-horarios' | 'sem-ligacao' | 'motor' | 'outro' | null =
+    falta ?? (estado.tipo === 'erro' ? estado.motivo : null);
 
   return (
     <>
@@ -561,10 +642,15 @@ export default function Direccoes({
               <div className="quando">
                 <div>
                   <label htmlFor="data">Dia</label>
+                  {/* OS LIMITES SÃO OS DOS HORÁRIOS CARREGADOS: escolher
+                      um dia para lá deles dava «sem viagem», e o que
+                      acontece é não termos o horário desse dia. */}
                   <input
                     id="data"
                     type="date"
                     value={data}
+                    min={periodo ? comHifens(periodo.inicio) : undefined}
+                    max={periodo ? comHifens(periodo.fim) : undefined}
                     onChange={(e) => setData(e.target.value)}
                   />
                 </div>
@@ -582,47 +668,100 @@ export default function Direccoes({
           </fieldset>
         )}
 
-        {semMotor && (
+        {problema === 'sem-horarios' && (
           // Dizer «não há viagem» quando o que há é um planeador sem dados é
-          // mentir a quem está à espera do autocarro.
+          // mentir a quem está à espera do autocarro. E as páginas das LINHAS
+          // não têm horas: o que se propõe são as das paragens.
           <div className="faixa alerta">
             <p>
-              <strong>Esta região ainda não tem horários carregados.</strong> As páginas de cada
-              paragem e de cada linha funcionam na mesma — têm os horários todos.
+              <strong>Esta região ainda não tem horários para o planeador.</strong> As páginas de
+              cada paragem mostram as horas que lá passam.
             </p>
+            <AsDuasParagens de={de} para={para} />
           </div>
         )}
 
         {/* O resultado chega depois. Sem isto, quem não vê a página não sabe
             que chegou — nem que está a demorar. */}
         <div aria-live="polite" aria-busy={estado.tipo === 'a-procurar'}>
-          {estado.tipo === 'parado' && !semMotor && (!de || !para) && (
+          {estado.tipo === 'parado' && !problema && (!de || !para) && (
             <p className="secundario">Escolhe de onde partes e para onde vais.</p>
           )}
-          {estado.tipo === 'a-procurar' && <p>A procurar viagens…</p>}
+          {estado.tipo === 'a-procurar' && !problema && <p>A procurar viagens…</p>}
 
-          {estado.tipo === 'erro' && (
+          {/* FALTA DE REDE NÃO É FALTA DE HORÁRIOS. A grelha que não chegou
+              diz-se assim, com uma maneira de tentar outra vez. */}
+          {problema === 'sem-ligacao' && (
             <div className="faixa alerta">
-              <h3>Não deu para procurar</h3>
-              <p>{estado.mensagem}</p>
+              <h3>Não foi possível descarregar os horários</h3>
+              <p>
+                Pode ser da ligação à Internet. Não quer dizer que não haja viagem: tenta de novo
+                daqui a pouco.
+              </p>
+              <p>
+                <button type="button" className="botao" onClick={tentarDeNovo}>
+                  Tentar de novo
+                </button>
+              </p>
             </div>
           )}
 
-          {estado.tipo === 'resultados' && itinerarios.length === 0 && (
-            <div className="faixa">
-              <h3>Sem viagem neste dia</h3>
+          {(problema === 'motor' || problema === 'outro') && (
+            <div className="faixa alerta">
+              <h3>O planeador não respondeu</h3>
+              <p>Tenta daqui a pouco. Os horários de cada paragem continuam a funcionar.</p>
+              <AsDuasParagens de={de} para={para} />
               <p>
-                Não há caminho de transporte público entre estes dois sítios no dia escolhido. Pode
-                ser mesmo assim — nem todos os sítios têm ligação todos os dias — ou pode ser do
-                calendário escolar, que ainda não está transcrito e deixa parte dos serviços sem
-                dias.
-              </p>
-              <p>
-                O <a href="/rede/paragens/">horário de cada paragem</a> mostra tudo o que lá passa,
-                inclusive o que o planeador ainda não sabe datar.
+                <button type="button" className="botao" onClick={tentarDeNovo}>
+                  Tentar de novo
+                </button>
               </p>
             </div>
           )}
+
+          {estado.tipo === 'resultados' &&
+            itinerarios.length === 0 &&
+            !problema &&
+            (foraDosHorarios(estado.data) ? (
+              // FORA DO PERÍODO não é «sem ligação»: é não termos o horário
+              // desse dia, e quem planeia tem de saber a diferença.
+              <div className="faixa">
+                <h3>Não temos os horários desse dia</h3>
+                <p>
+                  Os horários carregados vão de {dataCompleta(periodo!.inicio)} a{' '}
+                  {dataCompleta(periodo!.fim)}. Escolhe um dia nesse período.
+                </p>
+              </div>
+            ) : estado.data < dataDoCampo(new Date()) ? (
+              <DiaPassado
+                dia={estado.data}
+                fim={periodo?.fim ?? null}
+                aoEscolher={(d) => {
+                  setQuando('marcado');
+                  setData(d);
+                }}
+              />
+            ) : (
+              <div className="faixa">
+                <h3>Sem viagem a partir desta hora</h3>
+                <p>
+                  Não encontrámos caminho de transporte público entre estes dois sítios a partir das{' '}
+                  {estado.hora} de {diaDaSemana(estado.data.replace(/-/g, ''))},{' '}
+                  {diaCurto(estado.data.replace(/-/g, ''))}. Pode ser mesmo assim: nem todos os
+                  sítios têm ligação todos os dias, nem a todas as horas.
+                </p>
+                {servicosSemDatas > 0 && (
+                  <p>
+                    {servicosSemDatas === 1
+                      ? 'Um serviço desta região ainda não tem'
+                      : `${servicosSemDatas} serviços desta região ainda não têm`}{' '}
+                    os dias em que circula{servicosSemDatas === 1 ? '' : 'm'}, e o planeador não{' '}
+                    {servicosSemDatas === 1 ? 'o conta' : 'os conta'}.
+                  </p>
+                )}
+                <AsDuasParagens de={de} para={para} />
+              </div>
+            ))}
 
           {estado.tipo === 'resultados' && itinerarios.length > 0 && (
             <>
@@ -777,6 +916,93 @@ export default function Direccoes({
         </div>
       </section>
     </>
+  );
+}
+
+/** `AAAAMMDD` → `AAAA-MM-DD`, a forma de um campo de data. */
+const comHifens = (k: string) => `${k.slice(0, 4)}-${k.slice(4, 6)}-${k.slice(6, 8)}`;
+
+/** A página de uma paragem ou de uma estação no catálogo; `null` para tudo o resto. */
+function paginaDoPonto(p: Ponto | null): string | null {
+  if (!p || !p.id) return null;
+  if (p.tipo === 'paragem') return `/rede/paragens/${seguro(p.id)}/`;
+  if (p.tipo === 'estacao') return `/rede/estacoes/${seguro(p.id)}/`;
+  return null;
+}
+
+/**
+ * As páginas das duas pontas, quando são paragens ou estações.
+ *
+ * Mandava-se para o índice por letra, e quem lá chegava tinha de procurar
+ * outra vez, pela inicial, a paragem que estava escrita no campo de cima. A
+ * página da paragem tem as horas todas; a da linha não as tem, e por isso não
+ * se propõe.
+ */
+function AsDuasParagens({ de, para }: { de: Ponto | null; para: Ponto | null }) {
+  const vistas = new Set<string>();
+  const pontas = [de, para].flatMap((p) => {
+    const href = paginaDoPonto(p);
+    if (!href || !p || vistas.has(href)) return [];
+    vistas.add(href);
+    return [{ href, nome: p.nome }];
+  });
+  if (!pontas.length) {
+    return (
+      <p>
+        O <a href="/rede/paragens/">horário de cada paragem</a> mostra tudo o que lá passa.
+      </p>
+    );
+  }
+  return (
+    <p>
+      {pontas.map((x, i) => (
+        <Fragment key={x.href}>
+          {i > 0 && ' · '}
+          <a href={x.href}>Horário de {x.nome}</a>
+        </Fragment>
+      ))}
+    </p>
+  );
+}
+
+/**
+ * Um dia que já passou.
+ *
+ * Respondia «sem viagem neste dia», que é a frase que faz desistir — e o que
+ * aconteceu foi outra coisa: escolheu-se um dia que já foi. Diz-se isso, e
+ * oferece-se o mesmo dia da semana a partir de hoje, que é quase sempre o
+ * que se queria ver (dentro do que os horários carregados cobrem).
+ */
+function DiaPassado({
+  dia,
+  fim,
+  aoEscolher,
+}: {
+  dia: string;
+  fim: string | null;
+  aoEscolher: (dia: string) => void;
+}) {
+  const hoje = chaveDoDia(new Date());
+  let k = dia.replace(/-/g, '');
+  while (k < hoje) k = chaveMais(k, 7);
+  const nome = diaDaSemana(k);
+  const masculino = nome === 'sábado' || nome === 'domingo';
+  const rotulo =
+    k === hoje
+      ? `Procurar hoje, ${nome}, ${diaCurto(k)}`
+      : `Procurar ${masculino ? 'no próximo' : 'na próxima'} ${nome}, ${diaCurto(k)}`;
+  return (
+    <div className="faixa">
+      <h3>Esse dia já passou</h3>
+      <p>Escolhe um dia a partir de hoje.</p>
+      {(!fim || k <= fim) && (
+        <p>
+          <button type="button" className="botao" onClick={() => aoEscolher(comHifens(k))}>
+            {rotulo}
+          </button>
+        </p>
+      )}
+    </div>
   );
 }
 

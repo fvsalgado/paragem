@@ -120,6 +120,7 @@ export default function AppDoMapa({
   modosDesligados = [],
   motorDaRegiao = '',
   disponibilidadeDaRegiao = '',
+  servicosSemDatas = 0,
 }: {
   regiao: string;
   nomeDaRegiao: string;
@@ -135,6 +136,8 @@ export default function AppDoMapa({
   modosDesligados?: string[];
   motorDaRegiao?: string;
   disponibilidadeDaRegiao?: string;
+  /** Quantos serviços ainda não têm os dias em que circulam — ver `Direccoes`. */
+  servicosSemDatas?: number;
 }) {
   const [menu, setMenu] = useState(false);
 
@@ -533,6 +536,7 @@ export default function AppDoMapa({
             pontos={pontos}
             modosDesligados={modosDesligados}
             motorDaRegiao={motorDaRegiao}
+            servicosSemDatas={servicosSemDatas}
             paraInicial={aIr}
             variante="mapa"
             encolhido={encolhido}
