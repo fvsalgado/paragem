@@ -78,7 +78,8 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
   return (
     <AppDoMapa
       regiao={rid}
-      nomeDaRegiao={r.nome_com_artigo}
+      nomeDaRegiao={r.nome}
+      deDaRegiao={r.de}
       emDaRegiao={r.em}
       centro={centro}
       pontos={pontos}

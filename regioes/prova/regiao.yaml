@@ -37,6 +37,10 @@ demonstracao: true
 
 autoridade_de_transportes:
   nome: Comunidade Intermunicipal da Serra da Pedra Alta
+  # O artigo do nome da autoridade — «a» — para a frase que a nomeia sair
+  # com a contração certa («gerida pela …»). Opcional: sem ele, as frases
+  # dizem «a autoridade de transportes (…)». Não se adivinha, como o da região.
+  artigo: a
   sigla: CISPA
   tipo: cim
   url: https://serra-da-pedra-alta.example.org
@@ -48,6 +52,8 @@ rede:
   nome: Rede Alta
   url: https://rede-alta.example.org
   operador: Alta Transportes
+  # O artigo do operador, pela mesma razão: «operada pela …».
+  operador_artigo: a
 
 dominio_env: PARAGEM_DOMINIO_PROVA
 

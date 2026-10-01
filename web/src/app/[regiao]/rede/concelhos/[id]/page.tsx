@@ -15,6 +15,7 @@ import {
   NAO_ENCONTRADA,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
+import { aAutoridade, plural } from '@/lib/prosa';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -78,11 +79,19 @@ export default async function Concelho({
   return (
     <>
       <h1>{c.nome}</h1>
+      {/* «Município da <sigla>» cravava a contração no feminino: uma sigla
+          masculina, ou uma autoridade que é ela própria um município, saía
+          com o artigo errado. A contração vem da declaração da autoridade, ou
+          fica com «a autoridade de transportes» (`prosa.ts`). */}
       <p>
         Distrito {c.distrito}.{' '}
-        {c.membro
-          ? `Município ${r.autoridade?.sigla ? `da ${r.autoridade.sigla}` : 'da autoridade de transportes'}.`
-          : `Não é município ${r.autoridade?.sigla ? `da ${r.autoridade.sigla}` : 'da autoridade'}, e a rede serve-o na mesma.`}
+        {r.autoridade?.tipo === 'municipio'
+          ? c.membro
+            ? ''
+            : 'Fica fora do município, e a rede serve-o na mesma.'
+          : c.membro
+            ? `Município membro ${aAutoridade(r, 'de')}.`
+            : `Não é município membro ${aAutoridade(r, 'de')}, e a rede serve-o na mesma.`}
       </p>
       <MarcaDeDados regiao={rid} />
 
@@ -90,18 +99,20 @@ export default async function Concelho({
       <ul className="lista">
         <li>
           <span style={{ padding: '0.6rem 0.25rem', display: 'block' }}>
-            {ps.length} paragens de autocarro
+            {plural(ps.length, 'paragem de autocarro', 'paragens de autocarro')}
           </span>
         </li>
         <li>
           <span style={{ padding: '0.6rem 0.25rem', display: 'block' }}>
-            {linhasDaqui.length} linhas passam aqui
+            {linhasDaqui.length === 1
+              ? '1 linha passa aqui'
+              : `${plural(linhasDaqui.length, 'linha', 'linhas')} passam aqui`}
           </span>
         </li>
         {r.modos.includes('comboio') && (
           <li>
             <span style={{ padding: '0.6rem 0.25rem', display: 'block' }}>
-              {es.length} estações de comboio
+              {plural(es.length, 'estação de comboio', 'estações de comboio')}
             </span>
           </li>
         )}
@@ -134,7 +145,9 @@ export default async function Concelho({
           <div className="faixa a-pedido">
             <p>
               {zona.circuitos.length
-                ? `${zona.circuitos.length} circuitos na zona ${zona.nome}, que só circulam se alguém os reservar.`
+                ? zona.circuitos.length === 1
+                  ? `1 circuito na zona ${zona.nome}, que só circula se alguém o reservar.`
+                  : `${plural(zona.circuitos.length, 'circuito', 'circuitos')} na zona ${zona.nome}, que só circulam se alguém os reservar.`
                 : `Há transporte a pedido na zona ${zona.nome}, que só circula se alguém o reservar. Os circuitos ainda não estão levantados.`}
             </p>
             <p className="cartao-accoes">

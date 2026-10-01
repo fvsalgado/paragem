@@ -8,6 +8,7 @@ import {
   estacoes,
   origemDaRegiao,
 } from '@/lib/dados';
+import { redeEQuemAGere } from '@/lib/prosa';
 
 /**
  * A porta de entrada do PRODUTO, que não é a porta de entrada de nenhuma
@@ -104,10 +105,7 @@ export default async function Produto() {
                       o produto a funcionar sem usar dados de ninguém.
                     </p>
                   ) : (
-                    <p>
-                      Rede gerida por {r.autoridade?.nome ?? 'uma autoridade de transportes'}
-                      {r.rede?.operador ? `, com operação de ${r.rede.operador}` : ''}.
-                    </p>
+                    <p>{redeEQuemAGere(r)}.</p>
                   )}
                   <dl className="numeros">
                     <div>

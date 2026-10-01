@@ -304,11 +304,14 @@ class Sitio:
             # escritos, porque nenhuma heurística acerta nos topónimos
             # portugueses.
             "nome_com_artigo": r.nome_com_artigo,
+            "nome_com_artigo_no_inicio": r.nome_com_artigo_no_inicio,
             "de": r.com("de"),
             "em": r.com("em"),
             "a": r.com("a"),
-            "autoridade": r.autoridade,
-            "rede": r.rede,
+            # A autoridade e a rede tal como declaradas, mais as frases feitas
+            # quando a região declara os artigos (`Regiao.prosa_da_autoridade`).
+            "autoridade": {**r.autoridade, **r.prosa_da_autoridade},
+            "rede": {**r.rede, **r.prosa_do_operador},
             "dominio_env": r.dominio_env,
             # O domínio canónico, declarado na região. É o que o middleware
             # por host vai comparar com a linha da base (docs/BASE-DE-DADOS.md).

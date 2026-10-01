@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { exigirRegiao, url } from '@/lib/dados';
+import { redeEQuemAGere } from '@/lib/prosa';
 
 export default async function Rodape({ regiao: id }: { regiao: string }) {
   const r = await exigirRegiao(id);
@@ -22,11 +23,10 @@ export default async function Rodape({ regiao: id }: { regiao: string }) {
             </li>
           </ul>
         </nav>
-        <p>
-          Horários planeados. {r.rede?.nome ? `Rede ${r.rede.nome}` : 'Rede'} gerida por{' '}
-          {r.autoridade?.nome ?? 'a autoridade de transportes'}
-          {r.rede?.operador ? `, com operação de ${r.rede.operador}` : ''}.
-        </p>
+        {/* A FRASE QUE NOMEIA O CLIENTE, em todas as páginas. Dizia «Rede Rede
+            Alta gerida por Comunidade Intermunicipal…, com operação de …»:
+            sem os artigos e com a palavra repetida (`prosa.ts`). */}
+        <p>Horários planeados. {redeEQuemAGere(r)}.</p>
         {/* A ODbL não é uma boa maneira: é uma obrigação que segue a obra
             derivada. Os mapas e as estações de bicicletas vêm do
             OpenStreetMap. */}

@@ -170,6 +170,48 @@ class Regiao:
     def nome_com_artigo(self) -> str:
         return f"{_CONTRACOES[self.artigo]['artigo']} {self.nome}"
 
+    @property
+    def nome_com_artigo_no_inicio(self) -> str:
+        """«A Serra da Pedra Alta», «O Baixo Sável» — para ABRIR uma frase.
+
+        O `nome_com_artigo` entrava tal e qual no princípio de frases, e a
+        primeira frase da faixa da demonstração era «Demonstração. a Serra da
+        Pedra Alta não existe». A maiúscula é tipografia e não contração, mas
+        sai daqui pela mesma razão das outras formas: a prosa vem feita, e o
+        sítio não decide nada sobre o nome de uma região.
+        """
+        n = self.nome_com_artigo
+        return n[:1].upper() + n[1:]
+
+    # A AUTORIDADE E O OPERADOR TAMBÉM TÊM ARTIGO, e nenhuma regra o adivinha:
+    # «a Comunidade Intermunicipal», «o Município de Sável», «a Alta
+    # Transportes». Sem ele, a frase que nomeia o cliente — no rodapé de todas
+    # as páginas — dizia «gerida por Comunidade Intermunicipal…, com operação
+    # de …», sem artigo nenhum. É OPCIONAL: a região que não o declare continua
+    # a ter frases certas, noutra forma («pela autoridade de transportes
+    # (…)»), e o sítio escolhe pela presença destas chaves.
+
+    @property
+    def prosa_da_autoridade(self) -> dict[str, str]:
+        """«a …», «da …», «pela …» — só quando a região declara o artigo."""
+        artigo, nome = self.autoridade.get("artigo"), self.autoridade.get("nome")
+        if artigo not in _CONTRACOES or not nome:
+            return {}
+        c = _CONTRACOES[artigo]
+        return {
+            "com_artigo": f"{c['artigo']} {nome}",
+            "de": f"{c['de']} {nome}",
+            "por": f"{c['por']} {nome}",
+        }
+
+    @property
+    def prosa_do_operador(self) -> dict[str, str]:
+        """«pela Alta Transportes» — só quando a região declara o artigo do operador."""
+        artigo, nome = self.rede.get("operador_artigo"), self.rede.get("operador")
+        if artigo not in _CONTRACOES or not nome:
+            return {}
+        return {"operador_por": f"{_CONTRACOES[artigo]['por']} {nome}"}
+
     # --- território ------------------------------------------------------
 
     @property
@@ -245,6 +287,19 @@ class Regiao:
                 f"{pasta.name}: o artigo tem de ser 'o', 'a', 'os' ou 'as' e é {artigo!r}. "
                 "Não se adivinha: é «o» Médio Tejo e «a» Lezíria, e nenhuma regra acerta nos dois."
             )
+
+        # Os artigos da autoridade e do operador são opcionais — mas, se
+        # declarados, têm de ser artigos. Um «A» ou um «da» passava ao sítio
+        # como se fosse um, e a frase saía com a contração errada.
+        for onde, chave in (
+            (d.get("autoridade_de_transportes") or {}, "artigo"),
+            (d.get("rede") or {}, "operador_artigo"),
+        ):
+            if chave in onde and onde[chave] not in _CONTRACOES:
+                raise ErroDeRegiao(
+                    f"{pasta.name}: `{chave}` tem de ser 'o', 'a', 'os' ou 'as' e é "
+                    f"{onde[chave]!r}."
+                )
 
         inclui = d.get("inclui") or {}
 

@@ -45,10 +45,16 @@ export async function generateMetadata({
   // nenhum no separador.
   const r = await regiao(id);
   if (!r) return {};
+  // O TÍTULO DIZ A REGIÃO PRIMEIRO, E A MARCA UMA VEZ. O `default` levava
+  // «Paragem.pt —» e o modelo da raiz acrescentava «· Paragem.pt» outra vez:
+  // «Paragem.pt — a Serra da Pedra Alta · Paragem.pt», com o artigo em
+  // minúscula a abrir. Agora o início é «Transportes da Serra da Pedra Alta ·
+  // Paragem.pt» (o `default` passa pelo modelo da raiz), e cada página diz o
+  // que é e de onde: «Tarifário · Serra da Pedra Alta · Paragem.pt».
   return {
     title: {
-      default: `Paragem.pt — ${r.nome_com_artigo}`,
-      template: `%s · Paragem.pt`,
+      default: `Transportes ${r.de}`,
+      template: `%s · ${r.nome} · Paragem.pt`,
     },
     description: `Todos os transportes ${r.de}, num sítio só.`,
   };

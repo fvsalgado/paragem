@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { exigirModo, paragens, concelhos, urlRede } from '@/lib/dados';
 import { letraDe, LETRAS, paraUrl } from '@/lib/letras';
+import { plural } from '@/lib/prosa';
 
 export const metadata: Metadata = { title: 'Paragens' };
 
@@ -24,7 +25,7 @@ export default async function Paragens({ params }: { params: Promise<{ regiao: s
   return (
     <>
       <h1>Paragens</h1>
-      <p>{ps.length} paragens. Procura pela inicial, ou pelo concelho.</p>
+      <p>{plural(ps.length, 'paragem', 'paragens')}. Procura pela inicial, ou pelo concelho.</p>
 
       <h2>Por inicial</h2>
       <ul className="lista">

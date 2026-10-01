@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { exigirRegiao, temMosaicos, url } from '@/lib/dados';
+import { aAutoridade } from '@/lib/prosa';
 
 export const metadata: Metadata = { title: 'Acessibilidade' };
 
@@ -87,9 +88,9 @@ export default async function Acessibilidade({ params }: { params: Promise<{ reg
       <div className="faixa alerta">
         <p>
           <strong>Por preencher.</strong> O contacto para comunicar problemas de acessibilidade e o
-          mecanismo de reclamação previsto no artigo 9.º do Decreto-Lei n.º 83/2018 são{' '}
-          {r.autoridade?.nome ?? 'da entidade que publicar o sítio'} a definir. Uma declaração com
-          um contacto inventado é pior do que nenhuma: quem reclamar fica à espera.
+          mecanismo de reclamação previsto no artigo 9.º do Decreto-Lei n.º 83/2018 estão por
+          definir {aAutoridade(r, 'por')}. Uma declaração com um contacto inventado é pior do que
+          nenhuma: quem reclamar fica à espera.
         </p>
       </div>
     </>

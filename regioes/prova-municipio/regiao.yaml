@@ -37,6 +37,10 @@ demonstracao: true
 
 autoridade_de_transportes:
   nome: Município de Sável
+  # O artigo do nome da autoridade — «o» — para a frase que a nomeia sair
+  # com a contração certa («gerida pelo …»). Opcional: sem ele, as frases
+  # dizem «a autoridade de transportes (…)». Não se adivinha, como o da região.
+  artigo: o
   sigla: CMS
   tipo: municipio
   url: https://savel.example.org
@@ -45,6 +49,8 @@ rede:
   nome: Sável Bus
   url: https://savel-bus.example.org
   operador: Câmara Municipal de Sável
+  # O artigo do operador, pela mesma razão: «operada pela …».
+  operador_artigo: a
 
 dominio_env: PARAGEM_DOMINIO_PROVA_MUNICIPIO
 

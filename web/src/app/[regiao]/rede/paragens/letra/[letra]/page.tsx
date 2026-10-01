@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { exigirModo, paragens, concelhos, urlRede, urlDaParagem } from '@/lib/dados';
+import { plural } from '@/lib/prosa';
 import { letraDe, LETRAS, paraUrl, daUrl } from '@/lib/letras';
 
 /**
@@ -42,7 +43,8 @@ export default async function PorLetra({
     <>
       <h1>{l === '#' ? 'Paragens que começam por número' : `Paragens em ${l}`}</h1>
       <p>
-        {ps.length} paragens. <Link href={urlRede(rid, 'paragens/')}>Ver todas as iniciais</Link>.
+        {plural(ps.length, 'paragem', 'paragens')}.{' '}
+        <Link href={urlRede(rid, 'paragens/')}>Ver todas as iniciais</Link>.
       </p>
       <ul className="lista">
         {ps.map((p) => (
