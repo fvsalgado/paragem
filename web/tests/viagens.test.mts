@@ -224,15 +224,25 @@ test('à noite mostra-se a direta de amanhã, e não só o desvio de hoje', () =
  * PERGUNTADO: quem marca para sábado tem de ler «domingo», não «amanhã».
  */
 test('o dia aparece ao lado da hora, e só quando muda', () => {
-  const q = Date.UTC(2026, 8, 25, 18, 0);
-  assert.equal(diaDe(Date.UTC(2026, 8, 25, 23, 30), q), '', 'no mesmo dia não se escreve nada');
-  assert.equal(
-    diaDe(Date.UTC(2026, 8, 26, 0, 30), q),
-    'amanhã',
-    'trinta minutos depois, e é amanhã',
-  );
-  assert.equal(diaDe(Date.UTC(2026, 8, 24, 23, 0), q), 'ontem');
-  assert.match(diaDe(Date.UTC(2026, 8, 28, 9, 0), q), /28/, 'mais longe, escreve-se a data');
+  // As horas abaixo são em UTC, e o `diaDe` vê o dia no fuso do processo —
+  // o de quem perguntou. Fixa-se o fuso aqui, e não se confia no da máquina:
+  // em Lisboa, no verão, as 23h30 UTC já são o dia seguinte, e o teste
+  // passava no CI e falhava no portátil de quem o escreveu.
+  const antes = process.env.TZ;
+  process.env.TZ = 'UTC';
+  try {
+    const q = Date.UTC(2026, 8, 25, 18, 0);
+    assert.equal(diaDe(Date.UTC(2026, 8, 25, 23, 30), q), '', 'no mesmo dia não se escreve nada');
+    assert.equal(
+      diaDe(Date.UTC(2026, 8, 26, 0, 30), q),
+      'amanhã',
+      'trinta minutos depois, e é amanhã',
+    );
+    assert.equal(diaDe(Date.UTC(2026, 8, 24, 23, 0), q), 'ontem');
+    assert.match(diaDe(Date.UTC(2026, 8, 28, 9, 0), q), /28/, 'mais longe, escreve-se a data');
+  } finally {
+    process.env.TZ = antes;
+  }
 });
 
 // O interruptor do painel chega até aqui: as viagens das linhas de um modo

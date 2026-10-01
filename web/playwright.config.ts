@@ -34,6 +34,13 @@ const DADOS = process.env.PARAGEM_DADOS ?? 'http://127.0.0.1:4322';
 
 export default defineConfig({
   testDir: './tests',
+  // SÓ AS ESPECIFICAÇÕES DO NAVEGADOR. Sem isto o Playwright apanhava também
+  // os `*.test.mts`, que são do `node:test`: carregava-os todos no mesmo
+  // processo para os listar, e os testes deles corriam lá dentro, uns a seguir
+  // aos outros. Um que mudasse o `TZ` do processo mudava-o para os seguintes,
+  // e o resultado dependia da ordem. Esses correm no `npm run test:unidade`,
+  // cada ficheiro no seu processo.
+  testMatch: '**/*.spec.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 0,

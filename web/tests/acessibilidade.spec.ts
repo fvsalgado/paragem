@@ -18,12 +18,14 @@ import {
   buscaDeUmaParagem,
   concelhoComMaisParagens,
   descargasParaConsulta,
+  fusoDaRegiao,
   linhaComMaisViagens,
   ondeHaParagens,
   paragemComMaisPartidas,
   tarifasPorConfirmar,
   temAPedido,
   temModo,
+  umaPartidaFutura,
 } from './dados-da-regiao';
 
 /**
@@ -288,27 +290,39 @@ test('no tarifário, cada preço fica numa linha só, e o que não se paga diz �
   await expect(page.locator('main')).not.toContainText(/(^|\s)0,00\s?€/);
 });
 
-test('o «Perto de ti» aberto também passa no axe', async ({ page, context }) => {
-  // A lista do «Perto de ti» só existe depois de alguém carregar no botão, e
-  // um teste que só veja a página fechada não vê metade do componente —
-  // as ligações, as distâncias e as horas aparecem todas depois.
-  await context.grantPermissions(['geolocation']);
-  await context.setGeolocation(ONDE);
-  // Em `/rede/`: a raiz da região passou a ser o mapa, e o «Perto de ti» é
-  // o caminho SEM mapa — o equivalente acessível do ponto azul.
-  await page.goto(`/rede/`);
-  await page.getByRole('button', { name: /paragens perto de mim/i }).click();
-  await expect(page.locator('section[aria-labelledby="perto"]')).toContainText(/A seguir:/, {
-    timeout: 15_000,
-  });
+// O RELÓGIO PÕE-SE ONDE HÁ SERVIÇO, como no `perto.spec.ts`: cinco minutos
+// antes de uma partida a sério da paragem mais servida, no fuso da região.
+// Sem isto o «A seguir:» só aparecia às horas em que ainda há partidas — e à
+// noite a resposta certa passou a ser outra («Hoje já não há mais»). O CI
+// apanhou-o às 20h de Lisboa.
+const PARTIDA = umaPartidaFutura();
 
-  const r = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-    .analyze();
-  expect(
-    r.violations.map((v) => `${v.id}: ${v.help}`),
-    'violações com o bloco aberto',
-  ).toEqual([]);
+test.describe('com o relógio numa hora de serviço', () => {
+  test.use({ timezoneId: fusoDaRegiao() });
+
+  test('o «Perto de ti» aberto também passa no axe', async ({ page, context }) => {
+    // A lista do «Perto de ti» só existe depois de alguém carregar no botão, e
+    // um teste que só veja a página fechada não vê metade do componente —
+    // as ligações, as distâncias e as horas aparecem todas depois.
+    await context.grantPermissions(['geolocation']);
+    await context.setGeolocation(ONDE);
+    if (PARTIDA) await page.clock.setFixedTime(PARTIDA.quando);
+    // Em `/rede/`: a raiz da região passou a ser o mapa, e o «Perto de ti» é
+    // o caminho SEM mapa — o equivalente acessível do ponto azul.
+    await page.goto(`/rede/`);
+    await page.getByRole('button', { name: /paragens perto de mim/i }).click();
+    await expect(page.locator('section[aria-labelledby="perto"]')).toContainText(/A seguir:/, {
+      timeout: 15_000,
+    });
+
+    const r = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(
+      r.violations.map((v) => `${v.id}: ${v.help}`),
+      'violações com o bloco aberto',
+    ).toEqual([]);
+  });
 });
 
 test('o sítio diz aos motores de busca para não o indexarem', async ({ request }) => {
