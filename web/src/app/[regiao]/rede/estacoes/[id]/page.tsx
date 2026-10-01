@@ -1,7 +1,15 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { estacoes, exigirModo, concelhos, seguro, urlRede, urlDaParagem } from '@/lib/dados';
+import {
+  estacoes,
+  exigirModo,
+  concelhos,
+  seguro,
+  urlRede,
+  urlDaParagem,
+  NAO_ENCONTRADA,
+} from '@/lib/dados';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -24,7 +32,7 @@ export async function generateMetadata({
   const { regiao: rid, id } = await params;
   await exigirModo(rid, 'comboio');
   const e = (await estacoes(rid)).find((x) => seguro(x.id) === id);
-  return { title: e ? `${e.nome} (estação)` : 'Estação' };
+  return { title: e ? `${e.nome} (estação)` : NAO_ENCONTRADA };
 }
 
 export default async function Estacao({

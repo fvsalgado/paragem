@@ -10,6 +10,7 @@ import {
   operadorCurto,
   url,
   urlRede,
+  NAO_ENCONTRADA,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import Distintivo from '@/componentes/Distintivo';
@@ -35,7 +36,7 @@ export async function generateMetadata({
   const { regiao: rid, id } = await params;
   await exigirModo(rid, 'autocarro');
   const ficha = await lerParagem(rid, id);
-  return { title: ficha ? ficha.paragem.nome : 'Paragem' };
+  return { title: ficha ? ficha.paragem.nome : NAO_ENCONTRADA };
 }
 
 export default async function Paragem({
