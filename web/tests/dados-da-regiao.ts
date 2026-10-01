@@ -144,6 +144,8 @@ export type APedido = {
     nome: string;
     concelho: string;
     quadros: { tipo?: string; horas?: string[][]; viagens?: Viagem[] }[];
+    /** Quem a transcreveu à mão — nunca se mostra; diz só que houve transcrição. */
+    transcrito_por?: string;
   }[];
   reservas: { telefone?: string; telefone_apresentado?: string; online?: string };
 };

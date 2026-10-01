@@ -165,11 +165,22 @@ test('uma tabela de partidas não se faz passar por um percurso', async ({ page 
   await expect(page.getByText(/e não um percurso/).first()).toBeVisible();
 });
 
-test('quem transcreveu a folha à mão fica escrito na página', async ({ page }) => {
-  test.skip(!TAP, SEM.aPedido);
+test('uma folha transcrita à mão di-lo numa nota neutra, sem dizer quem', async ({ page }) => {
   // O guarda da construção prova que cada hora transcrita está no PDF de
   // origem. Que ela está na PARAGEM CERTA mediu-o alguém com os olhos, uma
   // vez — e quem lê tem direito a saber que foi assim que se soube.
+  //
+  // QUEM transcreveu é que não sai: a página dizia, em cada circuito, o nome
+  // de quem o fez e que estava «a conferir por quem publica» — uma nota de
+  // produção a chegar a quem só quer apanhar o autocarro.
+  const transcritos = (TAP?.horarios ?? []).filter((h) => h.transcrito_por);
+  test.skip(!transcritos.length, 'nenhum circuito desta região foi transcrito à mão');
   await page.goto(`/a-pedido/`);
-  await expect(page.getByText(/Transcrito da brochura por/).first()).toBeVisible();
+  const notas = page.getByText(/Transcrito da brochura.*por confirmar com a operadora/);
+  await expect(notas.first()).toBeVisible();
+  await expect(notas).toHaveCount(transcritos.length);
+  for (const quem of new Set(transcritos.map((h) => h.transcrito_por!))) {
+    await expect(page.locator('main')).not.toContainText(quem);
+  }
+  await expect(page.getByText(/Transcrito da brochura por/)).toHaveCount(0);
 });
