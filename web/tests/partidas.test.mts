@@ -8,7 +8,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { esperaLegivel, textoSobre } from '../src/lib/formato.ts';
-import { fraseDoDia, proximas, servicosNoDia, type Calendario } from '../src/lib/dias.ts';
+import {
+  dataDoCampo,
+  fraseDoDia,
+  horaDoRelogio,
+  proximas,
+  servicosNoDia,
+  type Calendario,
+} from '../src/lib/dias.ts';
 
 test('a espera responde à pergunta de quem está na paragem', () => {
   assert.equal(esperaLegivel('14:20', '14:08'), '12 min');
@@ -159,4 +166,15 @@ test('fora do período não se adivinha, e sem mais partidas diz-se até quando 
   assert.deepEqual(fora, { tipo: 'fora-do-periodo', inicio: '20261001', fim: '20261006' });
   const fim = proximas([U('06:45')], dia(6, 22), '22:00', CAL);
   assert.deepEqual(fim, { tipo: 'nenhuma', fim: '20261006' });
+});
+
+test('à meia-noite e meia, o dia do campo é o de hoje e não o de ontem em UTC', () => {
+  // 00:30 de sexta 2/10 em Lisboa, no verão, são 23:30 de quinta em UTC. O
+  // «Partir agora» usava o `toISOString()` para o dia e a hora local para as
+  // horas — e perguntava pelas carreiras de quinta.
+  process.env.TZ = 'Europe/Lisbon';
+  const d = new Date('2026-10-01T23:30:00Z');
+  assert.equal(d.toISOString().slice(0, 10), '2026-10-01', 'em UTC ainda é quinta');
+  assert.equal(dataDoCampo(d), '2026-10-02');
+  assert.equal(horaDoRelogio(d), '00:30');
 });

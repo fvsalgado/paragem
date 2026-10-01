@@ -56,6 +56,20 @@ export function chaveDoDia(d: Date): string {
   );
 }
 
+/**
+ * `AAAA-MM-DD` no fuso de quem lê — a forma de um `<input type="date">`.
+ *
+ * Existe porque o `toISOString()` é o dia em UTC, e o «Partir agora» usava-o
+ * ao lado de uma hora local: entre a meia-noite e a uma da manhã, no verão,
+ * o dia era o de ONTEM e a hora era a de hoje. A pergunta ia para a véspera,
+ * e o planeador respondia com as carreiras de quinta a quem perguntava na
+ * madrugada de sexta. Um relógio só, para o dia e para a hora.
+ */
+export function dataDoCampo(d: Date): string {
+  const c = chaveDoDia(d);
+  return `${c.slice(0, 4)}-${c.slice(4, 6)}-${c.slice(6, 8)}`;
+}
+
 /** `HH:MM` no fuso de quem lê. */
 export function horaDoRelogio(d: Date): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
