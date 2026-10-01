@@ -336,9 +336,23 @@ export default function Direccoes({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [de, para, quando, data, hora]);
 
+  // O formulário, para pôr o foco no campo que ficou por preencher.
+  const formulario = useRef<HTMLFormElement>(null);
+
   function trocar() {
     setDe(para);
     setPara(de);
+    // COM UM DOS LADOS VAZIO, O FOCO VAI PARA ELE. É o gesto de quem acabou
+    // de pôr a paragem no lado certo: a seguir escreve o outro — e quem usa
+    // leitor de ecrã ouve qual é o campo que falta.
+    if (!de !== !para) {
+      const vazio = de ? 0 : 1;
+      requestAnimationFrame(() =>
+        formulario.current
+          ?.querySelectorAll<HTMLInputElement>('input[role="combobox"]')
+          [vazio]?.focus(),
+      );
+    }
   }
 
   function mudarModo(m: Modo) {
@@ -447,6 +461,7 @@ export default function Direccoes({
       {/* ---- O CARTÃO DE CIMA: de onde, para onde. Sempre à vista. ---- */}
       <div className={noMapa ? 'cartao-de-cima' : 'cartao-de-cima em-pagina'}>
         <form
+          ref={formulario}
           className="campos-viagem"
           onSubmit={(e) => {
             e.preventDefault();
