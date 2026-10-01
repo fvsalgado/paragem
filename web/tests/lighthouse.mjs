@@ -81,6 +81,11 @@ const doModo = (m, nome) => (modos.includes(m) ? [[nome, `${R}/modos/${m}/`]] : 
 /** Uma de cada molde, as mais carregadas — se parte, parte onde há mais. */
 const PAGINAS = [
   ['produto', `${PRODUTO}/`],
+  // As três que o produto não tinha, e que davam 404 — incluindo a declaração
+  // de acessibilidade da página que vende acessibilidade.
+  ['contacto do produto', `${PRODUTO}/contacto/`],
+  ['privacidade do produto', `${PRODUTO}/privacidade/`],
+  ['acessibilidade do produto', `${PRODUTO}/acessibilidade/`],
   ['mapa da região', `${R}/`],
   ['a rede', `${R}/rede/`],
   ['demonstração', `${PROVA}/`],

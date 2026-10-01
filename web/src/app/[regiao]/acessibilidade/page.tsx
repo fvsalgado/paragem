@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { exigirRegiao, temMosaicos, url } from '@/lib/dados';
 import { aAutoridade } from '@/lib/prosa';
+import VerificacoesDeAcessibilidade from '@/componentes/VerificacoesDeAcessibilidade';
 
 export const metadata: Metadata = { title: 'Acessibilidade' };
 
@@ -36,22 +37,7 @@ export default async function Acessibilidade({ params }: { params: Promise<{ reg
       </p>
 
       <h2>O que já se verifica automaticamente</h2>
-      <ul>
-        <li>HTML semântico: cabeçalhos em ordem, listas, tabelas com cabeçalho de coluna.</li>
-        <li>
-          Contraste mínimo de 4,5:1 no texto — incluindo os números de linha, cuja cor vem do
-          horário da operadora e é corrigida quando não contrasta.
-        </li>
-        <li>Alvos táteis com pelo menos 44 px.</li>
-        <li>Foco visível em todos os elementos que o recebem.</li>
-        <li>Uma ligação para saltar diretamente ao conteúdo.</li>
-        <li>Respeito por «reduzir movimento» quando o sistema o pede.</li>
-      </ul>
-      <p>
-        Estas verificações correm em cada alteração, com o{' '}
-        <a href="https://github.com/dequelabs/axe-core">axe-core</a>. Uma violação grave impede a
-        publicação.
-      </p>
+      <VerificacoesDeAcessibilidade comLinhas />
 
       <h2>O que não está conforme</h2>
       <ul>

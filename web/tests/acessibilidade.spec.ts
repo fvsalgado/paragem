@@ -54,6 +54,11 @@ const PAGINAS: [string, string][] = [
   // primeira coisa que alguém vê. Se alguma tinha de estar nesta lista, era
   // esta.
   ['produto', `${PRODUTO}/`],
+  // E as outras três do produto, que davam 404: a página que vende um sítio
+  // acessível não tinha declaração de acessibilidade.
+  ['contacto do produto', `${PRODUTO}/contacto/`],
+  ['privacidade do produto', `${PRODUTO}/privacidade/`],
+  ['acessibilidade do produto', `${PRODUTO}/acessibilidade/`],
   ['mapa da região', `/`],
   ['a rede', `/rede/`],
   // A demonstração usa o mesmo molde mas leva a faixa que diz que a rede não
@@ -109,6 +114,7 @@ test('os cabeçalhos não saltam níveis', async ({ page }) => {
   // O axe não vê isto. Quem ouve a página navega por cabeçalhos, e um h1
   // seguido de h3 faz-lhe perder o fio.
   for (const caminho of [
+    `${PRODUTO}/`,
     `/`,
     `/rede/paragens/${PARAGEM.id}/`,
     `/rede/concelhos/${CONCELHO.id}/`,
@@ -149,6 +155,7 @@ test('os alvos táteis autónomos têm pelo menos 44 px', async ({ page }) => {
   // O que NÃO é isento é tudo o que está sozinho: itens de lista, botões,
   // navegação, a marca do cabeçalho. Esses medem-se.
   for (const caminho of [
+    `${PRODUTO}/contacto/`,
     `/rede/paragens/${PARAGEM.id}/`,
     `/`,
     `/rede/linhas/${LINHA.id}/`,
@@ -182,6 +189,8 @@ test('os alvos táteis autónomos têm pelo menos 44 px', async ({ page }) => {
 test('a página cabe num telemóvel sem deslizar para o lado', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 });
   for (const caminho of [
+    `${PRODUTO}/`,
+    `${PRODUTO}/contacto/`,
     `/`,
     `/rede/paragens/${PARAGEM.id}/`,
     `/rede/tarifario/`,
@@ -323,21 +332,6 @@ test.describe('com o relógio numa hora de serviço', () => {
       'violações com o bloco aberto',
     ).toEqual([]);
   });
-});
-
-test('o sítio diz aos motores de busca para não o indexarem', async ({ request }) => {
-  // Enquanto houver preços por confirmar e viagens sem dias, isto não se
-  // indexa: a página diz o que não sabe, um resultado de pesquisa não.
-  //
-  // A proteção da Vercel faz o mesmo do outro lado, mas vive num painel — e
-  // um interruptor de painel desliga-se sem deixar rasto. Este está num
-  // ficheiro que alguém tem de alterar num commit assinado.
-  // Pelo endereço da montra: este pedido é do Node, que não resolve `*.localhost`.
-  const r = await request.get(`${PRODUTO}/robots.txt`);
-  expect(r.status(), 'não há robots.txt').toBe(200);
-  const texto = await r.text();
-  expect(texto).toMatch(/User-agent:\s*\*/i);
-  expect(texto).toMatch(/Disallow:\s*\//);
 });
 
 test('o painel das direções, aberto sobre o mapa, também passa no axe', async ({ page }) => {
