@@ -2,9 +2,9 @@
  * «COMO SAIO DAQUI?» — a pergunta da página de um concelho, respondida com as
  * viagens que lá param.
  *
- * A página listava as linhas como números soltos («1109 · 6002 · 6005…»), sem
- * destino nem ligação, e quem morava na Sertã tinha de abrir linha a linha
- * para saber se alguma o levava a Tomar. As viagens já cá estão — são as do
+ * A página listava as linhas como números soltos («12 · 34 · 56…»), sem
+ * destino nem ligação, e quem morava no concelho tinha de abrir linha a linha
+ * para saber se alguma o levava à cidade do lado. As viagens já cá estão — são as do
  * horário de cada linha (`quadro`, em `linhas/<id>.json`) —, e a conta é
  * simples: para cada viagem que passa no concelho, os outros concelhos a que
  * ela chega depois, e a que horas sai daqui.
@@ -17,7 +17,7 @@ import type { Linha, LinhaDetalhe, Paragem } from './formato';
 export type SaidaDoConcelho = {
   /** O concelho de destino, ou `fora:<nome da paragem>` para o que fica fora da região. */
   chave: string;
-  /** «Tomar», ou o nome da paragem quando fica fora da região: «Leiria (Terminal)». */
+  /** O nome do concelho, ou o da paragem quando fica fora da região: «Vila Nova (Terminal)». */
   nome: string;
   /** Para onde levar o «Como chegar»: a paragem com mais partidas desse concelho. */
   para: string;

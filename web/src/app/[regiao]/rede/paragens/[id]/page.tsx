@@ -56,7 +56,7 @@ export default async function Paragem({
   const concelho = (await concelhos(rid)).find((c) => c.id === p.concelho);
   // A COR PELO IDENTIFICADOR DA LINHA, e não pelo número: há números que se
   // repetem entre concessões (a rede da região e a vizinha têm cada uma a sua
-  // «1109»), e pelo número a segunda herdava a cor da primeira.
+  // linha com o mesmo número), e pelo número a segunda herdava a cor da primeira.
   const cores = Object.fromEntries((await linhas(rid)).map((l) => [l.id, l.cor]));
   const partidas = ficha.partidas;
 

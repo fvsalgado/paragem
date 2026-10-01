@@ -56,7 +56,7 @@ export default async function Estacao({
   const cores = Object.fromEntries((await linhas(rid)).map((l) => [l.id, l.cor]));
 
   // O AUTOCARRO À PORTA, uma vez por nome. A estação mostrava duas vezes
-  // «Entroncamento (Estação) · 125 m» — os dois lados da estrada, que para
+  // «<terra> (Estação) · 125 m» — os dois lados da estrada, que para
   // quem sai do comboio são o mesmo sítio —, e nenhuma partida. Junta-se por
   // nome, com as partidas das duas, e a distância da mais perto.
   const porNome = new Map<string, { ids: string[]; metros: number }>();

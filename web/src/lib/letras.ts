@@ -29,8 +29,8 @@ export const paraUrl = (letra: string): string => (letra === '#' ? 'numero' : le
 export const daUrl = (pedaco: string): string => (pedaco === 'numero' ? '#' : pedaco.toUpperCase());
 
 /**
- * Para procurar: sem acentos, em minúsculas. Quem escreve «serta» procura a
- * Sertã, e num telemóvel o til é o que menos se escreve.
+ * Para procurar: sem acentos, em minúsculas. Quem escreve «obidos» procura
+ * Óbidos, e num telemóvel o acento é o que menos se escreve.
  */
 export function simples(s: string): string {
   return (s ?? '')

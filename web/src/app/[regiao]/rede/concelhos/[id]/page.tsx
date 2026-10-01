@@ -88,8 +88,8 @@ export default async function Concelho({
 
   // O TRANSPORTE A PEDIDO DESTE CONCELHO, todo: as zonas dele, as ligações
   // entre concelhos que têm aqui uma ponta (o LINK), e os circuitos com
-  // horário publicado. A página mostrava só a primeira zona — e a Sertã tem
-  // seis, mais o horário de 28 viagens e o LINK para Tomar.
+  // horário publicado. A página mostrava só a primeira zona — e havia
+  // concelhos com seis, mais um horário de 28 viagens e uma ligação a outro.
   const zonas = (pedido?.zonas ?? []).filter(
     (z) => z.concelho === c.id || (z.entre ?? []).includes(c.id),
   );
@@ -147,8 +147,8 @@ export default async function Concelho({
           concelho (`lib/concelho.ts`). */}
       {saidas.length > 0 && (
         <section aria-labelledby="c-sair">
-          {/* «Sair do concelho», e não «Sair de Sertã»: o artigo de um concelho
-              não está nos dados («da Sertã», «do Entroncamento»), e não se
+          {/* «Sair do concelho», e não «Sair de Porto»: o artigo de um concelho
+              não está nos dados («do Porto», «da Guarda»), e não se
               adivinha. */}
           <h2 id="c-sair">Sair do concelho</h2>
           <p className="secundario">

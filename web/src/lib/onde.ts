@@ -5,7 +5,7 @@
  * página listava oito vezes «Sem nome no mapa» — uma lista em que todos os
  * itens dizem o mesmo não ajuda ninguém a encontrar um táxi. O que os dados
  * TÊM é onde a praça está; e o sítio tem as paragens, com nomes que quem lá
- * mora reconhece. «Junto a Abrantes (Terminal), a 40 m» não se inventa: é a
+ * mora reconhece. «Junto à paragem do Mercado, a 40 m» não se inventa: é a
  * paragem da rede mais perto, à distância medida.
  */
 import { metros } from './viagens';

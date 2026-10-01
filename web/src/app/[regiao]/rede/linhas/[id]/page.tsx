@@ -67,7 +67,7 @@ function tituloDoSentido(s: Sentido): string {
 }
 
 /**
- * «Tomar (Terminal) (5 viagens), Abrantes (Terminal) (4) e Fátima (2)». As
+ * «Terminal A (5 viagens), Terminal B (4) e Terminal C (2)». As
  * contas só quando há mais do que uma ponta; as que passam de três juntam-se
  * numa — uma urbana com cinco pontas de uma viagem cada era uma frase de
  * quatro linhas.

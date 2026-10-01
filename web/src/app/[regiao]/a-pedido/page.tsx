@@ -108,7 +108,7 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
         </p>
 
         {/* CADA ZONA FECHADA, com os circuitos no resumo. Abertas, eram 24
-            ecrãs; e o nome de contrato de uma zona («Lote 1 e 3») não diz a
+            ecrãs; e o nome de contrato de uma zona (um número de lote) não diz a
             ninguém se é a dele — os nomes dos circuitos, que são as terras,
             dizem. */}
         {comCircuitos.map((z) => (

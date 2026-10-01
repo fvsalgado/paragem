@@ -570,7 +570,7 @@ table.horario th {
 }
 
 /* A LIGAÇÃO DO DISTINTIVO, sem o sublinhado da ligação a passar por dentro
-   da pastilha colorida (azul sobre o preto da 510), e com 44 px também de
+   da pastilha colorida (azul sobre o preto de uma linha escura), e com 44 px também de
    LARGURA: o distintivo de «10» dava um alvo de 31 px. O estado de
    passagem é um contorno à volta da pastilha. */
 table.horario a.ligacao-da-linha {

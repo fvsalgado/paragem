@@ -47,7 +47,7 @@ export default function PrecosDeExpresso({
   const id = useId();
   const [para, setPara] = useState('');
   // O DIA DA VIAGEM, e não só hoje. A consulta procurava sempre o dia de
-  // hoje, e quem planeia a ida a Lisboa para amanhã não via preço nenhum. O
+  // hoje, e quem planeia a viagem de amanhã não via preço nenhum. O
   // serviço já aceitava a data; faltava pedi-la. Começa em hoje, no relógio
   // de quem lê — no servidor não se sabe que dia é para essa pessoa.
   const [hoje, setHoje] = useState('');

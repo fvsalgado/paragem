@@ -87,7 +87,7 @@ export function precoDe(v: number | null): string | null {
  * O NOME DE UMA TERRA PORTUGUESA COMO SE DIZ EM PORTUGUÊS.
  *
  * O feed do operador de expressos escreve os nomes em inglês — «Lisbon»,
- * «Lisbon Airport», «Castelo Branco - Lisbon» —, e a página falava a língua
+ * «Lisbon Airport», «Porto - Lisbon» —, e a página falava a língua
  * do feed. Troca-se só o exónimo, palavra a palavra, numa lista curta de
  * terras portuguesas com nome inglês; o resto fica como o operador o escreve,
  * que é como aparece no bilhete.
@@ -109,7 +109,7 @@ export function emPortugues(nome: string): string {
  */
 export const pontoTecnico = (nome: string): boolean => /\bInterconnection Hub\b/i.test(nome);
 
-/** «Lisbon - Castelo Branco - Hub - Nice» → «Lisboa – Castelo Branco – Nice». */
+/** «Porto - Lisbon - Hub - Paris» → «Porto – Lisboa – Paris». */
 export function percursoEmPortugues(percurso: string): string {
   return percurso
     .split(/\s+-\s+/)

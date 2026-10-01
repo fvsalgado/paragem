@@ -24,13 +24,13 @@ const t = (
 test('arruma pelo que cada título é: a cada uso, por um período, ou sem pagar', () => {
   const [a] = ajudaParaEscolher([
     t('simples', 'Rede', 1.5),
-    t('meio', 'Rede', 0.75),
+    t('reduzido', 'Rede', 0.75),
     t('passe', 'Rede', 40, { periodo: 'mes' }),
     t('senior', 'Rede', 0, { nota: 'Para quem tem 65 anos ou mais.' }),
   ]);
   assert.deepEqual(
     a.aCadaUso.map((x) => x.id),
-    ['simples', 'meio'],
+    ['simples', 'reduzido'],
   );
   assert.deepEqual(
     a.porPeriodo.map((x) => x.id),
@@ -45,7 +45,7 @@ test('arruma pelo que cada título é: a cada uso, por um período, ou sem pagar
 test('a única conta é a dos preços: quantos do título inteiro se compram pelo do período', () => {
   const [a] = ajudaParaEscolher([
     t('simples', 'Rede', 1.5),
-    t('meio', 'Rede', 0.75),
+    t('reduzido', 'Rede', 0.75),
     t('passe', 'Rede', 40, { periodo: 'mes' }),
   ]);
   // A referência é o título de cada uso MAIS CARO — o preço inteiro, e não o
