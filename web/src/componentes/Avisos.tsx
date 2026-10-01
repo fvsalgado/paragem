@@ -1,4 +1,4 @@
-import { emVigor, nomeDaCausa, nomeDoEfeito, type Aviso } from '@/lib/avisos';
+import { emVigor, nomeDaCausa, nomeDoEfeito, prazoDoAviso, type Aviso } from '@/lib/avisos';
 
 /**
  * Um aviso, como quem está na paragem precisa de o ler.
@@ -10,19 +10,15 @@ import { emVigor, nomeDaCausa, nomeDoEfeito, type Aviso } from '@/lib/avisos';
  */
 export function CartaoDeAviso({ aviso }: { aviso: Aviso }) {
   const grave = aviso.gravidade === 'SEVERE';
-  const desde = aviso.inicio ? new Date(aviso.inicio) : null;
-  const ate = aviso.fim ? new Date(aviso.fim) : null;
-  const quando = (d: Date) => d.toLocaleString('pt-PT', { dateStyle: 'long', timeStyle: 'short' });
   return (
     <div className={grave ? 'faixa alerta' : 'faixa'}>
       <h2>{aviso.titulo}</h2>
       <p>{aviso.texto}</p>
       <p className="secundario">
         {nomeDaCausa(aviso.causa)} · {nomeDoEfeito(aviso.efeito)}
-        {desde ? ` · desde ${quando(desde)}` : ''}
-        {/* SEM FIM NÃO SE INVENTA UM: é o que a operadora sabe, e é isso que
-            se diz. «Até às 18h» num aviso que ninguém datou é uma promessa. */}
-        {ate ? ` até ${quando(ate)}` : desde ? ', sem fim previsto' : ''}
+        {/* As horas no fuso da região, e não no do servidor — que é UTC, e
+            punha o aviso das 7h às 6h no verão (`prazoDoAviso`). */}
+        {prazoDoAviso(aviso)}
       </p>
       {aviso.url ? (
         <p>

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Mudanca from '@/componentes/painel/Mudanca';
 import SemChaveDeServico from '@/componentes/painel/SemChaveDeServico';
+import { paraCampoLocal } from '@/lib/fuso';
 import { nomeDaAcao } from '@/lib/painel/auditoria';
 import { temChaveDeServico } from '@/lib/painel/base';
 import {
@@ -143,7 +144,9 @@ export default async function Auditoria({ searchParams }: Props) {
               const regiao = acao.entity_id.split('/')[0] ?? acao.entity_id;
               return (
                 <tr key={acao.id}>
-                  <td>{acao.created_at.slice(0, 16).replace('T', ' ')}</td>
+                  {/* A hora de Lisboa, como o resto do painel: o texto ISO
+                      cortado era a hora UTC, uma hora atrás no verão. */}
+                  <td>{paraCampoLocal(acao.created_at).replace('T', ' ')}</td>
                   <td>{acao.actor}</td>
                   <td>{nomeDaAcao(acao.action)}</td>
                   <td>

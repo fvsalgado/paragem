@@ -14,7 +14,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { doCampoLocal, paraCampoLocal, porExtenso } from '../src/lib/fuso.ts';
+import { diaNoFuso, doCampoLocal, paraCampoLocal, porExtenso } from '../src/lib/fuso.ts';
 
 const LX = 'Europe/Lisbon';
 
@@ -80,4 +80,13 @@ test('um fuso diferente dá uma hora diferente, que é o ponto de ser declarado'
   // lido e estaria cravado algures.
   assert.equal(doCampoLocal('2026-07-15T08:00', 'Atlantic/Azores'), '2026-07-15T08:00:00.000Z');
   assert.equal(doCampoLocal('2026-07-15T08:00', 'Europe/Madrid'), '2026-07-15T06:00:00.000Z');
+});
+
+test('o dia de um instante é o dia de Lisboa, e não o de UTC', () => {
+  // 00:30 de 2 de outubro em Lisboa são 23:30 de 1 de outubro em UTC. O
+  // painel tirava o dia ao texto ISO, e uma licença que acabava hoje dizia
+  // «falta um dia» durante uma hora por noite.
+  assert.equal(diaNoFuso('2026-10-01T23:30:00.000Z', LX), '2026-10-02');
+  assert.equal(diaNoFuso(new Date('2026-10-01T23:30:00.000Z'), LX), '2026-10-02');
+  assert.equal(diaNoFuso('2026-12-31T23:30:00.000Z', LX), '2026-12-31', 'no inverno, igual');
 });
