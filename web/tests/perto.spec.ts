@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
 
-import { buscaDeUmaParagem, ondeHaParagens } from './dados-da-regiao';
+import {
+  buscaDeUmaParagem,
+  fusoDaRegiao,
+  ondeHaParagens,
+  umaPartidaFutura,
+} from './dados-da-regiao';
 
 /**
  * O «Perto de ti» — e sobretudo o que ele faz quando NÃO sabe onde estás.
@@ -19,6 +24,14 @@ const REDE = '/rede';
 // responder à volta — e sai dos dados, não de um mapa escrito à mão.
 const ONDE = ondeHaParagens();
 const { nome: PARAGEM } = buscaDeUmaParagem();
+
+// O RELÓGIO PÕE-SE ONDE HÁ SERVIÇO, como na folha do mapa
+// (`partidas-na-folha.spec.ts`): cinco minutos antes de uma partida a sério
+// desta paragem, no fuso da região. Sem isto o «A seguir:» só aparecia nos
+// dias e às horas em que a paragem tem partidas — e um domingo, ou uma noite,
+// passou a ter outra resposta, que é a certa («hoje não há»).
+const PARTIDA = umaPartidaFutura();
+test.use({ timezoneId: fusoDaRegiao() });
 
 test('não pede a localização ao carregar a página', async ({ page }) => {
   // Sem permissão concedida: se a página a pedisse sozinha, o navegador
@@ -46,6 +59,7 @@ test('com a localização, mostra as paragens mais próximas e as horas', async 
 }) => {
   await context.grantPermissions(['geolocation']);
   await context.setGeolocation(ONDE);
+  if (PARTIDA) await page.clock.setFixedTime(PARTIDA.quando);
   await page.goto(`${REDE}/`);
   await page.getByRole('button', { name: /paragens perto de mim/i }).click();
 

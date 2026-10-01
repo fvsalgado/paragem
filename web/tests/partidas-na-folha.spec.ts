@@ -12,7 +12,12 @@
  */
 import { test, expect } from '@playwright/test';
 
-import { buscaDeUmaParagem, fusoDaRegiao, umaPartidaFutura } from './dados-da-regiao';
+import {
+  buscaDeUmaParagem,
+  fusoDaRegiao,
+  umaPartidaFutura,
+  umDiaSemPartidas,
+} from './dados-da-regiao';
 
 // A paragem com mais partidas desta região: é a que tem folha para ler, e sai
 // dos dados em vez de estar escrita aqui (`dados-da-regiao.ts`).
@@ -86,4 +91,24 @@ test('o fecho é discreto e continua a ter alvo de 44 px', async ({ page }) => {
   expect(caixa!.width).toBeGreaterThanOrEqual(44);
   expect(caixa!.height).toBeGreaterThanOrEqual(44);
   await expect(fechar).toHaveAttribute('aria-label', 'Fechar');
+});
+
+test('num dia em que aqui não passa nada, a folha di-lo e mostra o próximo dia', async ({
+  page,
+}) => {
+  // O caso do domingo: a folha mostrava como «agora» e «5 min» autocarros de
+  // dias úteis, e quem lia ficava à espera. Agora diz que hoje não há e dá as
+  // horas do próximo dia em que alguma coisa passa nesta paragem — sem os
+  // minutos de espera, que seriam de outro dia.
+  const caso = umDiaSemPartidas();
+  test.skip(!caso, 'nesta região a paragem mais servida tem partidas todos os dias');
+  await page.clock.setFixedTime(caso!.quando);
+  await page.goto(`/`);
+  await page.getByRole('combobox').fill(BUSCA);
+  await page.getByRole('option').first().click();
+  const frase = page.locator('.cartao-de-baixo .dia-das-partidas');
+  await expect(frase).toContainText('não há partidas nesta paragem', { timeout: 10000 });
+  await expect(frase).toContainText(/As próximas são (amanhã|n[oa] )/);
+  await expect(page.locator('.partidas li').first()).toBeVisible();
+  await expect(page.locator('.partidas li').first()).not.toContainText(/agora|\d+ min/);
 });

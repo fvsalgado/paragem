@@ -13,7 +13,14 @@ import {
   type Partida,
   type Ponto,
 } from '@/lib/formato';
-import { servicosDe, proximas } from '@/lib/dias';
+import {
+  calendarioDe,
+  dataCompleta,
+  fraseDoDia,
+  horaDoRelogio,
+  proximas,
+  type Calendario,
+} from '@/lib/dias';
 import { camadasDe } from '@/lib/pontos-no-mapa';
 import DisponibilidadeBicicletas, {
   ContagemDaEstacao,
@@ -181,15 +188,22 @@ export default function AppDoMapa({
     };
     // As camadas mudam com a região; sem isto a medida ficava da anterior.
   }, [camadas.length]);
-  const [partidas, setPartidas] = useState<Partida[] | null>(null);
   /**
-   * Que serviços andam HOJE. `null` enquanto não se sabe — e aí mostra-se
-   * tudo, que é melhor do que uma folha vazia à espera de um ficheiro.
+   * As partidas do ponto escolhido: `null` enquanto chegam, e `'falhou'`
+   * quando NÃO chegaram — que não é o mesmo que a paragem não ter partidas.
+   * Com a rede a falhar na paragem (o caso normal no interior), a folha dizia
+   * «Sem partidas registadas» de uma paragem com 186; quem lê vai-se embora.
    */
-  const [activosHoje, setActivosHoje] = useState<Set<string> | null>(null);
+  const [partidas, setPartidas] = useState<Partida[] | null | 'falhou'>(null);
+  /**
+   * Em que dias anda cada serviço. `undefined` enquanto se pergunta, `null`
+   * quando não se conseguiu saber — e as duas coisas não se confundem com
+   * «hoje não anda nada», que é uma resposta (`lib/dias.ts`).
+   */
+  const [calendario, setCalendario] = useState<Calendario | null | undefined>(undefined);
   useEffect(() => {
     let vivo = true;
-    servicosDe(regiao, new Date()).then((s) => vivo && setActivosHoje(s));
+    calendarioDe(regiao).then((c) => vivo && setCalendario(c));
     return () => {
       vivo = false;
     };
@@ -339,6 +353,30 @@ export default function AppDoMapa({
     });
   }
 
+  /**
+   * As partidas de uma paragem, do ficheiro do concelho dela.
+   *
+   * **Três respostas, e não duas.** O ficheiro que existe e não traz a
+   * paragem diz que ela não tem partidas; o que não existe (404, ou 400 na
+   * porta do armazém) diz o mesmo do concelho inteiro. O que NÃO CHEGOU — a
+   * rede caiu, o servidor respondeu 500 — não diz nada, e a folha tem de o
+   * dizer assim, com uma maneira de tentar outra vez. A tabela dos dias, se
+   * também tiver faltado, volta a ser pedida no mesmo gesto.
+   */
+  function carregarPartidas(p: Marca | Ponto) {
+    setPartidas(null);
+    const c = (p.concelho || 'fora-da-regiao').replace(/[^a-zA-Z0-9\-_]/g, '-');
+    fetch(enderecoDosDados(regiao, `partidas/${c}.json`))
+      .then((r) => {
+        if (r.ok) return r.json();
+        if (r.status === 404 || r.status === 400) return {};
+        throw new Error(`partidas: HTTP ${r.status}`);
+      })
+      .then((mapa: Record<string, Partida[]>) => setPartidas(mapa[p.id] ?? []))
+      .catch(() => setPartidas('falhou'));
+    if (calendario === null) calendarioDe(regiao).then(setCalendario);
+  }
+
   function abrir(p: Marca | Ponto) {
     setEscolhido(p as Marca);
     setPartidas(null);
@@ -346,11 +384,7 @@ export default function AppDoMapa({
     setPercurso(null);
     setEncolhido(false);
     if (p.tipo !== 'paragem') return;
-    const c = (p.concelho || 'fora-da-regiao').replace(/[^a-zA-Z0-9\-_]/g, '-');
-    fetch(enderecoDosDados(regiao, `partidas/${c}.json`))
-      .then((r) => (r.ok ? r.json() : {}))
-      .then((mapa: Record<string, Partida[]>) => setPartidas(mapa[p.id] ?? []))
-      .catch(() => setPartidas([]));
+    carregarPartidas(p);
     // Uma vez por sessão. Sem isto o distintivo sai cinzento, que é o que
     // acontece também se o ficheiro faltar — e um distintivo cinzento continua
     // a dizer o número da linha.
@@ -369,8 +403,13 @@ export default function AppDoMapa({
     setEncolhido(false);
   }
 
-  const agora = new Date().toTimeString().slice(0, 5);
-  const aSeguir = partidas ? proximas(partidas, agora, activosHoje) : null;
+  // O DIA E A HORA SAEM DO MESMO RELÓGIO, o de quem está a ler.
+  const instante = new Date();
+  const agora = horaDoRelogio(instante);
+  const aSeguir =
+    Array.isArray(partidas) && partidas.length > 0 && calendario !== undefined
+      ? proximas(partidas, instante, agora, calendario)
+      : null;
 
   return (
     <DisponibilidadeBicicletas endereco={disponibilidadeDaRegiao}>
@@ -569,19 +608,64 @@ export default function AppDoMapa({
               <ContagemDaEstacao id={escolhido.tipo === 'bicicleta' ? escolhido.id : null} />
             </p>
 
-            {aSeguir === null && escolhido.tipo === 'paragem' && <p>A carregar as horas…</p>}
-            {aSeguir !== null && aSeguir.length > 0 && (
+            {escolhido.tipo === 'paragem' &&
+              (partidas === null || (Array.isArray(partidas) && calendario === undefined)) && (
+                <p>A carregar as horas…</p>
+              )}
+            {partidas === 'falhou' && (
+              <div className="faixa alerta" role="status">
+                <p>
+                  <strong>Não foi possível carregar as horas desta paragem.</strong> Pode ser da
+                  ligação à Internet — não quer dizer que não haja autocarros.
+                </p>
+                <p>
+                  <button
+                    type="button"
+                    className="botao"
+                    onClick={() => carregarPartidas(escolhido)}
+                  >
+                    Tentar de novo
+                  </button>
+                </p>
+              </div>
+            )}
+            {aSeguir?.tipo === 'fora-do-periodo' && (
+              <p>
+                Os horários carregados vão de {dataCompleta(aSeguir.inicio)} a{' '}
+                {dataCompleta(aSeguir.fim)}, e não dizem o que passa hoje.
+              </p>
+            )}
+            {aSeguir?.tipo === 'nenhuma' && (
+              <p>
+                Nos horários carregados, que vão até {dataCompleta(aSeguir.fim)}, já não há partidas
+                desta paragem.
+              </p>
+            )}
+            {(aSeguir?.tipo === 'no-dia' || aSeguir?.tipo === 'sem-calendario') && (
               <>
                 <h3>A seguir</h3>
+                {/* QUANDO AS HORAS NÃO SÃO DE HOJE, DIZ-SE ANTES DE AS DAR.
+                  Uma lista de segunda-feira lida ao domingo parece a lista de
+                  domingo — e foi isso que a folha esteve a mostrar. */}
+                {aSeguir.tipo === 'no-dia' && aSeguir.dias > 0 && (
+                  <p className="dia-das-partidas">{fraseDoDia(aSeguir, instante)}</p>
+                )}
                 {/* QUEM ESTÁ NA PARAGEM NÃO QUER UM RELÓGIO, QUER SABER SE DÁ
                   TEMPO. «14:20» obriga a fazer a conta de cabeça, e a fazê-la
                   outra vez a cada minuto; «12 min» responde à pergunta. A hora
                   fica ao lado, em pequeno, porque quem planeia a tarde quer
-                  as horas — são duas perguntas e a folha responde às duas. */}
+                  as horas — são duas perguntas e a folha responde às duas.
+
+                  A espera só se calcula quando se sabe o dia: hoje, ou amanhã
+                  (com as 24 horas somadas). Sem a tabela dos dias, ou para
+                  daqui a dois dias, fica só o relógio. */}
                 <ul className="partidas">
-                  {aSeguir.map(({ partida: d, amanha }, i) => {
+                  {aSeguir.partidas.map((d, i) => {
                     const { texto, diaSeguinte } = horaLegivel(d.hora);
-                    const espera = esperaLegivel(d.hora, agora, amanha);
+                    const espera =
+                      aSeguir.tipo === 'no-dia' && aSeguir.dias <= 1
+                        ? esperaLegivel(d.hora, agora, aSeguir.dias === 1)
+                        : null;
                     const cor = cores[d.linha_id];
                     return (
                       <li key={`${d.hora}-${d.linha}-${i}`}>
@@ -605,11 +689,6 @@ export default function AppDoMapa({
                             ficar mais arrumada sem a nota. */}
                           {d.estimada && <em className="estimada"> hora estimada</em>}
                           {diaSeguinte && <em className="estimada"> dia seguinte</em>}
-                          {/* JÁ PASSARAM TODAS AS DE HOJE. A lista salta para
-                            as da manhã seguinte — e tem de o dizer, senão
-                            «06:45» às onze da noite lê-se como «já a
-                            seguir». */}
-                          {amanha && !diaSeguinte && <em className="estimada"> amanhã</em>}
                           {/* Quem gere, em pequeno e só quando não é a rede da
                             região. Na mesma paragem param carreiras de duas
                             concessões, e o título de uma não serve na outra. */}
@@ -617,17 +696,33 @@ export default function AppDoMapa({
                             <em className="estimada"> · {operadorCurto(d.operador)}</em>
                           )}
                         </span>
+                        {/* SEM ESPERA, A HORA É A RESPOSTA, e sobe para o
+                          lugar dela: num dia que não é hoje, ou a mais de doze
+                          horas, «06:45» em letra miúda era a única coisa que a
+                          linha dizia, e dizia-a baixinho. */}
                         <span className="quando-passa">
-                          {espera && <strong>{espera}</strong>}
-                          <span className="relogio">{texto}</span>
+                          {espera ? (
+                            <>
+                              <strong>{espera}</strong>
+                              <span className="relogio">{texto}</span>
+                            </>
+                          ) : (
+                            <strong>{texto}</strong>
+                          )}
                         </span>
                       </li>
                     );
                   })}
                 </ul>
+                {aSeguir.tipo === 'sem-calendario' && (
+                  <p className="secundario">
+                    Não foi possível confirmar em que dias anda cada serviço: estas horas podem não
+                    ser de hoje.
+                  </p>
+                )}
               </>
             )}
-            {aSeguir !== null && aSeguir.length === 0 && <p>Sem partidas registadas.</p>}
+            {Array.isArray(partidas) && partidas.length === 0 && <p>Sem partidas registadas.</p>}
 
             <p className="cartao-accoes">
               {/* Um BOTÃO e não uma ligação: isto não muda de página, abre as

@@ -2,7 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { horaLegivel, type Partida } from '@/lib/formato';
-import { servicosDe, proximas, type Proxima } from '@/lib/dias';
+import {
+  calendarioDe,
+  chaveDoDia,
+  dataCompleta,
+  diaDaSemana,
+  horaDoRelogio,
+  proximas,
+  quandoE,
+  type Calendario,
+  type Proximas,
+} from '@/lib/dias';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 
 /**
@@ -63,15 +73,56 @@ function distanciaLegivel(metros: number): string {
  */
 function proximasAqui(
   partidas: Partida[],
+  hoje: Date,
   agora: string,
-  activos: Set<string> | null,
-): Proxima<Partida>[] {
-  return proximas(partidas, agora, activos, 3);
+  calendario: Calendario | null,
+): Proximas<Partida> {
+  return proximas(partidas, hoje, agora, calendario, 3);
+}
+
+/**
+ * Antes das horas, o dia delas — em poucas palavras, que isto é uma linha.
+ *
+ * É a mesma informação da folha do mapa, encurtada: «Hoje não há. Na
+ * segunda-feira, 5/10:» lê-se de relance numa lista de cinco paragens.
+ */
+function prefixo(r: Proximas<Partida>, hoje: Date): string {
+  if (r.tipo !== 'no-dia' || r.dias === 0) return 'A seguir: ';
+  const h = chaveDoDia(hoje);
+  const quando = quandoE(r.chave, r.dias, h);
+  const antes = r.hoje === 'nao-ha' ? `Hoje, ${diaDaSemana(h)}, não há.` : 'Hoje já não há mais.';
+  return `${antes} ${quando.charAt(0).toUpperCase()}${quando.slice(1)}: `;
 }
 
 export default function PertoDeTi({ regiao, pontos }: { regiao: string; pontos: Ponto[] }) {
   const [estado, setEstado] = useState<Estado>({ tipo: 'parado' });
   const [partidas, setPartidas] = useState<Record<string, Partida[]>>({});
+  /**
+   * Os concelhos cujo ficheiro de partidas NÃO CHEGOU. Uma paragem sem horas
+   * por falta de rede não é uma paragem sem partidas, e a lista diz qual é.
+   */
+  const [semResposta, setSemResposta] = useState<string[]>([]);
+
+  /**
+   * UM PEDIDO POR CONCELHO, não um por paragem. Quem está numa paragem está
+   * num concelho, e as cinco mais perto estão quase sempre no mesmo — o maior
+   * ficheiro tem 50 kB com gzip.
+   */
+  function carregarPartidas(concelhos: string[]) {
+    setSemResposta((antes) => antes.filter((c) => !concelhos.includes(c)));
+    for (const c of concelhos) {
+      fetch(enderecoDosDados(regiao, `partidas/${c.replace(/[^a-zA-Z0-9\-_]/g, '-')}.json`))
+        .then((r) => {
+          if (r.ok) return r.json();
+          // O ficheiro que não existe é um concelho sem partidas — uma
+          // resposta. Qualquer outra coisa é falta de resposta.
+          if (r.status === 404 || r.status === 400) return {};
+          throw new Error(`partidas: HTTP ${r.status}`);
+        })
+        .then((mapa: Record<string, Partida[]>) => setPartidas((antes) => ({ ...antes, ...mapa })))
+        .catch(() => setSemResposta((antes) => [...new Set([...antes, c])]));
+    }
+  }
 
   function procurar() {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -96,21 +147,7 @@ export default function PertoDeTi({ regiao, pontos }: { regiao: string; pontos: 
           .sort((a, b) => a.metros - b.metros)
           .slice(0, 5);
         setEstado({ tipo: 'perto', pontos: perto });
-
-        // UM PEDIDO POR CONCELHO, não um por paragem. Quem está numa paragem
-        // está num concelho, e as cinco mais perto estão quase sempre no
-        // mesmo — o maior ficheiro tem 50 kB com gzip.
-        const concelhos = [...new Set(perto.map((p) => p.concelho))];
-        for (const c of concelhos) {
-          fetch(enderecoDosDados(regiao, `partidas/${c.replace(/[^a-zA-Z0-9\-_]/g, '-')}.json`))
-            .then((r) => (r.ok ? r.json() : {}))
-            .then((mapa: Record<string, Partida[]>) =>
-              setPartidas((antes) => ({ ...antes, ...mapa })),
-            )
-            .catch(() => {
-              /* Sem horas mostra-se a paragem à mesma: a distância já serve. */
-            });
-        }
+        carregarPartidas([...new Set(perto.map((p) => p.concelho))]);
       },
       (erro) => {
         if (erro.code === erro.PERMISSION_DENIED) setEstado({ tipo: 'recusado' });
@@ -120,18 +157,22 @@ export default function PertoDeTi({ regiao, pontos }: { regiao: string; pontos: 
     );
   }
 
-  const agora = new Date().toTimeString().slice(0, 5);
-  // Que serviços andam hoje. `null` enquanto não se sabe, e aí mostra-se
-  // tudo: uma lista vazia à espera de um ficheiro é pior do que uma lista
-  // com uma hora a mais.
-  const [activosHoje, setActivosHoje] = useState<Set<string> | null>(null);
+  // O dia e a hora saem do mesmo relógio, o de quem está a ler.
+  const hoje = new Date();
+  const agora = horaDoRelogio(hoje);
+  // Em que dias anda cada serviço. `undefined` enquanto se pergunta; `null`
+  // quando não se conseguiu saber — e aí as horas vêm com o aviso de que
+  // podem não ser de hoje (`lib/dias.ts`).
+  const [calendario, setCalendario] = useState<Calendario | null | undefined>(undefined);
   useEffect(() => {
     let vivo = true;
-    servicosDe(regiao, new Date()).then((s) => vivo && setActivosHoje(s));
+    calendarioDe(regiao).then((c) => vivo && setCalendario(c));
     return () => {
       vivo = false;
     };
   }, [regiao]);
+  const proximasDe = (suas: Partida[]) =>
+    calendario === undefined ? null : proximasAqui(suas, hoje, agora, calendario);
 
   return (
     <section aria-labelledby="perto">
@@ -180,6 +221,7 @@ export default function PertoDeTi({ regiao, pontos }: { regiao: string; pontos: 
             <ul className="lista">
               {estado.pontos.map((p) => {
                 const suas = partidas[p.id];
+                const r = suas?.length ? proximasDe(suas) : null;
                 return (
                   <li key={p.id}>
                     <a
@@ -188,32 +230,59 @@ export default function PertoDeTi({ regiao, pontos }: { regiao: string; pontos: 
                       <span>{p.nome}</span>
                       <span className="secundario">{distanciaLegivel(p.metros)}</span>
                     </a>
-                    {suas && suas.length > 0 && (
+                    {(r?.tipo === 'no-dia' || r?.tipo === 'sem-calendario') && (
                       <p className="secundario">
-                        A seguir:{' '}
-                        {proximasAqui(suas, agora, activosHoje).map(({ partida: d, amanha }, i) => {
+                        {/* QUANDO AS HORAS NÃO SÃO DE HOJE, A LINHA COMEÇA
+                          POR O DIZER: «Hoje, domingo, não há. Na
+                          segunda-feira, 5/10: 06:45 1000». */}
+                        {prefixo(r, hoje)}
+                        {r.partidas.map((d, i) => {
                           const { texto, diaSeguinte } = horaLegivel(d.hora);
                           return (
                             <span key={`${d.hora}-${d.linha}-${i}`}>
                               {i > 0 && ' · '}
-                              {/* Já passaram todas as de hoje: estas são da
-                                manhã seguinte, e tem de se ver. */}
-                              {amanha && !diaSeguinte && 'amanhã '}
                               {texto}
                               {diaSeguinte && ' (dia seguinte)'} {d.linha}
                               {d.estimada && ' est.'}
                             </span>
                           );
                         })}
+                        {r.tipo === 'sem-calendario' && ' — sem confirmar se é hoje'}
+                      </p>
+                    )}
+                    {r?.tipo === 'fora-do-periodo' && (
+                      <p className="secundario">
+                        Os horários carregados vão de {dataCompleta(r.inicio)} a{' '}
+                        {dataCompleta(r.fim)}, e não dizem o que passa hoje.
+                      </p>
+                    )}
+                    {r?.tipo === 'nenhuma' && (
+                      <p className="secundario">
+                        Sem mais partidas nos horários carregados, que vão até {dataCompleta(r.fim)}
+                        .
                       </p>
                     )}
                     {suas && suas.length === 0 && (
                       <p className="secundario">Sem partidas registadas nesta paragem.</p>
                     )}
+                    {!suas && semResposta.includes(p.concelho) && (
+                      <p className="secundario">Não foi possível carregar as horas.</p>
+                    )}
                   </li>
                 );
               })}
             </ul>
+            {/* UMA FALHA DE REDE NÃO É «SEM PARTIDAS». Diz-se, e tenta-se
+              outra vez com um toque, sem perder a lista. */}
+            {semResposta.length > 0 && (
+              <p>
+                Não foi possível carregar as horas de algumas paragens — pode ser da ligação à
+                Internet.{' '}
+                <button type="button" onClick={() => carregarPartidas(semResposta)}>
+                  Tentar de novo
+                </button>
+              </p>
+            )}
             <p className="secundario">
               Horários planeados, não em tempo real. Uma hora marcada <em>est.</em> foi calculada
               por nós entre duas do horário publicado.

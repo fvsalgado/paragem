@@ -1673,6 +1673,14 @@ main.pagina:has(.app-mapa) {
   font-variant-numeric: tabular-nums;
 }
 
+/* QUANDO AS HORAS NÃO SÃO DE HOJE, a frase vem antes delas e com peso: é o
+   que impede uma lista de segunda-feira de se ler como a de domingo. */
+.dia-das-partidas {
+  margin: 0.3rem 0 0.2rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .cartao-accoes {
   display: flex;
   align-items: center;
