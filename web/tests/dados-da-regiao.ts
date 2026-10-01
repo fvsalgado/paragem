@@ -391,16 +391,77 @@ export function umaPartidaFutura(
   // Cinco minutos antes dela, no fuso da região — que é o relógio de quem
   // está na paragem, e não o da máquina onde os testes correm.
   const [h, min] = partida.hora.split(':').map(Number);
-  const alvo = new Date(`${dia}T${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}:00Z`);
-  alvo.setUTCMinutes(alvo.getUTCMinutes() - 5);
-  const fuso = fusoDaRegiao(regiao);
-  const comoLocal = new Date(alvo.toLocaleString('en-US', { timeZone: fuso }));
-  const comoUtc = new Date(alvo.toLocaleString('en-US', { timeZone: 'UTC' }));
   return {
     paragem: p,
     hora: partida.hora,
-    quando: new Date(alvo.getTime() - (comoLocal.getTime() - comoUtc.getTime())),
+    quando: noFuso(dia, h * 60 + min - 5, fusoDaRegiao(regiao)),
   };
+}
+
+/** Um dia (`AAAA-MM-DD`) e os minutos desde a meia-noite, no fuso dado → o instante. */
+function noFuso(dia: string, minutos: number, fuso: string): Date {
+  const alvo = new Date(`${dia}T00:00:00Z`);
+  alvo.setUTCMinutes(minutos);
+  const comoLocal = new Date(alvo.toLocaleString('en-US', { timeZone: fuso }));
+  const comoUtc = new Date(alvo.toLocaleString('en-US', { timeZone: 'UTC' }));
+  return new Date(alvo.getTime() - (comoLocal.getTime() - comoUtc.getTime()));
+}
+
+/**
+ * UM DIA EM QUE NÃO PASSA NADA NA PARAGEM MAIS SERVIDA — e o próximo em que passa.
+ *
+ * É o caso que a folha esteve a contar mal: ao domingo, num terminal só com
+ * serviço de dias úteis, anunciava como «agora» autocarros que não vinham. O
+ * teste põe o relógio nesse dia, às 10h, e a folha tem de dizer que hoje não
+ * há e mostrar as do dia seguinte com serviço.
+ *
+ * Dentro do período da tabela e a partir de hoje — um dia fora dele é outra
+ * resposta («não se sabe»), e um dia já passado não é o que alguém pergunta.
+ * `null` quando a paragem anda todos os dias, ou quando alguma das partidas
+ * dela não declara serviço (essas andam todos os dias, por definição).
+ */
+export function umDiaSemPartidas(
+  regiao = REGIAO,
+): { paragem: Paragem; quando: Date; proximo: string } | null {
+  const p = paragemComMaisPartidas(regiao);
+  const grelha = ler<{ servicos: string[]; datas: Record<string, number[]> }>(
+    regiao,
+    'viagens.json',
+  );
+  const folha = ler<Record<string, { servico_id?: string }[]>>(
+    regiao,
+    `partidas/${p.concelho}.json`,
+  );
+  if (!grelha || !folha?.[p.id]) return null;
+  const servicos = folha[p.id].map((x) => x.servico_id);
+  if (!servicos.length || servicos.some((x) => !x)) return null;
+
+  const anda = (dia: string) => {
+    const doDia = new Set((grelha.datas[dia] ?? []).map((i) => grelha.servicos[i]));
+    return servicos.some((x) => doDia.has(x!));
+  };
+  const todas = Object.keys(grelha.datas).sort();
+  const hoje = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const mais = (d: string, n: number) =>
+    new Date(Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8) + n))
+      .toISOString()
+      .slice(0, 10)
+      .replace(/-/g, '');
+  const fim = todas[todas.length - 1];
+  for (let d = todas[0] > hoje ? todas[0] : mais(hoje, 1); d <= fim; d = mais(d, 1)) {
+    if (anda(d)) continue;
+    for (let seguinte = mais(d, 1); seguinte <= fim; seguinte = mais(seguinte, 1)) {
+      if (!anda(seguinte)) continue;
+      const comHifens = (x: string) => `${x.slice(0, 4)}-${x.slice(4, 6)}-${x.slice(6)}`;
+      return {
+        paragem: p,
+        quando: noFuso(comHifens(d), 10 * 60, fusoDaRegiao(regiao)),
+        proximo: seguinte,
+      };
+    }
+    return null;
+  }
+  return null;
 }
 
 /** O nome da região, como o sítio o escreve — para os títulos das páginas. */
