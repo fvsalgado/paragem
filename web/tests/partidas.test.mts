@@ -172,9 +172,16 @@ test('à meia-noite e meia, o dia do campo é o de hoje e não o de ontem em UTC
   // 00:30 de sexta 2/10 em Lisboa, no verão, são 23:30 de quinta em UTC. O
   // «Partir agora» usava o `toISOString()` para o dia e a hora local para as
   // horas — e perguntava pelas carreiras de quinta.
+  const antes = process.env.TZ;
   process.env.TZ = 'Europe/Lisbon';
-  const d = new Date('2026-10-01T23:30:00Z');
-  assert.equal(d.toISOString().slice(0, 10), '2026-10-01', 'em UTC ainda é quinta');
-  assert.equal(dataDoCampo(d), '2026-10-02');
-  assert.equal(horaDoRelogio(d), '00:30');
+  try {
+    const d = new Date('2026-10-01T23:30:00Z');
+    assert.equal(d.toISOString().slice(0, 10), '2026-10-01', 'em UTC ainda é quinta');
+    assert.equal(dataDoCampo(d), '2026-10-02');
+    assert.equal(horaDoRelogio(d), '00:30');
+  } finally {
+    // O fuso é do processo, e não deste teste: deixá-lo em Lisboa mudava o
+    // dia aos testes que viessem a seguir no mesmo processo.
+    process.env.TZ = antes;
+  }
 });
