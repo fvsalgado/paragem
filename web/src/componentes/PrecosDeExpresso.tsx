@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * «Quanto custa daqui até lá, hoje?» — a pergunta que um horário não responde.
+ * «Quanto custa daqui até lá?» — a pergunta que um horário não responde.
  *
  * O horário que o sítio publica é planeado: diz a que horas o autocarro devia
  * partir. Para um expresso isso não chega. Quem vai daqui a Lisboa quer saber
@@ -21,7 +21,7 @@
  * conseguiu — e não apaga nada do que já estava escrito.
  */
 
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import {
   consultarExpressos,
   duracaoDe,
@@ -29,6 +29,7 @@ import {
   precoDe,
   type RespostaDeExpressos,
 } from '@/lib/expressos';
+import { dataDoCampo } from '@/lib/dias';
 
 export type Destino = { id: string; nome: string };
 
@@ -45,6 +46,17 @@ export default function PrecosDeExpresso({
 }) {
   const id = useId();
   const [para, setPara] = useState('');
+  // O DIA DA VIAGEM, e não só hoje. A consulta procurava sempre o dia de
+  // hoje, e quem planeia a ida a Lisboa para amanhã não via preço nenhum. O
+  // serviço já aceitava a data; faltava pedi-la. Começa em hoje, no relógio
+  // de quem lê — no servidor não se sabe que dia é para essa pessoa.
+  const [hoje, setHoje] = useState('');
+  const [dia, setDia] = useState('');
+  useEffect(() => {
+    const h = dataDoCampo(new Date());
+    setHoje(h);
+    setDia((d) => d || h);
+  }, []);
   const [aPerguntar, setAPerguntar] = useState(false);
   const [r, setR] = useState<RespostaDeExpressos | null>(null);
 
@@ -56,31 +68,51 @@ export default function PrecosDeExpresso({
     e.preventDefault();
     if (!para) return;
     setAPerguntar(true);
-    setR(await consultarExpressos(base, de, para));
+    setR(await consultarExpressos(base, de, para, dia || undefined));
     setAPerguntar(false);
   }
 
   const nomeDoDestino = destinos.find((d) => d.id === para)?.nome ?? '';
+  // «hoje», ou o dia por extenso: «sexta-feira, 2/10».
+  const quando =
+    !dia || dia === hoje
+      ? 'de hoje'
+      : `de ${new Date(`${dia}T12:00:00`).toLocaleDateString('pt-PT', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'numeric',
+        })}`;
 
   return (
     <form className="precos-de-expresso" onSubmit={perguntar}>
-      <label htmlFor={`${id}-destino`}>Ver preços de hoje a partir de {nomeDaParagem}</label>
+      <label htmlFor={`${id}-destino`}>Ver preços e lugares a partir de {nomeDaParagem}</label>
+      <select
+        id={`${id}-destino`}
+        value={para}
+        onChange={(e) => {
+          setPara(e.target.value);
+          setR(null);
+        }}
+      >
+        <option value="">Escolher destino…</option>
+        {destinos.map((d) => (
+          <option key={d.id} value={d.id}>
+            {d.nome}
+          </option>
+        ))}
+      </select>
+      <label htmlFor={`${id}-dia`}>Dia da viagem</label>
       <div className="linha-de-campos">
-        <select
-          id={`${id}-destino`}
-          value={para}
+        <input
+          id={`${id}-dia`}
+          type="date"
+          value={dia}
+          min={hoje || undefined}
           onChange={(e) => {
-            setPara(e.target.value);
+            setDia(e.target.value);
             setR(null);
           }}
-        >
-          <option value="">Escolher destino…</option>
-          {destinos.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.nome}
-            </option>
-          ))}
-        </select>
+        />
         <button type="submit" disabled={!para || aPerguntar}>
           {aPerguntar ? 'A perguntar…' : 'Procurar'}
         </button>
@@ -98,8 +130,8 @@ export default function PrecosDeExpresso({
 
         {r && !r.falhou && r.viagens.length === 0 && (
           <p className="secundario">
-            O operador não mostra viagens de hoje entre {nomeDaParagem} e {nomeDoDestino}. Pode
-            haver noutro dia.
+            O operador não mostra viagens {quando} entre {nomeDaParagem} e {nomeDoDestino}.
+            Experimenta outro dia.
           </p>
         )}
 
@@ -107,7 +139,7 @@ export default function PrecosDeExpresso({
           <>
             <table>
               <caption className="so-para-leitores">
-                Viagens de hoje entre {nomeDaParagem} e {nomeDoDestino}, com preço e lugares
+                Viagens {quando} entre {nomeDaParagem} e {nomeDoDestino}, com preço e lugares
               </caption>
               <thead>
                 <tr>

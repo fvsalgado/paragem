@@ -1092,6 +1092,46 @@ details.lista-fechada > summary::-webkit-details-marker {
   margin-top: 0;
 }
 
+/* --- as páginas de modo ------------------------------------------------------ */
+
+/* Um ponto — uma praça de táxis, uma estação — com onde fica e as ações. */
+ul.pontos-de-modo {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+ul.pontos-de-modo > li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.5rem 0.25rem;
+  border-bottom: 1px solid var(--linhas);
+}
+ul.pontos-de-modo > li:last-child {
+  border-bottom: 0;
+}
+ul.pontos-de-modo .nome {
+  font-weight: 700;
+}
+ul.pontos-de-modo .onde {
+  font-size: 0.95rem;
+  color: var(--texto-secundario);
+}
+ul.pontos-de-modo .accoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.25rem;
+}
+ul.pontos-de-modo .accoes a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+  font-weight: 700;
+}
+.sobre-estes-dados details[open] > summary {
+  margin-bottom: 0.5rem;
+}
+
 /* Uma faixa de INFORMAÇÃO: o que é assim e vai continuar assim. O vermelho
    de alerta é para o que mudou hoje — usado para factos estáveis, gasta-se,
    e a região parece em crise. */
@@ -2595,9 +2635,11 @@ dialog.menu-do-mapa .lista .secundario {
   gap: 0.5rem;
 }
 
-.linha-de-campos select {
-  flex: 1 1 14rem;
+.linha-de-campos select,
+.linha-de-campos input {
+  flex: 1 1 10rem;
   min-width: 0;
+  width: auto;
 }
 
 /* Alvos táteis de 44 px, que é o mínimo do §4.5. */

@@ -3,13 +3,19 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import {
   concelhos,
+  dadosAbertos,
   modo as lerModo,
   modos as lerModos,
+  paragens as lerParagens,
+  procura,
   exigirRegiao,
   url,
   urlRede,
   NOME_DOS_MODOS,
 } from '@/lib/dados';
+import AbrirPeloEndereco from '@/componentes/AbrirPeloEndereco';
+import { paragemMaisPerto } from '@/lib/onde';
+import { emPortugues, percursoEmPortugues, pontoTecnico } from '@/lib/expressos';
 import QuadroDeHorario from '@/componentes/QuadroDeHorario';
 import Transcricao from '@/componentes/Transcricao';
 import DisponibilidadeBicicletas, {
@@ -88,18 +94,42 @@ function oQueHa(m: ModoDetalhe, em: string): string {
   return partes.length ? `Há ${lista(partes)} ${em}.` : '';
 }
 
-function Ponto({ p }: { p: PontoDeModo }) {
-  // O NOME E A NOTA SEPARADOS, e não colados: dois `<span>` seguidos liam-se
-  // como uma palavra só, no ecrã e no leitor de ecrã. O telefone é uma
-  // ligação, e numa lista as ligações desenham-se numa linha sua.
+/**
+ * UM PONTO — uma praça de táxis, uma estação — e ONDE FICA.
+ *
+ * A lista das praças era oito vezes «Sem nome no mapa»: uma lista em que
+ * todos os itens dizem o mesmo não ajuda ninguém a encontrar um táxi. Sem
+ * nome, diz-se o que é; e diz-se onde está com o que os dados têm — a paragem
+ * da rede mais perto, à distância medida (`lib/onde.ts`) — e com o mapa do
+ * próprio sítio já nele. Não se inventa nome nenhum (§4.4).
+ */
+function Ponto({
+  p,
+  oQue,
+  perto,
+  noMapa,
+}: {
+  p: PontoDeModo;
+  /** O que o ponto é, para quando não tem nome: «Praça de táxis». */
+  oQue: string;
+  perto: { nome: string; metros: number } | null;
+  noMapa: string | null;
+}) {
   return (
-    <li>
-      <span>{p.nome ?? 'Sem nome no mapa'}</span>
-      {p.telefone ? (
-        <a href={`tel:${p.telefone}`}>{p.telefone}</a>
-      ) : p.operador ? (
-        <span className="secundario"> · {p.operador}</span>
-      ) : null}
+    <li className="ponto-de-modo">
+      <span className="nome">{p.nome ?? oQue}</span>
+      <span className="onde">
+        {perto
+          ? `Junto à paragem ${perto.nome}, a ${perto.metros} m.`
+          : 'Sem paragem da rede por perto para servir de referência.'}
+        {p.operador ? ` ${p.operador}.` : ''}
+      </span>
+      <span className="accoes">
+        {noMapa && <a href={noMapa}>Ver no mapa</a>}
+        {/* O telefone é uma ligação, e numa lista as ligações desenham-se
+            numa linha sua. */}
+        {p.telefone && <a href={`tel:${p.telefone}`}>Ligar {p.telefone}</a>}
+      </span>
     </li>
   );
 }
@@ -112,11 +142,13 @@ function Ponto({ p }: { p: PontoDeModo }) {
  * urbanos municipais e expressos eram rótulos. Quem toca em «Bicicleta
  * partilhada» quer a estação mais perto, não a palavra.
  *
- * **E a página diz o que não sabe, primeiro.** O que há de cada um destes
- * modos é desigual: 82 estações de bicicletas com coordenadas, e dos urbanos
- * municipais só o traçado de duas linhas — sem paragens e sem horas. Pôr a
- * falta no fim, depois de uma lista bonita, é deixar quem a lê supor que a
- * lista está completa. Vai antes.
+ * **E a página diz o que não sabe — numa frase, antes da lista, e por
+ * inteiro no fim.** O que há de cada um destes modos é desigual: 82 estações
+ * de bicicletas com coordenadas, e dos urbanos municipais só o traçado de
+ * duas linhas. Pôr a falta só no fim, depois de uma lista bonita, era deixar
+ * quem a lê supor que a lista está completa; pô-la toda à frente, em
+ * vermelho, era abrir a porta pela cozinha — fontes e levantamentos antes das
+ * praças e das linhas. A frase curta avisa; «Sobre estes dados» explica.
  */
 export default async function Modo({ params }: { params: Promise<Params> }) {
   const { regiao: rid, modo: mid } = await params;
@@ -131,6 +163,23 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
   const pontos = porConcelho(m.pontos, nomes);
   const semNada = cs.filter((c) => !m.pontos.some((p) => p.concelho === c.id));
 
+  // ONDE FICA CADA PONTO: a paragem da rede mais perto, e o mapa do sítio já
+  // nele quando o ponto está no mapa (`/?ponto=<id>`).
+  const ps = await lerParagens(rid);
+  const noMapa = new Set((await procura(rid)).map((x) => x.id));
+  const ondeFica = (p: PontoDeModo) => ({
+    perto: paragemMaisPerto(p, ps),
+    noMapa: p.id && noMapa.has(p.id) ? url(rid, `/?ponto=${encodeURIComponent(p.id)}`) : null,
+  });
+
+  // DE ONDE VEM ISTO, PELO NOME. A página acabava em «De onde vem isto:
+  // osm-portugal.» — o identificador interno da fonte. O nome legível é o
+  // que a página de dados abertos já mostra ao lado de cada ficheiro deste
+  // modo; um modo sem ficheiros publicados fica só com a ligação para lá.
+  const fontes = [
+    ...new Set((await dadosAbertos(rid)).filter((x) => x.modo === mid).map((x) => x.fonte)),
+  ].filter(Boolean);
+
   return (
     <>
       <h1>{nome}</h1>
@@ -144,27 +193,22 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
         </p>
       )}
 
-      {/* O QUE FALTA VEM ANTES DO QUE HÁ. */}
+      {/* O CONTEÚDO PRIMEIRO, A RESSALVA DEPOIS. A página abria com blocos
+          de metodologia — dois deles no vermelho dos alertas —, e o que o
+          modo tem (as praças, as linhas, as estações) só começava no segundo
+          ecrã. A honestidade fica: numa frase aqui, por inteiro no fim, em
+          «Sobre estes dados». O vermelho fica para o que mudou hoje. */}
+      {m.operadores?.length ? (
+        <p>
+          <strong>Serviço de um operador privado:</strong> os títulos desta região não servem aqui,
+          e os bilhetes compram-se ao operador.
+        </p>
+      ) : null}
       {(m.incompleto || m.notas.length > 0) && (
-        <section aria-labelledby="falta">
-          <h2 id="falta" className="so-para-leitores">
-            O que falta saber
-          </h2>
-          <div className={`faixa${m.incompleto ? ' alerta' : ''}`}>
-            {m.notas.map((n) => (
-              <p key={n}>{n}</p>
-            ))}
-            {m.sistemas.some((s) => !s.disponibilidade_publica) && (
-              <p>
-                As bicicletas e as docas livres, quando aparecem, são lidas da página que o operador
-                publica e vêm com a hora da leitura — o operador pode contá-las mal, e por isso
-                mostra-se quando foram vistas e não se promete mais do que isso. Falta um feed de
-                dados próprio do sistema; até lá, se a leitura envelhecer ou o serviço estiver em
-                baixo, a página mostra só onde estão as estações.
-              </p>
-            )}
-          </div>
-        </section>
+        <p className="secundario">
+          {m.incompleto ? 'Esta lista está incompleta. ' : ''}
+          <a href="#sobre-estes-dados">{m.incompleto ? 'Saber porquê' : 'Sobre estes dados'}</a>.
+        </p>
       )}
 
       {/* --- os sistemas, com as estações por concelho ---
@@ -196,13 +240,21 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
                   <ul className="lista">
                     {g.itens.map((e) => (
                       <li key={`${e.lat},${e.lon}`}>
-                        <span>{e.nome ?? 'Sem nome no mapa'}</span>
+                        <span>
+                          {e.nome ??
+                            (() => {
+                              const perto = paragemMaisPerto(e, ps);
+                              return perto
+                                ? `Estação junto à paragem ${perto.nome}`
+                                : 'Estação sem nome no mapa';
+                            })()}
+                        </span>
                         <ContagemDaEstacao id={e.id} />
                       </li>
                     ))}
                   </ul>
                   {nomes.has(g.id) && (
-                    <p>
+                    <p className="cartao-accoes">
                       <Link href={urlRede(rid, `concelhos/${g.id}/`)}>Tudo em {g.nome}</Link>
                     </p>
                   )}
@@ -265,19 +317,30 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
           {pontos.map((g) => (
             <section key={g.id} aria-labelledby={`p-${g.id}`}>
               <h3 id={`p-${g.id}`}>
-                {g.nome} <span className="secundario">{g.itens.length}</span>
+                {g.nome}{' '}
+                <span className="secundario">
+                  ·{' '}
+                  {mid === 'taxi'
+                    ? plural(g.itens.length, 'praça', 'praças')
+                    : plural(g.itens.length, 'local', 'locais')}
+                </span>
               </h3>
-              <ul className="lista">
+              <ul className="pontos-de-modo">
                 {g.itens.map((p) => (
-                  <Ponto key={`${p.lat},${p.lon}`} p={p} />
+                  <Ponto
+                    key={`${p.lat},${p.lon}`}
+                    p={p}
+                    oQue={mid === 'taxi' ? 'Praça de táxis' : nome}
+                    {...ondeFica(p)}
+                  />
                 ))}
               </ul>
             </section>
           ))}
           {semNada.length > 0 && (
-            <p>
-              Sem nenhuma levantada: {semNada.map((c) => c.nome).join(', ')}. Quer dizer que não
-              está no mapa de onde isto vem — não que não exista.
+            <p className="secundario">
+              Ainda sem nenhuma registada: {semNada.map((c) => c.nome).join(', ')}. Não quer dizer
+              que não haja — quer dizer que ainda não está no mapa de onde isto vem.
             </p>
           )}
         </section>
@@ -301,7 +364,11 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
                 {p.linhas.map((l) => (
                   <li key={l.nome}>
                     <span>{l.nome}</span>
-                    {l.destino && <span className="secundario"> · {l.destino}</span>}
+                    {/* EM PORTUGUÊS, e sem os pontos técnicos do operador: o
+                        feed escreve «Lisbon - Castelo Branco - Hub - Nice». */}
+                    {l.destino && (
+                      <span className="secundario"> · {percursoEmPortugues(l.destino)}</span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -314,7 +381,10 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
                   base={expressosDaRegiao(rid)}
                   de={p.id}
                   nomeDaParagem={p.nome}
-                  destinos={p.destinos ?? []}
+                  destinos={(p.destinos ?? [])
+                    .filter((d) => !pontoTecnico(d.nome))
+                    .map((d) => ({ ...d, nome: emPortugues(d.nome) }))
+                    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt'))}
                 />
               )}
             </section>
@@ -341,14 +411,33 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
         </section>
       ) : null}
 
-      <section aria-labelledby="donde">
-        <h2 id="donde">De onde vem isto</h2>
-        <p>
-          {m.fontes.join(', ')}. As licenças e os ficheiros estão em{' '}
-          <Link href={url(rid, 'dados-abertos/')}>dados abertos</Link>, e o que falta está no
-          relatório de lacunas da mesma página.
-        </p>
-        <p>
+      {/* SOBRE ESTES DADOS: o que antes abria a página. Fechado, no fim, e
+          aberto por quem carregar em «Saber porquê» lá em cima. */}
+      <section aria-labelledby="sobre" className="sobre-estes-dados">
+        <AbrirPeloEndereco />
+        <h2 id="sobre">Sobre estes dados</h2>
+        <details id="sobre-estes-dados" className="lista-fechada">
+          <summary>De onde vem isto, e o que falta</summary>
+          {m.notas.map((n) => (
+            <p key={n}>{n}</p>
+          ))}
+          {m.sistemas.some((s) => !s.disponibilidade_publica) && (
+            <p>
+              As bicicletas e as docas livres, quando aparecem, são lidas da página que o operador
+              publica e vêm com a hora da leitura — o operador pode contá-las mal, e por isso
+              mostra-se quando foram vistas e não se promete mais do que isso. Falta um feed de
+              dados próprio do sistema; até lá, se a leitura envelhecer ou o serviço estiver em
+              baixo, a página mostra só onde estão as estações.
+            </p>
+          )}
+          <p>
+            {fontes.length > 0 ? <>Fontes: {lista(fontes)}. </> : null}
+            As licenças e os ficheiros estão em{' '}
+            <Link href={url(rid, 'dados-abertos/')}>dados abertos</Link>, e o que falta está no
+            relatório de lacunas da mesma página.
+          </p>
+        </details>
+        <p className="cartao-accoes">
           <Link href={urlRede(rid)}>Voltar à rede</Link>
         </p>
       </section>
@@ -390,7 +479,7 @@ function ParagensNoMapa({ h }: { h: HorarioDeModo }) {
         {resto}.
       </p>
       {faltam.length > 0 && (
-        <details>
+        <details className="lista-fechada">
           <summary>{faltam.length === 1 ? 'A que falta' : 'As que faltam'}</summary>
           <p>
             O cartaz dá o nome e a hora, nunca a coordenada. Estas ainda não estão no OpenStreetMap
