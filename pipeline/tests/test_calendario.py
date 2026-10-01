@@ -288,3 +288,82 @@ def test_um_feriado_municipal_nao_entra_nos_nacionais(raiz):
     cal = Calendario(regiao_ou_salta("medio-tejo").calendario)
     assert date(2026, 3, 1) not in cal.feriados(2026), "o de Tomar"
     assert date(2026, 9, 19) not in cal.feriados(2026), "o de Vila de Rei"
+
+
+# --- o nome por extenso de um código ---------------------------------------
+
+
+def test_um_codigo_de_dias_por_algarismos_tem_nome_e_nunca_sai_cru(raiz):
+    """«E-235» chegava ao título de um quadro e ao leitor de ecrã («tabela E-235»).
+
+    O nome sai da MESMA regra que dá as datas (`codigos.digitos.mapa`): se os
+    dois se desencontrassem, o quadro dizia «segundas» e o calendário punha o
+    autocarro às terças.
+    """
+    from paragem.calendario import NomesDosCodigos
+
+    decl = regiao_ou_salta("prova").calendario
+    nomes = NomesDosCodigos(decl)
+    assert nomes.get("E-235") == "Escolar · Segundas, terças e quintas, exceto feriados"
+    assert nomes.get("A-4") == "Anual · Quartas, exceto feriados"
+    assert nomes.get("A-U") == "Anual · Dias úteis"
+    # E o nome concorda com as datas: «2» é segunda-feira nas duas respostas.
+    cal = Calendario(decl)
+    datas = cal.resolver("A-2", date(2026, 3, 1), date(2026, 3, 31)).datas
+    assert datas and {d.isoweekday() for d in datas} == {1}
+    assert nomes.get("A-2", "").startswith("Anual · Segundas")
+
+
+def test_o_que_a_declaracao_nao_diz_nao_se_adivinha_nem_sai_em_codigo(raiz):
+    from paragem.calendario import NomesDosCodigos
+
+    nomes = NomesDosCodigos(regiao_ou_salta("prova").calendario)
+    # Dias desconhecidos de um período conhecido: diz-se que falta.
+    assert nomes.get("E-XYZ") == "Escolar · Dias por confirmar"
+    assert nomes.get("E-29") == "Escolar · Dias por confirmar", "o 9 não está no mapa"
+    # Um código que não é desta declaração não tem nome — quem chama decide.
+    assert nomes.get("Z-U") is None
+    assert nomes.get("WKD", "omissão") == "omissão"
+
+
+def test_o_prefixo_do_concelho_nao_muda_o_nome(raiz):
+    from paragem.calendario import NomesDosCodigos
+
+    nomes = NomesDosCodigos(regiao_ou_salta("prova").calendario, ["pa"])
+    assert nomes.get("PA_E-U") == nomes.get("E-U") == "Escolar · Dias úteis"
+    # Um prefixo que nenhum concelho declara não é prefixo.
+    assert nomes.get("XX_E-U") is None
+
+
+def test_os_quadros_ordenam_se_como_o_horario_impresso(raiz):
+    """Por ordem alfabética do título, «E-235» caía entre «Anual» e «Escolar»."""
+    from paragem.calendario import NomesDosCodigos
+
+    nomes = NomesDosCodigos(regiao_ou_salta("prova").calendario)
+    codigos = ["FE-U", "E-46", "A-S", "E-U", "E-235", "A-U", "A-DF", "WKD"]
+    assert sorted(codigos, key=nomes.ordem) == [
+        "A-U",
+        "A-S",
+        "A-DF",
+        "E-U",
+        "E-235",
+        "E-46",
+        "FE-U",
+        "WKD",
+    ]
+
+
+def test_um_servico_de_fora_chama_se_pelos_dias_da_semana():
+    from paragem.calendario import nome_pela_semana
+
+    dias = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+
+    def linha(*ligados):
+        return {d: "1" if i + 1 in ligados else "0" for i, d in enumerate(dias)}
+
+    assert nome_pela_semana(linha(1, 2, 3, 4, 5)) == "Segunda a sexta"
+    assert nome_pela_semana(linha(*range(1, 8))) == "Todos os dias"
+    assert nome_pela_semana(linha(6)) == "Sábados"
+    assert nome_pela_semana(linha(1, 3, 5)) == "Segundas, quartas e sextas"
+    assert nome_pela_semana(linha()) is None
+    assert nome_pela_semana(None) is None

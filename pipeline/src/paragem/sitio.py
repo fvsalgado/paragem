@@ -39,6 +39,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from .calendario import NomesDosCodigos, nome_pela_semana
 from .geo import distancia_km
 from .gtfs import Gtfs
 from .leitores import LEITORES_DE_HORARIO
@@ -382,8 +383,14 @@ class Sitio:
                 self._partidas_do_feed(
                     outro, partidas, linhas_da_paragem, (ficheiro or "").removesuffix(".zip")
                 )
+        # A ORDEM É A DO HORÁRIO IMPRESSO, e não a do alfabeto: Anual antes de
+        # Escolar, dias úteis antes de sábados (`NomesDosCodigos.ordem`). A
+        # página agrupa pela ordem em que as partidas chegam.
+        ordem = self._nomes_de_servico().ordem
         for sid, lista in partidas.items():
-            lista.sort(key=lambda p: (p["servico_nome"], p["hora"], p["linha"]))
+            lista.sort(
+                key=lambda p: (ordem(p["servico"]), p["servico_nome"], p["hora"], p["linha"])
+            )
             partidas[sid] = _sem_repetidas(lista)
 
         # O ÍNDICE TAMBÉM É DE TODOS, e por uma razão que se descobriu partida:
@@ -443,6 +450,7 @@ class Sitio:
         rotas = {r["route_id"]: r for r in feed.routes}
         viagens = {t["trip_id"]: t for t in feed.trips}
         nomes_de_servico = self._nomes_de_servico()
+        semana = {str(c.get("service_id")): c for c in feed.obter("calendar.txt")}
         com_datas = self._servicos_com_datas(feed)
         operador = self._operador_de(feed)
         proprio = operador == self._operador_de(self._feed(self.feed_proprio))
@@ -484,7 +492,12 @@ class Sitio:
                         "destino": ultima.get(tid, ""),
                         "hora": hora[:5],
                         "servico": servico,
-                        "servico_nome": nomes_de_servico.get(servico, servico),
+                        # NUNCA O CÓDIGO CRU: um serviço que não siga os
+                        # códigos da região chama-se pelos dias da semana do
+                        # `calendar.txt`, e sem isso «Outros dias».
+                        "servico_nome": nomes_de_servico.get(servico)
+                        or nome_pela_semana(semana.get(servico))
+                        or "Outros dias",
                         # A MESMA CHAVE QUE A GRELHA USA, para a página poder
                         # perguntar «isto anda HOJE?».
                         #
@@ -544,33 +557,33 @@ class Sitio:
         c = self.regiao.concelho_por_prefixo(prefixo)
         return c.id if c else None
 
-    def _nomes_de_servico(self) -> dict[str, str]:
-        """«A-U» → «Anual · Dias úteis», a partir do calendário declarado."""
-        cal = self.regiao.calendario or {}
-        codigos = cal.get("codigos") or {}
-        periodos = {k: (v or {}).get("nome", k) for k, v in (codigos.get("periodo") or {}).items()}
-        dias = {k: (v or {}).get("nome", k) for k, v in (codigos.get("dias") or {}).items()}
+    def _nomes_de_servico(self) -> NomesDosCodigos:
+        """«A-U» → «Anual · Dias úteis», a partir do calendário declarado.
 
-        nomes: dict[str, str] = {}
-        for p, np_ in periodos.items():
-            for d, nd in dias.items():
-                nomes[f"{p}-{d}"] = f"{np_} · {nd}"
-        # Os `service_id` de junho levam por vezes prefixo de concelho
-        # (`ABT_`, `ORM_`…) por causa dos calendários escolares (§6.2). O nome
-        # que se mostra é o do código base; o concelho já está na página.
-        for chave in list(nomes):
-            for c in self.regiao.concelhos:
-                if c.prefixo_stop_id:
-                    nomes[f"{c.prefixo_stop_id.upper()}_{chave}"] = nomes[chave]
-        return nomes
+        Os `service_id` levam por vezes prefixo de concelho (`ABT_`, `ORM_`…)
+        por causa dos calendários escolares (§6.2): os prefixos são os que os
+        concelhos declaram, e o nome que se mostra é o do código base.
+        """
+        prefixos = [c.prefixo_stop_id for c in self.regiao.concelhos if c.prefixo_stop_id]
+        return NomesDosCodigos(self.regiao.calendario or {}, prefixos)
 
     @staticmethod
     def _servicos_com_datas(feed: Gtfs) -> set[str]:
-        if "calendar_dates.txt" not in feed:
-            return set()
-        return {
-            r["service_id"] for r in feed["calendar_dates.txt"] if r.get("exception_type") == "1"
-        }
+        """Os serviços que andam em algum dia — pelo `calendar.txt` E pelo `calendar_dates.txt`.
+
+        Só se olhava para o segundo. A demonstração declara os dias no
+        primeiro, como muitos feeds, e a página de cada paragem dizia em
+        vermelho «Não se sabe em que dias este serviço circula» por baixo de
+        horários cujos dias a grelha do planeador conhecia — a mesma página a
+        dizer que sabia e que não sabia. Pergunta-se à função que a grelha
+        usa, para as duas respostas serem a mesma.
+        """
+        from .grelha import _datas_de_servico
+
+        com: set[str] = set()
+        for servicos in _datas_de_servico(feed).values():
+            com |= servicos
+        return com
 
     # --- linhas ---------------------------------------------------------
 

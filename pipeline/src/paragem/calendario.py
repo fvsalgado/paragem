@@ -375,3 +375,143 @@ class Calendario:
 
 def _d(v: Any) -> date:
     return v if isinstance(v, date) else date.fromisoformat(str(v))
+
+
+# --- o nome por extenso de um código --------------------------------------
+
+#: O dia da semana ISO no plural, como se diz «às segundas». É língua, não é
+#: dado de nenhuma região: quem diz que «2» é segunda-feira é a declaração
+#: (`codigos.digitos.mapa`), e aqui só se escreve o nome do dia que ela aponta.
+DIAS_NO_PLURAL = {
+    1: "segundas",
+    2: "terças",
+    3: "quartas",
+    4: "quintas",
+    5: "sextas",
+    6: "sábados",
+    7: "domingos",
+}
+
+
+def por_extenso(partes: list[str]) -> str:
+    """`["a", "b", "c"]` → «a, b e c». Uma só fica como está."""
+    if len(partes) <= 1:
+        return "".join(partes)
+    return f"{', '.join(partes[:-1])} e {partes[-1]}"
+
+
+def _maiuscula(texto: str) -> str:
+    return texto[:1].upper() + texto[1:]
+
+
+class NomesDosCodigos:
+    """`E-235` → «Escolar · Segundas, terças e quintas, exceto feriados».
+
+    **O código cru chegava a quem viaja.** A página da paragem mais servida da
+    região tinha cinco quadros com títulos como «E-235», «E-2356» e «E-46» — e
+    um leitor de ecrã anunciava «tabela E-235». O nome era montado só com os
+    códigos de dias DECLARADOS UM A UM (`U`, `S`, `DF`…), e os dias por
+    algarismos — cada combinação é um código diferente — caíam no código.
+
+    Os algarismos já tinham regra: o `codigos.digitos.mapa` diz que dia da
+    semana é cada um, e é com ele que o `resolver` acima lhes dá datas. O nome
+    sai da MESMA regra, e por isso não se pode desencontrar das datas: se a
+    declaração disser que «2» é segunda-feira, o quadro diz «segundas» e o
+    calendário põe-no às segundas.
+
+    O que a declaração não diz não se adivinha: um período desconhecido não
+    tem nome (quem chama decide o que mostrar), e uns dias desconhecidos dizem
+    «Dias por confirmar» — nunca o código.
+
+    **A ORDEM é a da declaração.** Os quadros saíam por ordem alfabética do
+    título, e «E-235» caía entre «Anual» e «Escolar». A ordem em que a região
+    escreve os períodos (Anual, Escolar, Férias…) e os dias (úteis, sábados,
+    domingos…) é a ordem por que um horário impresso se lê; os dias por
+    algarismos vêm depois dos declarados, por ordem do primeiro dia.
+    """
+
+    def __init__(self, declaracao: dict[str, Any] | None, prefixos: list[str] | None = None):
+        codigos = (declaracao or {}).get("codigos") or {}
+        self.periodos: dict[str, Any] = dict(codigos.get("periodo") or {})
+        self.dias: dict[str, Any] = dict(codigos.get("dias") or {})
+        self.digitos: dict[str, Any] = dict(codigos.get("digitos") or {})
+        # Os `service_id` levam por vezes o prefixo do concelho (`ABT_E-U`), por
+        # causa dos calendários escolares. O nome é o do código base: o
+        # concelho já está na página.
+        self.prefixos = {p.upper() for p in (prefixos or []) if p}
+
+    def _base(self, codigo: str) -> str:
+        cabeca, sep, resto = codigo.partition("_")
+        return resto if sep and cabeca.upper() in self.prefixos else codigo
+
+    def _mapa_dos_digitos(self) -> dict[str, int]:
+        return {str(k): int(v) for k, v in (self.digitos.get("mapa") or {}).items()}
+
+    def nome_dos_dias(self, dias: str) -> str | None:
+        decl = self.dias.get(dias)
+        if decl:
+            return (decl or {}).get("nome") or None
+        if dias.isdigit():
+            mapa = self._mapa_dos_digitos()
+            if any(c not in mapa for c in dias):
+                return None
+            semana = sorted({mapa[c] for c in dias})
+            texto = _maiuscula(
+                por_extenso([DIAS_NO_PLURAL[d] for d in semana if d in DIAS_NO_PLURAL])
+            )
+            # Os feriados ficam de fora quando a regra os exclui — é o que o
+            # `_regra_de_dias` faz às datas, e o nome tem de dizer o mesmo.
+            return (
+                f"{texto}, exceto feriados" if self.digitos.get("exclui_feriados", True) else texto
+            )
+        return None
+
+    def nome(self, codigo: str) -> str | None:
+        """O nome por extenso, ou `None` se o código não for desta declaração."""
+        periodo, _, dias = self._base(codigo).partition("-")
+        if not dias or periodo not in self.periodos:
+            return None
+        nome_do_periodo = (self.periodos[periodo] or {}).get("nome") or periodo
+        return f"{nome_do_periodo} · {self.nome_dos_dias(dias) or 'Dias por confirmar'}"
+
+    def get(self, codigo: str, omissao: str | None = None) -> str | None:
+        """A mesma pergunta que se fazia ao dicionário de antes."""
+        return self.nome(codigo) or omissao
+
+    def ordem(self, codigo: str) -> tuple[int, int, int, str]:
+        """A chave para ordenar quadros: período, dias, e o código para desempatar."""
+        periodo, _, dias = self._base(codigo).partition("-")
+        periodos = list(self.periodos)
+        declarados = list(self.dias)
+        i_periodo = periodos.index(periodo) if periodo in periodos else len(periodos)
+        if dias in declarados:
+            i_dias, primeiro = declarados.index(dias), 0
+        elif dias.isdigit():
+            mapa = self._mapa_dos_digitos()
+            i_dias = len(declarados)
+            primeiro = min((mapa.get(c, 9) for c in dias), default=9)
+        else:
+            i_dias, primeiro = len(declarados) + 1, 0
+        return (i_periodo, i_dias, primeiro, codigo)
+
+
+def nome_pela_semana(linha: dict[str, Any] | None) -> str | None:
+    """O nome de um serviço que não segue os códigos da região, pela semana.
+
+    Um feed de outra entidade chama aos serviços o que quiser — «WKD», «S1» —
+    e o identificador dele não é um título. O que o `calendar.txt` diz é em
+    que dias da semana anda, e é isso que se escreve. Não se diz «dias úteis»:
+    o `calendar.txt` não sabe de feriados, e «segunda a sexta» é o que ele
+    afirma de facto.
+    """
+    if not linha:
+        return None
+    nomes = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+    semana = [i + 1 for i, n in enumerate(nomes) if str(linha.get(n, "")).strip() == "1"]
+    if not semana:
+        return None
+    if semana == [1, 2, 3, 4, 5, 6, 7]:
+        return "Todos os dias"
+    if semana == [1, 2, 3, 4, 5]:
+        return "Segunda a sexta"
+    return _maiuscula(por_extenso([DIAS_NO_PLURAL[d] for d in semana]))

@@ -43,6 +43,33 @@ def test_a_demonstracao_nao_sai_vazia(raiz, tmp_path):
     assert s.feed_de_comboio is None
 
 
+def test_nenhum_quadro_da_paragem_tem_por_titulo_um_codigo(raiz, tmp_path):
+    """O título de cada quadro é o nome por extenso, e os dias sabem-se.
+
+    Dois defeitos que a página mostrava ao mesmo tempo. O primeiro, o código
+    cru no título («E-235»). O segundo, «Não se sabe em que dias este serviço
+    circula» em vermelho por baixo de serviços com os dias no `calendar.txt`
+    — que é como a demonstração os declara, e que a grelha do planeador lia
+    bem. A paragem dizia que não sabia o que o planeador sabia.
+    """
+    from paragem.sitio import construir
+
+    gtfs = raiz / "build" / "prova" / "gtfs"
+    if not (gtfs / "rede-alta.zip").exists():
+        pytest.skip("sem build/prova — corre `uv run pipeline build --regiao prova`")
+    shutil.copytree(gtfs, tmp_path / "gtfs")
+    construir(raiz, regiao_ou_salta("prova"), tmp_path)
+
+    partidas = []
+    for f in (tmp_path / "sitio" / "paragens").glob("*.json"):
+        partidas += json.loads(f.read_text(encoding="utf-8"))["partidas"]
+    assert partidas
+    crus = {p["servico_nome"] for p in partidas if p["servico_nome"] == p["servico"]}
+    assert not crus, f"quadros com o código por título: {sorted(crus)}"
+    sem_dias = {p["servico"] for p in partidas if not p["tem_datas"]}
+    assert not sem_dias, f"serviços com dias no calendar.txt dados como sem datas: {sem_dias}"
+
+
 def test_um_horario_transcrito_a_mao_chega_ao_sitio(raiz, tmp_path):
     """As folhas que se transcrevem à mão são horários como os outros.
 
