@@ -9,6 +9,16 @@
  * A regra que isto fixa: aqui dentro não entra nada que toque no disco.
  */
 
+/**
+ * O título de uma página que não existe.
+ *
+ * As fichas do catálogo davam ao separador «Paragem», «Linha», «Concelho»
+ * quando a ficha não existia — e era esse o título da página de «não
+ * encontrada», que o navegador punha por cima do certo. Um título só, igual
+ * ao da própria página de 404 (`[regiao]/not-found.tsx`).
+ */
+export const NAO_ENCONTRADA = 'Página não encontrada';
+
 /** Os identificadores são os das pastas em `regioes/`: minúsculas, dígitos e hífens. */
 export const IDENTIFICADOR = /^[a-z0-9][a-z0-9-]{0,63}$/;
 

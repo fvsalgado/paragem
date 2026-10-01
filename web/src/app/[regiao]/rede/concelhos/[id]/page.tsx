@@ -12,6 +12,7 @@ import {
   urlDaParagem,
   modos as lerModos,
   NOME_DOS_MODOS,
+  NAO_ENCONTRADA,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 
@@ -35,7 +36,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { regiao: rid, id } = await params;
   const c = (await concelhos(rid)).find((x) => x.id === id);
-  return { title: c ? c.nome : 'Concelho' };
+  return { title: c ? c.nome : NAO_ENCONTRADA };
 }
 
 export default async function Concelho({

@@ -1,7 +1,14 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { exigirModo, linhas, linhaDetalhe, urlRede, urlDaParagem } from '@/lib/dados';
+import {
+  exigirModo,
+  linhas,
+  linhaDetalhe,
+  urlRede,
+  urlDaParagem,
+  NAO_ENCONTRADA,
+} from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import Distintivo from '@/componentes/Distintivo';
 
@@ -26,7 +33,7 @@ export async function generateMetadata({
   const { regiao: rid, id } = await params;
   await exigirModo(rid, 'autocarro');
   const l = await linhaDetalhe(rid, id);
-  return { title: l ? `${l.codigo} — ${l.nome}` : 'Linha' };
+  return { title: l ? `${l.codigo} — ${l.nome}` : NAO_ENCONTRADA };
 }
 
 const NOME_DO_SENTIDO: Record<string, string> = { '0': 'Ida', '1': 'Volta' };

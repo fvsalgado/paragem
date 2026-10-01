@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { exigirRegiao } from '@/lib/dados';
+import { exigirRegiao, regiao } from '@/lib/dados';
 import Cabecalho from '@/componentes/Cabecalho';
 import Rodape from '@/componentes/Rodape';
 import MarcaDeDemonstracao from '@/componentes/MarcaDeDemonstracao';
@@ -39,7 +39,12 @@ export async function generateMetadata({
   params: Promise<{ regiao: string }>;
 }): Promise<Metadata> {
   const { regiao: id } = await params;
-  const r = await exigirRegiao(id);
+  // `regiao` e não `exigirRegiao`: aqui uma região que não existe não pode
+  // rebentar. Se rebentasse, a página de «não encontrada» do produto — que é
+  // para onde o invólucro manda uma região que não existe — ficava sem título
+  // nenhum no separador.
+  const r = await regiao(id);
+  if (!r) return {};
   return {
     title: {
       default: `Paragem.pt — ${r.nome_com_artigo}`,
