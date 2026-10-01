@@ -13,6 +13,7 @@ import {
   registarLicenca,
   retirarAlias,
 } from '@/lib/painel/acoes';
+import { diaNoFuso, paraCampoLocal } from '@/lib/fuso';
 import { nomeDaAcao } from '@/lib/painel/auditoria';
 import { temChaveDeServico } from '@/lib/painel/base';
 import { contarAvisosPublicados } from '@/lib/painel/avisos';
@@ -39,7 +40,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 function quandoEQuem(linha: { updated_at: string; updated_by: string | null }): string {
-  const dia = dataPorExtenso(linha.updated_at);
+  // O dia no fuso da casa, e não o do instante em UTC — que à meia-noite e
+  // meia de Lisboa ainda é ontem.
+  const dia = dataPorExtenso(diaNoFuso(linha.updated_at));
   return linha.updated_by ? `${dia}, por ${linha.updated_by}` : dia;
 }
 
@@ -74,7 +77,7 @@ export default async function FichaDaRegiao({ params, searchParams }: Props) {
   const osAlias = aliases.filter((a) => a.region_id === id);
   const estadoDoModulo = new Map(modulos.filter((m) => m.region_id === id).map((m) => [m.id, m]));
   const asLicencas = licencas.filter((l) => l.region_id === id);
-  const licenca = estadoDaLicenca(asLicencas, new Date().toISOString().slice(0, 10));
+  const licenca = estadoDaLicenca(asLicencas, diaNoFuso(new Date()));
   const declarados = noArmazem?.modos ?? null;
   const publicados = avisosPublicados.get(id) ?? 0;
   const ficha = `/admin/regioes/${encodeURIComponent(id)}/`;
@@ -347,7 +350,7 @@ export default async function FichaDaRegiao({ params, searchParams }: Props) {
               <tbody>
                 {acoes.map((acao) => (
                   <tr key={acao.id}>
-                    <td>{acao.created_at.slice(0, 16).replace('T', ' ')}</td>
+                    <td>{paraCampoLocal(acao.created_at).replace('T', ' ')}</td>
                     <td>{acao.actor}</td>
                     <td>{nomeDaAcao(acao.action)}</td>
                     <td>

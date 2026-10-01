@@ -10,6 +10,7 @@ import {
   listarModulos,
   listarRegioes,
 } from '@/lib/painel/consultas';
+import { diaNoFuso } from '@/lib/fuso';
 import { estadoDaLicenca } from '@/lib/painel/licencas';
 import { resumoDosModulos } from '@/lib/painel/modulos';
 
@@ -44,7 +45,9 @@ export default async function Regioes({ searchParams }: Props) {
     listarModulos(),
     listarLicencas(),
   ]);
-  const hoje = new Date().toISOString().slice(0, 10);
+  // O dia de hoje NO FUSO DA CASA: em UTC, à meia-noite e meia de Lisboa,
+  // ainda era ontem, e uma licença que acaba hoje dizia «falta um dia».
+  const hoje = diaNoFuso(new Date());
   const ligadas = regioes.filter((r) => r.is_enabled).length;
   const aAcabar = regioes.filter(
     (r) =>

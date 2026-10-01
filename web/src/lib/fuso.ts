@@ -116,3 +116,15 @@ export function porExtenso(iso: string | null | undefined, fuso: string = FUSO):
     timeStyle: 'short',
   });
 }
+
+/**
+ * O dia civil de um instante, no fuso da casa: `AAAA-MM-DD`.
+ *
+ * O `toISOString().slice(0, 10)` é o dia em UTC, e o servidor do painel corre
+ * em UTC: entre a meia-noite e a uma da manhã de Lisboa, no verão, é ainda o
+ * dia de ontem. Uma licença que acaba hoje lia-se «falta um dia», e a hora
+ * de uma alteração gravada à meia-noite e meia ficava na véspera.
+ */
+export function diaNoFuso(iso: string | Date, fuso: string = FUSO): string {
+  return paraCampoLocal(typeof iso === 'string' ? iso : iso.toISOString(), fuso).slice(0, 10);
+}

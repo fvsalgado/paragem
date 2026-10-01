@@ -6,7 +6,15 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFileSync, readdirSync } from 'node:fs';
 
-import { CAUSAS, EFEITOS, GRAVIDADES, emVigor, ordenar, type Aviso } from '../src/lib/avisos.ts';
+import {
+  CAUSAS,
+  EFEITOS,
+  GRAVIDADES,
+  emVigor,
+  ordenar,
+  prazoDoAviso,
+  type Aviso,
+} from '../src/lib/avisos.ts';
 import { CAUSA, EFEITO, GRAVIDADE } from '../src/lib/gtfs-rt.ts';
 
 const BASE: Aviso = {
@@ -134,4 +142,29 @@ test('os rótulos do painel estão em português, e não são o nome da especifi
     assert.notEqual(rotulo, nome, `«${nome}» ficou por traduzir`);
     assert.match(rotulo, /^[a-zà-ÿ]/u, `«${nome}» devia ter um rótulo em minúsculas`);
   }
+});
+
+test('a página pública dá a hora do aviso no fuso da região, e não no do servidor', () => {
+  // O servidor corre em UTC. O aviso que o técnico marcou para as 7h de 1 de
+  // outubro (6h UTC, no verão) saía na página pública às 6h: o componente
+  // formatava sem fuso. O painel, que já usava o fuso declarado, dizia 7h.
+  const antes = process.env.TZ;
+  process.env.TZ = 'UTC';
+  try {
+    const texto = prazoDoAviso({ inicio: '2026-10-01T06:00:00.000Z', fim: null }, 'Europe/Lisbon');
+    assert.match(texto, /desde 1 de outubro de 2026.*07:00/);
+    assert.doesNotMatch(texto, /06:00/);
+    assert.match(texto, /sem fim previsto$/);
+    // Sem fuso passado, vale o da casa (`PARAGEM_FUSO`, Lisboa por omissão).
+    assert.match(prazoDoAviso({ inicio: '2026-10-01T06:00:00.000Z', fim: null }), /07:00/);
+    // No inverno, a hora de Lisboa é a de UTC.
+    assert.match(prazoDoAviso({ inicio: null, fim: '2026-12-01T18:00:00.000Z' }), /até .*18:00/);
+  } finally {
+    process.env.TZ = antes;
+  }
+});
+
+test('sem início nem fim não se escreve prazo nenhum, e sem fim não se inventa um', () => {
+  assert.equal(prazoDoAviso({ inicio: null, fim: null }), '');
+  assert.doesNotMatch(prazoDoAviso({ inicio: null, fim: '2026-12-01T18:00:00Z' }), /sem fim/);
 });

@@ -17,6 +17,7 @@
  */
 import { cache } from 'react';
 import { IDENTIFICADOR } from './formato.ts';
+import { porExtenso } from './fuso.ts';
 import type { Causa, Efeito, Gravidade } from './gtfs-rt';
 
 /** Uma linha de `public.avisos`, tal como o PostgREST a devolve. */
@@ -102,6 +103,26 @@ export function emVigor(a: Pick<Aviso, 'inicio' | 'fim'>, agora: Date = new Date
   if (a.inicio && Date.parse(a.inicio) > t) return false;
   if (a.fim && Date.parse(a.fim) < t) return false;
   return true;
+}
+
+/**
+ * Quando é que o aviso vale, por extenso — NO FUSO DA REGIÃO, e não no do
+ * servidor.
+ *
+ * O painel já escrevia e mostrava as horas no fuso declarado (`lib/fuso.ts`);
+ * a página pública formatava-as com o `toLocaleString` sem fuso, que no
+ * servidor é UTC. No verão, o aviso que o técnico marcou para as 7h saía às
+ * 6h — informação errada em nome da autoridade, e no aviso, que é a única
+ * coisa que ela escreve à mão e em cima da hora.
+ *
+ * SEM FIM NÃO SE INVENTA UM: é o que a operadora sabe, e é isso que se diz.
+ * «Até às 18h» num aviso que ninguém datou é uma promessa. E sem início nem
+ * fim não se diz nada — o aviso está a acontecer, e é tudo o que se sabe.
+ */
+export function prazoDoAviso(a: Pick<Aviso, 'inicio' | 'fim'>, fuso?: string): string {
+  const desde = a.inicio ? ` · desde ${porExtenso(a.inicio, fuso)}` : '';
+  const ate = a.fim ? ` até ${porExtenso(a.fim, fuso)}` : a.inicio ? ', sem fim previsto' : '';
+  return desde + ate;
 }
 
 /** Os graves primeiro; dentro da mesma gravidade, o que começou há menos tempo. */
