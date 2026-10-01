@@ -2150,6 +2150,219 @@ ul.produto-botoes {
   min-height: 0;
 }
 
+/* --- a montra ------------------------------------------------------------- */
+
+/* As faixas da montra vão à largura do ecrã; o conteúdo fica na medida larga.
+   Alternam o fundo do sítio e o branco, com um filete — sem gradientes nem
+   sombras (§6): o que separa uma secção da outra é o fundo, não o relevo. */
+/* A medida e a margem de dentro são as do cabeçalho do produto, para o
+   texto de cada faixa começar na mesma vertical que a marca lá em cima. */
+.produto-interior {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+.produto-faixa {
+  padding: 3rem 0;
+}
+.produto-faixa.clara {
+  background: #fff;
+  border-top: 1px solid var(--linhas);
+  border-bottom: 1px solid var(--linhas);
+}
+.produto-faixa h2 {
+  font-size: 1.6rem;
+  margin: 0 0 0.75rem;
+}
+/* O texto corrido fica na medida de leitura, mesmo numa faixa larga. */
+.produto-medida {
+  max-width: var(--medida);
+}
+
+/* O primeiro ecrã: o que é e para quem, à esquerda; o produto a funcionar, à
+   direita. Com ar por cima do título — na montra antiga o `h1` estava a 0 px
+   do cabeçalho (P4-029). */
+.produto-heroi {
+  padding: 2.5rem 0 3rem;
+}
+.produto-heroi .produto-interior {
+  display: grid;
+  gap: 2.5rem;
+}
+.produto-sobretitulo {
+  font-weight: 700;
+  color: var(--texto-secundario);
+  margin: 0 0 0.75rem;
+}
+.produto-heroi h1 {
+  font-size: 2.1rem;
+  line-height: 1.1;
+  margin: 0 0 1rem;
+  max-width: 18ch;
+}
+.produto-chamada {
+  font-size: 1.15rem;
+  max-width: 36rem;
+}
+.produto-heroi .produto-botoes {
+  margin: 1.5rem 0 0.5rem;
+}
+.produto-garantias {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.produto-garantias li {
+  font-size: 0.9rem;
+  background: #fff;
+  border: 1px solid var(--linhas);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+}
+
+/* O telemóvel: uma moldura na cor do texto à volta de uma captura real. A
+   proporção vai declarada para a caixa existir antes de a imagem chegar. */
+.produto-telemovel {
+  margin: 0 auto;
+  width: min(16.5rem, 78vw);
+}
+.produto-telemovel .ecra {
+  border: 10px solid var(--texto);
+  border-radius: 2.25rem;
+  overflow: hidden;
+  background: #fff;
+  aspect-ratio: 390 / 844;
+}
+.produto-telemovel img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.produto-telemovel figcaption {
+  font-size: 0.9rem;
+  color: var(--texto-secundario);
+  text-align: center;
+  margin-top: 0.75rem;
+}
+
+@media (min-width: 64rem) {
+  .produto-heroi {
+    padding: 3.5rem 0 4rem;
+  }
+  .produto-heroi .produto-interior {
+    grid-template-columns: minmax(0, 1fr) 17rem;
+    gap: 4rem;
+    align-items: center;
+  }
+  .produto-heroi h1 {
+    font-size: 2.75rem;
+  }
+  .produto-telemovel {
+    width: 17rem;
+  }
+}
+
+/* As grelhas de cartões: uma coluna no telemóvel, tantas quantas couberem
+   na secretária — e as que lá estão esticam-se até à margem, em vez de
+   deixarem uma coluna vazia à direita. */
+.produto-regioes,
+.produto-grelha {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 0;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+}
+.produto-regioes .cartao,
+.produto-grelha .cartao {
+  margin: 0;
+}
+.produto-regioes h3 {
+  margin: 0;
+}
+/* O nome da região é a ligação para ela, e é um alvo autónomo: 44 px. */
+.produto-regioes h3 a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+}
+.produto-regioes h3 + .secundario {
+  margin: 0 0 0.5rem;
+}
+.produto-grupo h3 {
+  margin: 0 0 0.5rem;
+}
+.produto-grupo ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+.produto-grupo li + li {
+  margin-top: 0.5rem;
+}
+
+/* Os passos da entrada: um filete de 3 px na cor da marca por cima de cada
+   um, e o número à vista. O `ol` continua a contar para o leitor de ecrã. */
+ol.produto-passos {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0;
+  display: grid;
+  gap: 1.5rem 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 12.5rem), 1fr));
+}
+ol.produto-passos li {
+  border-top: 3px solid var(--marca);
+  padding-top: 0.75rem;
+}
+ol.produto-passos h3 {
+  margin: 0.25rem 0 0.4rem;
+}
+ol.produto-passos p {
+  margin: 0;
+}
+.produto-numero {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--marca);
+}
+
+/* Duas colunas de texto a partir de 48rem: «Como funciona» ao lado de «Os
+   dados», «Quem está por trás» ao lado do código e do nome. */
+.produto-duas {
+  display: grid;
+  gap: 0.5rem 3rem;
+}
+.produto-duas h2 {
+  margin-top: 1.5rem;
+}
+.produto-duas > div:first-child h2 {
+  margin-top: 0;
+}
+@media (min-width: 48rem) {
+  .produto-duas {
+    grid-template-columns: 1fr 1fr;
+  }
+  .produto-duas h2 {
+    margin-top: 0;
+  }
+}
+
+/* O fecho: com quem se fala, numa faixa na cor clara da marca — encostada
+   ao rodapé, sem a margem que o separa das páginas de texto. */
+.produto-fecho {
+  background: #e8f1f4;
+  border-top: 1px solid var(--linhas);
+}
+main.produto:has(> .produto-fecho:last-child) + .rodape {
+  margin-top: 0;
+}
+
 /* --- a aplicação do mapa ------------------------------------------------- */
 
 /* O mapa OCUPA O ECRÃ. É a diferença entre um sítio com um mapa lá dentro e

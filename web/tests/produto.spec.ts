@@ -8,7 +8,7 @@
  * que não pode voltar.
  */
 import { test, expect } from '@playwright/test';
-import { PRODUTO } from './anfitrioes';
+import { DEMONSTRACOES, PRODUTO, anfitriao } from './anfitrioes';
 
 const PAGINAS: [string, string][] = [
   ['/contacto/', 'Falar connosco'],
@@ -76,4 +76,47 @@ test('a marca do produto parece a marca, e o título não se cola ao cabeçalho'
     });
     expect(ar, `${caminho}: o título está a ${ar} px do cabeçalho`).toBeGreaterThanOrEqual(24);
   }
+});
+
+test('a montra vende: o produto a funcionar, para quem é, e com quem se fala', async ({ page }) => {
+  await page.goto(`${PRODUTO}/`);
+  const principal = page.getByRole('main');
+  await expect(
+    page.getByRole('heading', { level: 1, name: /Os transportes do seu território/ }),
+  ).toBeVisible();
+  await expect(principal).toContainText(
+    'Para comunidades intermunicipais, áreas metropolitanas e câmaras',
+  );
+
+  // As duas chamadas no primeiro ecrã: marcar (por correio, com o assunto) e
+  // experimentar (numa demonstração, que é do produto — nunca num cliente).
+  const marcar = principal.getByRole('link', { name: 'Marcar uma demonstração' }).first();
+  await expect(marcar).toBeInViewport();
+  await expect(marcar).toHaveAttribute('href', /^mailto:[^?]+\?subject=Marcar%20uma%20demonstra/);
+  const experimentar = principal.getByRole('link', { name: 'Experimentar a demonstração' });
+  await expect(experimentar).toBeInViewport();
+  const destino = await experimentar.getAttribute('href');
+  expect(
+    DEMONSTRACOES.map((id) => `${anfitriao(id)}/`),
+    `«Experimentar» leva a ${destino}, que não é uma demonstração`,
+  ).toContain(destino);
+
+  // O telemóvel: uma captura que carrega, com o texto alternativo a dizer o
+  // que mostra.
+  const captura = page.getByRole('img', { name: /A página de uma paragem no telemóvel/ });
+  await expect(captura).toBeVisible();
+  expect(await captura.evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0)).toBe(
+    true,
+  );
+
+  // As âncoras do cabeçalho levam a secções que existem.
+  for (const ancora of ['demonstracao', 'para-quem', 'entrada']) {
+    await expect(page.locator(`#${ancora}`), ancora).toHaveCount(1);
+  }
+  // E nada de preços inventados: pede-se uma proposta.
+  await expect(principal.getByRole('link', { name: 'Pedir proposta' }).first()).toHaveAttribute(
+    'href',
+    /^mailto:/,
+  );
+  await expect(principal).not.toContainText('€');
 });
