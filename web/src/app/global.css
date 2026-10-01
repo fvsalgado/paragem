@@ -1132,6 +1132,40 @@ ul.pontos-de-modo .accoes a {
   margin-bottom: 0.5rem;
 }
 
+/* --- «Que título me serve?» -------------------------------------------------- */
+
+.ajuda-da-rede {
+  background: #fff;
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  padding: 0.25rem 1rem 0.75rem;
+  margin: 0.75rem 0;
+}
+.ajuda-da-rede > h3 {
+  margin-top: 0.75rem;
+}
+dl.qual-titulo {
+  margin: 0;
+}
+dl.qual-titulo dt {
+  font-weight: 700;
+  margin-top: 0.75rem;
+  color: var(--marca);
+}
+dl.qual-titulo dd {
+  margin: 0.25rem 0 0;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--linhas);
+  line-height: 1.45;
+}
+.preco-em-linha {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.nota-do-titulo {
+  display: block;
+}
+
 /* Uma faixa de INFORMAÇÃO: o que é assim e vai continuar assim. O vermelho
    de alerta é para o que mudou hoje — usado para factos estáveis, gasta-se,
    e a região parece em crise. */
