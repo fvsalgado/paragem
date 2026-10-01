@@ -70,6 +70,44 @@ def test_nenhum_quadro_da_paragem_tem_por_titulo_um_codigo(raiz, tmp_path):
     assert not sem_dias, f"serviços com dias no calendar.txt dados como sem datas: {sem_dias}"
 
 
+def test_a_linha_tem_horario_por_sentido_e_diz_de_onde_parte_e_para_onde_vai(raiz, tmp_path):
+    """«Qual é o horário da linha X?» não tinha resposta no sítio.
+
+    A página da linha era a lista das paragens do percurso mais servido, sem
+    uma hora, e com os sentidos chamados «Ida» e «Volta». Cada sentido passa a
+    trazer o seu quadro — as paragens com hora marcada e as horas de cada
+    viagem, com o nome do tipo de dia por extenso e a chave da tabela dos dias
+    — e as pontas de verdade das viagens.
+    """
+    from paragem.sitio import construir
+
+    gtfs = raiz / "build" / "prova" / "gtfs"
+    if not (gtfs / "rede-alta.zip").exists():
+        pytest.skip("sem build/prova — corre `uv run pipeline build --regiao prova`")
+    shutil.copytree(gtfs, tmp_path / "gtfs")
+    construir(raiz, regiao_ou_salta("prova"), tmp_path)
+
+    servicos = set(
+        json.loads((tmp_path / "sitio" / "servicos.json").read_text(encoding="utf-8"))["servicos"]
+    )
+    com_quadro = 0
+    for f in (tmp_path / "sitio" / "linhas").glob("*.json"):
+        linha = json.loads(f.read_text(encoding="utf-8"))
+        total = 0
+        for s in linha["sentidos"]:
+            assert s["origens"] and s["destinos"], "cada sentido diz de onde parte e para onde vai"
+            q = s["quadro"]
+            for v in q["viagens"]:
+                assert len(v["horas"]) == len(q["paragens"])
+                assert v["servico_id"] in servicos, "a chave tem de ser a da tabela dos dias"
+                assert v["servico_nome"] != v["servico_id"].split(":")[-1], "nunca o código cru"
+                assert any(v["horas"])
+            total += len(q["viagens"])
+            com_quadro += bool(q["viagens"])
+        assert total == linha["viagens"], f"{linha['id']}: todas as viagens entram no horário"
+    assert com_quadro, "nenhuma linha da demonstração ficou com horário"
+
+
 def test_um_horario_transcrito_a_mao_chega_ao_sitio(raiz, tmp_path):
     """As folhas que se transcrevem à mão são horários como os outros.
 

@@ -1,27 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ASeguir from '@/componentes/ASeguir';
+import QuadrosPorDia, { type QuadroDoDia } from '@/componentes/QuadrosPorDia';
 import { expandir, type PartidasCompactas } from '@/lib/formato';
-import {
-  calendarioDe,
-  chaveDoDia,
-  horaDoRelogio,
-  proximas,
-  servicosNoDia,
-  type Calendario,
-} from '@/lib/dias';
-
-/** Um quadro do horário completo: um tipo de dia, e a tabela dele já desenhada. */
-export type QuadroDoDia = {
-  chave: string;
-  nome: string;
-  /** Os serviços deste quadro, pela chave da tabela dos dias. */
-  servicos: string[];
-  quantas: number;
-  /** A tabela, desenhada no servidor: aqui só se decide se está aberta. */
-  conteudo: ReactNode;
-};
+import { calendarioDe, horaDoRelogio, proximas, type Calendario } from '@/lib/dias';
 
 /**
  * A PÁGINA DA PARAGEM COMEÇA PELO QUE PASSA A SEGUIR, e o horário vem depois.
@@ -38,7 +21,8 @@ export type QuadroDoDia = {
  *    do cartão do mapa (`ASeguir`, `proximas`) e a mesma tabela dos dias
  *    (`calendarioDe`): as duas respostas não se podem desencontrar.
  * 2. **Horário completo** — um quadro por tipo de dia, fechado, e os que
- *    valem HOJE abertos e marcados «hoje».
+ *    valem HOJE abertos e marcados «hoje» (`QuadrosPorDia`, o mesmo da página
+ *    da linha).
  *
  * **Porque é que isto corre no navegador.** É a única coisa na página que
  * depende da hora de quem lê, e a página é servida da cache: no servidor, a
@@ -82,23 +66,6 @@ export default function PartidasDaParagem({
   const pronto = instante !== null && calendario !== undefined;
   const agora = instante ? horaDoRelogio(instante) : '';
   const resultado = pronto ? proximas(lista, instante, agora, calendario, 6) : null;
-  const deHoje = pronto && calendario ? servicosNoDia(calendario, chaveDoDia(instante)) : null;
-  const valeHoje = (q: QuadroDoDia) => !!deHoje && q.servicos.some((s) => deHoje.has(s));
-
-  // OS QUADROS DE HOJE ABREM-SE UMA VEZ, quando se sabe que dia é. Depois
-  // disso mandam as mãos de quem lê: fechar um não o volta a abrir daqui a
-  // trinta segundos, quando o relógio anda.
-  const [abertos, setAbertos] = useState<Set<string>>(() => new Set());
-  const [jaAbriu, setJaAbriu] = useState(false);
-  useEffect(() => {
-    if (!pronto || jaAbriu) return;
-    setAbertos(new Set(quadros.filter(valeHoje).map((q) => q.chave)));
-    setJaAbriu(true);
-    // `valeHoje` muda com o relógio; o que interessa é a primeira vez.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pronto, jaAbriu, quadros]);
-
-  const algumHoje = quadros.some(valeHoje);
 
   return (
     <>
@@ -130,45 +97,7 @@ export default function PartidasDaParagem({
 
       <section aria-labelledby="horario">
         <h2 id="horario">Horário completo</h2>
-        <p className="secundario">
-          {quadros.length === 1
-            ? 'Um quadro, com todas as partidas desta paragem.'
-            : `Um quadro por tipo de dia${algumHoje ? '; os que valem hoje estão abertos e marcados' : ''}. Toca num para o abrir.`}
-        </p>
-        {quadros.map((q) => {
-          const hoje = valeHoje(q);
-          return (
-            <details
-              key={q.chave}
-              className={`quadro-do-dia${hoje ? ' de-hoje' : ''}`}
-              open={abertos.has(q.chave)}
-              onToggle={(e) => {
-                const aberto = e.currentTarget.open;
-                setAbertos((antes) => {
-                  if (antes.has(q.chave) === aberto) return antes;
-                  const depois = new Set(antes);
-                  if (aberto) depois.add(q.chave);
-                  else depois.delete(q.chave);
-                  return depois;
-                });
-              }}
-            >
-              <summary>
-                <span className="nome-do-quadro">{q.nome}</span>
-                {hoje && (
-                  <span className="hoje">
-                    <span className="so-para-leitores">, vale </span>hoje
-                  </span>
-                )}
-                <span className="quantas">
-                  <span className="so-para-leitores">, </span>
-                  {q.quantas} {q.quantas === 1 ? 'partida' : 'partidas'}
-                </span>
-              </summary>
-              {q.conteudo}
-            </details>
-          );
-        })}
+        <QuadrosPorDia regiao={regiao} quadros={quadros} />
       </section>
     </>
   );
