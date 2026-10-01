@@ -4,7 +4,7 @@
  * Funções puras, sem leituras: a página dá-lhes o que leu do `a-pedido.json`.
  */
 import type { APedido } from './formato';
-import { simples } from './letras';
+import { simples } from './letras.ts';
 
 /** O endereço do horário de um grupo de circuitos — uma brochura, um folheto. */
 export const caminhoDoHorario = (grupo: string): string => `a-pedido/${grupo}/`;

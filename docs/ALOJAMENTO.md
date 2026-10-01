@@ -52,9 +52,10 @@ Host, traduz pelo mapa da base (`web/src/lib/regiao-host.ts`, cinco minutos
 de memória por instância) e reescreve `/…` para `/<regiao>/…` por dentro, sem
 o endereço público mudar — é reescrita e nunca `headers()` numa página, para
 a cache continuar a valer. Um anfitrião que não é de nenhuma região
-(`www.paragem.pt`, um `*.vercel.app`, `localhost`) vê a montra em `/` e um 404
-em tudo o resto: **nunca a rede de um cliente** num endereço que ninguém lhe
-atribuiu. Um alias (`region_domain_aliases`) redireciona (308) para o
+(`www.paragem.pt`, um `*.vercel.app`, `localhost`) vê as páginas do produto —
+a montra, `/contacto/`, `/privacidade/`, `/acessibilidade/`, e o `robots.txt` e
+o mapa do sítio dele — e um 404 em tudo o resto: **nunca a rede de um cliente**
+num endereço que ninguém lhe atribuiu. Um alias (`region_domain_aliases`) redireciona (308) para o
 canónico. O caminho antigo `/<regiao>/…` deixou de existir, por decisão do
 dono (CLAUDE.md §11.7).
 
@@ -80,7 +81,8 @@ variável não existe: quem manda é a base.
 | `NEXT_PUBLIC_PARAGEM_DADOS` | todos | a porta pública do balde: `https://<ref>.supabase.co/storage/v1/object/public/sitio` |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | todos | a base do painel — a lista das regiões ligadas, lida com a chave pública |
 | `REVALIDATE_SECRET` | produção e pré-visualização, sensível | o que o pipeline apresenta ao avisar; 16 caracteres ou mais |
-| `NEXT_PUBLIC_PARAGEM_PRODUTO` | todos | a montra, `https://www.paragem.pt`: para onde levam a marca e o «Outras regiões» a partir de qualquer região |
+| `NEXT_PUBLIC_PARAGEM_PRODUTO` | todos | a montra, `https://www.paragem.pt`: para onde levam a marca e o «Outras regiões» a partir de qualquer região. É também O endereço do produto — o único anfitrião onde o `robots.txt` do produto deixa indexar, e a morada do mapa do sítio dele |
+| `NEXT_PUBLIC_PARAGEM_CONTACTO` | opcional | o correio para onde a página do produto manda escrever («Falar connosco», «Marcar uma demonstração», «Pedir proposta»). Sem ela, ou com um valor que não seja um endereço, vale o que o repositório já publica no `AUTORIA.md` e no `SECURITY.md` |
 | `PARAGEM_DOMINIOS` | só pré-visualização | `id=host,…` somado ao mapa da base; nos testes é o mapa inteiro |
 | `PARAGEM_MODULOS_DESLIGADOS` | só nos testes | `id=modo+modo,…` somado ao que a base diz; é como o CI prova que um módulo desligado sai do sítio ([`PAINEL.md`](PAINEL.md)) |
 | `NEXT_PUBLIC_PARAGEM_POSTHOG` | produção | a medição ([`MEDICAO.md`](MEDICAO.md)); uma pré-visualização não mede |
@@ -158,9 +160,12 @@ e abrir é decisão da autoridade de transportes (Fase 5), não nossa.
 
 Dois cadeados, em sítios diferentes de propósito: a **proteção de
 pré-visualizações** da Vercel (Vercel Authentication, `preview`), que vive no
-painel e se desliga sem deixar rasto; e **`web/public/robots.txt`**, com
-`Disallow: /`, que vive no repositório e só muda num commit que alguém
-assina. Há um teste que verifica o segundo.
+painel e se desliga sem deixar rasto; e **o `robots.txt` de cada região**
+(`web/src/app/[regiao]/robots.txt/route.ts`), com `Disallow: /`, que vive no
+repositório e só muda num commit que alguém assina. O anfitrião do produto
+tem o seu, que deixa indexar: não tem horários, e quem procura o produto pelo
+nome tem de o encontrar. Há testes que verificam os dois
+(`web/tests/robots.spec.ts`).
 
 ## O motor e o proxy
 

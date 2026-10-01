@@ -2037,6 +2037,119 @@ ul.cartoes .cartao h3 {
   font-size: 1.15rem;
 }
 
+/* --- as páginas do produto ---------------------------------------------- */
+
+/* A MEDIDA DO PRODUTO É MAIS LARGA. As páginas de uma região são uma coluna
+   de leitura; a montra é uma página de quem decide, ao computador, e tem duas
+   colunas a partir de 64rem — o texto de um lado, o produto a funcionar do
+   outro. O cabeçalho e o rodapé acompanham-na, para não ficarem numa coluna
+   estreita por cima de uma página larga. */
+.cabecalho-do-produto .interior,
+.rodape-do-produto .interior {
+  max-width: 72rem;
+}
+
+/* Uma linha só, também no telemóvel: a marca à esquerda e o «Falar connosco»
+   à direita. As três âncoras saem abaixo de 48rem — as secções estão logo
+   abaixo, e um botão que cai para a segunda linha deixa de estar à vista. */
+.cabecalho-do-produto .interior {
+  flex-wrap: nowrap;
+  gap: 1rem;
+}
+.cabecalho-do-produto a.marca {
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+.cabecalho-do-produto nav {
+  margin-left: auto;
+}
+.cabecalho-do-produto nav ul {
+  flex-wrap: nowrap;
+}
+.cabecalho-do-produto a.botao {
+  flex-shrink: 0;
+}
+@media (max-width: 47.99rem) {
+  .cabecalho-do-produto nav {
+    display: none;
+  }
+  .cabecalho-do-produto a.botao {
+    margin-left: auto;
+  }
+}
+
+/* O símbolo: o poste na cor do texto, a placa na da marca. As cores vêm dos
+   tokens, para o símbolo nunca divergir da página à volta dele. */
+.simbolo-do-produto {
+  display: block;
+  flex-shrink: 0;
+}
+.simbolo-do-produto .poste {
+  fill: var(--texto);
+}
+.simbolo-do-produto .placa {
+  fill: var(--marca);
+}
+.simbolo-do-produto .olho {
+  fill: #fff;
+}
+
+/* A segunda ação, de contorno: o mesmo verbo, com menos peso que a primeira.
+   O contorno é de 2 px para se ver como botão e não como caixa de texto. */
+a.botao.secundario {
+  background: #fff;
+  color: var(--marca);
+  border: 2px solid var(--marca);
+}
+a.botao.secundario:hover,
+a.botao.secundario:focus-visible {
+  background: #e8f1f4;
+  color: var(--marca-hover);
+  border-color: var(--marca-hover);
+}
+
+/* As páginas de texto do produto — contacto, privacidade, acessibilidade.
+   Com ar por cima do título: na montra antiga o `h1` estava a 0 px do fim do
+   cabeçalho, e era a única página onde se colava a ele. */
+.produto-texto {
+  max-width: var(--medida);
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+}
+.produto-entrada {
+  font-size: 1.15rem;
+}
+ul.produto-botoes {
+  list-style: none;
+  padding: 0;
+}
+
+/* O endereço por extenso, que se copia de um toque: um `mailto:` sem programa
+   de correio configurado não abre nada, e quem o escreve à mão erra uma
+   letra. `overflow-wrap` para um endereço comprido não empurrar a página para
+   o lado num telemóvel. */
+.endereco-de-correio {
+  -webkit-user-select: all;
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+.correio-por-extenso {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0.5rem 0 1rem;
+}
+
+/* As ligações no meio de uma frase do rodapé ficam na linha da frase. Com os
+   44 px das ligações autónomas, cada uma abria um buraco na entrelinha; a
+   norma isenta-as (2.5.8, «em linha»), e o teste dos alvos também. */
+.rodape-do-produto p {
+  margin: 0.5rem 0;
+}
+.rodape-do-produto p a {
+  display: inline;
+  min-height: 0;
+}
+
 /* --- a aplicação do mapa ------------------------------------------------- */
 
 /* O mapa OCUPA O ECRÃ. É a diferença entre um sítio com um mapa lá dentro e

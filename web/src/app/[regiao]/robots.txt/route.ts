@@ -1,4 +1,19 @@
-# Este ficheiro não é um pormenor de configuração: é o §4.4 escrito para os
+/**
+ * `GET /robots.txt` no anfitrião de uma REGIÃO — e a regra não mudou.
+ *
+ * Era `public/robots.txt`, servido igual a todos os anfitriões. Mudou-se para
+ * aqui quando o anfitrião do produto passou a ter o seu
+ * (`app/-produto/robots.txt`), que deixa indexar uma página sem horários. O
+ * desta continua a fechar a porta, com o comentário que tinha, palavra por
+ * palavra: é o §4.4 escrito para os motores de busca, e sai quando a
+ * autoridade de transportes autorizar (Fase 5) — num commit que alguém
+ * assina, e não num interruptor de um painel.
+ *
+ * Sem `Sitemap:`, de propósito. O mapa do sítio da região já existe
+ * (`app/[regiao]/sitemap.xml`), para esse dia ser uma linha aqui; antes dele,
+ * apontá-lo era convidar a ler o que se pede para não indexar.
+ */
+const REGRA = `# Este ficheiro não é um pormenor de configuração: é o §4.4 escrito para os
 # motores de busca.
 #
 # O que aqui se publica são horários planeados, com a data dos dados, e pode
@@ -19,7 +34,7 @@
 #
 # E É A ÚNICA TRANCA QUE HÁ EM PRODUÇÃO. Este comentário dizia que «a proteção
 # da Vercel faz o mesmo do outro lado», e não faz: medido no painel do projeto,
-# o `ssoProtection` está ligado só para as PRÉ-VISUALIZAÇÕES. O endereço
+# o \`ssoProtection\` está ligado só para as PRÉ-VISUALIZAÇÕES. O endereço
 # público está aberto a quem lá chegue — o que é o que se quer, porque há quem
 # precise de apanhar o autocarro —, e o que não se quer é que um motor de busca
 # ponha uma hora destas num resultado sem o resto da página à volta.
@@ -28,3 +43,13 @@
 
 User-agent: *
 Disallow: /
+`;
+
+export function GET(): Response {
+  return new Response(REGRA, {
+    headers: {
+      'content-type': 'text/plain; charset=utf-8',
+      'cache-control': 'public, max-age=3600',
+    },
+  });
+}

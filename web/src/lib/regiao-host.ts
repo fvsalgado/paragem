@@ -247,14 +247,47 @@ export type Decisao =
  * parte (`scripts/copiar-maplibre.mjs`). Fora desta lista, o pedido dele era
  * reescrito para dentro de uma região e dava 404, e o mapa não desenhava nada
  * em região nenhuma.
+ *
+ * O `/produto/` são as imagens do produto — a captura do telemóvel, a imagem
+ * de partilha, os ícones do manifesto (`scripts/imagens-do-produto.mjs`). São
+ * as mesmas em qualquer anfitrião: a imagem de partilha de uma página de
+ * paragem é a do produto até a região ter a sua.
+ *
+ * Os três ícones de raiz são convenções do Next (`app/icon.svg`,
+ * `app/apple-icon.png`, `app/favicon.ico`): estavam nesta lista à espera
+ * deles, e davam 404 porque os ficheiros não existiam.
  */
-export const CAMINHOS_DE_FICHEIROS = ['/glifos/', '/maplibre/'] as const;
-export const FICHEIROS_DE_RAIZ = [
-  '/robots.txt',
-  '/favicon.ico',
-  '/icon.svg',
-  '/apple-icon.png',
-] as const;
+export const CAMINHOS_DE_FICHEIROS = ['/glifos/', '/maplibre/', '/produto/'] as const;
+export const FICHEIROS_DE_RAIZ = ['/favicon.ico', '/icon.svg', '/apple-icon.png'] as const;
+
+/**
+ * Os ficheiros de raiz que cada anfitrião responde À SUA MANEIRA, e que por
+ * isso não passam tal como estão: reescrevem-se como uma página.
+ *
+ * O `robots.txt` era um ficheiro só, em `public/`, servido igual a todos os
+ * anfitriões — e o `Disallow: /` que existe para não indexar horários (§4.4)
+ * fechava também a página do produto, que não tem horários nenhuns. Agora a
+ * região responde o dela (`app/[regiao]/robots.txt`, a mesma regra de
+ * sempre) e o produto responde o seu (`app/-produto/robots.txt`). O mesmo
+ * para o mapa do sítio: o de uma região lista as páginas dela, no domínio
+ * dela.
+ */
+export const FICHEIROS_DE_CADA_ANFITRIAO = ['/robots.txt', '/sitemap.xml'] as const;
+
+/**
+ * As páginas do PRODUTO: a montra, o contacto, a privacidade e a
+ * acessibilidade de `www.paragem.pt`. Davam 404 — só a montra existia — e a
+ * página que vende acessibilidade não tinha declaração de acessibilidade.
+ *
+ * Por dentro vivem em `SEGMENTO_DO_PRODUTO`, que começa por hífen como o
+ * `NAO_E_ENDERECO`: é um segmento que nenhuma região pode ter (o
+ * identificador começa por letra ou algarismo), e por isso uma região chamada
+ * `contacto` nunca ficaria com o início tapado pela página do produto. Pelo
+ * mesmo motivo, o segmento não se alcança de fora: num anfitrião de região
+ * vai para dentro dela, e num anfitrião desconhecido não está nesta lista.
+ */
+export const PAGINAS_DO_PRODUTO = ['/', '/contacto/', '/privacidade/', '/acessibilidade/'] as const;
+export const SEGMENTO_DO_PRODUTO = '/-produto';
 
 /**
  * Um segmento que nenhuma região pode ter: começa por hífen, e o leitor de
@@ -290,12 +323,20 @@ export function decidir(
 
   const regiao = host ? (mapa.dominios[host] ?? null) : null;
   if (regiao === null) {
-    // O anfitrião não é de ninguém: a montra, e só a montra. Tudo o resto vai
-    // para um caminho que não existe — incluindo `/<regiao>/…`, que era o
-    // endereço antigo e deixou de o ser.
-    return pathname === '/'
-      ? { tipo: 'passar' }
-      : { tipo: 'reescrever', para: NAO_E_ENDERECO + pathname };
+    // O anfitrião não é de ninguém: as páginas do produto, e só elas. Tudo o
+    // resto vai para um caminho que não existe — incluindo `/<regiao>/…`, que
+    // era o endereço antigo e deixou de o ser.
+    const doProduto =
+      PAGINAS_DO_PRODUTO.includes(pathname as (typeof PAGINAS_DO_PRODUTO)[number]) ||
+      FICHEIROS_DE_CADA_ANFITRIAO.includes(
+        pathname as (typeof FICHEIROS_DE_CADA_ANFITRIAO)[number],
+      );
+    return {
+      tipo: 'reescrever',
+      para: (doProduto ? SEGMENTO_DO_PRODUTO : NAO_E_ENDERECO) + pathname,
+    };
   }
+  // Numa região vai TUDO para dentro dela, o `robots.txt` incluído: é o dela,
+  // e diz o que ela diz.
   return { tipo: 'reescrever', para: `/${regiao}${pathname}` };
 }

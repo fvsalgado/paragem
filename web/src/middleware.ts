@@ -6,7 +6,7 @@ import {
   ehDoPainel,
 } from '@/lib/painel/guarda';
 import { COOKIE_DA_SESSAO, lerSessao } from '@/lib/painel/sessao';
-import { decidir, mapaDeDominios } from '@/lib/regiao-host';
+import { NAO_E_ENDERECO, decidir, mapaDeDominios } from '@/lib/regiao-host';
 
 /**
  * A porta do multi-região, e a guarda do painel.
@@ -14,8 +14,9 @@ import { decidir, mapaDeDominios } from '@/lib/regiao-host';
  * Cada pedido público é reescrito para o segmento da sua região: o Host diz
  * qual (`regiao-host.ts` traduz e decide), e o caminho passa a `/<regiao>/…`
  * por dentro sem o endereço público mudar. Um anfitrião que não é de nenhuma
- * região vê a página do produto em `/` e um 404 em tudo o resto — nunca a
- * rede de um cliente. Um alias redireciona (308) para o domínio canónico.
+ * região vê as páginas do produto — a montra, o contacto, a privacidade, a
+ * acessibilidade — e um 404 em tudo o resto: nunca a rede de um cliente. Um
+ * alias redireciona (308) para o domínio canónico.
  *
  * A decisão é uma função pura (`decidir`), testada frase a frase; isto só a
  * traduz para o que o Next entende. Corre no runtime de edge, à frente de
@@ -56,8 +57,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
       const destino = request.nextUrl.clone();
       destino.pathname = decisao.para;
       const resposta = NextResponse.rewrite(destino);
-      // O que não é endereço não se indexa: é um 404 com outro nome.
-      if (decisao.para.startsWith('/-')) resposta.headers.set('X-Robots-Tag', 'noindex, nofollow');
+      // O que não é endereço não se indexa: é um 404 com outro nome. Só esse —
+      // as páginas do produto também vivem num segmento com hífen, e essas são
+      // precisamente as que se querem encontrar.
+      if (decisao.para.startsWith(NAO_E_ENDERECO + '/')) {
+        resposta.headers.set('X-Robots-Tag', 'noindex, nofollow');
+      }
       return resposta;
     }
   }

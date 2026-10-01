@@ -10,6 +10,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   NAO_E_ENDERECO,
+  SEGMENTO_DO_PRODUTO,
   decidir,
   dominioDaRegiao,
   esquecerMapa,
@@ -63,17 +64,55 @@ test('o endereço antigo deixou de existir: /<regiao>/ num anfitrião de região
   });
 });
 
-test('um anfitrião desconhecido vê a montra em /, e mais nada', () => {
-  assert.deepEqual(decidir('paragem-abc.vercel.app', '/', MAPA), { tipo: 'passar' });
-  assert.deepEqual(decidir(null, '/', MAPA), { tipo: 'passar' });
+test('um anfitrião desconhecido vê as páginas do produto, e mais nada', () => {
+  for (const host of ['paragem-abc.vercel.app', null]) {
+    for (const caminho of ['/', '/contacto/', '/privacidade/', '/acessibilidade/']) {
+      assert.deepEqual(decidir(host, caminho, MAPA), {
+        tipo: 'reescrever',
+        para: `${SEGMENTO_DO_PRODUTO}${caminho}`,
+      });
+    }
+  }
   // Nem por caminho: `/prova-municipio/` num anfitrião que não é de ninguém não é a
   // rede de ninguém. Vai para um segmento que nenhuma região pode ter.
   const d = decidir('paragem-abc.vercel.app', '/prova-municipio/rede/', MAPA);
   assert.deepEqual(d, { tipo: 'reescrever', para: `${NAO_E_ENDERECO}/prova-municipio/rede/` });
-  assert.ok(
-    NAO_E_ENDERECO.startsWith('/-'),
-    'começa por hífen: nenhum identificador de região o pode ter',
-  );
+  for (const segmento of [NAO_E_ENDERECO, SEGMENTO_DO_PRODUTO]) {
+    assert.ok(
+      segmento.startsWith('/-'),
+      `${segmento} começa por hífen: nenhum identificador de região o pode ter`,
+    );
+  }
+});
+
+test('o segmento do produto não se alcança de fora, nem numa região nem fora dela', () => {
+  // Por fora só há os endereços públicos. Pedido pelo nome interno, num
+  // anfitrião desconhecido, é um endereço que não existe…
+  assert.deepEqual(decidir('paragem-abc.vercel.app', `${SEGMENTO_DO_PRODUTO}/contacto/`, MAPA), {
+    tipo: 'reescrever',
+    para: `${NAO_E_ENDERECO}${SEGMENTO_DO_PRODUTO}/contacto/`,
+  });
+  // … e numa região vai para dentro dela, como tudo o resto: o contacto do
+  // produto não aparece com a casa de uma autoridade à volta.
+  assert.deepEqual(decidir('prova.exemplo.pt', '/contacto/', MAPA), {
+    tipo: 'reescrever',
+    para: '/prova/contacto/',
+  });
+});
+
+test('o robots.txt e o mapa do sítio são de cada anfitrião', () => {
+  for (const ficheiro of ['/robots.txt', '/sitemap.xml']) {
+    // O da região diz o que ela diz — o robots.txt dela continua a fechar a porta.
+    assert.deepEqual(decidir('prova.exemplo.pt', ficheiro, MAPA), {
+      tipo: 'reescrever',
+      para: `/prova${ficheiro}`,
+    });
+    // O do produto é outro: o anfitrião do produto não tem horários, e indexa-se.
+    assert.deepEqual(decidir('paragem-abc.vercel.app', ficheiro, MAPA), {
+      tipo: 'reescrever',
+      para: `${SEGMENTO_DO_PRODUTO}${ficheiro}`,
+    });
+  }
 });
 
 test('um alias redireciona para o canónico e nunca serve', () => {
@@ -86,7 +125,10 @@ test('um alias redireciona para o canónico e nunca serve', () => {
 test('a API e os ficheiros passam tal como estão, em qualquer anfitrião', () => {
   for (const host of ['prova.exemplo.pt', 'paragem-abc.vercel.app', null]) {
     assert.deepEqual(decidir(host, '/api/revalidate/', MAPA), { tipo: 'passar' });
-    assert.deepEqual(decidir(host, '/robots.txt', MAPA), { tipo: 'passar' });
+    for (const icone of ['/favicon.ico', '/icon.svg', '/apple-icon.png']) {
+      assert.deepEqual(decidir(host, icone, MAPA), { tipo: 'passar' });
+    }
+    assert.deepEqual(decidir(host, '/produto/partilha.png', MAPA), { tipo: 'passar' });
     assert.deepEqual(decidir(host, '/glifos/Atkinson.woff2', MAPA), { tipo: 'passar' });
     assert.deepEqual(decidir(host, '/maplibre/6.11.2/maplibre-gl-worker.mjs', MAPA), {
       tipo: 'passar',
