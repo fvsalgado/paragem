@@ -16,6 +16,7 @@ import {
   Trocar,
 } from './Icones';
 import { viagemProcurada, viagemSemResposta, motorIndisponivel } from '@/lib/medicao';
+import { dataDoCampo, horaDoRelogio } from '@/lib/dias';
 import type { Ponto } from '@/lib/formato';
 import { planear, capacidadeDe } from '@/lib/planeador';
 import {
@@ -127,8 +128,11 @@ export default function Direccoes({
   const [de, setDe] = useState<Ponto | null>(deInicial);
   const [para, setPara] = useState<Ponto | null>(paraInicial);
   const [quando, setQuando] = useState<'agora' | 'marcado'>('agora');
-  const [data, setData] = useState(agora.toISOString().slice(0, 10));
-  const [hora, setHora] = useState(agora.toTimeString().slice(0, 5));
+  // O DIA E A HORA DO MESMO RELÓGIO. O dia vinha do `toISOString()`, que é
+  // UTC, e a hora do relógio de quem lê: no verão, entre a meia-noite e a uma,
+  // o campo abria no dia de ontem (`dataDoCampo`, em `lib/dias.ts`).
+  const [data, setData] = useState(dataDoCampo(agora));
+  const [hora, setHora] = useState(horaDoRelogio(agora));
   const [abertoQuando, setAbertoQuando] = useState(false);
   const [estado, setEstado] = useState<Estado>({ tipo: 'parado' });
   const [porModo, setPorModo] = useState<PorModo>(VAZIO);
@@ -210,8 +214,8 @@ export default function Direccoes({
     if (!de || !para || Number.isNaN(de.lat) || Number.isNaN(para.lat)) return;
     // «Agora» é agora À HORA DE PROCURAR, e não a hora a que a página abriu.
     const n = new Date();
-    const d = quando === 'agora' ? n.toISOString().slice(0, 10) : data;
-    const h = quando === 'agora' ? n.toTimeString().slice(0, 5) : hora;
+    const d = quando === 'agora' ? dataDoCampo(n) : data;
+    const h = quando === 'agora' ? horaDoRelogio(n) : hora;
 
     const chave = `${de.lat},${de.lon}|${para.lat},${para.lon}|${quando}|${data}|${hora}`;
     if (!forcar && chave === ultima.current) return;
