@@ -6,6 +6,7 @@ import {
   paragem as lerParagem,
   concelhos,
   linhas,
+  compactar,
   horaLegivel,
   operadorCurto,
   url,
@@ -14,6 +15,7 @@ import {
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import Distintivo from '@/componentes/Distintivo';
+import PartidasDaParagem, { type QuadroDoDia } from '@/componentes/PartidasDaParagem';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -51,17 +53,109 @@ export default async function Paragem({
   const p = ficha.paragem;
 
   const concelho = (await concelhos(rid)).find((c) => c.id === p.concelho);
-  const cores = Object.fromEntries((await linhas(rid)).map((l) => [l.codigo, l.cor]));
+  // A COR PELO IDENTIFICADOR DA LINHA, e não pelo número: há números que se
+  // repetem entre concessões (a rede da região e a vizinha têm cada uma a sua
+  // «1109»), e pelo número a segunda herdava a cor da primeira.
+  const cores = Object.fromEntries((await linhas(rid)).map((l) => [l.id, l.cor]));
   const partidas = ficha.partidas;
 
   // Por serviço, que é como um horário impresso se lê: «Anual · Dias úteis»,
   // e não «hoje». Uma paragem não tem um horário — tem vários, conforme o dia.
+  // A ordem é a em que as partidas chegam, e o pipeline já as manda pela do
+  // horário impresso (Anual antes de Escolar, dias úteis antes de sábados).
   const porServico = new Map<string, typeof partidas>();
   for (const d of partidas) {
     const lista = porServico.get(d.servico_nome) ?? [];
     lista.push(d);
     porServico.set(d.servico_nome, lista);
   }
+
+  // AS COLUNAS NO MESMO SÍTIO EM TODOS OS QUADROS. Com larguras automáticas,
+  // a coluna das linhas começava a 97 px num quadro e a 87 px no seguinte, e a
+  // página parecia recortes colados. A largura da coluna da linha é a do
+  // número mais comprido DESTA paragem — a mesma em todos os quadros dela.
+  const maisComprido = Math.max(2, ...partidas.map((d) => d.linha.length));
+  const larguraDaLinha = `${Math.max(4.25, maisComprido * 0.7 + 2.25).toFixed(2)}rem`;
+
+  const quadros: QuadroDoDia[] = [...porServico.entries()].map(([servico, lista]) => ({
+    chave: servico,
+    nome: servico,
+    servicos: [...new Set(lista.map((d) => d.servico_id).filter((s): s is string => !!s))],
+    quantas: lista.length,
+    conteudo: (
+      <>
+        <table className="horario quadro-fixo">
+          {/* O título está no resumo do quadro, à vista; a legenda é para
+              quem chega à tabela pelo leitor de ecrã, que a anuncia. */}
+          <caption className="so-para-leitores">{servico}</caption>
+          <thead>
+            <tr>
+              <th scope="col" style={{ width: '4.75rem' }}>
+                Hora
+              </th>
+              <th scope="col" style={{ width: larguraDaLinha }}>
+                Linha
+              </th>
+              <th scope="col">Destino</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lista.map((d, i) => {
+              const h = horaLegivel(d.hora);
+              return (
+                <tr key={`${d.linha_id}-${d.hora}-${i}`}>
+                  <td>
+                    <span className="hora">{h.texto}</span>
+                    {/* POR EXTENSO E POR BAIXO, e não «est.» numa abreviatura
+                        que só se explicava a quem passasse o rato por cima. */}
+                    {d.estimada && <span className="nota-da-hora">estimada</span>}
+                    {h.diaSeguinte && <span className="nota-da-hora">dia seguinte</span>}
+                  </td>
+                  <td>
+                    <Link className="ligacao-da-linha" href={urlRede(rid, `linhas/${d.linha_id}/`)}>
+                      <span className="so-para-leitores">Linha </span>
+                      <Distintivo codigo={d.linha} cor={cores[d.linha_id]} tamanho="medio" />
+                    </Link>
+                  </td>
+                  <td>
+                    {/* Uma circular volta ao sítio de onde parte, e o quadro
+                        diz isso em vez de repetir o nome desta paragem. Ver
+                        `circular` em `formato.ts`. */}
+                    {d.circular ? 'circular · volta aqui' : d.destino}
+                    {/* QUEM GERE, quando não é a rede da região. O §1 manda
+                        que seja informação secundária — e é o que isto é:
+                        abaixo do destino, em pequeno. Escondê-lo de todo era
+                        outra coisa, porque nesta paragem param carreiras de
+                        duas concessões e o título de uma não serve na outra. */}
+                    {d.operador && (
+                      <>
+                        <br />
+                        <span className="secundario">Gerido por {operadorCurto(d.operador)}</span>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {lista.some((d) => !d.tem_datas) && (
+          <div className="faixa informacao">
+            <p>
+              <strong>Não se sabe em que dias este serviço circula.</strong> O calendário de
+              funcionamento da operadora ainda não foi transcrito, e sem ele estas horas existem mas
+              não têm dia. Confirma com a operadora antes de contar com elas.
+            </p>
+          </div>
+        )}
+      </>
+    ),
+  }));
+
+  // O «Ver no mapa» abre o mapa do próprio sítio nesta paragem, com o cartão
+  // dela. É uma ligação a sério (`<a>`) e não uma navegação por dentro: o
+  // mapa lê o endereço ao abrir.
+  const noMapa = url(rid, `/?ponto=${encodeURIComponent(p.id)}`);
 
   return (
     <>
@@ -80,6 +174,16 @@ export default async function Paragem({
           'Esta paragem fica fora dos concelhos da região. A linha que a serve atravessa a fronteira.'
         )}
       </p>
+      {/* A AÇÃO NO TOPO, junto do nome. Estava no fim da página — a 19 000 px
+          na paragem mais servida —, e chegava-lhe quem já tinha desistido. O
+          destino vai preenchido: quem chega a esta paragem por uma pesquisa
+          não tem de escrever outra vez o nome que já está no ecrã. */}
+      <p className="cartao-accoes">
+        <Link className="botao" href={url(rid, `/viagem/?para=${encodeURIComponent(p.nome)}`)}>
+          Como chegar aqui
+        </Link>
+        <a href={noMapa}>Ver no mapa</a>
+      </p>
       <MarcaDeDados regiao={rid} />
 
       {partidas.length === 0 ? (
@@ -90,105 +194,32 @@ export default async function Paragem({
           </p>
         </div>
       ) : (
-        [...porServico.entries()].map(([servico, lista]) => {
-          const semDatas = lista.some((d) => !d.tem_datas);
-          return (
-            <section key={servico}>
-              <table className="horario">
-                <caption>{servico}</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Hora</th>
-                    <th scope="col">Linha</th>
-                    <th scope="col">Destino</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lista.map((d, i) => {
-                    const h = horaLegivel(d.hora);
-                    return (
-                      <tr key={`${d.linha}-${d.hora}-${i}`}>
-                        <td>
-                          <span className="hora">{h.texto}</span>
-                          {h.diaSeguinte && (
-                            <>
-                              {' '}
-                              <span className="secundario">(dia seguinte)</span>
-                            </>
-                          )}
-                          {d.estimada && (
-                            <>
-                              {' '}
-                              <abbr title="Hora estimada por nós entre dois pontos do horário publicado">
-                                est.
-                              </abbr>
-                            </>
-                          )}
-                        </td>
-                        <td>
-                          <Link href={urlRede(rid, `linhas/${d.linha_id}/`)}>
-                            <Distintivo codigo={d.linha} cor={cores[d.linha]} />
-                          </Link>
-                        </td>
-                        <td>
-                          {/* Uma circular volta ao sítio de onde parte, e o
-                            quadro diz isso em vez de repetir o nome desta
-                            paragem. Ver `circular` em `formato.ts`. */}
-                          {d.circular ? 'circular · volta aqui' : d.destino}
-                          {/* QUEM GERE, quando não é a rede da região. O §1
-                            manda que seja informação secundária — e é o que
-                            isto é: abaixo do destino, em pequeno. Escondê-lo
-                            de todo era outra coisa, porque nesta paragem
-                            param carreiras de duas concessões e o título de
-                            uma não serve na outra. */}
-                          {d.operador && (
-                            <>
-                              <br />
-                              <span className="secundario">
-                                Gerido por {operadorCurto(d.operador)}
-                              </span>
-                            </>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              {semDatas && (
-                <div className="faixa alerta">
-                  <p>
-                    <strong>Não se sabe em que dias este serviço circula.</strong> O calendário de
-                    funcionamento da operadora ainda não foi transcrito, e sem ele estas horas
-                    existem mas não têm dia. Confirma com a operadora antes de contar com elas.
-                  </p>
-                </div>
-              )}
-            </section>
-          );
-        })
+        <PartidasDaParagem
+          regiao={rid}
+          partidas={compactar(partidas)}
+          cores={cores}
+          quadros={quadros}
+        />
       )}
 
-      <h2>Onde fica</h2>
-      <p>
-        {p.lat}, {p.lon}{' '}
-        <a
-          href={`https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lon}#map=17/${p.lat}/${p.lon}`}
-        >
-          ver no OpenStreetMap
-        </a>
-      </p>
-      {/* A ligação que fecha o círculo: esta página diz o que passa aqui, e
-          daqui vai-se a «como chegar» com o destino JÁ preenchido. Sem o
-          `?para=`, quem chega de uma pesquisa a esta paragem tinha de escrever
-          outra vez o nome que já estava no ecrã. */}
-      <p>
-        Para vir de outro sítio,{' '}
-        <Link href={url(rid, `/viagem/?para=${encodeURIComponent(p.nome)}`)}>
-          procura como chegar a {p.nome}
-        </Link>
-        .
-      </p>
+      {/* ONDE FICA, em palavras de quem viaja. Eram coordenadas cruas —
+          «39.463, -8.213525» —, que não dizem nada a ninguém e faziam a página
+          parecer um extrato de base de dados. O sítio tem o seu mapa; as
+          coordenadas ficam, em pequeno, para quem as quer. */}
+      <section aria-labelledby="onde">
+        <h2 id="onde">Onde fica</h2>
+        <p className="cartao-accoes">
+          <a href={noMapa}>Ver no mapa desta região</a>
+          <a
+            href={`https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lon}#map=17/${p.lat}/${p.lon}`}
+          >
+            Ver no OpenStreetMap
+          </a>
+        </p>
+        <p className="secundario">
+          Coordenadas: {p.lat}, {p.lon}
+        </p>
+      </section>
     </>
   );
 }

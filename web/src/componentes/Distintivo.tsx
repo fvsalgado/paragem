@@ -11,11 +11,36 @@
  * Agora ESCURECE a cor até o branco passar os 4,5:1. A linha continua
  * reconhecível — um roxo escurecido continua roxo —, e o número lê-se.
  */
-export default function Distintivo({ codigo, cor }: { codigo: string; cor?: string | null }) {
+export default function Distintivo({
+  codigo,
+  cor,
+  tamanho = 'pequeno',
+}: {
+  codigo: string;
+  cor?: string | null;
+  /**
+   * UM SÓ DESENHO, EM TRÊS TAMANHOS. Havia dois para a mesma coisa — este,
+   * nas tabelas, e um `.linha-distintivo` no cartão do mapa, com outra letra,
+   * outro raio e sem o contraste garantido — e no título da linha o número
+   * ficava com 12 px numa letra de 28. O número É a linha: manda onde está.
+   *
+   * - `pequeno`: listas, ao lado de um nome;
+   * - `medio`: quadros de partidas e cartões, onde é o que se procura;
+   * - `grande`: o título da página da linha.
+   */
+  tamanho?: 'pequeno' | 'medio' | 'grande';
+}) {
+  const classe = tamanho === 'pequeno' ? 'distintivo' : `distintivo ${tamanho}`;
   const original = normalizar(cor);
   if (!original) {
     return (
-      <span className="distintivo" style={{ borderColor: 'var(--linhas)' }}>
+      // SEM COR CONHECIDA, NEUTRO — mas com fundo e contorno: sem eles, o
+      // número de uma linha sem `route_color` lia-se como texto solto ao lado
+      // das pastilhas coloridas das outras.
+      <span
+        className={classe}
+        style={{ background: '#fff', color: 'var(--texto)', borderColor: 'var(--borda-campo)' }}
+      >
         {codigo}
       </span>
     );
@@ -23,12 +48,26 @@ export default function Distintivo({ codigo, cor }: { codigo: string; cor?: stri
   const fundo = comContrasteSuficiente(original);
   return (
     <span
-      className="distintivo"
+      className={classe}
       style={{ background: fundo, color: textoSobre(fundo), borderColor: fundo }}
     >
       {codigo}
     </span>
   );
+}
+
+/**
+ * A cor da linha para desenhar o PERCURSO sobre o fundo claro da página.
+ *
+ * É a mesma do distintivo, e pela mesma razão: o `comContrasteSuficiente`
+ * escurece-a até o branco passar os 4,5:1 por cima dela — e uma cor que dá
+ * 4,5:1 contra o branco dá mais de 3:1 contra o fundo da página, que é o que
+ * a WCAG 1.4.11 pede a um traço que diz alguma coisa. Um fio amarelo-claro num
+ * fundo claro não se via; escurecido, continua amarelo e vê-se.
+ */
+export function corDoTraco(cor?: string | null): string {
+  const original = normalizar(cor);
+  return original ? comContrasteSuficiente(original) : 'var(--marca)';
 }
 
 export function normalizar(cor?: string | null): string | null {
