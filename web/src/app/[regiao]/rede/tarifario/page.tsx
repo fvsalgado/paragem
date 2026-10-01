@@ -43,7 +43,9 @@ export default async function Tarifario({ params }: { params: Promise<{ regiao: 
             <thead>
               <tr>
                 <th scope="col">Título</th>
-                <th scope="col">Preço</th>
+                <th scope="col" className="preco">
+                  Preço
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -72,7 +74,15 @@ export default async function Tarifario({ params }: { params: Promise<{ regiao: 
                       </>
                     )}
                   </td>
-                  <td>{typeof x.valor === 'number' ? moeda.format(x.valor) : '—'}</td>
+                  {/* «Grátis» e não «0,00 €»: um zero com moeda lê-se como um
+                      preço por preencher, e o que a fonte diz é que não se paga. */}
+                  <td className="preco">
+                    {typeof x.valor !== 'number'
+                      ? '—'
+                      : x.valor === 0
+                        ? 'Grátis'
+                        : moeda.format(x.valor)}
+                  </td>
                 </tr>
               ))}
             </tbody>
