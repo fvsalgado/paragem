@@ -1282,6 +1282,45 @@ class Sitio:
         return self._concelho_por_dico(limite.codigo) if limite else None
 
 
+def partidas_das_estacoes(estacoes: list[dict], g, feed: str) -> dict[str, list[dict[str, Any]]]:
+    """As partidas de comboio de cada estação, tiradas da grelha do planeador.
+
+    Na forma das partidas de uma paragem (`hora`, `linha`, `destino`,
+    `servico_id`), para a página da estação as mostrar com o mesmo «A seguir»
+    da paragem — e com a mesma tabela dos dias, que já conhece os serviços do
+    comboio. O destino é a última paragem da viagem; o número é o da categoria
+    do comboio (Regional, Intercidades…), que é o que o operador publica.
+    """
+    indice = {p[0]: i for i, p in enumerate(g.paragens)}
+    alvo = {indice[f"{feed}:{e['id']}"]: e["id"] for e in estacoes if f"{feed}:{e['id']}" in indice}
+    saida: dict[str, list[dict[str, Any]]] = collections.defaultdict(list)
+    for li, si, horas in g.viagens:
+        linha = g.linhas[li]
+        if len(linha) > 3 and linha[3] != "comboio":
+            continue
+        trios = [horas[k : k + 3] for k in range(0, len(horas), 3)]
+        if len(trios) < 2:
+            continue
+        destino = g.paragens[trios[-1][0]][3]
+        for paragem, _chegada, partida in trios[:-1]:
+            estacao = alvo.get(paragem)
+            if estacao is None:
+                continue
+            saida[estacao].append(
+                {
+                    "hora": f"{partida // 3600:02d}:{partida % 3600 // 60:02d}",
+                    "linha": linha[0],
+                    "linha_id": "",
+                    "destino": destino,
+                    "servico_id": g.servicos[si],
+                    "estimada": False,
+                }
+            )
+    for lista in saida.values():
+        lista.sort(key=lambda p: (p["hora"], p["linha"], p["destino"]))
+    return dict(saida)
+
+
 def _contadas(c: collections.Counter[str]) -> list[dict[str, Any]]:
     """`{"B": 2, "A": 1}` → `[{"nome": "B", "viagens": 2}, {"nome": "A", "viagens": 1}]`."""
     return [
@@ -1407,6 +1446,28 @@ def construir(raiz: Path, regiao: Regiao, destino: Path, territorio=None) -> Sit
             s.destino / "viagens.json", g, (regiao.motor or {}).get("fuso", "UTC")
         )
         s.saidas.append(Saida(s.destino / "viagens.json", bytes_escritos, quantas))
+
+        # AS PARTIDAS DE COMBOIO DE CADA ESTAÇÃO, da MESMA grelha do planeador.
+        #
+        # A página da estação dizia «os horários da CP não são publicados
+        # aqui», e o planeador do mesmo sítio propunha comboios ao minuto. Saem
+        # da grelha, e não de uma segunda leitura do feed: se divergissem, a
+        # estação e o planeador discordavam sobre o mesmo comboio.
+        if s.feed_de_comboio and estacoes:
+            por_estacao = partidas_das_estacoes(estacoes, g, s.feed_de_comboio.removesuffix(".zip"))
+            pasta = s.destino / "estacoes"
+            pasta.mkdir(parents=True, exist_ok=True)
+            total = 0
+            for e in estacoes:
+                texto = json.dumps(
+                    {"estacao": e, "partidas": por_estacao.get(e["id"], [])},
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    default=_json_seguro,
+                )
+                (pasta / f"{_seguro(e['id'])}.json").write_text(texto + "\n", encoding="utf-8")
+                total += len(texto) + 1
+            s.saidas.append(Saida(pasta, total, len(estacoes)))
 
         # POR ONDE PASSA O AUTOCARRO entre uma paragem e a seguinte.
         #

@@ -23,6 +23,7 @@ export default function ASeguir({
   cores,
   Titulo = 'h3',
   id,
+  titulo = 'A seguir',
 }: {
   resultado: Proximas<PartidaLeve>;
   /** O relógio de quem lê — o mesmo que deu `agora`. */
@@ -31,13 +32,19 @@ export default function ASeguir({
   agora: string;
   /** A cor de cada linha, pelo identificador dela (`cores-das-linhas.json`). */
   cores: Record<string, string | null | undefined>;
-  /** O nível do título: um `h3` dentro do cartão do mapa, um `h2` na página. */
-  Titulo?: 'h2' | 'h3';
+  /**
+   * O nível do título: um `h3` dentro do cartão do mapa, um `h2` na página;
+   * `null` quando quem o usa já pôs o título por cima (a paragem à porta de
+   * uma estação, com o nome dela e a distância).
+   */
+  Titulo?: 'h2' | 'h3' | null;
   id?: string;
+  /** O texto do título: «A seguir», «Comboios a seguir». */
+  titulo?: string;
 }) {
   return (
     <>
-      <Titulo id={id}>A seguir</Titulo>
+      {Titulo && <Titulo id={id}>{titulo}</Titulo>}
       {resultado.tipo === 'fora-do-periodo' && (
         <p>
           Os horários carregados vão de {dataCompleta(resultado.inicio)} a{' '}

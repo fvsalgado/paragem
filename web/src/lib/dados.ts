@@ -456,6 +456,20 @@ export const paragem = cache(
 export const urlDaParagem = (r: string, stopId: string): string =>
   urlRede(r, `paragens/${seguro(stopId)}/`);
 
+/**
+ * A FICHA DE UMA ESTAÇÃO: a estação e as partidas de comboio dela, tiradas da
+ * mesma grelha que o planeador usa. `null` com dados de antes disto — e aí a
+ * página diz onde estão as horas, em vez de inventar que não há.
+ */
+export type FichaDeEstacao = { estacao: Estacao; partidas: Partida[] };
+
+export const estacaoDetalhe = cache(
+  async (r: string, id: string): Promise<FichaDeEstacao | null> => {
+    if (await desligado(r, 'comboio')) return null;
+    return await ler<FichaDeEstacao | null>(r, `estacoes/${seguro(id)}.json`, null);
+  },
+);
+
 export const linhaDetalhe = cache(
   async (r: string, id: string): Promise<LinhaDetalhe | null> =>
     await ler<LinhaDetalhe | null>(r, `linhas/${seguro(id)}.json`, null),

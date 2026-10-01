@@ -2,14 +2,21 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import {
+  compactar,
+  estacaoDetalhe,
   estacoes,
   exigirModo,
   concelhos,
+  linhas,
+  paragem as lerParagem,
   seguro,
+  url,
   urlRede,
   urlDaParagem,
   NAO_ENCONTRADA,
 } from '@/lib/dados';
+import MarcaDeDados from '@/componentes/MarcaDeDados';
+import ProximasPartidas from '@/componentes/ProximasPartidas';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -45,6 +52,31 @@ export default async function Estacao({
   const e = (await estacoes(rid)).find((x) => seguro(x.id) === id);
   if (!e) notFound();
   const concelho = (await concelhos(rid)).find((c) => c.id === e.concelho);
+  const ficha = await estacaoDetalhe(rid, e.id);
+  const cores = Object.fromEntries((await linhas(rid)).map((l) => [l.id, l.cor]));
+
+  // O AUTOCARRO À PORTA, uma vez por nome. A estação mostrava duas vezes
+  // «Entroncamento (Estação) · 125 m» — os dois lados da estrada, que para
+  // quem sai do comboio são o mesmo sítio —, e nenhuma partida. Junta-se por
+  // nome, com as partidas das duas, e a distância da mais perto.
+  const porNome = new Map<string, { ids: string[]; metros: number }>();
+  for (const p of e.paragens_perto) {
+    const g = porNome.get(p.nome) ?? { ids: [], metros: p.metros };
+    g.ids.push(p.id);
+    g.metros = Math.min(g.metros, p.metros);
+    porNome.set(p.nome, g);
+  }
+  const aPorta = await Promise.all(
+    [...porNome.entries()].map(async ([nome, g]) => {
+      const fichas = (await Promise.all(g.ids.map((i) => lerParagem(rid, i)))).filter(
+        (f): f is NonNullable<typeof f> => !!f,
+      );
+      const partidas = fichas
+        .flatMap((f) => f.partidas)
+        .sort((a, b) => a.hora.localeCompare(b.hora));
+      return { nome, id: g.ids[0], metros: g.metros, partidas };
+    }),
+  );
 
   return (
     <>
@@ -59,34 +91,78 @@ export default async function Estacao({
         )}
         .
       </p>
-
-      <h2>Autocarro à porta</h2>
-      {e.sem_ligacao ? (
-        <div className="faixa alerta">
-          <p>
-            <strong>Não há paragem de autocarro a menos de 300 m desta estação.</strong> Quem aqui
-            chegar de comboio tem de contar com outra maneira de sair — a pé, de táxi, ou com quem o
-            venha buscar.
-          </p>
-        </div>
-      ) : (
-        <ul className="lista">
-          {e.paragens_perto.map((p) => (
-            <li key={p.id}>
-              <Link href={urlDaParagem(rid, p.id)}>
-                <span>{p.nome}</span>
-                <span className="secundario">{p.metros} m</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <h2>Horários de comboio</h2>
-      <p>
-        Os horários da CP não são publicados aqui. Consulta-os em{' '}
-        <a href="https://www.cp.pt">cp.pt</a>.
+      <p className="cartao-accoes">
+        <Link className="botao" href={url(rid, `/viagem/?para=${encodeURIComponent(e.nome)}`)}>
+          Como chegar aqui
+        </Link>
+        <a href={url(rid, `/?ponto=${encodeURIComponent(e.id)}`)}>Ver no mapa</a>
       </p>
+      <MarcaDeDados regiao={rid} />
+
+      {/* OS COMBOIOS QUE O SÍTIO JÁ TEM. A página dizia «os horários da CP não
+          são publicados aqui», e o planeador do mesmo sítio propunha comboios
+          ao minuto: a estação negava o que o sítio sabe. As partidas vêm da
+          mesma grelha que o planeador usa. */}
+      <section aria-labelledby="comboios" className="a-seguir">
+        {ficha && ficha.partidas.length > 0 ? (
+          <ProximasPartidas
+            regiao={rid}
+            partidas={compactar(ficha.partidas)}
+            cores={{}}
+            Titulo="h2"
+            id="comboios"
+            titulo="Comboios a seguir"
+          />
+        ) : (
+          <>
+            <h2 id="comboios">Comboios a seguir</h2>
+            <p>
+              {ficha
+                ? 'Nos horários carregados, nenhum comboio parte desta estação.'
+                : 'As horas dos comboios desta estação ainda não estão nesta página — o planeador já as usa: procura a viagem em «Como chegar».'}
+            </p>
+          </>
+        )}
+        <p className="secundario">
+          Horário planeado do operador ferroviário. Bilhetes e perturbações em{' '}
+          <a href="https://www.cp.pt">cp.pt</a>.
+        </p>
+      </section>
+
+      <section aria-labelledby="autocarro">
+        <h2 id="autocarro">Autocarro à porta</h2>
+        {e.sem_ligacao ? (
+          // UM FACTO QUE NÃO MUDA AMANHÃ, numa faixa de informação: a de
+          // alerta é para o que mudou hoje (P1-017).
+          <div className="faixa informacao">
+            <p>
+              <strong>Não há paragem de autocarro a menos de 300 m desta estação.</strong> Quem aqui
+              chegar de comboio tem de contar com outra maneira de sair — a pé, de táxi, ou com quem
+              o venha buscar.
+            </p>
+          </div>
+        ) : (
+          aPorta.map((g) => (
+            <div key={g.nome} className="paragem-a-porta">
+              <h3>
+                <Link href={urlDaParagem(rid, g.id)}>{g.nome}</Link>{' '}
+                <span className="secundario">· {g.metros} m</span>
+              </h3>
+              {g.partidas.length > 0 ? (
+                <ProximasPartidas
+                  regiao={rid}
+                  partidas={compactar(g.partidas)}
+                  cores={cores}
+                  Titulo={null}
+                  quantas={3}
+                />
+              ) : (
+                <p className="secundario">Sem partidas registadas nesta paragem.</p>
+              )}
+            </div>
+          ))
+        )}
+      </section>
     </>
   );
 }
