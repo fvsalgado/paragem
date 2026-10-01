@@ -155,6 +155,7 @@ test('os alvos táteis autónomos têm pelo menos 44 px', async ({ page }) => {
   // O que NÃO é isento é tudo o que está sozinho: itens de lista, botões,
   // navegação, a marca do cabeçalho. Esses medem-se.
   for (const caminho of [
+    `${PRODUTO}/`,
     `${PRODUTO}/contacto/`,
     `/rede/paragens/${PARAGEM.id}/`,
     `/`,

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { AUTOR, CODIGO, CONTACTO, CORETO, correioPara } from '@/lib/produto';
+import { AUTOR, CODIGO, CONTACTO, correioPara } from '@/lib/produto';
 
 /**
  * O rodapé das páginas do produto: com quem se fala, o que é de quem, e onde
@@ -42,10 +42,6 @@ export default function RodapeDoProduto({ origem = '' }: { origem?: string }) {
         <p>
           O código é livre, sob AGPL-3.0-only. «Paragem.pt» é o nome do produto e não é abrangido
           pela licença do código.
-        </p>
-        <p>
-          Da mesma casa: o <a href={CORETO}>Coreto</a>, a agenda cultural do seu território, numa
-          agenda só.
         </p>
       </div>
     </footer>
