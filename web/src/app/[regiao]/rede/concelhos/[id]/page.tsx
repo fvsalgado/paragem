@@ -110,7 +110,11 @@ export default async function Concelho({
     incompleto: d.incompleto,
   }));
   const presentes = outros.filter((o) => o.quantos > 0).sort((a, b) => b.quantos - a.quantos);
-  const porLevantar = outros.filter((o) => o.quantos === 0 && o.incompleto);
+  // OS QUE A REGIÃO TEM E ESTE CONCELHO NÃO, numa frase: quem mora cá tem o
+  // direito de saber que o serviço existe na região e não aqui — mas sem um
+  // cartão a ocupar o lugar de um cheio.
+  const ausentes = outros.filter((o) => o.quantos === 0);
+  const algumPorLevantar = ausentes.some((o) => o.incompleto);
 
   const numeros = [
     plural(ps.length, 'paragem', 'paragens'),
@@ -291,7 +295,7 @@ export default async function Concelho({
         </section>
       )}
 
-      {(presentes.length > 0 || porLevantar.length > 0) && (
+      {(presentes.length > 0 || ausentes.length > 0) && (
         <section aria-labelledby="c-outros">
           <h2 id="c-outros">Outros transportes</h2>
           {presentes.length > 0 && (
@@ -306,11 +310,11 @@ export default async function Concelho({
               ))}
             </ul>
           )}
-          {porLevantar.length > 0 && (
+          {ausentes.length > 0 && (
             <p className="secundario">
-              Ainda sem registo neste concelho:{' '}
-              {lista(porLevantar.map((o) => o.nome.toLowerCase()))}. Não quer dizer que não haja —
-              quer dizer que ainda não está nos dados.
+              Sem registo neste concelho: {lista(ausentes.map((o) => o.nome))}.
+              {algumPorLevantar &&
+                ' Onde o levantamento ainda não está completo, não quer dizer que não haja — quer dizer que ainda não está nos dados.'}
             </p>
           )}
         </section>
