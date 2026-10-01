@@ -21,7 +21,7 @@ const paragem = (id: string, concelho: string | null, partidas = 1): Paragem => 
 const PARAGENS = [
   paragem('c1', 'cima', 50),
   paragem('c2', 'cima'),
-  paragem('m1', 'meio'),
+  paragem('m1', 'centro'),
   paragem('b1', 'baixo', 9),
   paragem('b2', 'baixo', 30),
   paragem('f1', null),
@@ -29,7 +29,7 @@ const PARAGENS = [
 ];
 const NOMES = new Map([
   ['cima', 'Cima'],
-  ['meio', 'Meio'],
+  ['centro', 'Centro'],
   ['baixo', 'Baixo'],
 ]);
 
@@ -82,16 +82,16 @@ test('os destinos são os concelhos a que a viagem chega depois, com a hora de s
   assert.deepEqual(
     s.map((x) => [x.nome, x.viagens]),
     [
-      ['Meio', 2],
+      ['Centro', 2],
       ['Baixo', 1],
     ],
   );
   const baixo = s.find((x) => x.chave === 'baixo')!;
   assert.equal(baixo.para, 'B2', 'o «Como chegar» vai para a paragem com mais partidas de lá');
   assert.deepEqual(baixo.porDia, [{ dia: 'Dias úteis', horas: ['07:00'] }]);
-  const meio = s.find((x) => x.chave === 'meio')!;
+  const centro = s.find((x) => x.chave === 'centro')!;
   assert.deepEqual(
-    meio.porDia.map((d) => [d.dia, d.horas]),
+    centro.porDia.map((d) => [d.dia, d.horas]),
     [
       ['Dias úteis', ['07:00']],
       ['Sábados', ['09:10']],

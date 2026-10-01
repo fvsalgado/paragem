@@ -9,7 +9,7 @@ import { procurarTerra, type IndiceDasTerras } from '@/lib/a-pedido';
  * A pergunta é sempre a mesma, e quem a faz é sobretudo gente mais velha, ao
  * telemóvel. A página respondia a tudo menos a ela: o nome da aldeia
  * aparecia, quando aparecia, dentro do nome de um circuito, algures em 24
- * ecrãs de zonas com nomes de contrato («Lote 1 e 3»).
+ * ecrãs de zonas com nomes de contrato (números de lote).
  *
  * Procura nos nomes dos circuitos, das paragens de cada circuito e das zonas
  * (`indiceDasTerras`), sem acentos. Quando não encontra, diz que não

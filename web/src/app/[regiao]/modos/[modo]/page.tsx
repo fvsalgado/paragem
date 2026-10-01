@@ -365,7 +365,7 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
                   <li key={l.nome}>
                     <span>{l.nome}</span>
                     {/* EM PORTUGUÊS, e sem os pontos técnicos do operador: o
-                        feed escreve «Lisbon - Castelo Branco - Hub - Nice». */}
+                        feed escreve «Lisbon - Hub - Paris». */}
                     {l.destino && (
                       <span className="secundario"> · {percursoEmPortugues(l.destino)}</span>
                     )}
