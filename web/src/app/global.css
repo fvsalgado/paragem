@@ -803,6 +803,106 @@ ol.percurso-da-linha a:hover {
   text-decoration: underline;
 }
 
+/* --- a página do concelho -------------------------------------------------- */
+
+/* «Sair do concelho»: um cartão por destino, com as linhas, as horas a que
+   se sai daqui e o «Como chegar» já preenchido. */
+ul.saidas {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+@media (min-width: 40rem) {
+  ul.saidas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+ul.saidas > li {
+  background: #fff;
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  padding: 0.75rem 1rem 0.25rem;
+  min-width: 0;
+}
+ul.saidas h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+}
+ul.saidas p {
+  margin: 0.25rem 0;
+}
+ul.saidas .cartao-accoes {
+  margin-top: 0.25rem;
+}
+.linhas-da-saida,
+.linhas-da-paragem {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.horas-da-saida {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* As linhas que passam no concelho: o distintivo com a cor da linha, e o
+   nome — eram números corridos numa frase, sem cor nem ligação. */
+ul.linhas-do-concelho {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+ul.linhas-do-concelho > li {
+  border-bottom: 1px solid var(--linhas);
+}
+ul.linhas-do-concelho > li:last-child {
+  border-bottom: 0;
+}
+ul.linhas-do-concelho a {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: var(--alvo);
+  padding: 0.45rem 0.25rem;
+  color: var(--texto);
+  text-decoration: none;
+}
+ul.linhas-do-concelho a:hover,
+ul.linhas-do-concelho a:focus-visible {
+  background: #fff;
+}
+ul.linhas-do-concelho a > span:last-child {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+ul.zonas-do-concelho {
+  margin: 0.25rem 0 0.5rem;
+  padding-left: 1.25rem;
+}
+
+/* As paragens do concelho, fechadas quando são muitas: o nome por inteiro e
+   as linhas por baixo, sem nunca partir o nome a meio da palavra. */
+details.paragens-do-concelho > summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--alvo);
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--marca);
+}
+.paragens-com-linhas a {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.3rem;
+}
+.lista.paragens-com-linhas a > .nome {
+  overflow-wrap: break-word;
+}
+
 /* Uma faixa de INFORMAÇÃO: o que é assim e vai continuar assim. O vermelho
    de alerta é para o que mudou hoje — usado para factos estáveis, gasta-se,
    e a região parece em crise. */
