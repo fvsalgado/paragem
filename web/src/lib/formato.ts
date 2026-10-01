@@ -252,12 +252,38 @@ export type Linha = {
   operador?: string;
 };
 
+/** Uma ponta das viagens de um sentido — de onde partem, ou para onde vão — e quantas. */
+export type PontaDoSentido = { nome: string; viagens: number };
+
+/** Uma viagem no horário de um sentido: a hora em cada paragem do quadro, ou `""`. */
+export type ViagemDoQuadro = {
+  servico_id: string;
+  servico_nome: string;
+  destino: string;
+  horas: string[];
+  /** Os índices das horas estimadas por nós (`timepoint=0`). */
+  estimadas: number[];
+};
+
 export type Sentido = {
   sentido: string;
   variantes: number;
   viagens: number;
   viagens_deste_percurso: number;
   paragens: { id: string; nome: string }[];
+  /**
+   * De onde partem e para onde vão as viagens deste sentido, a mais comum à
+   * frente. Opcionais: dados construídos antes disto não as trazem, e a
+   * página usa as pontas do percurso mais servido.
+   */
+  origens?: PontaDoSentido[];
+  destinos?: PontaDoSentido[];
+  /**
+   * O horário do sentido, como o de papel: as paragens com hora marcada e as
+   * horas de cada viagem (`pipeline/src/paragem/quadros.py`). Opcional, pela
+   * mesma razão.
+   */
+  quadro?: { paragens: { id: string; nome: string }[]; viagens: ViagemDoQuadro[] };
 };
 
 export type LinhaDetalhe = Linha & { sentidos: Sentido[] };

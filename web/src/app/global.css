@@ -301,6 +301,11 @@ h3 {
 .rolar-na-horizontal {
   overflow-x: auto;
   padding: 0 0.75rem 0.75rem;
+  /* O texto só para leitores de ecrã é posto em posição absoluta: sem um
+     antepassado posicionado, o que está nas colunas da direita ficava fora
+     da caixa que rola e empurrava a PÁGINA para o lado — 555 px de largura a
+     320 px de ecrã. Aqui dentro, rola com o resto. */
+  position: relative;
 }
 .rolar-na-horizontal table {
   border-collapse: collapse;
@@ -650,6 +655,152 @@ details.quadro-do-dia[open] {
 .a-seguir > h2 {
   margin-top: 0.75rem;
   font-size: 1.15rem;
+}
+
+/* --- a página da linha ---------------------------------------------------- */
+
+/* O número da linha manda no título: era um distintivo de 12 px numa letra
+   de 28, e o número é a identidade da linha. */
+.titulo-da-linha {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.65rem;
+}
+.titulo-da-linha .nome-da-linha {
+  min-width: 0;
+}
+
+/* De onde partem e até onde vão as viagens de um sentido: «De» e «Até» à
+   esquerda, as pontas à direita. */
+dl.pontas-do-sentido {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15rem 0.75rem;
+  margin: 0.5rem 0;
+}
+dl.pontas-do-sentido dt {
+  font-weight: 700;
+}
+dl.pontas-do-sentido dd {
+  margin: 0;
+  min-width: 0;
+}
+h3.parte-do-sentido {
+  margin-top: 1.5rem;
+}
+
+/* Os sentidos, à mão, no alto de uma página comprida. */
+nav.sentidos ul {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+}
+nav.sentidos a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+  font-weight: 700;
+}
+
+/* O horário de um sentido: paragens nas linhas, viagens nas colunas, e a
+   primeira coluna presa enquanto as horas deslizam. O nome da paragem pode
+   partir em duas linhas — sem isso, um nome comprido levava metade do ecrã e
+   deixava duas horas à vista. */
+.quadro-da-linha thead th:first-child {
+  text-align: left;
+}
+.quadro-da-linha th[scope='row'] {
+  white-space: normal;
+  min-width: 9rem;
+  max-width: 11rem;
+  line-height: 1.25;
+}
+.quadro-da-linha td,
+.quadro-da-linha thead th {
+  font-variant-numeric: tabular-nums;
+}
+.quadro-da-linha td.estimada {
+  font-style: italic;
+  color: var(--texto-secundario);
+}
+.quadro-da-linha td.nao-passa {
+  color: var(--texto-secundario);
+}
+.nota-do-quadro {
+  margin: 0.25rem 0.75rem 0;
+  font-size: 0.85rem;
+  color: var(--texto-secundario);
+}
+
+/*
+ * O PERCURSO NA COR DA LINHA: um fio com um nó por paragem, cheio nas pontas.
+ *
+ * É o desenho das linhas nos mapas de rede, e o da linha do tempo do
+ * planeador. A cor é a da linha, escurecida até se ver sobre o fundo
+ * (`corDoTraco`). Cada paragem é uma ligação com 44 px de alvo.
+ */
+ol.percurso-da-linha {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+ol.percurso-da-linha li {
+  position: relative;
+  padding-left: 2rem;
+}
+ol.percurso-da-linha li::before {
+  content: '';
+  position: absolute;
+  left: 0.55rem;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--cor-da-linha, var(--marca));
+}
+ol.percurso-da-linha li.primeira::before {
+  top: 50%;
+}
+ol.percurso-da-linha li.ultima::before {
+  bottom: 50%;
+}
+ol.percurso-da-linha li.primeira.ultima::before {
+  display: none;
+}
+ol.percurso-da-linha li::after {
+  content: '';
+  position: absolute;
+  left: 0.3rem;
+  top: 50%;
+  width: 0.85rem;
+  height: 0.85rem;
+  margin-top: -0.425rem;
+  border-radius: 999px;
+  border: 3px solid var(--cor-da-linha, var(--marca));
+  background: #fff;
+}
+ol.percurso-da-linha li.ponta::after {
+  background: var(--cor-da-linha, var(--marca));
+}
+ol.percurso-da-linha a {
+  display: flex;
+  align-items: center;
+  min-height: var(--alvo);
+  padding: 0.3rem 0;
+  color: var(--texto);
+  text-decoration: none;
+  line-height: 1.25;
+}
+ol.percurso-da-linha li.ponta a {
+  font-weight: 700;
+}
+ol.percurso-da-linha a:hover {
+  color: var(--marca);
+  text-decoration: underline;
 }
 
 /* Uma faixa de INFORMAÇÃO: o que é assim e vai continuar assim. O vermelho

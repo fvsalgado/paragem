@@ -15,7 +15,8 @@ import {
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import Distintivo from '@/componentes/Distintivo';
-import PartidasDaParagem, { type QuadroDoDia } from '@/componentes/PartidasDaParagem';
+import PartidasDaParagem from '@/componentes/PartidasDaParagem';
+import type { QuadroDoDia } from '@/componentes/QuadrosPorDia';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -81,7 +82,7 @@ export default async function Paragem({
     chave: servico,
     nome: servico,
     servicos: [...new Set(lista.map((d) => d.servico_id).filter((s): s is string => !!s))],
-    quantas: lista.length,
+    contagem: lista.length === 1 ? '1 partida' : `${lista.length} partidas`,
     conteudo: (
       <>
         <table className="horario quadro-fixo">

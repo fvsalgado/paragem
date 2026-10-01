@@ -45,6 +45,7 @@ from .gtfs import Gtfs
 from .leitores import LEITORES_DE_HORARIO
 from .leitores.osm import ATRIBUICAO as ATRIBUICAO_OSM
 from .leitores.osm import LICENCA_URL as LICENCA_ODBL
+from .quadros import Passagem, ViagemDoSentido, quadro_do_sentido
 from .regiao import Regiao
 from .regiao import Saida as SaidaDaReceita
 
@@ -603,20 +604,35 @@ class Sitio:
         # ela, a partida que o painel mostra aponta para uma página que não
         # existe, e uma ligação partida é pior do que a partida escondida —
         # promete e não cumpre.
-        feeds = [
-            f
-            for f in (self._feed(self.feed_proprio), *map(self._feed, self.feeds_na_mesma_paragem))
-            if f
+        com_nome = [
+            (ficheiro, self._feed(ficheiro))
+            for ficheiro in (self.feed_proprio, *self.feeds_na_mesma_paragem)
         ]
+        feeds = [f for _, f in com_nome if f]
 
         nome_da_paragem: dict[str, str] = {}
         viagens: dict[str, dict] = {}
         por_viagem: dict[str, list] = collections.defaultdict(list)
         operador_da_rota: dict[str, str] = {}
+        # O nome do serviço de cada viagem, já por extenso, e a chave com que a
+        # tabela dos dias o conhece (`<feed>:<serviço>`, como nas partidas):
+        # é com ela que a página sabe que quadro vale hoje.
+        servico_da_viagem: dict[str, tuple[str, str]] = {}
+        nomes = self._nomes_de_servico()
         proprio = self._operador_de(feed)
-        for f in feeds:
+        for ficheiro, f in com_nome:
+            if f is None:
+                continue
+            nome_feed = (ficheiro or "").removesuffix(".zip")
+            semana = {str(c.get("service_id")): c for c in f.obter("calendar.txt")}
             nome_da_paragem.update({s["stop_id"]: s.get("stop_name", "") for s in f.stops})
             viagens.update({x["trip_id"]: x for x in f.trips})
+            for x in f.trips:
+                sid = str(x.get("service_id", ""))
+                servico_da_viagem[x["trip_id"]] = (
+                    f"{nome_feed}:{sid}" if nome_feed else sid,
+                    nomes.get(sid) or nome_pela_semana(semana.get(sid)) or "Outros dias",
+                )
             for st in f.stop_times:
                 por_viagem[st["trip_id"]].append(st)
             quem = self._operador_de(f)
@@ -624,6 +640,31 @@ class Sitio:
                 operador_da_rota[r["route_id"]] = "" if quem == proprio else quem
         for paradas in por_viagem.values():
             paradas.sort(key=lambda x: int(x["stop_sequence"]))
+
+        # O HORÁRIO DE CADA SENTIDO, como o de papel (`quadros.py`): as viagens
+        # com a hora em cada paragem, e se essa hora é marcada ou estimada.
+        do_sentido: dict[tuple[str, str], list[ViagemDoSentido]] = collections.defaultdict(list)
+        for tid, paradas in por_viagem.items():
+            t = viagens.get(tid)
+            if not t or tid not in servico_da_viagem:
+                continue
+            servico_id, servico_nome = servico_da_viagem[tid]
+            passagens = [
+                Passagem(
+                    st["stop_id"],
+                    (st.get("departure_time") or st.get("arrival_time") or "").strip()[:5],
+                    st.get("timepoint", "1") != "0",
+                )
+                for st in paradas
+            ]
+            do_sentido[(t["route_id"], t.get("direction_id", "0"))].append(
+                ViagemDoSentido(
+                    servico_id,
+                    servico_nome,
+                    nome_da_paragem.get(paradas[-1]["stop_id"], "") if paradas else "",
+                    [x for x in passagens if x.hora],
+                )
+            )
 
         # Percursos por (linha, sentido), contados pela frequência.
         percursos: dict[tuple[str, str], collections.Counter] = collections.defaultdict(
@@ -648,6 +689,11 @@ class Sitio:
                 if linha_id != rid:
                     continue
                 mais_comum, quantas = contagem.most_common(1)[0]
+                as_viagens = do_sentido.get((linha_id, sentido), [])
+                origens: collections.Counter[str] = collections.Counter()
+                for sequencia, n in contagem.items():
+                    if sequencia:
+                        origens[nome_da_paragem.get(sequencia[0], "")] += n
                 sentidos.append(
                     {
                         "sentido": sentido,
@@ -657,6 +703,14 @@ class Sitio:
                         "paragens": [
                             {"id": sid, "nome": nome_da_paragem.get(sid, "")} for sid in mais_comum
                         ],
+                        # DE ONDE PARTE E PARA ONDE VAI, DE VERDADE. «Ida» e
+                        # «Volta» não diziam nada — e numa linha chamada
+                        # «A - B», a «Ida» começava numa terceira terra. Contam-
+                        # se as pontas de todas as viagens, a mais comum à
+                        # frente: é o que a página escreve no título do sentido.
+                        "origens": _contadas(origens),
+                        "destinos": _contadas(collections.Counter(v.destino for v in as_viagens)),
+                        "quadro": quadro_do_sentido(as_viagens, nome_da_paragem),
                     }
                 )
             entrada = {
@@ -1226,6 +1280,13 @@ class Sitio:
             return None
         limite = territorio.concelho_de(lat, lon)
         return self._concelho_por_dico(limite.codigo) if limite else None
+
+
+def _contadas(c: collections.Counter[str]) -> list[dict[str, Any]]:
+    """`{"B": 2, "A": 1}` → `[{"nome": "B", "viagens": 2}, {"nome": "A", "viagens": 1}]`."""
+    return [
+        {"nome": n, "viagens": k} for n, k in sorted(c.items(), key=lambda x: (-x[1], x[0])) if n
+    ]
 
 
 def _ordem_de_linha(codigo: str) -> str:
