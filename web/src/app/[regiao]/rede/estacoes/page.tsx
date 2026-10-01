@@ -14,8 +14,11 @@ export default async function Estacoes({ params }: { params: Promise<{ regiao: s
     <>
       <h1>Estações de comboio</h1>
       <p>{plural(es.length, 'estação', 'estações')} na região.</p>
+      {/* UM FACTO ESTÁVEL, numa faixa de informação: o vermelho de alerta é
+          para o que mudou hoje — usado para isto, gasta-se, e a região parece
+          em crise. */}
       {sozinhas.length > 0 && (
-        <div className="faixa alerta">
+        <div className="faixa informacao">
           <p>
             <strong>
               {sozinhas.length === 1

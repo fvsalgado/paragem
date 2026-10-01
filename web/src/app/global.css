@@ -1071,6 +1071,27 @@ details.lista-fechada > summary::-webkit-details-marker {
   padding: 0.6rem 0.25rem;
 }
 
+/* --- a página da estação ----------------------------------------------------- */
+
+/* A paragem à porta da estação: o nome (ligação para a página dela, com 44 px)
+   e a distância, e por baixo as próximas partidas. */
+.paragem-a-porta {
+  border-top: 1px solid var(--linhas);
+  padding-top: 0.25rem;
+  margin-top: 0.5rem;
+}
+.paragem-a-porta h3 {
+  margin: 0;
+}
+.paragem-a-porta h3 a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+}
+.paragem-a-porta .partidas {
+  margin-top: 0;
+}
+
 /* Uma faixa de INFORMAÇÃO: o que é assim e vai continuar assim. O vermelho
    de alerta é para o que mudou hoje — usado para factos estáveis, gasta-se,
    e a região parece em crise. */

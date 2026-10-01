@@ -775,3 +775,37 @@ def test_a_pagina_escreve_o_openstreetmap_ao_lado_de_cada_ficheiro_odbl():
     assert _atribuicao_da_descarga(sem_nada, ODBL) == ("© contribuidores do OpenStreetMap", True)
     # O que não é ODbL fica com o que o registo diz.
     assert _atribuicao_da_descarga(da_autoridade, CONSULTA) == ("Autoridade de Exemplo", False)
+
+
+def test_a_estacao_tem_as_partidas_de_comboio_da_grelha_do_planeador():
+    """«Os horários da CP não são publicados aqui», dizia a estação — e o
+    planeador do mesmo sítio propunha comboios ao minuto. As partidas saem da
+    MESMA grelha que o planeador usa: se fossem lidas à parte, a estação e o
+    planeador podiam discordar sobre o mesmo comboio.
+    """
+    from types import SimpleNamespace
+
+    from paragem.sitio import partidas_das_estacoes
+
+    g = SimpleNamespace(
+        paragens=[
+            ["comboio:E1", 0, 0, "Estação Um"],
+            ["comboio:E2", 0, 0, "Estação Dois"],
+            ["rede:P1", 0, 0, "Paragem"],
+        ],
+        linhas=[["R", "", None, "comboio", 0], ["7", "", None, "autocarro", 0]],
+        servicos=["comboio:S1", "rede:A-U"],
+        viagens=[
+            # Um comboio E1 → E2 às 07:05; e um que passa a meia-noite.
+            [0, 0, [0, 25500, 25500, 1, 27000, 27000]],
+            [0, 0, [0, 87000, 87300, 1, 88200, 88200]],
+            # Um autocarro que passa à porta não é partida de comboio.
+            [1, 1, [0, 26000, 26000, 2, 26600, 26600]],
+        ],
+    )
+    p = partidas_das_estacoes([{"id": "E1"}, {"id": "E2"}], g, "comboio")
+    assert [(x["hora"], x["linha"], x["destino"], x["servico_id"]) for x in p["E1"]] == [
+        ("07:05", "R", "Estação Dois", "comboio:S1"),
+        ("24:15", "R", "Estação Dois", "comboio:S1"),
+    ]
+    assert "E2" not in p, "de onde a viagem acaba não se parte"

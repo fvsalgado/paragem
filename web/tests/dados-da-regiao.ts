@@ -52,7 +52,14 @@ export type Paragem = {
 };
 type Linha = { id: string; codigo: string; nome: string; modo: string; viagens: number };
 type Concelho = { id: string; nome: string; paragens: number };
-type Estacao = { id: string; nome: string; lat: number; lon: number; concelho: string | null };
+type Estacao = {
+  id: string;
+  nome: string;
+  lat: number;
+  lon: number;
+  concelho: string | null;
+  sem_ligacao?: boolean;
+};
 export type Sistema = { nome: string; estado: string | null; estacoes: Estacao[] };
 type Viagem = { passagens: [string, string][]; rotulo: string };
 type Quadro = { nome: string; tipo?: string; viagens: Viagem[] };
