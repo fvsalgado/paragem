@@ -23,6 +23,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { PROVA } from './anfitrioes';
 import {
   concelhoComOutroModo,
+  concelhos,
   modosDeclarados,
   horarioComParagensPorSituar,
   modo as lerModo,
@@ -37,6 +38,7 @@ const COM_PAGINA = umModoComPagina();
 const BICICLETA = temModoLigado('bicicleta') ? lerModo('bicicleta') : null;
 const URBANOS = temModoLigado('urbano-municipal') ? lerModo('urbano-municipal') : null;
 const EXPRESSO = temModoLigado('expresso') ? lerModo('expresso') : null;
+const TAXI = temModoLigado('taxi') ? lerModo('taxi') : null;
 const QUADRO = URBANOS ? umQuadroDe('urbano-municipal') : null;
 /** A secção «o que falta saber» só existe onde há lacunas declaradas. */
 const LACUNAS_NAS_BICICLETAS = !!BICICLETA && (BICICLETA.incompleto || BICICLETA.notas.length > 0);
@@ -49,6 +51,19 @@ const ROTULO: Record<string, RegExp> = {
   expresso: /Expresso/,
   'a-pedido': /pedido/,
 };
+
+/**
+ * «SOBRE ESTES DADOS», aberto. O que a página sabe da proveniência e do que
+ * falta estava em caixas no topo — duas a vermelho —, e o conteúdo só
+ * começava no segundo ecrã. Passou para o fim, fechado, com uma frase curta
+ * em cima; os testes que leem essa explicação abrem-na como uma pessoa faz.
+ */
+async function abrirSobre(page: import('@playwright/test').Page) {
+  const sobre = page.locator('#sobre-estes-dados');
+  if (!(await sobre.evaluate((d) => (d as HTMLDetailsElement).open))) {
+    await sobre.locator('summary').click();
+  }
+}
 
 test('a grelha «Por modo» leva a algum lado', async ({ page }) => {
   test.skip(!COM_PAGINA, SEM.modo('nenhum com página própria'));
@@ -72,6 +87,7 @@ test('as bicicletas dizem onde estão, e de onde viriam as contagens', async ({ 
   test.skip(!BICICLETA, SEM.modo('bicicleta'));
   test.skip(!LACUNAS_NAS_BICICLETAS, SEM.lacunas('bicicleta'));
   await page.goto(`/modos/bicicleta/`);
+  await abrirSobre(page);
   await expect(page.getByText(/lidas da página que o operador publica/)).toBeVisible();
   await expect(page.getByText(/pode contá-las mal/)).toBeVisible();
 
@@ -99,20 +115,44 @@ test('sem serviço de disponibilidade, não aparece contagem nenhuma', async ({ 
   await expect(page.getByText(/Neste momento,/)).toHaveCount(0);
 });
 
-test('a falta vem antes da lista, e não depois', async ({ page }) => {
+test('a falta diz-se numa frase antes da lista, e explica-se no fim', async ({ page }) => {
+  // Este teste MUDOU com a decisão de pôr o conteúdo primeiro: a explicação
+  // inteira abria a página, em vermelho, e as praças só começavam no segundo
+  // ecrã. O aviso continua ANTES da lista — numa frase —, e a explicação
+  // continua lá, em «Sobre estes dados».
   test.skip(!temModoLigado('taxi'), SEM.modo('taxi'));
+  test.skip(!TAXI?.incompleto, SEM.lacunas('taxi'));
   await page.goto(`/modos/taxi/`);
-  const falta = page.getByText(/é o que o OpenStreetMap tem/);
+  const aviso = page.getByText(/Esta lista está incompleta/);
   const onde = page.getByRole('heading', { name: 'Onde estão' });
-  await expect(falta).toBeVisible();
+  await expect(aviso).toBeVisible();
   await expect(onde).toBeVisible();
-  const y = async (l: typeof falta) => (await l.boundingBox())!.y;
-  expect(await y(falta), 'a lacuna tem de vir antes da lista').toBeLessThan(await y(onde));
+  const y = async (l: typeof aviso) => (await l.boundingBox())!.y;
+  expect(await y(aviso), 'o aviso tem de vir antes da lista').toBeLessThan(await y(onde));
+  await expect(page.locator('.faixa.alerta')).toHaveCount(0);
+
+  // A explicação, no fim, por quem a quiser ler — e sem o identificador da
+  // fonte: «osm-portugal» não diz nada a ninguém.
+  await page.getByRole('link', { name: 'Saber porquê' }).click();
+  await expect(page.locator('#sobre-estes-dados')).toHaveAttribute('open', '');
+  const sobre = page.locator('#sobre-estes-dados');
+  for (const nota of TAXI!.notas) await expect(sobre).toContainText(nota.slice(0, 40));
+  await expect(page.locator('main')).not.toContainText(/osm-portugal/);
 
   // E os concelhos onde não há nenhuma ficam escritos: «não está no mapa» não
   // é o mesmo que «não existe», e quem lá mora tem o direito de saber a
   // diferença.
-  await expect(page.getByText(/Sem nenhuma levantada:/)).toBeVisible();
+  if (concelhos().some((c) => !TAXI!.pontos.some((p) => p.concelho === c.id))) {
+    await expect(page.getByText(/Ainda sem nenhuma registada:/)).toBeVisible();
+  }
+});
+
+test('cada praça de táxis diz onde fica, em vez de «Sem nome no mapa»', async ({ page }) => {
+  test.skip(!temModoLigado('taxi') || !TAXI?.pontos.length, SEM.modo('taxi'));
+  await page.goto(`/modos/taxi/`);
+  await expect(page.locator('main')).not.toContainText('Sem nome no mapa');
+  const praca = page.locator('ul.pontos-de-modo > li').first();
+  await expect(praca).toContainText(/Junto à paragem .*, a \d+ m\.|Sem paragem da rede por perto/);
 });
 
 test('os urbanos municipais separam o que se sabe do que falta', async ({ page }) => {
@@ -122,6 +162,7 @@ test('os urbanos municipais separam o que se sabe do que falta', async ({ page }
   // continua a faltar são as coordenadas das paragens.
   test.skip(!URBANOS?.percursos.length, SEM.modo('urbano-municipal'));
   await page.goto(`/modos/urbano-municipal/`);
+  await abrirSobre(page);
   await expect(page.getByText(/As paragens e as horas não estão lá/)).toBeVisible();
 
   // As linhas cujo TRAÇADO se conhece, numa lista — que é o que são: o
@@ -284,5 +325,6 @@ test('a página nomeia o que ainda falta: um feed próprio do sistema', async ({
   test.skip(!BICICLETA, SEM.modo('bicicleta'));
   test.skip(!LACUNAS_NAS_BICICLETAS, SEM.lacunas('bicicleta'));
   await page.goto(`/modos/bicicleta/`);
+  await abrirSobre(page);
   await expect(page.getByText(/Falta um feed de dados próprio do sistema/)).toBeVisible();
 });

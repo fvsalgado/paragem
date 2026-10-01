@@ -82,3 +82,38 @@ export function precoDe(v: number | null): string | null {
   if (v == null) return null;
   return `${v.toFixed(2).replace('.', ',')} €`;
 }
+
+/**
+ * O NOME DE UMA TERRA PORTUGUESA COMO SE DIZ EM PORTUGUÊS.
+ *
+ * O feed do operador de expressos escreve os nomes em inglês — «Lisbon»,
+ * «Lisbon Airport», «Castelo Branco - Lisbon» —, e a página falava a língua
+ * do feed. Troca-se só o exónimo, palavra a palavra, numa lista curta de
+ * terras portuguesas com nome inglês; o resto fica como o operador o escreve,
+ * que é como aparece no bilhete.
+ */
+const EXONIMOS: [RegExp, string][] = [
+  [/\bLisbon Airport\b/g, 'Lisboa (Aeroporto)'],
+  [/\bLisbon\b/g, 'Lisboa'],
+  [/\bOporto\b/g, 'Porto'],
+];
+
+export function emPortugues(nome: string): string {
+  return EXONIMOS.reduce((n, [ingles, portugues]) => n.replace(ingles, portugues), nome);
+}
+
+/**
+ * Um ponto técnico do operador — o «International Interconnection Hub» onde
+ * os autocarros trocam de passageiros — não é um destino que alguém escolha.
+ * Sai das listas e dos percursos; o resto da viagem fica.
+ */
+export const pontoTecnico = (nome: string): boolean => /\bInterconnection Hub\b/i.test(nome);
+
+/** «Lisbon - Castelo Branco - Hub - Nice» → «Lisboa – Castelo Branco – Nice». */
+export function percursoEmPortugues(percurso: string): string {
+  return percurso
+    .split(/\s+-\s+/)
+    .filter((parte) => !/^hub$/i.test(parte.trim()))
+    .map(emPortugues)
+    .join(' – ');
+}
