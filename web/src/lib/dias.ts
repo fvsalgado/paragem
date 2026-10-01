@@ -159,6 +159,17 @@ export type Proximas<T> =
       hoje: 'ha' | 'nao-ha' | 'ja-passaram';
     };
 
+/** O índice de cada serviço na tabela, feito uma vez por tabela. */
+const indices = new WeakMap<Calendario, Map<string, number>>();
+function indiceDosServicos(cal: Calendario): Map<string, number> {
+  let m = indices.get(cal);
+  if (!m) {
+    m = new Map(cal.servicos.map((s, i) => [s, i]));
+    indices.set(cal, m);
+  }
+  return m;
+}
+
 /** Uma partida sem `servico_id` anda todos os dias: o feed não declara calendário. */
 const andaEm =
   <T extends { servico_id?: string }>(activos: Set<string>) =>
@@ -225,8 +236,22 @@ export function proximas<T extends { hora: string; servico_id?: string }>(
   // mercado, tem dias seguidos sem nada — e o que responde a «quando é o
   // próximo?» é o primeiro em que alguma coisa passa. Vai até ao fim do
   // período: depois dele os horários carregados já não falam.
+  //
+  // Pergunta-se a cada dia só pelos serviços DESTA paragem — uma dezena —, e
+  // não se monta o conjunto dos mil e tal da região dia a dia: uma paragem só
+  // de verão, aberta em outubro, percorre meses, e isto corre a cada
+  // renderização da folha.
+  const indice = indiceDosServicos(cal);
+  const todosOsDias = partidas.some((p) => !p.servico_id);
+  const daqui = new Set<number>();
+  for (const p of partidas) {
+    const i = p.servico_id ? indice.get(p.servico_id) : undefined;
+    if (i !== undefined) daqui.add(i);
+  }
+  const andaAlgumaNo = (dia: string) =>
+    todosOsDias || (cal.datas[dia] ?? []).some((i) => daqui.has(i));
   for (let n = 1, dia = chaveMais(chave, 1); dia <= periodo.fim; n++, dia = chaveMais(chave, n)) {
-    const doDia = partidasDo(dia);
+    const doDia = andaAlgumaNo(dia) ? partidasDo(dia) : [];
     if (doDia.length) {
       return {
         tipo: 'no-dia',
