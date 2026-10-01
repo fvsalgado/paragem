@@ -268,6 +268,26 @@ test('o que não se sabe está escrito na página', async ({ page }) => {
   }
 });
 
+test('no tarifário, cada preço fica numa linha só, e o que não se paga diz «Grátis»', async ({
+  page,
+}) => {
+  // A 390 px lia-se «1,5 / 0 €» e «18 / ,0 / 0 / €»: a célula do preço partia
+  // a meio, e com ampliação um 18 passa por 0. Mede-se o texto, linha a
+  // linha, e não o estilo — um estilo certo noutro elemento passava na mesma.
+  await page.goto(`/rede/tarifario/`);
+  const linhas = await page.locator('td.preco').evaluateAll((tds) =>
+    tds.map((td) => {
+      const r = document.createRange();
+      r.selectNodeContents(td);
+      return new Set([...r.getClientRects()].map((q) => Math.round(q.top))).size;
+    }),
+  );
+  expect(linhas.length, 'o tarifário tem de ter preços').toBeGreaterThan(0);
+  expect(Math.max(...linhas), 'um preço partido em duas linhas').toBe(1);
+  // «0,00 €» lê-se como um preço por preencher; a fonte diz que não se paga.
+  await expect(page.locator('main')).not.toContainText(/(^|\s)0,00\s?€/);
+});
+
 test('o «Perto de ti» aberto também passa no axe', async ({ page, context }) => {
   // A lista do «Perto de ti» só existe depois de alguém carregar no botão, e
   // um teste que só veja a página fechada não vê metade do componente —
