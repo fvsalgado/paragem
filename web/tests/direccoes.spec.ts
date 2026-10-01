@@ -148,9 +148,11 @@ test('o destino vem do endereço, em vez de se escrever outra vez', async ({ pag
 });
 
 test('a página de uma paragem leva às direções com o destino preenchido', async ({ page }) => {
+  // A ligação está no topo, junto do nome — estava no fim da página, a
+  // 19 000 px na paragem mais servida.
   await page.goto(`/rede/paragens/${PARAGEM.id}/`);
   const nome = await page.locator('h1').innerText();
-  await page.getByRole('link', { name: /procura como chegar/i }).click();
+  await page.getByRole('link', { name: /como chegar aqui/i }).click();
   await expect(page).toHaveURL(/\/viagem\/\?para=/);
   await expect(page.getByRole('combobox', { name: 'Para', exact: true })).toHaveValue(nome);
 });

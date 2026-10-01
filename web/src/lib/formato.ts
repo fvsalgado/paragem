@@ -161,6 +161,84 @@ export type Partida = {
   operador?: string;
 };
 
+/** O que uma lista de próximas partidas precisa de saber de cada uma. */
+export type PartidaLeve = Pick<
+  Partida,
+  'hora' | 'linha' | 'linha_id' | 'destino' | 'servico_id' | 'estimada' | 'circular' | 'operador'
+>;
+
+/**
+ * AS PARTIDAS DE UMA PARAGEM COMO VÃO PARA O NAVEGADOR, sem repetir textos.
+ *
+ * O «A seguir» da página da paragem calcula-se no navegador — é a única coisa
+ * na página que depende da hora de quem lê, e a página é servida da cache. Em
+ * objetos, as 287 partidas da paragem mais servida repetiam o destino, a
+ * linha e o serviço 287 vezes: perto de 50 kB a mais em cada visita, por cima
+ * da tabela que já lá está. Em tabelas e índices são uns 9 kB.
+ *
+ * Cada partida é `[hora, linha, destino, serviço, marcas, operador]`, com os
+ * índices para as listas de cima; −1 quer dizer «nenhum» (uma circular não tem
+ * destino, um feed sem calendário não tem serviço). Marcas: 1 é hora estimada,
+ * 2 é circular.
+ */
+export type PartidasCompactas = {
+  linhas: [codigo: string, id: string][];
+  destinos: string[];
+  servicos: string[];
+  operadores: string[];
+  partidas: [string, number, number, number, number, number][];
+};
+
+export function compactar(lista: PartidaLeve[]): PartidasCompactas {
+  const c: PartidasCompactas = {
+    linhas: [],
+    destinos: [],
+    servicos: [],
+    operadores: [],
+    partidas: [],
+  };
+  const indices = new Map<string, number>();
+  const indice = (grupo: string, chave: string, juntar: () => number) => {
+    const k = `${grupo}\u0000${chave}`;
+    let i = indices.get(k);
+    if (i === undefined) {
+      i = juntar();
+      indices.set(k, i);
+    }
+    return i;
+  };
+  for (const p of lista) {
+    const linha = indice(
+      'l',
+      `${p.linha}\u0000${p.linha_id}`,
+      () => c.linhas.push([p.linha, p.linha_id]) - 1,
+    );
+    const destino = p.circular ? -1 : indice('d', p.destino, () => c.destinos.push(p.destino) - 1);
+    const servico = p.servico_id
+      ? indice('s', p.servico_id, () => c.servicos.push(p.servico_id!) - 1)
+      : -1;
+    const operador = p.operador
+      ? indice('o', p.operador, () => c.operadores.push(p.operador!) - 1)
+      : -1;
+    const marcas = (p.estimada ? 1 : 0) | (p.circular ? 2 : 0);
+    c.partidas.push([p.hora, linha, destino, servico, marcas, operador]);
+  }
+  return c;
+}
+
+export function expandir(c: PartidasCompactas): PartidaLeve[] {
+  return c.partidas.map(([hora, l, d, s, marcas, o]) => ({
+    hora,
+    linha: c.linhas[l]?.[0] ?? '',
+    linha_id: c.linhas[l]?.[1] ?? '',
+    destino: d >= 0 ? c.destinos[d] : '',
+    ...(s >= 0 ? { servico_id: c.servicos[s] } : {}),
+    estimada: (marcas & 1) === 1,
+    ...((marcas & 2) === 2 ? { circular: true } : {}),
+    ...(o >= 0 ? { operador: c.operadores[o] } : {}),
+  }));
+}
+
 export type Linha = {
   id: string;
   codigo: string;

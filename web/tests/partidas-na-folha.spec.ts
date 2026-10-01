@@ -74,7 +74,7 @@ test('a espera não se sobrepõe ao destino', async ({ page }) => {
 
 test('o distintivo leva o número da linha e a cor dela', async ({ page }) => {
   const linhas = await abrirParagem(page);
-  const dist = linhas.first().locator('.linha-distintivo');
+  const dist = linhas.first().locator('.distintivo');
   await expect(dist).toHaveText(/\S/);
   // A cor vem do `cores-das-linhas.json`. Se o ficheiro faltar, o distintivo
   // fica neutro e continua legível — o que NÃO pode é ficar sem fundo.

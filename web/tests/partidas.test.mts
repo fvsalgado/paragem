@@ -7,7 +7,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { esperaLegivel, textoSobre } from '../src/lib/formato.ts';
+import { compactar, esperaLegivel, expandir, textoSobre } from '../src/lib/formato.ts';
 import {
   dataDoCampo,
   fraseDoDia,
@@ -184,4 +184,46 @@ test('à meia-noite e meia, o dia do campo é o de hoje e não o de ontem em UTC
     // dia aos testes que viessem a seguir no mesmo processo.
     process.env.TZ = antes;
   }
+});
+
+test('as partidas compactas voltam a ser as mesmas partidas', () => {
+  // É o que vai para o navegador na página da paragem: sem repetir o destino,
+  // a linha e o serviço em cada partida. O que se perde é só o nome da própria
+  // paragem nas circulares, que a lista nunca mostra.
+  const lista = [
+    {
+      hora: '07:10',
+      linha: '1',
+      linha_id: 'RA1',
+      destino: 'Ribeira',
+      servico_id: 'f:A-U',
+      estimada: false,
+    },
+    {
+      hora: '08:00',
+      linha: '2',
+      linha_id: 'RA2',
+      destino: 'Aqui',
+      servico_id: 'f:A-U',
+      estimada: true,
+      circular: true,
+    },
+    {
+      hora: '09:00',
+      linha: '1',
+      linha_id: 'RA1',
+      destino: 'Ribeira',
+      estimada: false,
+      operador: 'Outra, Lda',
+    },
+  ];
+  const c = compactar(lista);
+  assert.equal(c.destinos.length, 1, 'o destino repetido escreve-se uma vez');
+  assert.equal(c.linhas.length, 2);
+  const de_volta = expandir(c);
+  assert.deepEqual(de_volta[0], lista[0]);
+  assert.equal(de_volta[1].circular, true);
+  assert.equal(de_volta[1].estimada, true);
+  assert.equal(de_volta[2].servico_id, undefined, 'sem serviço declarado continua sem serviço');
+  assert.equal(de_volta[2].operador, 'Outra, Lda');
 });

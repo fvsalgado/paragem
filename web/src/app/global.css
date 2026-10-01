@@ -201,6 +201,12 @@ h3 {
   align-items: center;
   min-height: var(--alvo);
 }
+/* E 44 px também de largura nas ligações da navegação: «Avisos», a mais
+   curta, dava um alvo de 40 px. */
+.rodape nav a {
+  justify-content: center;
+  min-width: var(--alvo);
+}
 
 /* --- cartões e listas ---------------------------------------------------- */
 
@@ -373,6 +379,16 @@ h3 {
 .lista a:focus-visible {
   background: #fff;
 }
+/* O TEXTO SECUNDÁRIO, em todo o lado e não só nas listas. A classe existia
+   em dezenas de sítios — «Gerido por …», «hora estimada», as coordenadas, as
+   notas — e só as listas lhe davam estilo: no resto, a nota saía igual ao
+   texto principal e competia com ele. `:where` não pesa nada, e por isso
+   qualquer regra mais precisa (a das listas, a das partidas) continua a
+   mandar onde já mandava. */
+:where(p, span, small, em, div, li).secundario {
+  color: var(--texto-secundario);
+  font-size: 0.9rem;
+}
 .lista .secundario {
   color: var(--texto-secundario);
   font-size: 0.9rem;
@@ -421,19 +437,42 @@ h3 {
   background: #fff;
 }
 
+/* O NÚMERO DA LINHA, num desenho só e em três tamanhos (`Distintivo.tsx`).
+   Havia dois — este a 0,78 rem nas tabelas e um `.linha-distintivo` a
+   0,95 rem no cartão do mapa — e no título da linha o número ficava com
+   12 px numa letra de 28. */
 .distintivo {
-  display: inline-block;
-  font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
   font-weight: 700;
+  line-height: 1.2;
+  min-height: 1.4rem;
   border-radius: 6px;
   padding: 0.1rem 0.45rem;
   border: 1px solid transparent;
   min-width: 2.5em;
   text-align: center;
+  font-variant-numeric: tabular-nums;
   /* O NÚMERO DA LINHA NÃO SE PARTE. Dentro de uma célula de tabela com
      `overflow-wrap: anywhere` partia: a 390 px, a «1002» saía «100» por cima
      de «2», e lia-se como duas linhas que não existem. */
   white-space: nowrap;
+  overflow-wrap: normal;
+  vertical-align: middle;
+}
+.distintivo.medio {
+  font-size: 0.95rem;
+  min-height: 1.65rem;
+  padding: 0.15rem 0.5rem;
+}
+.distintivo.grande {
+  font-size: 1.25rem;
+  min-height: 2.25rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 8px;
+  min-width: 2.9em;
 }
 
 /* --- tabelas de horário -------------------------------------------------- */
@@ -453,7 +492,9 @@ table.horario td {
   text-align: left;
   padding: 0.45rem 0.5rem;
   border-bottom: 1px solid var(--linhas);
-  vertical-align: top;
+  /* AO MEIO, e não em cima: a hora e o destino encostavam ao alto da célula e
+     o distintivo da linha ficava 10 px mais abaixo — a fila parecia torta. */
+  vertical-align: middle;
   /* Um nome de paragem longo não pode empurrar a tabela para fora do ecrã:
      a 320 px, um nome de paragem com rua, equipamento e concelho lá dentro
      fazia a página deslizar para o lado. */
@@ -489,6 +530,135 @@ table.horario th {
   color: var(--texto-secundario);
   font-weight: 700;
   font-size: 0.85rem;
+}
+
+/* A LIGAÇÃO DO DISTINTIVO, sem o sublinhado da ligação a passar por dentro
+   da pastilha colorida (azul sobre o preto da 510), e com 44 px também de
+   LARGURA: o distintivo de «10» dava um alvo de 31 px. O estado de
+   passagem é um contorno à volta da pastilha. */
+table.horario a.ligacao-da-linha {
+  text-decoration: none;
+  min-width: var(--alvo);
+}
+table.horario a.ligacao-da-linha:hover .distintivo {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* OS QUADROS DE UMA PARAGEM, com as colunas no mesmo sítio em todos. Com
+   larguras automáticas, cada quadro desenhava as suas, e a coluna das linhas
+   andava de quadro para quadro. As larguras vêm da página (`th` com `style`). */
+table.horario.quadro-fixo {
+  table-layout: fixed;
+}
+/* O QUE A HORA NÃO É, por extenso e por baixo dela: «estimada», «dia
+   seguinte». Era «est.», numa abreviatura que só se explicava a quem passava
+   o rato por cima. */
+.nota-da-hora {
+  display: block;
+  font-size: 0.75rem;
+  font-style: italic;
+  line-height: 1.15;
+  color: var(--texto-secundario);
+}
+
+/*
+ * UM QUADRO POR TIPO DE DIA, FECHADO, e os de hoje abertos e marcados.
+ *
+ * Desenrolados, os dez quadros de um terminal eram 23 ecrãs. O resumo diz o
+ * nome do quadro, se vale hoje e quantas partidas tem; a seta à direita diz
+ * que se abre — sem ela, o resumo parecia uma frase e não um botão.
+ */
+details.quadro-do-dia {
+  border-top: 1px solid var(--linhas);
+}
+details.quadro-do-dia:last-of-type {
+  border-bottom: 1px solid var(--linhas);
+}
+details.quadro-do-dia > summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.6rem;
+  min-height: 3.25rem;
+  padding: 0.5rem 2rem 0.5rem 0.25rem;
+  position: relative;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 700;
+}
+details.quadro-do-dia > summary::-webkit-details-marker {
+  display: none;
+}
+details.quadro-do-dia > summary::after {
+  content: '';
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-top: -0.4rem;
+  border-right: 2px solid var(--marca);
+  border-bottom: 2px solid var(--marca);
+  transform: rotate(45deg);
+}
+details.quadro-do-dia[open] > summary::after {
+  transform: rotate(-135deg);
+  margin-top: -0.1rem;
+}
+details.quadro-do-dia > summary:hover {
+  background: #fff;
+}
+details.quadro-do-dia > summary:focus-visible {
+  outline-offset: -3px;
+}
+details.quadro-do-dia .nome-do-quadro {
+  min-width: 0;
+}
+details.quadro-do-dia .quantas {
+  margin-left: auto;
+  font-weight: 400;
+  font-size: 0.9rem;
+  color: var(--texto-secundario);
+  white-space: nowrap;
+}
+details.quadro-do-dia[open] {
+  padding-bottom: 0.75rem;
+}
+.hoje {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #fff;
+  background: var(--marca);
+  border-radius: 999px;
+  padding: 0.05rem 0.55rem;
+}
+
+/* O «A SEGUIR» DA PÁGINA DA PARAGEM, num cartão: é a resposta, e vem antes
+   do horário. A altura mínima guarda o lugar das partidas enquanto o
+   navegador faz as contas, para o resto da página não saltar quando chegam. */
+.a-seguir {
+  background: #fff;
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  padding: 0.1rem 1rem 0.5rem;
+  margin: 1rem 0 0.5rem;
+  min-height: 9rem;
+}
+.a-seguir > h2 {
+  margin-top: 0.75rem;
+  font-size: 1.15rem;
+}
+
+/* Uma faixa de INFORMAÇÃO: o que é assim e vai continuar assim. O vermelho
+   de alerta é para o que mudou hoje — usado para factos estáveis, gasta-se,
+   e a região parece em crise. */
+.faixa.informacao {
+  border-left-color: var(--texto-secundario);
+  background: #eef2f0;
+  color: var(--texto);
 }
 
 /* --- formulários --------------------------------------------------------- */
@@ -1636,19 +1806,12 @@ main.pagina:has(.app-mapa) {
   border-bottom: none;
 }
 
-/* O NÚMERO DA LINHA COM A COR DELA, do `route_color` do feed. Sem cor
-   conhecida fica neutro — e um distintivo neutro continua a dizer o número. */
-.linha-distintivo {
+/* O NÚMERO DA LINHA COM A COR DELA, do `route_color` do feed, no desenho de
+   todos os distintivos (`Distintivo.tsx`, tamanho `medio`). Sem cor conhecida
+   fica neutro — e um distintivo neutro continua a dizer o número. */
+.partidas .distintivo {
   flex: none;
   min-width: 2.9rem;
-  padding: 0.2rem 0.45rem;
-  border-radius: 5px;
-  background: var(--linhas);
-  color: var(--texto);
-  font-weight: 700;
-  font-size: 0.95rem;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
 }
 
 .partidas .destino {
@@ -1698,9 +1861,17 @@ main.pagina:has(.app-mapa) {
 .cartao-accoes {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.25rem 1.25rem;
   flex-wrap: wrap;
   margin-top: 1rem;
+}
+/* A segunda ação é uma ligação, e continua a ser um alvo: «Horário completo»
+   ao lado de «Como chegar» tinha 26 px de altura. */
+.cartao-accoes > a:not(.botao) {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+  font-weight: 700;
 }
 
 /* O botão «Como chegar» — o verbo do Maps, e por isso o único destacado. */

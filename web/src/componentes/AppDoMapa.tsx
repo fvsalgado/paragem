@@ -4,23 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import Mapa, { type Marca } from '@/componentes/Mapa';
 import EscolherPonto from '@/componentes/EscolherPonto';
 import Direccoes, { type Percurso } from '@/componentes/Direccoes';
-import {
-  esperaLegivel,
-  horaLegivel,
-  NOME_DOS_MODOS,
-  textoSobre,
-  operadorCurto,
-  type Partida,
-  type Ponto,
-} from '@/lib/formato';
-import {
-  calendarioDe,
-  dataCompleta,
-  fraseDoDia,
-  horaDoRelogio,
-  proximas,
-  type Calendario,
-} from '@/lib/dias';
+import { NOME_DOS_MODOS, type Partida, type Ponto } from '@/lib/formato';
+import { calendarioDe, horaDoRelogio, proximas, type Calendario } from '@/lib/dias';
+import ASeguir from '@/componentes/ASeguir';
 import { camadasDe } from '@/lib/pontos-no-mapa';
 import DisponibilidadeBicicletas, {
   ContagemDaEstacao,
@@ -410,6 +396,28 @@ export default function AppDoMapa({
     setEncolhido(false);
   }
 
+  // UM PONTO PELO ENDEREÇO: `/?ponto=<id>` abre o mapa já nele, com o cartão.
+  //
+  // É o «Ver no mapa» das páginas de paragem, de estação e das praças de
+  // táxi. A página da paragem dizia onde ela fica com «39.463, -8.213525» —
+  // coordenadas cruas, que não dizem nada a quem viaja —, e o sítio tem o seu
+  // próprio mapa. Lê-se uma vez, ao abrir: é o endereço de chegada, não um
+  // estado que o mapa vá escrevendo (isso é outra conversa, P2-027).
+  //
+  // Primeiro as paragens e as estações: os identificadores de modos
+  // diferentes vêm de fontes diferentes, e se algum dia coincidirem, quem
+  // chega de uma página de paragem quer a paragem.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('ponto');
+    if (!id) return;
+    const p =
+      pontos.find((x) => x.id === id && (x.tipo === 'paragem' || x.tipo === 'estacao')) ??
+      pontos.find((x) => x.id === id);
+    if (p) abrir(p);
+    // Só ao abrir: os pontos são os da região, e não mudam depois disso.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // O DIA E A HORA SAEM DO MESMO RELÓGIO, o de quem está a ler.
   const instante = new Date();
   const agora = horaDoRelogio(instante);
@@ -640,98 +648,11 @@ export default function AppDoMapa({
                 </p>
               </div>
             )}
-            {aSeguir?.tipo === 'fora-do-periodo' && (
-              <p>
-                Os horários carregados vão de {dataCompleta(aSeguir.inicio)} a{' '}
-                {dataCompleta(aSeguir.fim)}, e não dizem o que passa hoje.
-              </p>
-            )}
-            {aSeguir?.tipo === 'nenhuma' && (
-              <p>
-                Nos horários carregados, que vão até {dataCompleta(aSeguir.fim)}, já não há partidas
-                desta paragem.
-              </p>
-            )}
-            {(aSeguir?.tipo === 'no-dia' || aSeguir?.tipo === 'sem-calendario') && (
-              <>
-                <h3>A seguir</h3>
-                {/* QUANDO AS HORAS NÃO SÃO DE HOJE, DIZ-SE ANTES DE AS DAR.
-                  Uma lista de segunda-feira lida ao domingo parece a lista de
-                  domingo — e foi isso que a folha esteve a mostrar. */}
-                {aSeguir.tipo === 'no-dia' && aSeguir.dias > 0 && (
-                  <p className="dia-das-partidas">{fraseDoDia(aSeguir, instante)}</p>
-                )}
-                {/* QUEM ESTÁ NA PARAGEM NÃO QUER UM RELÓGIO, QUER SABER SE DÁ
-                  TEMPO. «14:20» obriga a fazer a conta de cabeça, e a fazê-la
-                  outra vez a cada minuto; «12 min» responde à pergunta. A hora
-                  fica ao lado, em pequeno, porque quem planeia a tarde quer
-                  as horas — são duas perguntas e a folha responde às duas.
-
-                  A espera só se calcula quando se sabe o dia: hoje, ou amanhã
-                  (com as 24 horas somadas). Sem a tabela dos dias, ou para
-                  daqui a dois dias, fica só o relógio. */}
-                <ul className="partidas">
-                  {aSeguir.partidas.map((d, i) => {
-                    const { texto, diaSeguinte } = horaLegivel(d.hora);
-                    const espera =
-                      aSeguir.tipo === 'no-dia' && aSeguir.dias <= 1
-                        ? esperaLegivel(d.hora, agora, aSeguir.dias === 1)
-                        : null;
-                    const cor = cores[d.linha_id];
-                    return (
-                      <li key={`${d.hora}-${d.linha}-${i}`}>
-                        <span
-                          className="linha-distintivo"
-                          style={
-                            cor ? { background: `#${cor}`, color: textoSobre(cor) } : undefined
-                          }
-                        >
-                          {d.linha}
-                        </span>
-                        <span className="destino">
-                          {/* UMA CIRCULAR DIZ-SE CIRCULAR. Repetir aqui o
-                            nome da paragem onde a pessoa está não responde a
-                            nada — e nas linhas urbanas desta região era o que
-                            acontecia em 98 das 101 partidas do cais. */}
-                          {d.circular ? 'circular · volta aqui' : d.destino}
-                          {/* O QUE NÃO É CERTO CONTINUA A DIZER-SE. Uma hora
-                            interpolada por nós não é o que o horário publica,
-                            e o §4.4 não deixa que isso se perca por a folha
-                            ficar mais arrumada sem a nota. */}
-                          {d.estimada && <em className="estimada"> hora estimada</em>}
-                          {diaSeguinte && <em className="estimada"> dia seguinte</em>}
-                          {/* Quem gere, em pequeno e só quando não é a rede da
-                            região. Na mesma paragem param carreiras de duas
-                            concessões, e o título de uma não serve na outra. */}
-                          {d.operador && (
-                            <em className="estimada"> · {operadorCurto(d.operador)}</em>
-                          )}
-                        </span>
-                        {/* SEM ESPERA, A HORA É A RESPOSTA, e sobe para o
-                          lugar dela: num dia que não é hoje, ou a mais de doze
-                          horas, «06:45» em letra miúda era a única coisa que a
-                          linha dizia, e dizia-a baixinho. */}
-                        <span className="quando-passa">
-                          {espera ? (
-                            <>
-                              <strong>{espera}</strong>
-                              <span className="relogio">{texto}</span>
-                            </>
-                          ) : (
-                            <strong>{texto}</strong>
-                          )}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-                {aSeguir.tipo === 'sem-calendario' && (
-                  <p className="secundario">
-                    Não foi possível confirmar em que dias anda cada serviço: estas horas podem não
-                    ser de hoje.
-                  </p>
-                )}
-              </>
+            {/* O «A SEGUIR» É O MESMO DA PÁGINA DA PARAGEM (`ASeguir.tsx`): o
+              mesmo cálculo e os mesmos casos — hoje, o próximo dia com
+              partidas, fora do período, sem a tabela dos dias. */}
+            {aSeguir && (
+              <ASeguir resultado={aSeguir} instante={instante} agora={agora} cores={cores} />
             )}
             {Array.isArray(partidas) && partidas.length === 0 && <p>Sem partidas registadas.</p>}
 
