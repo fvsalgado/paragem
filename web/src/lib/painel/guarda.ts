@@ -28,6 +28,13 @@ export const CABECALHO_DO_CAMINHO = 'x-paragem-caminho-admin';
  */
 export const CAMINHO_DA_ENTRADA = '/admin/entrar/';
 
+/**
+ * Onde se escolhe a palavra-passe, com a ligação de ativação (0009). Também se
+ * abre sem sessão: quem a abre ainda não tem palavra-passe nenhuma, e é o
+ * token da ligação — conferido pela base — que diz quem é.
+ */
+export const CAMINHO_DA_ATIVACAO = '/admin/ativar/';
+
 /** `/admin/auditoria/` e `/admin/auditoria` são o mesmo sítio. */
 function semBarraFinal(pathname: string): string {
   return pathname.replace(/\/+$/, '') || '/';
@@ -43,6 +50,12 @@ export function ehAEntrada(pathname: string): boolean {
   return semBarraFinal(pathname) === semBarraFinal(CAMINHO_DA_ENTRADA);
 }
 
+/** As duas páginas do painel que se abrem sem sessão: a entrada e a ativação. */
+export function ehPublicaDoPainel(pathname: string): boolean {
+  const caminho = semBarraFinal(pathname);
+  return ehAEntrada(caminho) || caminho === semBarraFinal(CAMINHO_DA_ATIVACAO);
+}
+
 /**
  * Para onde mandar um pedido a `/admin` que não tem sessão. Guarda-se o
  * caminho a que a pessoa ia, em `destino`, para não se perder o gesto ao
@@ -51,16 +64,19 @@ export function ehAEntrada(pathname: string): boolean {
  */
 export function caminhoDaEntrada(pathname: string): string {
   const caminho = semBarraFinal(pathname);
-  if (ehAEntrada(caminho) || caminho === '/admin') return CAMINHO_DA_ENTRADA;
+  if (ehPublicaDoPainel(caminho) || caminho === '/admin') return CAMINHO_DA_ENTRADA;
   return `${CAMINHO_DA_ENTRADA}?${new URLSearchParams({ destino: `${caminho}/` })}`;
 }
 
 /**
  * Só caminhos do painel. Um `destino` para fora virava a entrada num
- * redirecionador aberto; um `//` é «outra origem» para um navegador.
+ * redirecionador aberto; um `//` é «outra origem» para um navegador. E nunca
+ * as páginas sem sessão: voltar à ativação depois de entrar era voltar a uma
+ * ligação já gasta.
  */
 export function destinoSeguro(destino: string | undefined): string {
   if (!destino || destino.startsWith('//') || !ehDoPainel(destino)) return '/admin/';
+  if (ehPublicaDoPainel(destino.split('?')[0] ?? destino)) return '/admin/';
   return destino;
 }
 
@@ -76,6 +92,6 @@ export function destinoSeguro(destino: string | undefined): string {
  */
 export function barreiraDoLayout(temSessao: boolean, cabecalho: string | null): string | null {
   if (temSessao) return null;
-  if (!cabecalho || ehAEntrada(cabecalho)) return null;
+  if (!cabecalho || ehPublicaDoPainel(cabecalho)) return null;
   return caminhoDaEntrada(cabecalho);
 }

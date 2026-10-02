@@ -1,12 +1,14 @@
 # O painel
 
-`/admin` é onde quem responde pelo produto liga e desliga o que só faz sentido
-em tempo de execução: as regiões, os módulos de cada uma, os domínios, as
-licenças. Tudo o que lá se grava passa por uma função da base e deixa linha na
-auditoria, com o antes e o depois — nenhuma escrita toca numa tabela por fora
-([`BASE-DE-DADOS.md`](BASE-DE-DADOS.md)). É o painel do
+`/admin` é onde se liga e desliga o que só faz sentido em tempo de execução:
+as regiões, os módulos de cada uma, os domínios, as licenças — e onde a
+autoridade de transportes de cada região escreve os seus avisos. Cada pessoa
+entra com o seu email e a sua palavra-passe, e vê só as regiões onde tem um
+papel. Tudo o que lá se grava passa por uma função da base e deixa linha na
+auditoria, com o antes, o depois e o nome de quem o fez — nenhuma escrita toca
+numa tabela por fora ([`BASE-DE-DADOS.md`](BASE-DE-DADOS.md)). É o painel do
 [Coreto](https://github.com/fvsalgado/coreto), levantado e reduzido ao que
-este produto governa.
+este produto governa, com o mesmo desenho de contas.
 
 **O painel não publica dados.** Os horários, as paragens, os mosaicos são do
 pipeline, que os sobe para o armazém e avisa o sítio. O que o painel muda faz
@@ -25,7 +27,9 @@ mapa de domínios no middleware.
 |                               | ligar e desligar cada um dos sete módulos                                                            | `set_modulo`                                                |
 |                               | registar uma licença — uma linha por contrato ou renovação                                           | `add_region_license`                                        |
 | `/admin/regioes/<id>/avisos/` | escrever, corrigir, publicar, retirar e apagar avisos                                                | `upsert_aviso`, `set_aviso_publicado`, `delete_aviso`       |
-| `/admin/auditoria/`           | quem fez o quê, quando, com o antes e o depois; recortes por pessoa, ação, tipo e mês; partilhável   | — (lê `admin_actions`)                                      |
+| `/admin/pessoas/`             | convidar uma pessoa, os papéis dela por região, uma ligação nova, desativar                          | `create_pessoa`, `set_papel`, `create_convite`, `set_pessoa_ativa` |
+| `/admin/ativar/?t=…`          | quem foi convidado escolhe a palavra-passe e entra                                                   | `ativar_com_convite`                                        |
+| `/admin/auditoria/`           | quem fez o quê, quando, com o antes e o depois; recortes por pessoa, ação, tipo e mês; partilhável   | — (lê `admin_actions`; quem gere uma região, por `acoes_das_regioes`) |
 
 Três regras que o painel herda da base e mostra a quem carrega no botão:
 
@@ -124,42 +128,103 @@ redirecionar» ligado: as ligações que andam por aí continuam a chegar (308).
 Depois, o `dominio:` do `regiao.yaml` — o CI reprova enquanto os dois
 disserem coisas diferentes — e o domínio novo no projeto da plataforma.
 
-## Como se entra, e como se guarda
+## Quem entra, e o que cada um pode
 
-Uma palavra-passe e mais nada. Não há contas nem registo: quem entra é quem
-responde pelo produto, e o registo de auditoria escreve `gestor`. Se um dia
-houver mais do que uma pessoa, é aí que se acrescentam contas — antes disso,
-uma tabela de utilizadores com uma linha era cerimónia.
+Cada pessoa entra com **o seu email e a sua palavra-passe** (migração 0009), e
+tem **papéis por região**. É o mesmo desenho do painel do Coreto:
+
+| papel      | onde        | o que faz                                                                                   |
+| ---------- | ----------- | ------------------------------------------------------------------------------------------- |
+| **dono**   | tudo        | regiões, domínios e alias, licenças, pessoas, «Atualizar as páginas do sítio», a auditoria inteira |
+| **gestor** | uma região  | a ficha dela: os módulos, os avisos, os contactos da declaração e da privacidade, a procura, o rasto dela |
+| **editor** | uma região  | os avisos dela — escrever, publicar, retirar, apagar                                         |
+
+Domínios, alias, licenças, criar e desligar regiões e gerir pessoas ficam com
+o dono: são decisões comerciais e de infraestrutura. Uma pessoa **só vê as
+regiões onde tem papel**: as outras, as licenças, as pessoas e a ficha de uma
+região onde só edita avisos respondem 404 — nem se confirma que existem. Quem
+tem uma região só entra direto nela (a ficha, se gere; os avisos, se edita);
+quem tem várias tem um seletor de região no cabeçalho.
+
+**O dono não muda de chave.** A palavra-passe do ambiente
+(`ADMIN_PASSWORD_HASH`) continua a ser a dele, e a porta dele não passa por
+tabela nenhuma da 0009 — é isso que garante que ninguém fica trancado fora no
+dia em que as contas chegam a produção. Com `ADMIN_EMAIL` definido, entra com
+esse email; sem ele, com qualquer email e a palavra-passe dele, como entrava
+antes. **Define-o**: é o que tira o dono do caminho de quem escreve outro
+email.
+
+### Convidar, ativar, recuperar
+
+1. O dono, em «Pessoas», escreve o nome, o email e o papel em cada região.
+2. O painel gera uma **ligação de ativação** de uso único, válida sete dias, e
+   mostra-a **uma vez**, com um botão de copiar. A base guarda só o sha256 do
+   token. **Não sai correio nenhum do painel**: o dono envia a ligação pelo
+   meio que usa com aquela pessoa.
+3. A pessoa abre `/admin/ativar/?t=…`, escolhe a palavra-passe (12 caracteres
+   ou mais) e entra.
+4. Esqueceu-se dela? O dono gera uma ligação nova na ficha da pessoa; a
+   palavra-passe antiga vale até a nova ser escolhida, e a ligação anterior
+   deixa de servir.
+
+**Desativar não apaga**: a pessoa deixa de entrar no clique seguinte (os
+papéis e a pessoa leem-se da base em cada pedido, sem memória), as ligações por
+usar caem, e o nome dela fica em tudo o que fez, na auditoria.
+
+### Como se guarda
 
 **Três barreiras, e as três dizem o mesmo** (`web/src/lib/painel/guarda.ts`):
 
 1. **O middleware, à porta.** Sem cookie de sessão válido, `/admin/…` em
-   qualquer anfitrião manda para `/admin/entrar/`, com o destino guardado. É
-   avaliado antes do encaminhamento por região: o painel é um só e vive fora
-   do segmento — `<região>.paragem.pt/admin/` é o painel, não uma página da
+   qualquer anfitrião manda para `/admin/entrar/`, com o destino guardado — a
+   entrada e a ativação são as duas portas que abrem sem sessão. É avaliado
+   antes do encaminhamento por região: o painel é um só e vive fora do
+   segmento — `<região>.paragem.pt/admin/` é o painel, não uma página da
    região.
-2. **O layout de `app/admin`**, já dentro do servidor, volta a ler a sessão
-   antes de servir qualquer leitura. São verificações independentes, de
-   propósito: uma apanha o que a outra deixar passar.
-3. **Cada ação** volta a exigir a sessão do seu lado, e é o nome dela que vai
-   para a auditoria.
+2. **O layout de `app/admin`** — e cada página —, já dentro do servidor, volta
+   a ler a sessão, a pessoa e os papéis dela na base antes de servir qualquer
+   leitura. São verificações independentes, de propósito: uma apanha o que a
+   outra deixar passar.
+3. **Cada ação** volta a exigir a sessão **e o papel** do seu lado, antes de
+   escrever — a página só mostra o botão a quem pode, mas uma ação de servidor
+   recebe o que lhe mandarem. É o nome dela («Ana Silva · ana@…») que vai para
+   a auditoria. Um aviso publicado, retirado ou apagado tem ainda de ser da
+   região que a ação diz: sem isso, quem edita os avisos de uma região mexia
+   nos de outra trocando um identificador.
 
 A sessão é um cookie assinado (`paragem_admin`, HMAC-SHA256 com o
 `ADMIN_SESSION_SECRET`, oito horas, `HttpOnly`, `SameSite=Strict`, só em
-`/admin`). O servidor não guarda sessões: trocar o segredo invalida todas de
-uma vez, que é o que se quer quando se troca um segredo. A palavra-passe
-confere-se com scrypt (32 MiB por verificação) contra o hash em
-`ADMIN_PASSWORD_HASH`; a comparação é em tempo constante. Cinco tentativas
-falhadas por origem em quinze minutos e a entrada fecha por um quarto de hora
-(`rate_limit_hit`, migração 0005) — o endereço nunca se guarda, só um hash
-com sal.
+`/admin`) que diz quem é (`sub`: o identificador da pessoa, ou `dono`) e leva a
+**impressão da palavra-passe** em vigor quando se entrou. O servidor confere-a
+em cada pedido — contra a base, numa pessoa; contra o ambiente, no dono —, e
+por isso **uma palavra-passe nova expulsa quem estava dentro com a antiga**. A
+assinatura fica só com o segredo, que é o que o middleware consegue conferir no
+edge, sem base. Trocar o segredo invalida todas as sessões de uma vez.
+
+As palavras-passe conferem-se com scrypt (32 MiB por verificação), em tempo
+constante; o trabalho é o mesmo exista o email ou não, e a frase de erro também
+(«Email ou palavra-passe incorretos.»). O **limite conta só as tentativas
+falhadas**, por origem e por email: cinco num quarto de hora e essa origem — ou
+esse email, venha de onde vier — espera um quarto de hora; uma entrada certa
+limpa a contagem. Nem o endereço nem o email se guardam, só hashes com sal.
 
 **O público degrada, a segurança fecha.** Sem `ADMIN_PASSWORD_HASH` ou
 `ADMIN_SESSION_SECRET` o painel não abre — mostra «Painel por configurar» e
-mais nada. Sem `SUPABASE_SERVICE_ROLE_KEY` abre e não lê: diz que falta a
-chave em vez de mostrar uma lista vazia a fingir que não há regiões. Uma
-leitura que falha cai num ecrã que diz «não consegui ler», nunca em «não há
+mais nada. Sem `SUPABASE_SERVICE_ROLE_KEY` abre só ao dono e não lê: diz que
+falta a chave em vez de mostrar uma lista vazia a fingir que não há regiões.
+Uma leitura que falha cai num ecrã que diz «não consegui ler», nunca em «não há
 nada» (`app/admin/error.tsx`).
+
+### A transição: o sítio antes da migração 0009
+
+O sítio vai para o ar antes de a 0009 ser aplicada à base de produção, e
+funciona assim: as tabelas das pessoas não existem, e o painel abre **ao dono,
+como hoje** — com a palavra-passe de sempre e qualquer email —, sem erro
+nenhum. «Pessoas» diz que a instalação ainda não tem contas; o limite de
+tentativas conta como contava (todas, por origem) até as funções novas
+existirem. Aplicada a 0009, tudo isto muda sozinho, sem deploy. A 0009 aplica-se
+como as outras ([`BASE-DE-DADOS.md`](BASE-DE-DADOS.md)): o ficheiro, o CI
+verde, e só depois o `db push`.
 
 ## Configurar
 
@@ -174,12 +239,16 @@ printf '%s' 'a-palavra-passe' | node scripts/senha.mjs   # dá o ADMIN_PASSWORD_
 | `ADMIN_SESSION_SECRET`      | 32 caracteres ou mais, ao acaso. Trocar invalida as sessões abertas                                      |
 | `SUPABASE_SERVICE_ROLE_KEY` | uma chave **secreta** do projeto Supabase, criada só para o painel («painel»). Nunca `NEXT_PUBLIC_`     |
 | `IP_HASH_SALT`              | 16 caracteres ou mais: o sal dos hashes de origem. Sem ele vale um sal escrito no código — que é público |
+| `ADMIN_EMAIL`               | opcional, e recomendada: o email do dono. Com ela, a palavra-passe do ambiente só entra com este email   |
 
-As quatro vivem no ambiente do servidor ([`ALOJAMENTO.md`](ALOJAMENTO.md));
-nenhuma chega ao navegador. No CI o painel testa-se com uma palavra-passe
-gerada por corrida e sem base: o que se prova é o código — as barreiras, a
-sessão, os formulários, a acessibilidade —, e a base tem os seus testes no
-trabalho `Migrações`.
+Vivem no ambiente do servidor ([`ALOJAMENTO.md`](ALOJAMENTO.md)); nenhuma
+chega ao navegador. No CI o painel testa-se com uma palavra-passe gerada por
+corrida e sem base: o que se prova é o código — as barreiras, a sessão, os
+formulários, a acessibilidade —, e a base tem os seus testes no trabalho
+`Migrações`. A prova de ponta a ponta das contas — uma pessoa da região A não
+vê nem escreve na B, nem chamando as ações do servidor com o formulário
+adulterado — precisa da base, e corre com ela localmente
+(`web/tests/painel-contas.spec.ts`); sem base, salta e diz porquê.
 
 ## O que o painel NÃO faz, de propósito
 

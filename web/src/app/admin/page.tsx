@@ -1,9 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import Aviso from '@/componentes/painel/Aviso';
 import SemChaveDeServico from '@/componentes/painel/SemChaveDeServico';
 import { revalidarSitio } from '@/lib/painel/acoes';
+import { dentroDaPagina, type Dentro } from '@/lib/painel/autenticacao';
 import { temChaveDeServico } from '@/lib/painel/base';
+import { inicioDe, nomeDoPapel, pode } from '@/lib/painel/papeis';
 import {
   listarAliases,
   listarLicencas,
@@ -23,7 +26,58 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Regiões · Painel' };
 
 interface Props {
-  searchParams: Promise<{ aviso?: string }>;
+  searchParams: Promise<{ aviso?: string; regiao?: string }>;
+}
+
+/** A página de uma região para quem a abre: a ficha a quem a gere, os avisos a quem os escreve. */
+function paginaDaRegiaoPara(dentro: Dentro, regiao: string): string {
+  const ficha = `/admin/regioes/${encodeURIComponent(regiao)}/`;
+  return pode(dentro, regiao, 'gestor') ? ficha : `${ficha}avisos/`;
+}
+
+/**
+ * O início de uma pessoa com mais de uma região — ou com nenhuma, que é o
+ * estado de quem foi convidada e ainda não recebeu papel.
+ */
+async function AsMinhasRegioes({ dentro, aviso }: { dentro: Dentro; aviso?: string }) {
+  const regioes = (await listarRegioes()).filter((r) => dentro.papeis[r.id]);
+  return (
+    <>
+      <h1>As minhas regiões</h1>
+      <Aviso texto={aviso} />
+      {regioes.length === 0 ? (
+        <p>
+          Ainda não tens nenhuma região atribuída. Quem gere o painel dá-te o papel numa região, e
+          ela aparece aqui no clique seguinte.
+        </p>
+      ) : (
+        <ul className="lista cartoes">
+          {regioes.map((r) => {
+            const papel = dentro.papeis[r.id];
+            return (
+              <li key={r.id} className="cartao">
+                <h2>
+                  <Link href={paginaDaRegiaoPara(dentro, r.id)}>{r.name}</Link>
+                </h2>
+                <p className="secundario-texto">
+                  És {papel ? nomeDoPapel(papel) : ''} desta região.{' '}
+                  {r.is_enabled
+                    ? `O sítio dela está em ${r.domain}.`
+                    : 'O sítio dela está desligado.'}
+                </p>
+                <p className="linha-accoes">
+                  {pode(dentro, r.id, 'gestor') ? (
+                    <Link href={`/admin/regioes/${encodeURIComponent(r.id)}/`}>A região</Link>
+                  ) : null}
+                  <Link href={`/admin/regioes/${encodeURIComponent(r.id)}/avisos/`}>Avisos</Link>
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </>
+  );
 }
 
 /**
@@ -36,7 +90,23 @@ interface Props {
  * regiões — quantas, e em que estado — está nas contas de cima.
  */
 export default async function Regioes({ searchParams }: Props) {
-  const { aviso } = await searchParams;
+  const { aviso, regiao: pedida } = await searchParams;
+  const dentro = await dentroDaPagina();
+
+  // O SELETOR DE REGIÃO do cabeçalho manda para aqui (`?regiao=`), e daqui
+  // vai-se para a página que essa pessoa pode abrir nessa região.
+  if (pedida && pode(dentro, pedida, 'editor')) redirect(paginaDaRegiaoPara(dentro, pedida));
+
+  if (!dentro.dono) {
+    // Com UMA região, a lista era um clique a mais todos os dias. O aviso de
+    // uma ação recusada vem com ela.
+    if (Object.keys(dentro.papeis).length === 1) {
+      redirect(`${inicioDe(dentro)}${aviso ? `?aviso=${encodeURIComponent(aviso)}` : ''}`);
+    }
+    if (!temChaveDeServico()) return <SemChaveDeServico titulo="As minhas regiões" />;
+    return <AsMinhasRegioes dentro={dentro} aviso={aviso} />;
+  }
+
   if (!temChaveDeServico()) return <SemChaveDeServico titulo="Regiões" />;
 
   const [regioes, aliases, modulos, licencas] = await Promise.all([

@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
- * Gera o valor de `ADMIN_PASSWORD_HASH`.
+ * Gera o valor de `ADMIN_PASSWORD_HASH` — a palavra-passe do DONO do painel.
  *
- * O painel não tem contas nem registo: tem uma palavra-passe, e dessa
- * palavra-passe o servidor só conhece um hash com sal. Isto é a única forma
- * prevista de o produzir. Uso preferido — a palavra-passe entra por `stdin`
+ * As outras pessoas escolhem a sua no próprio painel, com a ligação de
+ * ativação que o dono lhes manda (0009); esta é a do dono, que entra sem
+ * depender de tabela nenhuma, e dela o servidor só conhece um hash com sal.
+ * Isto é a única forma prevista de o produzir. Uso preferido — a palavra-passe entra por `stdin`
  * e não fica no histórico da shell nem na lista de processos:
  *
  *     printf '%s' 'a-palavra-passe' | node scripts/senha.mjs
@@ -15,8 +16,9 @@
  *
  * O que sai é uma linha `scrypt$N$r$p$sal$hash`, pronta a colar na variável.
  * Cada execução dá um valor diferente para a mesma palavra-passe — o sal é
- * novo de cada vez, e é isso que se pretende. Trocar a palavra-passe não
- * invalida as sessões abertas; trocar o `ADMIN_SESSION_SECRET` invalida.
+ * novo de cada vez, e é isso que se pretende. Trocar a palavra-passe
+ * invalida as sessões do dono que estavam abertas; trocar o
+ * `ADMIN_SESSION_SECRET` invalida as de toda a gente.
  */
 import { randomBytes } from 'node:crypto';
 import { COMPRIMENTO_MINIMO, codificarSenha } from '../src/lib/painel/senha.ts';

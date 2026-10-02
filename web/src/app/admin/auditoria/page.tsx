@@ -2,8 +2,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Mudanca from '@/componentes/painel/Mudanca';
 import SemChaveDeServico from '@/componentes/painel/SemChaveDeServico';
+import { notFound } from 'next/navigation';
 import { paraCampoLocal } from '@/lib/fuso';
+import { dentroDaPagina } from '@/lib/painel/autenticacao';
 import { nomeDaAcao } from '@/lib/painel/auditoria';
+import { pode } from '@/lib/painel/papeis';
 import { temChaveDeServico } from '@/lib/painel/base';
 import {
   listarAcoes,
@@ -97,6 +100,14 @@ function Recortes({ opcoes, recorte }: { opcoes: OpcoesDaAuditoria; recorte: Rec
 }
 
 export default async function Auditoria({ searchParams }: Props) {
+  // O DONO LÊ TUDO; quem gere regiões lê o rasto delas, e mais nada. Quem só
+  // edita avisos não tem auditoria: o que precisa de saber de um aviso está
+  // na página dos avisos.
+  const dentro = await dentroDaPagina();
+  const regioes = dentro.dono
+    ? null
+    : Object.keys(dentro.papeis).filter((r) => pode(dentro, r, 'gestor'));
+  if (regioes !== null && regioes.length === 0) notFound();
   if (!temChaveDeServico()) return <SemChaveDeServico titulo="Auditoria" />;
 
   const params = await searchParams;
@@ -108,8 +119,8 @@ export default async function Auditoria({ searchParams }: Props) {
     mes: params.mes || undefined,
   };
   const [acoes, opcoes] = await Promise.all([
-    listarAcoes(pagina, POR_PAGINA, recorte),
-    opcoesDaAuditoria(),
+    listarAcoes(pagina, POR_PAGINA, recorte, regioes),
+    opcoesDaAuditoria(regioes),
   ]);
 
   return (

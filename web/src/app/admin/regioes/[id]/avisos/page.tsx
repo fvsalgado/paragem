@@ -7,6 +7,7 @@ import { IDENTIFICADOR, NOME_DOS_MODOS, regiao as fichaNoArmazem } from '@/lib/d
 import { CAUSAS, EFEITOS, GRAVIDADES, emVigor } from '@/lib/avisos';
 import { FUSO, paraCampoLocal, porExtenso } from '@/lib/fuso';
 import { apagarAviso, guardarAviso, publicarAviso } from '@/lib/painel/acoes';
+import { paginaDaRegiao } from '@/lib/painel/autenticacao';
 import { temChaveDeServico } from '@/lib/painel/base';
 import { avisosDaRegiao } from '@/lib/painel/avisos';
 import { listarRegioes } from '@/lib/painel/consultas';
@@ -36,6 +37,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function AvisosDaRegiao({ params, searchParams }: Props) {
   const [{ id }, { aviso, editar }] = await Promise.all([params, searchParams]);
   if (!IDENTIFICADOR.test(id)) notFound();
+  // Os avisos de uma região são de quem tem papel nela — editor, gestor — e do dono.
+  await paginaDaRegiao(id, 'editor');
   if (!temChaveDeServico()) return <SemChaveDeServico titulo={`Avisos · ${id}`} />;
 
   const [regioes, avisos, noArmazem] = await Promise.all([

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Aviso from '@/componentes/painel/Aviso';
 import SemChaveDeServico from '@/componentes/painel/SemChaveDeServico';
 import { criarRegiao } from '@/lib/painel/acoes';
+import { paginaDoDono } from '@/lib/painel/autenticacao';
 import { temChaveDeServico } from '@/lib/painel/base';
 
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,8 @@ const ARTIGOS = [
  */
 export default async function NovaRegiao({ searchParams }: Props) {
   const params = await searchParams;
+  // Criar uma região é uma decisão comercial: só o dono.
+  await paginaDoDono();
   if (!temChaveDeServico()) return <SemChaveDeServico titulo="Nova região" />;
 
   return (
