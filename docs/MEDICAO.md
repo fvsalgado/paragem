@@ -46,6 +46,16 @@ aumenta as hipóteses de alguém olhar para ela.
 - a gravação de sessão, desligada;
 - o endereço IP.
 
+## O que a medição custa a quem a usa
+
+Nada no caminho da página. A biblioteca do PostHog (96 kB comprimidos) só se
+descarrega quando há chave, e só depois de a página acabar de carregar e de o
+navegador ficar livre (`web/src/lib/medicao.ts`); o que se conta antes disso
+espera numa fila, com a hora a que aconteceu. E não vai buscar scripts de fora
+— nem o dos inquéritos, que não há (`disable_surveys`,
+`disable_external_dependency_loading`): no início da região real eram 35 kB
+que ninguém usava.
+
 ## Se um dia for preciso seguir a mesma pessoa
 
 Funis de conversão, coortes, «quantos dos que procuraram voltaram» — isso exige

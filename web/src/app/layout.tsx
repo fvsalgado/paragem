@@ -37,9 +37,17 @@ export const viewport: Viewport = { themeColor: COR_DO_TEMA };
  * privacidade diz que não o regista. O `next/font` vai buscá-la uma vez, na
  * construção, e serve-a com o resto do sítio. A letra é a mesma.
  */
+/*
+ * SÓ O ALFABETO LATINO SE PRÉ-CARREGA. O `latin` do Google já traz o
+ * português todo — os acentos, o «ç», o «ã», as aspas angulares e o «€»;
+ * o `latin-ext` é o «ł», o «ő», o «ș». Pré-carregados os dois, cada página
+ * pagava 12 kB por letras que quase nunca escreve (P3-006). O `latin-ext`
+ * continua declarado, com o seu `unicode-range`: o navegador só o pede se uma
+ * página o usar — o nome de uma cidade estrangeira num expresso.
+ */
 const letra = Atkinson_Hyperlegible({
   weight: ['400', '700'],
-  subsets: ['latin', 'latin-ext'],
+  subsets: ['latin'],
   display: 'swap',
   variable: '--letra',
 });

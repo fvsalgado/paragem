@@ -23,7 +23,7 @@
  * política de privacidade com base legal, e contrato de subcontratação com
  * quem processa. Está escrito em `docs/MEDICAO.md` o que isso implica.
  */
-import posthog from 'posthog-js';
+import type { PostHog } from 'posthog-js';
 
 const CHAVE = process.env.NEXT_PUBLIC_PARAGEM_POSTHOG ?? '';
 const SERVIDOR = process.env.NEXT_PUBLIC_PARAGEM_POSTHOG_HOST ?? 'https://eu.i.posthog.com';
@@ -31,39 +31,83 @@ const SERVIDOR = process.env.NEXT_PUBLIC_PARAGEM_POSTHOG_HOST ?? 'https://eu.i.p
 /** `true` quando se segue a mesma pessoa entre visitas — e aí é preciso consentimento. */
 const COM_IDENTIFICADOR = process.env.NEXT_PUBLIC_PARAGEM_MEDICAO_IDENTIFICADA === '1';
 
-let ligado = false;
+/**
+ * A BIBLIOTECA CHEGA DEPOIS DA PÁGINA, e não com ela (P3-006).
+ *
+ * Era importada no topo deste ficheiro, e este ficheiro é do invólucro de
+ * TODAS as páginas: 96 kB comprimidos (290 kB de JavaScript a avaliar) no
+ * caminho de cada uma delas — mais do que o React —, para mandar uma visita.
+ * Medido na região real: era o maior ficheiro do tarifário, uma página de
+ * 12 kB de HTML. E vinha mesmo sem chave, num sítio que não mede nada.
+ *
+ * Agora só se descarrega com chave, e só depois de a página ter acabado de
+ * carregar e de o navegador ficar livre: a medição não pode atrasar a
+ * resposta que se está a medir. O que se pede antes disso espera numa fila,
+ * com a hora a que aconteceu — uma visita contada dois segundos depois
+ * continua a ser contada à hora certa.
+ */
+let carregada: Promise<PostHog | null> | null = null;
+
+function quandoLivre(fazer: () => void): void {
+  // Sem `requestIdleCallback` (o Safari só o tem há pouco), um prazo fixo.
+  const depois = () =>
+    typeof window.requestIdleCallback === 'function'
+      ? window.requestIdleCallback(fazer, { timeout: 4000 })
+      : window.setTimeout(fazer, 1500);
+  if (document.readyState === 'complete') depois();
+  else window.addEventListener('load', depois, { once: true });
+}
 
 export function comecar(): void {
-  if (ligado || !CHAVE || typeof window === 'undefined') return;
-  ligado = true;
+  if (carregada || !CHAVE || typeof window === 'undefined') return;
+  carregada = new Promise((resolver) =>
+    quandoLivre(() => {
+      import('posthog-js')
+        .then(({ default: posthog }) => {
+          posthog.init(CHAVE, {
+            api_host: SERVIDOR,
+            // A visita à página é nossa de contar: o autocapture apanharia cliques em
+            // elementos com texto lá dentro — e o texto, aqui, são nomes de paragens
+            // que a pessoa escreveu.
+            autocapture: false,
+            capture_pageview: false,
+            capture_pageleave: true,
+            disable_session_recording: true,
+            // NADA DE SCRIPTS DE FORA. Sem isto o PostHog ia buscar o dos
+            // inquéritos (35 kB, medido no início da região real) e os que um
+            // dia se ligassem no painel dele — código que não passou por aqui,
+            // a correr num sítio de uma autoridade pública. Não há inquéritos.
+            disable_surveys: true,
+            disable_external_dependency_loading: true,
+            // Sem armazenamento no dispositivo: nada fica lá quando a pessoa fecha.
+            persistence: COM_IDENTIFICADOR ? 'localStorage+cookie' : 'memory',
+            // O endereço IP não entra. É dado pessoal e não serve para nada do que
+            // aqui se quer saber.
+            property_denylist: COM_IDENTIFICADOR ? [] : ['$ip'],
+            ip: COM_IDENTIFICADOR,
+            person_profiles: COM_IDENTIFICADOR ? 'always' : 'never',
+          });
+          resolver(posthog);
+        })
+        // Uma medição que não carregou não parte a página: fica por medir.
+        .catch(() => resolver(null));
+    }),
+  );
+}
 
-  posthog.init(CHAVE, {
-    api_host: SERVIDOR,
-    // A visita à página é nossa de contar: o autocapture apanharia cliques em
-    // elementos com texto lá dentro — e o texto, aqui, são nomes de paragens
-    // que a pessoa escreveu.
-    autocapture: false,
-    capture_pageview: false,
-    capture_pageleave: true,
-    disable_session_recording: true,
-    // Sem armazenamento no dispositivo: nada fica lá quando a pessoa fecha.
-    persistence: COM_IDENTIFICADOR ? 'localStorage+cookie' : 'memory',
-    // O endereço IP não entra. É dado pessoal e não serve para nada do que
-    // aqui se quer saber.
-    property_denylist: COM_IDENTIFICADOR ? [] : ['$ip'],
-    ip: COM_IDENTIFICADOR,
-    person_profiles: COM_IDENTIFICADOR ? 'always' : 'never',
-  });
+/** Conta agora, com a hora de agora — mesmo que a biblioteca ainda esteja a chegar. */
+function contar(nome: string, propriedades: Record<string, unknown>): void {
+  if (!carregada) return;
+  const quando = new Date();
+  carregada.then((p) => p?.capture(nome, propriedades, { timestamp: quando }));
 }
 
 export function pagina(caminho: string, extra: Record<string, unknown> = {}): void {
-  if (!ligado) return;
-  posthog.capture('$pageview', { $current_url: caminho, ...extra });
+  contar('$pageview', { $current_url: caminho, ...extra });
 }
 
 export function evento(nome: string, propriedades: Record<string, unknown> = {}): void {
-  if (!ligado) return;
-  posthog.capture(nome, propriedades);
+  contar(nome, propriedades);
 }
 
 /**
