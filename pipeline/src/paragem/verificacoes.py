@@ -159,13 +159,16 @@ def regioes(raiz: Path, *, exigir_construcao: bool = True) -> Resultado:
         r.afirmar(False, "existe a região de prova")
         return r
 
-    # 1. A prova nasce sem código novo.
-    especificos = [s.leitor for s in prova.saidas if s.leitor not in GENERICOS]
-    r.afirmar(
-        not especificos,
-        "a região de prova usa só leitores genéricos"
-        + (f" (usa {', '.join(especificos)})" if especificos else ""),
-    )
+    # 1. A prova nasce sem código novo — e as outras regiões inventadas
+    #    também. A de demonstração tem os sete modos: é a prova mais exigente
+    #    do contrato, e era a única que não estava a ser verificada.
+    for inventada in [prova, *[x for x in todas if x.demonstracao and x.id != prova.id]]:
+        especificos = [s.leitor for s in inventada.saidas if s.leitor not in GENERICOS]
+        r.afirmar(
+            not especificos,
+            f"{inventada.id} usa só leitores genéricos"
+            + (f" (usa {', '.join(especificos)})" if especificos else ""),
+        )
 
     # 2. Artigos diferentes entre regiões: é o que impede uma contração de
     #    ficar cravada no código.

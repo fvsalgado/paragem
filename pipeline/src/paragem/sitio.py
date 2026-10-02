@@ -174,6 +174,8 @@ class Sitio:
 
     def __init__(self, raiz: Path, regiao: Regiao, destino: Path) -> None:
         self.raiz = Path(raiz)
+        # O registo das fontes, lido à primeira pergunta (`_do_openstreetmap`).
+        self._registo: Any = None
         self.regiao = regiao
         self.destino = Path(destino) / "sitio"
         self.saidas: list[Saida] = []
@@ -986,12 +988,18 @@ class Sitio:
             "osm-taxis": self._modo_pontos,
             "osm-rotas": self._modo_percursos,
             "gtfs-filtrado": self._modo_feed,
+            # Um feed inteiro de outra entidade é um feed como o recortado: o
+            # que muda é só se foi preciso recortá-lo. O da rede própria e o do
+            # comboio não chegam aqui — têm catálogo próprio (ver `modos`).
+            "gtfs-arquivo": self._modo_feed,
             "horarios-pdf-cartaz": self._modo_cartaz,
             "horarios-manuais": self._modo_cartaz,
             # O instantâneo do sítio de reservas sai na MESMA forma dos
             # cartazes e das transcrições — o que muda é de onde veio, e isso
             # está na fonte, não aqui.
             "horarios-reservas": self._modo_cartaz,
+            # E o que já chega em tabela, sem papel: a mesma forma outra vez.
+            "horarios-tabela": self._modo_cartaz,
         }.get(decl.leitor)
         if construtor is None:
             return None
@@ -1116,14 +1124,35 @@ class Sitio:
                 }
             )
         percursos.sort(key=lambda p: _simples(str(p["nome"])))
-        return {
-            "percursos": percursos,
-            "notas": [
+        # DE ONDE VEM O TRAÇADO, pela licença da fonte e não pelo leitor. O
+        # leitor lê qualquer ficheiro com a forma de um extrato do
+        # OpenStreetMap — e o de uma região inventada tem essa forma sem ser
+        # dele. Dizer «vem do OpenStreetMap» por cima de um traçado inventado
+        # era atribuir-lhe o que não fez.
+        if self._do_openstreetmap(decl.fonte):
+            nota = (
                 "O traçado destas linhas vem do OpenStreetMap: é por onde elas "
                 "passam. As paragens e as horas não estão lá — quando existem, "
                 "vêm dos cartazes de quem as opera."
-            ],
-        }
+            )
+        else:
+            nota = (
+                "O traçado destas linhas é por onde elas passam. As paragens e as "
+                "horas, quando existem, vêm de quem as opera."
+            )
+        return {"percursos": percursos, "notas": [nota]}
+
+    def _do_openstreetmap(self, id_fonte: str) -> bool:
+        """A fonte é o OpenStreetMap — sob ODbL —, e não um ficheiro com a forma dele?"""
+        from .fontes import ErroDeFonte, Registo
+
+        if self._registo is None:
+            self._registo = Registo.carregar(self.raiz)
+        try:
+            f = self._registo.obter(id_fonte)
+        except ErroDeFonte:
+            return True
+        return (f.licenca or "").upper().startswith("ODBL")
 
     def _concelhos_do_tracado(self, territorio, geometria: dict[str, Any]) -> list[str]:
         """Os concelhos por onde um traçado passa, pela ordem em que os toca."""
@@ -1300,25 +1329,30 @@ class Sitio:
                     "bilhetes": (a.get("agency_fare_url") or "").strip() or None,
                 }
             )
-        return {
-            "paragens": paragens,
-            "operadores": operadores,
-            "notas": [
-                "Serviço de um operador privado. Os bilhetes vendem-se no sítio "
-                "dele, e os títulos desta região não servem.",
-                # A INTERFACE É EM PORTUGUÊS (§1) E ESTES NOMES NÃO SÃO.
-                #
-                # Vêm do feed do operador, que os escreve em inglês — «Bus
-                # Station». Traduzi-los aqui era escrever à mão o nome de uma
-                # paragem de terceiro, que é o que o §4.4 não deixa. O próprio
-                # operador publica os nomes em português quando se lhe
-                # pergunta, e é por isso que a consulta de preços os mostra
-                # certos; o que falta é trazê-los para as páginas estáticas.
+        notas = [
+            "Serviço de um operador privado. Os bilhetes vendem-se no sítio "
+            "dele, e os títulos desta região não servem.",
+        ]
+        # A INTERFACE É EM PORTUGUÊS (§1) E ESTES NOMES PODEM NÃO SER.
+        #
+        # Vêm do feed do operador, e há operadores que os escrevem em inglês
+        # — «Bus Station». Traduzi-los aqui era escrever à mão o nome de uma
+        # paragem de terceiro, que é o que o §4.4 não deixa. O próprio
+        # operador publica os nomes em português quando se lhe pergunta, e é
+        # por isso que a consulta de preços os mostra certos; o que falta é
+        # trazê-los para as páginas estáticas.
+        #
+        # SÓ SE DIZ QUANDO É VERDADE. A frase estava escrita para todos os
+        # feeds, e a página de um operador que escreve em português dizia que
+        # os nomes estavam em inglês, por cima de uma lista inteira em
+        # português.
+        if _ha_nomes_em_ingles(str(p["nome"]) for p in paragens):
+            notas.append(
                 "Os nomes das paragens são os que o operador publica no feed "
                 "dele, em inglês. Quando se consultam os preços, aparecem "
-                "como ele os escreve em português.",
-            ],
-        }
+                "como ele os escreve em português."
+            )
+        return {"paragens": paragens, "operadores": operadores, "notas": notas}
 
     def _concelho_de(self, territorio, lat: float, lon: float) -> str | None:
         """Em que concelho fica um ponto que não é uma paragem da rede.
@@ -1402,6 +1436,22 @@ def _ordem_de_linha(codigo: str) -> str:
     if codigo.isdigit():
         return f"0{int(codigo):08d}"
     return f"1{_simples(codigo)}"
+
+
+#: As palavras com que um feed internacional escreve uma paragem em inglês.
+#: «Terminal» fica de fora: também é português.
+_PALAVRAS_EM_INGLES = {"bus", "station", "stop", "airport", "street", "square", "center", "centre"}
+
+
+def _ha_nomes_em_ingles(nomes) -> bool:
+    """Há, nestes nomes de paragem, algum escrito em inglês?"""
+    import re as _re
+
+    return any(
+        palavra in _PALAVRAS_EM_INGLES
+        for nome in nomes
+        for palavra in _re.findall(r"[a-z]+", nome.lower())
+    )
 
 
 def _modo_gtfs(route_type: str) -> str:
