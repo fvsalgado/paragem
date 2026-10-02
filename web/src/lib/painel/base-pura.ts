@@ -76,6 +76,15 @@ export function traduzirErro(erro: unknown): string {
       return 'o endereço tem de ser só o domínio — por exemplo, transportes.exemplo.pt —, sem https://, sem barras e sem espaços';
     }
     if (/email/i.test(mensagem)) return 'o email não se lê como um endereço de correio';
+    if (/telefone/i.test(mensagem)) {
+      return 'o telefone só leva algarismos, espaços, o sinal + e parênteses';
+    }
+    if (/reclamacao/i.test(mensagem)) {
+      return 'o endereço de reclamação tem de ser completo, a começar por https://';
+    }
+    if (/responsavel|outra_tem_nome/i.test(mensagem)) {
+      return 'falta o nome de quem responde pelos dados';
+    }
     if (/prazo|ends_on|fim/i.test(mensagem)) return 'o fim não pode vir antes do começo';
     if (/titulo|texto/i.test(mensagem)) return 'o título e o texto não podem ficar em branco';
     return 'um dos valores não é aceite — confirma o que escreveste';

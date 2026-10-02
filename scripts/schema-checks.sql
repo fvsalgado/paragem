@@ -218,7 +218,8 @@ begin
    where t.schemaname = 'public'
      and t.tablename in ('regions', 'region_domain_aliases', 'modulos', 'admin_actions',
                          'region_licenses', 'rate_limits', 'avisos',
-                         'admin_pessoas', 'admin_papeis', 'admin_convites')
+                         'admin_pessoas', 'admin_papeis', 'admin_convites',
+                         'region_contactos')
      and not t.rowsecurity;
   assert n = 0, format('%s tabelas sem RLS', n);
 
@@ -537,4 +538,85 @@ begin
   delete from public.admin_pessoas where id in (v_id, v_outra);  -- leva papéis e ligações
   delete from public.regions where id = 'checks-pessoas';
   delete from public.rate_limits where bucket like 'schema-checks:%';
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- OS CONTACTOS (0010). O que vai para a declaração de acessibilidade e para a
+-- privacidade: só o que é um endereço, com rasto, sem rasto quando nada muda,
+-- e legível de fora só para as regiões ligadas.
+do $$
+declare
+  n integer;
+begin
+  select count(*) into n from pg_policies
+   where schemaname = 'public' and tablename = 'region_contactos';
+  assert n = 1, format('os contactos deviam ter uma policy e têm %s', n);
+
+  perform public.create_region('checks-contactos', 'Contactos das Checks', 'os',
+                               'checks-contactos.paragem.pt', 99, 'schema-checks');
+
+  -- Um email que não é email, um endereço que não é da Web, e «outra
+  -- entidade» sem nome: recusados na escrita, que é onde há quem os corrija.
+  begin
+    perform public.set_region_contactos('prova', 'não é email', null, null, 'por-preencher',
+                                        null, '', null, 'schema-checks');
+    assert false, 'um email inválido devia ser recusado';
+  exception when check_violation then null;
+  end;
+  begin
+    perform public.set_region_contactos('prova', null, null, 'javascript:alert(1)',
+                                        'por-preencher', null, '', null, 'schema-checks');
+    assert false, 'um endereço de reclamação que não é da Web devia ser recusado';
+  exception when check_violation then null;
+  end;
+  begin
+    perform public.set_region_contactos('prova', null, null, null, 'outra', '  ', 'a', null,
+                                        'schema-checks');
+    assert false, '«outra entidade» sem nome devia ser recusada';
+  exception when check_violation then null;
+  end;
+
+  -- Gravar deixa rasto; gravar o mesmo não deixa nada.
+  assert public.set_region_contactos('prova', ' Acessibilidade@Exemplo.PT ', '800 000 000',
+                                     'https://exemplo.pt/reclamar', 'autoridade', 'ignorado', 'o',
+                                     'privacidade@exemplo.pt', 'schema-checks'),
+    'gravar contactos novos devia devolver true';
+  select count(*) into n from public.region_contactos
+   where region_id = 'prova' and acessibilidade_email = 'acessibilidade@exemplo.pt'
+     and responsavel = 'autoridade' and responsavel_nome is null and responsavel_artigo = '';
+  assert n = 1, 'o email fica em minúsculas, e o nome de «outra» só se guarda com «outra»';
+  assert not public.set_region_contactos('prova', 'acessibilidade@exemplo.pt', '800 000 000',
+                                         'https://exemplo.pt/reclamar', 'autoridade', null, '',
+                                         'privacidade@exemplo.pt', 'outra-pessoa'),
+    'gravar o mesmo devia devolver false';
+  select count(*) into n from public.region_contactos
+   where region_id = 'prova' and updated_by = 'schema-checks';
+  assert n = 1, 'gravar o mesmo não muda o autor da linha';
+  select count(*) into n from public.admin_actions
+   where action = 'region.contactos' and entity_type = 'region' and entity_id = 'prova';
+  assert n = 1, format('esperava uma linha de rasto dos contactos, há %s', n);
+  -- E o rasto da região, que é o que o gestor vê, leva-os.
+  select count(*) into n from public.acoes_das_regioes(array['prova'])
+   where action = 'region.contactos';
+  assert n = 1, 'o rasto da região devia levar os contactos';
+
+  perform public.set_region_contactos('checks-contactos', 'a@exemplo.pt', null, null,
+                                      'outra', 'Entidade das Checks', 'a', null, 'schema-checks');
+
+  -- COMO O SÍTIO PERGUNTA, com o papel da chave pública: lê os da região
+  -- ligada, e os da desligada não existem.
+  set local role anon;
+  select count(*) into n from public.region_contactos where region_id = 'prova';
+  assert n = 1, 'a chave pública devia ler os contactos de uma região ligada';
+  select count(*) into n from public.region_contactos where region_id = 'checks-contactos';
+  assert n = 0, 'a chave pública não lê os contactos de uma região desligada';
+  reset role;
+  assert not has_function_privilege('anon',
+    'public.set_region_contactos(text, text, text, text, text, text, text, text, text, text)',
+    'execute'), 'a chave pública não escreve contactos';
+
+  -- O que estas verificações escreveram sai daqui, rasto incluído.
+  delete from public.region_contactos where region_id in ('prova', 'checks-contactos');
+  delete from public.regions where id = 'checks-contactos';
+  delete from public.admin_actions where actor = 'schema-checks';
 end $$;

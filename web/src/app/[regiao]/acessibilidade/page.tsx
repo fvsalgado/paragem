@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { exigirRegiao, temMosaicos, url, regiao } from '@/lib/dados';
 import { aAutoridade } from '@/lib/prosa';
+import { lerContactos, telefoneParaMarcar } from '@/lib/contactos';
 import VerificacoesDeAcessibilidade from '@/componentes/VerificacoesDeAcessibilidade';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
@@ -35,7 +36,10 @@ export async function generateMetadata({
 export default async function Acessibilidade({ params }: { params: Promise<{ regiao: string }> }) {
   const { regiao: rid } = await params;
   const r = await exigirRegiao(rid);
-  const comMapa = await temMosaicos(rid);
+  const [comMapa, contactos] = await Promise.all([temMosaicos(rid), lerContactos(rid)]);
+  const email = contactos?.acessibilidade_email;
+  const telefone = contactos?.acessibilidade_telefone;
+  const reclamar = contactos?.reclamacao_url;
   return (
     <>
       <h1>Declaração de acessibilidade</h1>
@@ -84,15 +88,41 @@ export default async function Acessibilidade({ params }: { params: Promise<{ reg
         <a href={url(rid, '/dados-abertos/')}>Dados abertos</a>.
       </p>
 
+      {/* O CONTACTO É DA AUTORIDADE, e escreve-se no painel (P4-024): dizia
+          «Por preencher» também na região a sério, porque não havia onde o
+          pôr. O que continua por indicar diz-se — nunca se inventa. */}
       <h2>Contacto e mecanismo de reclamação</h2>
-      <div className="faixa alerta">
+      {email ? (
         <p>
-          <strong>Por preencher.</strong> O contacto para comunicar problemas de acessibilidade e o
-          mecanismo de reclamação previsto no artigo 9.º do Decreto-Lei n.º 83/2018 estão por
-          definir {aAutoridade(r, 'por')}. Uma declaração com um contacto inventado é pior do que
-          nenhuma: quem reclamar fica à espera.
+          Para comunicar um problema de acessibilidade neste sítio, ou pedir num formato acessível a
+          informação que aqui está, escreve para <a href={`mailto:${email}`}>{email}</a>
+          {telefone ? (
+            <>
+              {' '}
+              ou liga para <a href={`tel:${telefoneParaMarcar(telefone)}`}>{telefone}</a>
+            </>
+          ) : null}
+          .
         </p>
-      </div>
+      ) : null}
+      {email && reclamar ? (
+        <p>
+          Se a resposta não chegar, ou não resolver o problema, podes apresentar uma reclamação em{' '}
+          <a href={reclamar}>{new URL(reclamar).hostname}</a>.
+        </p>
+      ) : null}
+      {!email || !reclamar ? (
+        <div className={email ? 'faixa informacao' : 'faixa alerta'}>
+          <p>
+            <strong>Por preencher.</strong>{' '}
+            {email
+              ? `O mecanismo de reclamação previsto no artigo 9.º do Decreto-Lei n.º 83/2018 ainda não foi indicado ${aAutoridade(r, 'por')}.`
+              : `O contacto para comunicar problemas de acessibilidade e o mecanismo de reclamação previsto no artigo 9.º do Decreto-Lei n.º 83/2018 estão por definir ${aAutoridade(r, 'por')}.`}{' '}
+            Uma declaração com um contacto inventado é pior do que nenhuma: quem reclamar fica à
+            espera.
+          </p>
+        </div>
+      ) : null}
     </>
   );
 }

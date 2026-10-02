@@ -73,8 +73,9 @@ export default function ConvidarPessoa({ regioes }: { regioes: { id: string; nom
           <legend>Papel em cada região</legend>
           <p className="secundario-texto">
             <strong>Editor</strong> escreve, publica e retira os avisos da região.{' '}
-            <strong>Gestor</strong> faz isso e gere a ficha dela: os módulos, os contactos e o
-            relatório da procura. A pessoa só vê as regiões onde tiver um papel.
+            <strong>Gestor</strong> faz isso e gere a ficha dela: os modos, os contactos da
+            declaração e o relatório das procuras sem resposta. A pessoa só vê as regiões onde tiver
+            um papel.
           </p>
           <ul className="papeis-por-regiao">
             {regioes.map((r) => (

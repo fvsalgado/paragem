@@ -18,6 +18,7 @@ sentido em tempo de execução e que o painel muda sem um commit:
 | `admin_pessoas`         | quem entra no painel além do dono: email, nome, o hash da palavra-passe, o estado | só o painel                          |
 | `admin_papeis`          | o papel de cada pessoa em cada região: gestor ou editor  | só o painel                                          |
 | `admin_convites`        | as ligações de ativação — só o sha256 do token, com prazo e de uso único | só o painel                          |
+| `region_contactos`      | o contacto de acessibilidade, onde se reclama, e quem responde pelos dados | a declaração e a privacidade, com a chave anónima — só das regiões ligadas |
 
 É o desenho do [Coreto](https://github.com/fvsalgado/coreto) — a mesma casa, o
 mesmo autor, o mesmo problema resolvido primeiro lá —, levantado e reduzido.
@@ -44,7 +45,7 @@ sem linhas tem tudo ligado.
 `set_region_domain`, `add_region_alias`, `remove_region_alias`, as dos avisos
 e, desde a 0009, as das pessoas (`create_pessoa`, `set_papel`,
 `set_pessoa_ativa`, `create_convite`, `ativar_com_convite`, `registar_acesso`)
-— e são elas que escrevem e que deixam a linha em `admin_actions`, com o nome
+e, desde a 0010, a dos contactos (`set_region_contactos`) — e são elas que escrevem e que deixam a linha em `admin_actions`, com o nome
 e o email de quem o fez. As palavras-passe e os tokens das ligações nunca
 entram no rasto. Uma escrita direta era uma
 ação sem rasto, e o rasto é metade do que torna um interruptor confiável.
@@ -77,6 +78,20 @@ tentativas passa a contar só as falhadas (`rate_limit_check`,
 região lê o rasto dela pela `acoes_das_regioes`, que sabe de que região é cada
 aviso mesmo nas linhas que não o dizem, e que deixa de fora as licenças e as
 pessoas.
+
+**Os contactos da declaração são da autoridade, e por isso daqui** (0010). A
+declaração de acessibilidade e a privacidade de cada região diziam «Por
+preencher» também na região a sério, porque não havia onde a autoridade pusesse
+o contacto. Podiam ir para o `regiao.yaml`, ao lado da marca, e não foram: a
+marca define a região e muda com uma construção; o contacto diz a quem se
+escreve, muda quando a pessoa que respondia sai, e quem o muda é a autoridade,
+no painel — o `CONTAS.md` dá ao gestor «os textos que a base guarde». E o rasto
+conta: uma declaração com o contacto errado é uma obrigação por cumprir, e
+saber quem o mudou, e quando, é a prova de que se cumpriu. Leem-se com a chave
+pública, como os avisos publicados, e só os das regiões ligadas (a policy
+pergunta à `regiao_publica`, uma função, para valer igual no projeto e num
+Postgres limpo). Nada se semeia: um contacto inventado numa declaração de
+acessibilidade é pior do que nenhum.
 
 **O público degrada, a segurança fecha.** Se o sítio não conseguir ler
 `modulos`, mostra tudo — assumir tudo desligado por causa de uma falha de rede
@@ -160,6 +175,11 @@ O que já está feito:
   Aplicada, o PostgREST do projeto relê o esquema sozinho; numa base local com
   um PostgREST à parte, é preciso `notify pgrst, 'reload schema'`. E, como na
   0007, o ficheiro passa a ter o carimbo da hora a que correu.
+- **A 0010 (os contactos) NÃO está aplicada** — escrita a 02/10/2026,
+  provada no CI e na base local. Só acrescenta: o sítio de hoje nunca pergunta
+  pela tabela, e o novo, sem ela, diz «Por preencher» — o mesmo que diz sem
+  linha — e a ficha diz que a instalação ainda não guarda contactos. Aplica-se
+  depois da 0009, pela ordem dos ficheiros.
 - **A palavra-passe da base não ficou guardada em lado nenhum.** Foi gerada ao
   acaso na criação e deitada fora: o sítio vai falar com a base pelas chaves
   de API, não por `psql`. Para uma ligação direta, redefine-se no painel do

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from '@/componentes/Ligacao';
 import { exigirRegiao, temMosaicos, url, regiao } from '@/lib/dados';
 import { aAutoridade } from '@/lib/prosa';
+import { lerContactos, responsavelNaFrase } from '@/lib/contactos';
 import { motorDaRegiao } from '@/lib/enderecos';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
@@ -37,6 +38,10 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
   const comMotor = motorDaRegiao(rid, r.demonstracao) !== '';
   // Uma região sem recorte do OpenStreetMap não tem mapa, nem botão no mapa.
   const comMapa = await temMosaicos(rid);
+  // Quem responde pelos dados e a quem se escreve: da autoridade, no painel (P4-024).
+  const contactos = await lerContactos(rid);
+  const responsavel = responsavelNaFrase(contactos, aAutoridade(r, 'com_artigo'));
+  const emailDePrivacidade = contactos?.privacidade_email;
 
   return (
     <>
@@ -108,12 +113,40 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
         <Link href={url(rid, '/dados-abertos/')}>Dados abertos</Link>.
       </p>
 
+      <h2>Quem responde pelos dados</h2>
+      {responsavel ? (
+        <p>
+          O responsável pelo tratamento é {responsavel}.
+          {emailDePrivacidade ? (
+            <>
+              {' '}
+              Para questões de privacidade, escreve para{' '}
+              <a href={`mailto:${emailDePrivacidade}`}>{emailDePrivacidade}</a>.
+            </>
+          ) : null}
+        </p>
+      ) : (
+        <div className="faixa informacao">
+          <p>
+            <strong>Por preencher.</strong> Quem responde pelos dados deste sítio ainda não foi
+            indicado {aAutoridade(r, 'por')}.
+            {emailDePrivacidade ? (
+              <>
+                {' '}
+                Entretanto, as questões de privacidade vão para{' '}
+                <a href={`mailto:${emailDePrivacidade}`}>{emailDePrivacidade}</a>.
+              </>
+            ) : (
+              ' Um contacto inventado é pior do que nenhum.'
+            )}
+          </p>
+        </div>
+      )}
+
       <h2>Se quiseres saber mais</h2>
       <p>
         A declaração de acessibilidade está em{' '}
-        <Link href={url(rid, '/acessibilidade/')}>Acessibilidade</Link>. O contacto para questões de
-        privacidade é o {aAutoridade(r, 'de')}, e ainda está por definir — como o de acessibilidade.
-        Um contacto inventado é pior do que nenhum.
+        <Link href={url(rid, '/acessibilidade/')}>Acessibilidade</Link>.
       </p>
     </>
   );
