@@ -364,7 +364,9 @@ fontes:
     ficheiro: data/manual/prova/prova.osm.xml
     sha256: "0d1196e4c2e673deb4ef878f105406822d44759f0ebaa323cc4ffcf555c6d6c0"
     licenca: AGPL-3.0-only
-    atribuicao: null
+    # A que os leitores `osm-*` escrevem dentro dos ficheiros que fazem daqui.
+    # Não é a do OpenStreetMap: não há nele um único objeto do verdadeiro.
+    atribuicao: Dados inventados pelo Paragem.pt, para a região de prova
     verificado_em: 2026-09-19
     obtido_em: null
     notas: >-
@@ -490,7 +492,8 @@ fontes:
     ficheiro: data/manual/demo/demo.osm.xml
     sha256: "be4c6084ffd981262ce270fa111cdc4f83e3bf8c8d0575c755a69abe992d6137"
     licenca: AGPL-3.0-only
-    atribuicao: null
+    # A mesma frase do canto do mapa desta região, e pela mesma razão.
+    atribuicao: Dados inventados pelo Paragem.pt, para a demonstração
     verificado_em: 2026-10-02
     obtido_em: null
     notas: >-

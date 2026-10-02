@@ -23,7 +23,7 @@ from typing import Any
 import osmium
 
 from .base import Contexto, Resultado
-from .osm import ATRIBUICAO, _escrever_geojson, _ficheiro
+from .osm import _escrever_geojson, _ficheiro, termos_embutidos
 
 nome = "osm-sitios"
 
@@ -290,6 +290,7 @@ def ler(ctx: Contexto, saida) -> Resultado:
     sitios = sorted(vistos.values(), key=lambda s: (s["nome"], s["id"]))
 
     destino = ctx.caminho_de_saida(saida)
+    atribuicao, licenca = termos_embutidos(ctx, saida)
     _escrever_geojson(
         destino,
         [
@@ -301,10 +302,12 @@ def ler(ctx: Contexto, saida) -> Resultado:
             }
             for s in sitios
         ],
+        atribuicao,
+        licenca,
     )
 
     return Resultado(
         contagens={"sitios.total": len(sitios)},
         saidas={saida.saida or "": str(destino.relative_to(ctx.raiz))},
-        notas=[ATRIBUICAO],
+        notas=[atribuicao],
     )
