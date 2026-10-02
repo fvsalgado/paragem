@@ -11,13 +11,25 @@
  * Agora ESCURECE a cor até o branco passar os 4,5:1. A linha continua
  * reconhecível — um roxo escurecido continua roxo —, e o número lê-se.
  */
+/**
+ * A COR DE UM MODO QUANDO A LINHA NÃO TRAZ A SUA. Um comboio sem `route_color`
+ * saía num distintivo BRANCO — o desenho neutro, que o §6 reserva aos
+ * privados (expressos, táxis) — ao lado das pastilhas coloridas da rede: na
+ * estação, os comboios pareciam o serviço de outra casa. O comboio tem cor no
+ * §6, e é essa (o planeador já a usava nas direções).
+ */
+const COR_DO_MODO: Record<string, string> = { comboio: '#3f4852' };
+
 export default function Distintivo({
   codigo,
   cor,
+  modo,
   tamanho = 'pequeno',
 }: {
   codigo: string;
   cor?: string | null;
+  /** O modo da linha: dá a cor do §6 a uma linha que não traz a sua. */
+  modo?: string;
   /**
    * UM SÓ DESENHO, EM TRÊS TAMANHOS. Havia dois para a mesma coisa — este,
    * nas tabelas, e um `.linha-distintivo` no cartão do mapa, com outra letra,
@@ -31,7 +43,7 @@ export default function Distintivo({
   tamanho?: 'pequeno' | 'medio' | 'grande';
 }) {
   const classe = tamanho === 'pequeno' ? 'distintivo' : `distintivo ${tamanho}`;
-  const original = normalizar(cor);
+  const original = normalizar(cor) ?? (modo ? (COR_DO_MODO[modo] ?? null) : null);
   if (!original) {
     return (
       // SEM COR CONHECIDA, NEUTRO — mas com fundo e contorno: sem eles, o

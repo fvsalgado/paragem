@@ -24,6 +24,7 @@ export default function ASeguir({
   Titulo = 'h3',
   id,
   titulo = 'A seguir',
+  modo,
 }: {
   resultado: Proximas<PartidaLeve>;
   /** O relógio de quem lê — o mesmo que deu `agora`. */
@@ -41,6 +42,8 @@ export default function ASeguir({
   id?: string;
   /** O texto do título: «A seguir», «Comboios a seguir». */
   titulo?: string;
+  /** O modo das partidas, quando são todas de um — dá cor às linhas que não a trazem. */
+  modo?: string;
 }) {
   return (
     <>
@@ -83,7 +86,12 @@ export default function ASeguir({
                   : null;
               return (
                 <li key={`${d.hora}-${d.linha_id}-${i}`}>
-                  <Distintivo codigo={d.linha} cor={cores[d.linha_id]} tamanho="medio" />
+                  <Distintivo
+                    codigo={d.linha}
+                    cor={cores[d.linha_id]}
+                    modo={modo}
+                    tamanho="medio"
+                  />
                   <span className="destino">
                     {/* UMA CIRCULAR DIZ-SE CIRCULAR. Repetir aqui o nome da
                         paragem onde a pessoa está não responde a nada — e nas

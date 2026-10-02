@@ -124,6 +124,7 @@ export default async function Estacao({
             regiao={rid}
             partidas={compactar(ficha.partidas)}
             cores={{}}
+            modo="comboio"
             Titulo="h2"
             id="comboios"
             titulo="Comboios a seguir"

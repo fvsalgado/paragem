@@ -22,6 +22,7 @@ export default function ProximasPartidas({
   id,
   titulo,
   quantas = 6,
+  modo,
 }: {
   regiao: string;
   partidas: PartidasCompactas;
@@ -30,6 +31,8 @@ export default function ProximasPartidas({
   id?: string;
   titulo?: string;
   quantas?: number;
+  /** O modo das partidas, quando são todas de um (os comboios de uma estação). */
+  modo?: string;
 }) {
   const lista = useMemo(() => expandir(partidas), [partidas]);
 
@@ -111,6 +114,7 @@ export default function ProximasPartidas({
         Titulo={Titulo}
         id={id}
         titulo={titulo}
+        modo={modo}
       />
     </div>
   );
