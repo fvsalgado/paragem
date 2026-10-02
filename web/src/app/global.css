@@ -1807,6 +1807,30 @@ button.resumo-opcao:hover {
   height: 3rem;
 }
 
+/* OS CONTROLOS APARECEM JÁ NO SÍTIO ONDE FICAM. O MapLibre cria-os no fundo
+   e no alto do mapa, e o `AppDoMapa` mede as folhas e sobe-os uma imagem
+   depois: viam-se a nascer e a saltar (CLS de 0,017 só deles, na região
+   real). Escondidos até essa medição — `data-cantos` é ela que o põe —, não
+   saltam: aparecem. */
+.app-mapa:not([data-cantos='medidos']) .maplibregl-control-container {
+  visibility: hidden;
+}
+/* E O CANTO DE BAIXO NÃO CRESCE DEPOIS DE APARECER. A atribuição nasce vazia
+   — escondida pela folha do MapLibre — e enche-se quando a fonte dos mosaicos
+   responde, segundos depois; o botão da localização entra quando o navegador
+   diz que a sabe dar. Cada um empurrava o outro para cima no mesmo canto. Os
+   dois têm o lugar guardado desde o princípio: uma linha de atribuição e um
+   botão de 3 rem. */
+.app-mapa .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group {
+  min-width: 3rem;
+  min-height: 3rem;
+}
+.app-mapa .maplibregl-ctrl-attrib.maplibregl-attrib-empty {
+  display: block;
+  visibility: hidden;
+  min-height: 20px;
+}
+
 /* OS BOTÕES DE APROXIMAR E AFASTAR, POR BAIXO DO QUE FLUTUA NO ALTO.
    Num telemóvel a barra da procura vai de uma borda à outra e tapava-os; o
    `--tapado-no-alto` é o que a procura, a fila das camadas e o cartão das
