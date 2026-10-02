@@ -57,7 +57,8 @@ dominio_env: PARAGEM_DOMINIO_PROVA_MUNICIPIO
 # O domínio canónico em que esta região responde. DECLARADO, não adivinhado
 # (o identificador tal e qual: é uma demonstração). A base de dados do painel guarda uma cópia
 # desta linha e o CI confere que as duas dizem o mesmo (docs/BASE-DE-DADOS.md).
-# Nada o lê ainda: o encaminhamento por host chega a seguir (CLAUDE.md §11.7).
+# Onde a região responde decide-o a linha da base, que o middleware lê; este
+# valor é o que a linha tem de dizer, e o CI confere (ferramentas/verificar-seeds.py).
 dominio: prova-municipio.paragem.pt
 
 territorio:

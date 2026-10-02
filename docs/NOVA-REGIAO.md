@@ -4,10 +4,16 @@ O contrato do Paragem.pt é este: **uma autoridade de transportes nova entra sem
 um único commit de código**. O código é um só para todas as regiões; o que faz
 uma região existir são os ficheiros em `regioes/<id>/`.
 
-E não é teoria: o CI faz nascer a **Serra da Pedra Alta** em todas as corridas,
-constrói-a ao lado das que já existem e verifica que nasce inteira, sem misturar um
-byte com a outra. E faz o mesmo à região de demonstração, que tem os sete modos
-e um mapa próprio — o caso mais exigente do mesmo contrato. **Se este guia e a prova divergirem, o CI é que tem razão** —
+E não é teoria: o CI faz nascer as duas regiões de prova — **a Serra da Pedra
+Alta**, de uma comunidade intermunicipal, e **o Baixo Sável**, de um município
+— em todas as corridas, constrói-as lado a lado e verifica que nascem
+inteiras, sem misturar um byte de uma com a outra. E faz o mesmo à região de
+demonstração, que tem os sete modos e um mapa próprio — o caso mais exigente
+do mesmo contrato.
+
+Este guia é o lado técnico. O que a **autoridade de transportes** dá, decide e
+faz — as pessoas, os papéis, os contactos, a ordem das coisas — está em
+[`ENTRADA.md`](ENTRADA.md). **Se este guia e a prova divergirem, o CI é que tem razão** —
 e o guia é que está errado.
 
 ## Antes de começar: o que é preciso ter
@@ -211,6 +217,16 @@ As regiões de prova não declaram nenhuma das duas, de propósito; a
 demonstração (`regioes/demo/`) declara uma inventada, para mostrar a marca
 branca a funcionar.
 
+## Passo 6 — as pessoas e os contactos da autoridade
+
+Com a região criada, o dono convida no painel (`/admin/pessoas/`) quem vai
+trabalhar nela — **gestor** ou **editor**, região a região — e entrega a cada
+pessoa a ligação de ativação. O gestor preenche na ficha os contactos que a
+declaração de acessibilidade e a privacidade mostram; até lá, as duas páginas
+dizem «Por preencher» ([`PAINEL.md`](PAINEL.md)). O relatório das procuras sem
+resposta precisa de duas variáveis no alojamento
+([`MEDICAO.md`](MEDICAO.md)); sem elas, diz quais faltam.
+
 ## A lista de verificação
 
 - [ ] `regiao.yaml` com o artigo certo e os dois números do território
@@ -222,6 +238,8 @@ branca a funcionar.
 - [ ] `uv run pipeline check-regioes` verde — inclui a busca de fugas
 - [ ] `dominio:` declarado no `regiao.yaml`; a linha em `public.regions` criada em «Nova região» no painel (ou por SQL, na raiz da região); o job `Migrações` do CI verde
 - [ ] Os dados publicados no armazém, e a região ligada na ficha dela no painel
+- [ ] O gestor e os editores convidados, cada um com a sua conta ativada
+- [ ] Os contactos de acessibilidade e de privacidade preenchidos na ficha — ou o «Por preencher» assumido, e dito à autoridade
 - [ ] Relatório lido, e o que falta entregue a quem o pode preencher
 
 ## Propriedade e licença
