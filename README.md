@@ -17,11 +17,12 @@ intermunicipal ou uma área metropolitana — e entra por configuração, **sem 
 
 ## Isto prova-se, não se promete
 
-O CI constrói em todas as corridas **duas regiões inventadas de fio a pavio** —
-a Serra da Pedra Alta e o Baixo Sável. Não existem: nem uma paragem, nem uma
-estrada, nem um horário vêm de sítio nenhum. É isso que lhes permite ser ao
-mesmo tempo a demonstração pública do produto, sem pedir uma linha a ninguém, e
-a prova executável do que o produto afirma.
+O CI constrói em todas as corridas **três regiões inventadas de fio a pavio** —
+a Serra da Pedra Alta e o Baixo Sável, que são as provas, e as Terras do Ameno,
+que são a demonstração. Não existem: nem uma paragem, nem uma estrada, nem um
+horário vêm de sítio nenhum. É isso que lhes permite ser ao mesmo tempo a
+demonstração pública do produto, sem pedir uma linha a ninguém, e a prova
+executável do que o produto afirma.
 
 São duas porque uma sozinha não prova nada sobre multi-região — não há com que
 a comparar. E são diferentes uma da outra de propósito:
@@ -38,6 +39,14 @@ sozinha, fica provado que o produto não precisa de uma CIM. Com caixas
 geográficas disjuntas, uma coordenada trocada entre regiões falha em vez de
 cair nas duas. E com uma região de um modo só, vê-se que um modo ausente não
 desenha uma secção vazia.
+
+As provas são o dia zero, de propósito mínimas. **As Terras do Ameno são o dia
+100**: a região que se mostra a quem decide, com os sete modos — a rede com
+urbanos e interurbanos, o comboio com o autocarro à porta da estação, o
+transporte a pedido com zonas e regra de reserva, o urbano de uma câmara, as
+bicicletas, um expresso e os táxis — e um mapa desenhado por nós. Nasce, como
+as outras, só com leitores genéricos; tudo o que ela tem sai de
+[`data/manual/demo/inventar.py`](data/manual/demo/inventar.py).
 
 ## As regiões reais vivem noutra raiz
 
@@ -108,6 +117,8 @@ Precisa de [uv](https://docs.astral.sh/uv/) e de Python 3.11 ou mais recente.
 ```bash
 uv run pipeline build --regiao prova --sem-rede            # uma região inventada, em segundos
 uv run pipeline build --regiao prova-municipio --sem-rede  # a outra
+uv run pipeline build --regiao demo --sem-rede             # a demonstração, com os sete modos
+uv run pipeline mosaicos --regiao demo                     # o mapa dela, desenhado da geografia
 uv run pipeline build --regiao <id>        # uma região real: descarrega, constrói, valida
 uv run pipeline validate --regiao <id>     # só o validador, sem reconstruir
 uv run pipeline report --regiao <id>       # o relatório de lacunas

@@ -51,7 +51,19 @@ Três coisas que a declaração carrega e que se é tentado a deduzir:
 
 A região diz o que tem; o leitor não sabe onde está. Um feed GTFS de outra
 operadora entra pelo `gtfs-arquivo`; um feed nacional pelo `gtfs-filtrado`; o
-OpenStreetMap pelos `osm-*`.
+OpenStreetMap pelos `osm-*`; um horário que quem gere o serviço entrega já em
+tabela — a câmara com o seu urbano, a autoridade com os circuitos a pedido —
+pelo `horarios-tabela`, com as coordenadas das paragens quando a tabela as
+traz.
+
+O mapa também é da região, e não do código. Por omissão desenha-se do recorte
+do OpenStreetMap que ela já usa (`pipeline mosaicos`, com o Planetiler); uma
+região que declare a sua geografia (`mapa:` na receita, um GeoJSON no esquema
+do OpenMapTiles) tem os mosaicos desenhados dela, sem Java e sem rede
+(`mosaicos_proprios.py`), com a atribuição que declara. A mesma geografia pode
+ser a carta administrativa (`limites:` com uma fonte em GeoJSON), e então o mapa
+e a atribuição a concelhos não podem discordar. É assim que a região de
+demonstração tem mapa sem pedir nada a ninguém.
 
 Numa fonte nova experimenta-se por esta ordem: um leitor genérico existente, um
 leitor genérico novo, e só depois um leitor específico daquela fonte. Hoje há
