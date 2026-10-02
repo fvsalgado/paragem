@@ -163,7 +163,9 @@ test('os urbanos municipais separam o que se sabe do que falta', async ({ page }
   test.skip(!URBANOS?.percursos.length, SEM.modo('urbano-municipal'));
   await page.goto(`/modos/urbano-municipal/`);
   await abrirSobre(page);
-  await expect(page.getByText(/As paragens e as horas não estão lá/)).toBeVisible();
+  // A frase depende da fonte do traçado — o OpenStreetMap, que não tem horas,
+  // ou quem opera a linha —, e diz sempre de onde vêm as paragens e as horas.
+  await expect(page.getByText(/As paragens e as horas/).first()).toBeVisible();
 
   // As linhas cujo TRAÇADO se conhece, numa lista — que é o que são: o
   // OpenStreetMap tem por onde passam e não tem mais nada. Quantas são é da
