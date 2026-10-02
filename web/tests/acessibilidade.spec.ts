@@ -86,20 +86,29 @@ const PAGINAS: [string, string][] = [
   ['privacidade', `/privacidade/`],
 ];
 
-for (const [nome, caminho] of PAGINAS) {
-  test(`${nome}: sem violações do axe`, async ({ page }) => {
-    await page.goto(caminho);
-    const r = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-      .analyze();
+// NOS DOIS TEMAS (P1-044). O escuro tem as suas cores — os mesmos papéis,
+// outros valores —, e um contraste que passa num pode não passar no outro: é
+// por isso que o axe corre as páginas todas outra vez com o sistema às
+// escuras, e não só uma para amostra.
+for (const tema of ['light', 'dark'] as const) {
+  test.describe(tema === 'light' ? 'tema claro' : 'tema escuro', () => {
+    test.use({ colorScheme: tema });
+    for (const [nome, caminho] of PAGINAS) {
+      test(`${nome}: sem violações do axe`, async ({ page }) => {
+        await page.goto(caminho);
+        const r = await new AxeBuilder({ page })
+          .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+          .analyze();
 
-    // A mensagem tem de dizer O QUÊ e ONDE. «2 violações» não chega para
-    // ninguém corrigir nada.
-    const resumo = r.violations.map(
-      (v) =>
-        `${v.id} (${v.impact}): ${v.help} — ${v.nodes.length} elementos\n    ${v.nodes[0]?.html?.slice(0, 160)}`,
-    );
-    expect(resumo, `${caminho}\n  ${resumo.join('\n  ')}`).toEqual([]);
+        // A mensagem tem de dizer O QUÊ e ONDE. «2 violações» não chega para
+        // ninguém corrigir nada.
+        const resumo = r.violations.map(
+          (v) =>
+            `${v.id} (${v.impact}): ${v.help} — ${v.nodes.length} elementos\n    ${v.nodes[0]?.html?.slice(0, 160)}`,
+        );
+        expect(resumo, `${tema} ${caminho}\n  ${resumo.join('\n  ')}`).toEqual([]);
+      });
+    }
   });
 }
 

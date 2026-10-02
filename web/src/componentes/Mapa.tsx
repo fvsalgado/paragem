@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { Map as MapaLibre, GeoJSONSource } from 'maplibre-gl';
-import { ATRIBUICAO_OSM, estiloDoMapa } from '@/lib/estilo-mapa';
+import { ATRIBUICAO_OSM, estiloDoMapa, type TemaDoMapa } from '@/lib/estilo-mapa';
 import { camadasDe, type CamadaDePontos } from '@/lib/pontos-no-mapa';
 import { DENSIDADE, imagemDaPlaca } from '@/lib/icones-do-mapa';
 import type { Ponto } from '@/lib/formato';
@@ -135,6 +135,38 @@ function carregarMapLibre(): Promise<Biblioteca> {
 const semMovimento = () =>
   typeof window !== 'undefined' &&
   !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+/** O tema que o sistema pede — o mesmo `prefers-color-scheme` das cores da página. */
+const ESCURO = '(prefers-color-scheme: dark)';
+function temaDoSistema(): TemaDoMapa {
+  return typeof window !== 'undefined' && window.matchMedia?.(ESCURO).matches ? 'escuro' : 'claro';
+}
+
+/**
+ * MUDA O TEMA DE UM MAPA QUE JÁ ESTÁ DESENHADO, camada a camada.
+ *
+ * Um `setStyle` refazia o estilo inteiro e levava com ele as camadas que o
+ * sítio acrescenta depois — os pontos da rede, o percurso escolhido. As cores
+ * do mapa de base são só tinta: troca-se a tinta de cada camada do estilo, e
+ * o resto fica onde estava.
+ */
+function aplicarTema(
+  m: MapaLibre,
+  mosaicos: string,
+  atribuicao: string | undefined,
+  tema: TemaDoMapa,
+) {
+  for (const camada of estiloDoMapa(mosaicos, atribuicao, tema).layers) {
+    if (!('paint' in camada) || !camada.paint || !m.getLayer(camada.id)) continue;
+    for (const [propriedade, valor] of Object.entries(camada.paint)) {
+      m.setPaintProperty(
+        camada.id,
+        propriedade as Parameters<MapaLibre['setPaintProperty']>[1],
+        valor,
+      );
+    }
+  }
+}
 
 /**
  * A imagem da placa de um modo, posta no mapa uma vez. `false` quando não se
@@ -349,7 +381,10 @@ export default function Mapa({
 
         criado = new Map({
           container: caixa.current,
-          style: estiloDoMapa(mosaicos, atribuicao || undefined),
+          // O MAPA NO TEMA DO SISTEMA, como o resto da página (P1-044): um mapa
+          // claro no meio de uma página escura encandeava exatamente onde o
+          // tema escuro devia poupar os olhos.
+          style: estiloDoMapa(mosaicos, atribuicao || undefined, temaDoSistema()),
           center: [centro[1], centro[0]],
           zoom,
           // A ATRIBUIÇÃO JÁ ESCRITA QUANDO O CONTROLO NASCE. Vinha só da fonte
@@ -684,6 +719,18 @@ export default function Mapa({
       );
     }
   }, [modosVisiveis, pontos, estado]);
+
+  // O TEMA SEGUE O DO SISTEMA COM O MAPA ABERTO: quem tem o telemóvel a mudar
+  // sozinho ao anoitecer vê o mapa mudar com a página, e não fica com um
+  // retângulo claro no meio dela.
+  useEffect(() => {
+    const m = mapa.current;
+    if (!m || estado !== 'pronto' || !window.matchMedia) return;
+    const consulta = window.matchMedia(ESCURO);
+    const mudou = () => aplicarTema(m, mosaicos, atribuicao || undefined, temaDoSistema());
+    consulta.addEventListener('change', mudou);
+    return () => consulta.removeEventListener('change', mudou);
+  }, [estado, mosaicos, atribuicao]);
 
   // Os pontos podem mudar depois de o mapa estar pronto (uma procura, um
   // filtro). Atualiza-se a fonte, não o mapa.

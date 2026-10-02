@@ -40,26 +40,62 @@ import type { StyleSpecification } from 'maplibre-gl';
  * a rua. Todas continuam claras o suficiente para o texto preto por cima
  * passar os 4,5:1.
  */
-const FUNDO = '#e6ebe3';
-const AGUA = '#a3ccdf';
-const AGUA_ESCURA = '#5d93b4';
-const MATA = '#b9d8b1';
-const CAMPO = '#d8e8ce';
-const PARQUE = '#b5dfae';
-const URBANO = '#f2f0ea';
-const EDIFICIO = '#dbd7ce';
-const EDIFICIO_RISCO = '#c4bfb4';
-const ESTRADA = '#ffffff';
-const ESTRADA_RISCO = '#bcc6bf';
-const ESTRADA_MENOR = '#ffffff';
-/* As vias rápidas em quente, como em qualquer mapa de estradas: é o que
-   permite ler a rede principal sem ler um nome. */
-const RAPIDA = '#f7d69a';
-const RAPIDA_RISCO = '#d9a94f';
-const TEXTO = '#102c3f';
-const TEXTO_HALO = '#f3f6f1';
-const SECUNDARIO = '#4a5c66';
-const FRONTEIRA = '#a9b5ae';
+const CLARA = {
+  FUNDO: '#e6ebe3',
+  AGUA: '#a3ccdf',
+  AGUA_ESCURA: '#5d93b4',
+  MATA: '#b9d8b1',
+  CAMPO: '#d8e8ce',
+  PARQUE: '#b5dfae',
+  URBANO: '#f2f0ea',
+  EDIFICIO: '#dbd7ce',
+  EDIFICIO_RISCO: '#c4bfb4',
+  ESTRADA: '#ffffff',
+  ESTRADA_RISCO: '#bcc6bf',
+  ESTRADA_MENOR: '#ffffff',
+  /* As vias rápidas em quente, como em qualquer mapa de estradas: é o que
+     permite ler a rede principal sem ler um nome. */
+  RAPIDA: '#f7d69a',
+  RAPIDA_RISCO: '#d9a94f',
+  TEXTO: '#102c3f',
+  TEXTO_HALO: '#f3f6f1',
+  SECUNDARIO: '#4a5c66',
+  FRONTEIRA: '#a9b5ae',
+  /** As travessas do caminho de ferro, por cima do carril. */
+  TRAVESSAS: '#ffffff',
+};
+
+/**
+ * A PALETA DO TEMA ESCURO (P1-044), a mesma regra ao contrário: cada camada
+ * distingue-se da de baixo — o casario mais claro do que o campo, as ruas
+ * mais claras do que o casario, a água mais azul do que tudo —, e o texto
+ * claro sobre um halo escuro passa os 4,5:1 sobre qualquer delas. Os pontos
+ * da rede não mudam: são a cor de cada modo com contorno branco, e leem-se
+ * nos dois fundos.
+ */
+const ESCURA: typeof CLARA = {
+  FUNDO: '#1b262c',
+  AGUA: '#1f4257',
+  AGUA_ESCURA: '#8cc3de',
+  MATA: '#203a2c',
+  CAMPO: '#22322a',
+  PARQUE: '#244530',
+  URBANO: '#27343b',
+  EDIFICIO: '#33434b',
+  EDIFICIO_RISCO: '#44555e',
+  ESTRADA: '#46565e',
+  ESTRADA_RISCO: '#5a6b73',
+  ESTRADA_MENOR: '#3d4c54',
+  RAPIDA: '#8a6a32',
+  RAPIDA_RISCO: '#b08a45',
+  TEXTO: '#e6edf0',
+  TEXTO_HALO: '#14202a',
+  SECUNDARIO: '#a9b8bf',
+  FRONTEIRA: '#5f7079',
+  TRAVESSAS: '#1b262c',
+};
+
+export type TemaDoMapa = 'claro' | 'escuro';
 
 /** A largura de uma estrada cresce com o zoom, e não em degraus bruscos. */
 const largura = (paradas: [number, number][]): unknown => ({
@@ -77,7 +113,29 @@ export const ATRIBUICAO_OSM =
 export function estiloDoMapa(
   urlDosMosaicos: string,
   atribuicao: string = ATRIBUICAO_OSM,
+  tema: TemaDoMapa = 'claro',
 ): StyleSpecification {
+  const {
+    FUNDO,
+    AGUA,
+    AGUA_ESCURA,
+    MATA,
+    CAMPO,
+    PARQUE,
+    URBANO,
+    EDIFICIO,
+    EDIFICIO_RISCO,
+    ESTRADA,
+    ESTRADA_RISCO,
+    ESTRADA_MENOR,
+    RAPIDA,
+    RAPIDA_RISCO,
+    TEXTO,
+    TEXTO_HALO,
+    SECUNDARIO,
+    FRONTEIRA,
+    TRAVESSAS,
+  } = tema === 'escuro' ? ESCURA : CLARA;
   return {
     version: 8,
     name: 'Paragem',
@@ -310,7 +368,7 @@ export function estiloDoMapa(
         filter: ['==', 'class', 'rail'],
         minzoom: 11,
         paint: {
-          'line-color': '#ffffff',
+          'line-color': TRAVESSAS,
           'line-width': largura([
             [11, 0.6],
             [14, 1.4],

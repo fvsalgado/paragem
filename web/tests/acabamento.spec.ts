@@ -7,7 +7,7 @@
  * pelo que o CSS diz, que é o que já os tinha deixado passar uma vez.
  */
 import { test, expect } from '@playwright/test';
-import { linhaComMaisViagens, paragemComMaisPartidas } from './dados-da-regiao';
+import { linhaComMaisViagens, paragemComMaisPartidas, temMosaicos, SEM } from './dados-da-regiao';
 
 test('o texto secundário é secundário: mais pequeno, e na cor do §6', async ({ page }) => {
   // A classe aparecia setenta vezes e não tinha regra fora das listas: as
@@ -88,4 +88,25 @@ test('num ecrã largo, o «A seguir» fica ao lado do horário, e não por cima 
     .locator('section[aria-labelledby="horario"]')
     .boundingBox())!;
   expect(horarioNoTelemovel.y).toBeGreaterThan(seguirNoTelemovel.y);
+});
+
+test('o tema escuro vem do sistema, e o mapa muda com ele', async ({ page }) => {
+  // P1-044: a página e o mapa de base, nas cores do tema que o sistema pede —
+  // e o mapa aberto troca de tinta quando o sistema troca, sem perder nada.
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto('/rede/');
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(15, 26, 32)');
+  test.skip(!temMosaicos(), SEM.mosaicos);
+  await page.goto('/');
+  type ComMapa = {
+    __mapa?: { loaded(): boolean; getPaintProperty(c: string, p: string): unknown };
+  };
+  await page.waitForFunction(() => !!(window as unknown as ComMapa).__mapa?.loaded());
+  const fundo = () =>
+    page.evaluate(() =>
+      (window as unknown as ComMapa).__mapa!.getPaintProperty('fundo', 'background-color'),
+    );
+  expect(await fundo()).toBe('#1b262c');
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect.poll(fundo).toBe('#e6ebe3');
 });

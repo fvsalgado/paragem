@@ -53,7 +53,11 @@ export default function Distintivo({
       // das pastilhas coloridas das outras.
       <span
         className={classe}
-        style={{ background: '#fff', color: 'var(--texto)', borderColor: 'var(--borda-campo)' }}
+        style={{
+          background: 'var(--superficie)',
+          color: 'var(--texto)',
+          borderColor: 'var(--borda-campo)',
+        }}
       >
         {codigo}
       </span>

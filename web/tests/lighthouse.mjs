@@ -3,7 +3,9 @@
  *
  * TRÊS COISAS, e as duas últimas são novas:
  *
- * 1. **Acessibilidade ≥ 95** em todas as páginas — o critério do §9.
+ * 1. **Acessibilidade ≥ 95** em todas as páginas, nos DOIS TEMAS — o critério
+ *    do §9. O tema escuro (P1-044) tem as suas cores, e um contraste que passa
+ *    num pode não passar no outro.
  * 2. **Desempenho**, com um piso por molde. O CI nunca o tinha visto (P3-006):
  *    o início da região real pesava 1,1 MB e prendia o telemóvel 3,6 s, e
  *    aqui só se media a acessibilidade, numa demonstração de 13 pontos. O piso
@@ -327,12 +329,12 @@ const reprovar = (msg) => {
   falhou = true;
 };
 
-// --- 1 e 2: acessibilidade e desempenho ------------------------------------
+// --- 1 e 2: acessibilidade e desempenho, no tema claro -------------------------
 
 const claro = { chrome: await abrirChrome(), extra: [], relancado: false };
 const medidas = new Map();
 try {
-  console.log('Acessibilidade ≥ %d e desempenho:', MINIMO);
+  console.log('Tema claro — acessibilidade ≥ %d e desempenho:', MINIMO);
   for (const [nome, endereco] of PAGINAS) {
     let r = await medir(claro, endereco, ['accessibility', 'performance']);
     const nota = Math.round((r.lhr.categories.accessibility.score ?? 0) * 100);
@@ -389,10 +391,34 @@ try {
   await Promise.resolve(claro.chrome.kill()).catch(() => {});
 }
 
+// --- 1 outra vez: acessibilidade no tema escuro --------------------------------
+//
+// O Chrome com a preferência do sistema no escuro, como num telemóvel à noite:
+// é o `prefers-color-scheme` que o sítio segue (P1-044).
+const escuro = {
+  chrome: await abrirChrome(['--blink-settings=preferredColorScheme=0']),
+  extra: ['--blink-settings=preferredColorScheme=0'],
+  relancado: false,
+};
+try {
+  console.log('\nTema escuro — acessibilidade ≥ %d:', MINIMO);
+  for (const [nome, endereco] of PAGINAS) {
+    const r = await medir(escuro, endereco, ['accessibility']);
+    const nota = Math.round((r.lhr.categories.accessibility.score ?? 0) * 100);
+    console.log(
+      `${nota >= MINIMO ? '✓' : '✗'} ${nota.toString().padStart(3)} ${nome} (${endereco})`,
+    );
+    for (const f of falhasDeAcessibilidade(r.lhr)) console.log(f);
+    if (nota < MINIMO) reprovar(`    acessibilidade no escuro ${nota} < ${MINIMO}`);
+  }
+} finally {
+  await Promise.resolve(escuro.chrome.kill()).catch(() => {});
+}
+
 if (falhou) {
   console.error(
     `\nAlguma página reprovou. O §9 exige acessibilidade ≥ ${MINIMO}; o desempenho, o salto e o peso estão acima.`,
   );
   process.exit(1);
 }
-console.log(`\nTudo dentro: acessibilidade ≥ ${MINIMO}, desempenho, salto e peso.`);
+console.log(`\nTudo dentro: acessibilidade ≥ ${MINIMO} nos dois temas, desempenho, salto e peso.`);
