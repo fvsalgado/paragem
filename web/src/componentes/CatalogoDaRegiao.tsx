@@ -108,7 +108,7 @@ export default async function CatalogoDaRegiao({
               pontos={pontos}
               regiao={rid}
               modosDesligados={r.modos_desligados ?? []}
-              motorDaRegiao={motorDaRegiao(rid)}
+              motorDaRegiao={motorDaRegiao(rid, r.demonstracao)}
               servicosSemDatas={servicosSemDatas(await lacunas(rid))}
             />
           </section>

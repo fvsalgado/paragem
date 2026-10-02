@@ -257,7 +257,7 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
           Só se monta quando há sistemas, para as páginas de táxi e urbanos não
           irem à rede à toa. */}
       {m.sistemas.length > 0 && (
-        <DisponibilidadeBicicletas endereco={disponibilidadeDaRegiao(rid)}>
+        <DisponibilidadeBicicletas endereco={disponibilidadeDaRegiao(rid, r.demonstracao)}>
           {m.sistemas.map((s) => (
             <section key={s.id} aria-labelledby={`s-${s.id}`}>
               <h2 id={`s-${s.id}`}>{s.nome}</h2>
@@ -415,7 +415,7 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
                   fica como está. */}
               {p.id && (
                 <PrecosDeExpresso
-                  base={expressosDaRegiao(rid)}
+                  base={expressosDaRegiao(rid, r.demonstracao)}
                   de={p.id}
                   nomeDaParagem={p.nome}
                   destinos={(p.destinos ?? [])

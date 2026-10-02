@@ -49,8 +49,19 @@ function primeiro(...nomes: string[]): string {
 export function enderecoDoServico(
   servico: 'OTP' | 'DISPONIBILIDADE' | 'EXPRESSOS',
   regiao: string,
+  demonstracao = false,
 ): string {
   const s = sufixo(regiao);
+  // UMA DEMONSTRAÇÃO SÓ FALA COM O QUE FOI CONFIGURADO PARA ELA. O endereço
+  // sem sufixo serve quem aloja uma região só — e, num alojamento com várias,
+  // pô-lo à disposição de uma região inventada era mandar o motor, a
+  // disponibilidade ou a consulta de preços de OUTRA região perguntar por
+  // paragens que não existem: um planeador a responder com os comboios de
+  // outro sítio, um formulário de preços a pedir ao operador a viagem entre
+  // dois nomes inventados.
+  if (demonstracao) {
+    return primeiro(`PARAGEM_${servico}_${s}`, `NEXT_PUBLIC_PARAGEM_${servico}_${s}`);
+  }
   return primeiro(
     `PARAGEM_${servico}_${s}`,
     `NEXT_PUBLIC_PARAGEM_${servico}_${s}`,
@@ -59,7 +70,9 @@ export function enderecoDoServico(
   );
 }
 
-export const motorDaRegiao = (regiao: string): string => enderecoDoServico('OTP', regiao);
-export const disponibilidadeDaRegiao = (regiao: string): string =>
-  enderecoDoServico('DISPONIBILIDADE', regiao);
-export const expressosDaRegiao = (regiao: string): string => enderecoDoServico('EXPRESSOS', regiao);
+export const motorDaRegiao = (regiao: string, demonstracao = false): string =>
+  enderecoDoServico('OTP', regiao, demonstracao);
+export const disponibilidadeDaRegiao = (regiao: string, demonstracao = false): string =>
+  enderecoDoServico('DISPONIBILIDADE', regiao, demonstracao);
+export const expressosDaRegiao = (regiao: string, demonstracao = false): string =>
+  enderecoDoServico('EXPRESSOS', regiao, demonstracao);

@@ -113,8 +113,8 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
       modos={modos}
       temAPedido={temAPedido}
       modosDesligados={r.modos_desligados ?? []}
-      motorDaRegiao={motorDaRegiao(rid)}
-      disponibilidadeDaRegiao={disponibilidadeDaRegiao(rid)}
+      motorDaRegiao={motorDaRegiao(rid, r.demonstracao)}
+      disponibilidadeDaRegiao={disponibilidadeDaRegiao(rid, r.demonstracao)}
       servicosSemDatas={servicosSemDatas(await lacunas(rid))}
     />
   );
