@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { dadosAbertos, exigirRegiao, lacunas, regiao } from '@/lib/dados';
-import { enderecoDosDados } from '@/lib/dados-do-navegador';
+import { enderecoDaDescarga } from '@/lib/descargas';
 import { tamanho, type Descarga } from '@/lib/formato';
 import { aAutoridade } from '@/lib/prosa';
 import { dataCompleta } from '@/lib/dias';
@@ -71,11 +71,13 @@ const TERMOS: Record<string, string> = {
   terceiro: 'ficheiro de outra entidade — os termos são dela',
 };
 
-function Ficheiro({ d, regiao }: { d: Descarga; regiao: string }) {
+function Ficheiro({ d }: { d: Descarga }) {
   const nome = d.caminho ?? d.ficheiro;
   return (
     <li>
-      <a href={enderecoDosDados(regiao, `descargas/${nome}`)} download>
+      {/* PELO DOMÍNIO DA REGIÃO, e não pelo do armazém (P4-025): a rota
+          redireciona para lá, e é este endereço que se copia. */}
+      <a href={enderecoDaDescarga(d)} download>
         {nome}
       </a>{' '}
       <span className="secundario">
@@ -132,16 +134,13 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
       {soParaConsulta.length ? (
         <div className="faixa alerta">
           <p>
-            <strong>Nem todos estes ficheiros têm licença aberta declarada.</strong> Os que derivam
-            do OpenStreetMap saem sob ODbL e reutilizam-se com atribuição
+            <strong>Nem todos estes ficheiros têm licença aberta declarada.</strong> Os que a
+            declaração desta região dá como assentes no OpenStreetMap saem sob ODbL e reutilizam-se
+            com atribuição
             {abertos.length ? ` (${abertos.length})` : ''}. Os que a construção faz a partir de
             documentos cujos termos não nos autorizam a relicenciar estão aqui{' '}
             <strong>para consulta</strong> ({soParaConsulta.length}): a publicação com licença
-            aberta depende de autorização{' '}
-            {r.autoridade?.nome
-              ? `d${r.artigo === 'a' ? 'a' : 'o'} ${r.autoridade.nome}`
-              : 'da autoridade de transportes'}
-            .
+            aberta depende de autorização {aAutoridade(r, 'de')}.
           </p>
         </div>
       ) : (
@@ -156,12 +155,14 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
               <>
                 {daCasa.length > 0 ? `${sobOdbl.length} ` : ''}
                 {sobOdbl.length === 1 && daCasa.length > 0 ? 'sai' : 'saem'} sob{' '}
-                <strong>ODbL</strong> — pode levá-los, usá-los e redistribuí-los, com duas
-                condições: atribuir a origem, e partilhar nos mesmos termos o que deles derivar. A
-                atribuição vai dentro do próprio ficheiro, para não depender de ninguém se lembrar
-                dela: no <code>attributions.txt</code> dos GTFS, num <code>ATRIBUICAO.txt</code> nos
-                outros zip, nos campos <code>attribution</code> e <code>license</code> dos JSON. Um
-                CSV não tem onde a guardar, e leva-a aqui, ao lado.
+                <strong>ODbL</strong>, a licença que a declaração desta região lhes dá: assentam no
+                OpenStreetMap, e a ODbL obriga a partilhar nos mesmos termos o que dele deriva. Pode
+                levá-los, usá-los e redistribuí-los, com duas condições: atribuir a origem, e
+                partilhar nos mesmos termos o que deles derivar. A atribuição vai dentro do próprio
+                ficheiro, para não depender de ninguém se lembrar dela: no{' '}
+                <code>attributions.txt</code> dos GTFS, num <code>ATRIBUICAO.txt</code> nos outros
+                zip, nos campos <code>attribution</code> e <code>license</code> dos JSON. Um CSV não
+                tem onde a guardar, e leva-a aqui, ao lado.
               </>
             ) : null}
             {daCasa.length > 0 ? (
@@ -197,7 +198,7 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
             <p>{g.texto}</p>
             <ul className="descargas">
               {doGrupo.map((d) => (
-                <Ficheiro key={d.caminho ?? d.ficheiro} d={d} regiao={rid} />
+                <Ficheiro key={d.caminho ?? d.ficheiro} d={d} />
               ))}
             </ul>
           </section>
