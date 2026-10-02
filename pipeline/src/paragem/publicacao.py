@@ -31,6 +31,7 @@ a versão, fecharia a janela de vez; fica para quando fizer falta.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 from collections.abc import Callable
@@ -227,6 +228,51 @@ def publicar(
 # ---------------------------------------------------------------------------
 
 
+def tipo_da_chave(chave: str) -> str:
+    """Que chave do Supabase é esta, sem a mostrar a ninguém.
+
+    Devolve ``secreta`` (``sb_secret_…``), ``publica`` (``sb_publishable_…``),
+    ``servico`` (o JWT antigo ``service_role``), ``anonima`` (o JWT antigo
+    ``anon``) ou ``desconhecida``. Do JWT lê-se só o papel que ele declara,
+    sem o validar: é para dizer a quem a pôs que pôs a errada, não para
+    decidir acesso nenhum — isso é o Supabase que decide.
+    """
+    if chave.startswith("sb_secret_"):
+        return "secreta"
+    if chave.startswith("sb_publishable_"):
+        return "publica"
+    partes = chave.split(".")
+    if len(partes) == 3:
+        try:
+            corpo = partes[1] + "=" * (-len(partes[1]) % 4)
+            papel = json.loads(base64.urlsafe_b64decode(corpo)).get("role")
+        except (ValueError, AttributeError):
+            papel = None
+        if papel == "service_role":
+            return "servico"
+        if papel == "anon":
+            return "anonima"
+    return "desconhecida"
+
+
+def cabecalhos_da_chave(chave: str) -> dict[str, str]:
+    """Como a chave vai em cada pedido, conforme o tipo dela.
+
+    AS CHAVES NOVAS NÃO SÃO JWT. Uma ``sb_secret_…`` vai só no ``apikey``:
+    posta também num ``Authorization: Bearer``, o Supabase tenta lê-la como
+    JWT e o pedido segue sem o papel de serviço. A listagem do balde passava
+    (o balde é público) e cada escrita era recusada pelas políticas de acesso
+    — «new row violates row-level security policy» —, que foi como falhou a
+    primeira publicação feita com uma chave nova. A documentação do Supabase
+    di-lo nas limitações conhecidas das chaves novas.
+
+    A chave antiga, ``service_role``, é um JWT, e vai nos dois, como sempre foi.
+    """
+    if chave.startswith("sb_"):
+        return {"apikey": chave}
+    return {"authorization": f"Bearer {chave}", "apikey": chave}
+
+
 class ArmazemSupabase:
     """Um balde do Storage do Supabase, falado pela API REST com a chave de serviço.
 
@@ -244,7 +290,7 @@ class ArmazemSupabase:
         self.url = url.rstrip("/")
         self.balde = balde
         self.cliente = cliente or httpx.Client(timeout=httpx.Timeout(300.0, connect=30.0))
-        self.cabecalhos = {"authorization": f"Bearer {chave}", "apikey": chave}
+        self.cabecalhos = cabecalhos_da_chave(chave)
 
     def _falhou(self, r: httpx.Response, o_que: str) -> None:
         if r.status_code >= 400:

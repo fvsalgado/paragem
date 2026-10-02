@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -220,6 +221,38 @@ def test_o_envio_leva_upsert_tipo_e_validade(tmp_path: Path) -> None:
     armazem.apagar(["prova/linhas/999.json"])
     assert pedidos[-1].method == "DELETE"
     assert json.loads(pedidos[-1].content) == {"prefixes": ["prova/linhas/999.json"]}
+
+
+def test_uma_chave_nova_vai_so_no_apikey() -> None:
+    # Num `Authorization: Bearer`, o Supabase lê-a como JWT, falha, e a escrita
+    # é recusada pelas políticas de acesso: foi assim que a primeira
+    # publicação com uma chave nova falhou.
+    pedidos: list[httpx.Request] = []
+    armazem = ArmazemSupabase(
+        "https://x.supabase.co",
+        "sb_secret_abc",
+        cliente=httpx.Client(transport=_api_de_brincar(pedidos)),
+    )
+    armazem.enviar_bytes("prova/regiao.json", b"{}", "application/json")
+    p = pedidos[-1]
+    assert p.headers["apikey"] == "sb_secret_abc"
+    assert "authorization" not in p.headers
+
+
+def _jwt(papel: str) -> str:
+    corpo = base64.urlsafe_b64encode(json.dumps({"role": papel}).encode()).decode().rstrip("=")
+    return f"eyJhbGciOiJIUzI1NiJ9.{corpo}.assinatura"
+
+
+def test_o_tipo_da_chave_diz_a_publica_por_engano() -> None:
+    assert publicacao.tipo_da_chave("sb_secret_abc") == "secreta"
+    assert publicacao.tipo_da_chave("sb_publishable_abc") == "publica"
+    assert publicacao.tipo_da_chave(_jwt("service_role")) == "servico"
+    assert publicacao.tipo_da_chave(_jwt("anon")) == "anonima"
+    assert publicacao.tipo_da_chave("chave") == "desconhecida"
+    assert publicacao.tipo_da_chave("a.b.c") == "desconhecida"
+    # A antiga continua a ir nos dois cabeçalhos, como sempre foi.
+    assert set(publicacao.cabecalhos_da_chave(_jwt("service_role"))) == {"apikey", "authorization"}
 
 
 def test_um_erro_do_armazem_diz_o_que_falhou() -> None:
