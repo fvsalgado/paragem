@@ -6,6 +6,14 @@
  * Separado de `avisos.ts` porque lê o catálogo da região (`dados.ts`), que só
  * corre no servidor; `avisos.ts` vai também para o navegador, na
  * pré-visualização do painel.
+ *
+ * O QUE ISTO CUSTA, escrito para quem vier medir: as páginas de linha e de
+ * paragem, e o início, passam a refazer-se ao minuto em vez de à hora —
+ * o Next toma o prazo mais curto das leituras de uma página, e o dos avisos é
+ * um minuto (`VALIDADE_S`, em `avisos.ts`). Os dados delas continuam guardados
+ * por uma hora; o que se repete é render o HTML, em segundo plano, e só quando
+ * alguém visita a página depois do minuto. Sem base configurada (o CI), não
+ * há leitura dos avisos e nada muda.
  */
 import { cache } from 'react';
 import type { CatalogoDosAvisos } from '@/componentes/Avisos';
