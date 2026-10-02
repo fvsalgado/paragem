@@ -2,9 +2,9 @@
 
 Para uma autoridade de transportes isto não é vaidade. **Os pedidos que não têm
 resposta são a lista da procura que a rede não serve** — alguém que escreve
-«Sertã → Tomar» e não obtém caminho está a dizer que precisa dessa ligação.
-Saber quantos são e para onde é matéria de planeamento de rede, e é
-provavelmente o dado mais valioso que este sítio produz.
+«Covas do Vento → Porto Ameno» e não obtém caminho está a dizer que precisa
+dessa ligação. Saber quantos são e para onde é matéria de planeamento de rede,
+e é provavelmente o dado mais valioso que este sítio produz.
 
 ## A configuração de origem dá MAIS dados e não menos
 
@@ -24,7 +24,7 @@ uma rede.
 | evento | o que traz | para que serve |
 | --- | --- | --- |
 | `$pageview` | `tipo` (paragem, linha, concelho…) e `id` | que paragens e linhas as pessoas consultam |
-| `viagem_procurada` | `ligacao` («Sertã → Tomar»), dia, hora, dia da semana, nº de opções, minutos e transbordos da melhor, linhas usadas | a procura, e o que a rede lhe responde |
+| `viagem_procurada` | `ligacao` («Covas do Vento → Porto Ameno»), dia, hora, dia da semana, nº de opções, minutos e transbordos da melhor, linhas usadas | a procura, e o que a rede lhe responde |
 | **`viagem_sem_resposta`** | `ligacao`, dia, hora, dia da semana | **a procura que a rede não serve** |
 | `motor_indisponivel` | a razão | o planeador em baixo — ver `ALOJAMENTO.md` |
 

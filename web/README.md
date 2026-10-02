@@ -107,13 +107,13 @@ motor desligado manda alguém de táxi para uma viagem que existe.
 
 **A janela de procura é de doze horas**, e é a decisão que mais pesa. Medido na
 Fase 2: o OTP, por omissão, escolhe cinquenta minutos, e com cinquenta minutos
-a ligação Torres Novas → Entroncamento — que tem catorze viagens por dia —
-devolve zero itinerários. Cinquenta minutos é uma janela de cidade.
+uma ligação entre duas cidades vizinhas — com catorze viagens por dia —
+devolvia zero itinerários. Cinquenta minutos é uma janela de cidade.
 
 A procura de paragens usa um índice próprio, `procura.json`: 2419 pontos, um
 por nome, 41 kB com gzip. O `paragens.json` tem 843 kB e serve para construir
-as páginas — mandá-lo para o telemóvel de quem só quer escrever «Tomar» era
-gastar-lhe os dados por nada.
+as páginas — mandá-lo para o telemóvel de quem só quer escrever «Porto Ameno»
+era gastar-lhe os dados por nada.
 
 **E o índice não vai dentro da página.** Pede-se à parte, depois de ela se
 pintar (`src/lib/pontos-do-navegador.ts`): embutido, era quase todo o HTML do
