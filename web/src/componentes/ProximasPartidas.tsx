@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ASeguir from '@/componentes/ASeguir';
 import { expandir, type PartidasCompactas } from '@/lib/formato';
 import { calendarioDe, horaDoRelogio, proximas, type Calendario } from '@/lib/dias';
@@ -53,32 +53,65 @@ export default function ProximasPartidas({
     return () => clearInterval(t);
   }, []);
 
-  if (instante === null || calendario === undefined) {
+  // O LUGAR DAS PARTIDAS FICA GUARDADO enquanto se fazem as contas (P3-010).
+  //
+  // A página vem da cache com uma frase no lugar das horas, e as horas chegam
+  // depois — com a tabela dos dias. Medido na paragem mais servida da região
+  // real, em 4G lenta: a caixa crescia de 128 para 378 px quando chegavam, e o
+  // horário inteiro descia por baixo do dedo (CLS 0,13; 0,40 no Lighthouse).
+  // Agora o HTML já traz as linhas, fantasmas, quantas vão ser — e a caixa
+  // não encolhe quando chegam menos: fica com a altura que tinha.
+  const aEspera = instante === null || calendario === undefined;
+  const caixa = useRef<HTMLDivElement>(null);
+  const reservado = useRef(0);
+  useLayoutEffect(() => {
+    if (aEspera && caixa.current) reservado.current = caixa.current.offsetHeight;
+  });
+  const linhas = Math.min(quantas, lista.length);
+
+  if (aEspera) {
     return (
-      <>
+      <div ref={caixa}>
         {Titulo && <Titulo id={id}>{titulo ?? 'A seguir'}</Titulo>}
-        <p className="secundario" aria-live="polite">
+        <p className="so-para-leitores" aria-live="polite">
           A ver o que passa a seguir…
         </p>
+        <ul className="fantasma-das-partidas" aria-hidden="true">
+          {Array.from({ length: linhas }, (_, i) => (
+            <li key={i}>
+              <span className="distintivo medio">&nbsp;</span>
+              <span className="destino">&nbsp;</span>
+              <span className="quando-passa">
+                <strong>&nbsp;</strong>
+                <span className="relogio">&nbsp;</span>
+              </span>
+            </li>
+          ))}
+        </ul>
         <noscript>
+          {/* Sem JavaScript as linhas fantasma nunca se preenchem: saem, e fica
+              a frase que diz porquê. */}
+          <style>{'.fantasma-das-partidas{display:none}'}</style>
           <p>
             O que passa a seguir calcula-se com a hora do teu aparelho, e isso precisa de
             JavaScript.
           </p>
         </noscript>
-      </>
+      </div>
     );
   }
   const agora = horaDoRelogio(instante);
   return (
-    <ASeguir
-      resultado={proximas(lista, instante, agora, calendario, quantas)}
-      instante={instante}
-      agora={agora}
-      cores={cores}
-      Titulo={Titulo}
-      id={id}
-      titulo={titulo}
-    />
+    <div ref={caixa} style={reservado.current ? { minHeight: reservado.current } : undefined}>
+      <ASeguir
+        resultado={proximas(lista, instante, agora, calendario, quantas)}
+        instante={instante}
+        agora={agora}
+        cores={cores}
+        Titulo={Titulo}
+        id={id}
+        titulo={titulo}
+      />
+    </div>
   );
 }

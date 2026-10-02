@@ -6,6 +6,7 @@ import {
   exigirModo,
   horaLegivel,
   linhaDetalhe,
+  quadrosDeHoje,
   urlDaParagem,
   NAO_ENCONTRADA,
   type PontaDoSentido,
@@ -199,11 +200,19 @@ export default async function Linha({
   // A COR DA LINHA NO PERCURSO, com o contraste garantido: um fio amarelo-claro
   // num fundo claro não se via (`corDoTraco`).
   const cor = { '--cor-da-linha': corDoTraco(l.cor) } as CSSProperties;
-  const sentidos = l.sentidos.map((s, i) => ({
-    s,
-    ancora: `sentido-${i + 1}`,
-    titulo: tituloDoSentido(s),
-  }));
+  const sentidos = await Promise.all(
+    l.sentidos.map(async (s, i) => {
+      const titulo = tituloDoSentido(s);
+      const quadros = quadrosDoSentido(s, titulo);
+      return {
+        s,
+        ancora: `sentido-${i + 1}`,
+        titulo,
+        quadros,
+        hoje: await quadrosDeHoje(rid, quadros),
+      };
+    }),
+  );
 
   return (
     <>
@@ -241,8 +250,7 @@ export default async function Linha({
         </nav>
       )}
 
-      {sentidos.map(({ s, ancora, titulo }) => {
-        const quadros = quadrosDoSentido(s, titulo);
+      {sentidos.map(({ s, ancora, titulo, quadros, hoje }) => {
         const ultima = s.paragens.length - 1;
         return (
           <section key={s.sentido} aria-labelledby={ancora}>
@@ -260,7 +268,7 @@ export default async function Linha({
 
             <h3 className="parte-do-sentido">Horário</h3>
             {quadros.length > 0 ? (
-              <QuadrosPorDia regiao={rid} quadros={quadros} />
+              <QuadrosPorDia regiao={rid} quadros={quadros} noServidor={hoje} />
             ) : (
               // DADOS DE ANTES DO HORÁRIO DA LINHA: diz-se onde estão as
               // horas, em vez de deixar a secção vazia a parecer que não há.
