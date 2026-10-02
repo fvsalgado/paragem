@@ -180,4 +180,14 @@ motor:
       de: { nome: Covas do Vento, lat: 39.496036, lon: -10.687892 }
       para: { nome: Almeão (Centro), lat: 39.442323, lon: -10.421857 }
 
-verificacoes: []
+# AS ESTAÇÕES SEM AUTOCARRO PERTO, e quem as compara é esta declaração: os
+# feeds dos dois lados são saídas desta receita, uma ou uma lista de cada lado.
+# Na demonstração todas as estações da região têm paragem à porta — a de
+# Lagoa Serena, sem nenhuma, fica fora dela —, e a verificação corre para o
+# provar em cada construção, em vez de existir só nas regiões a sério.
+verificacoes:
+  - tipo: correspondencias-comboio-autocarro
+    comboio: gtfs/comboio.zip
+    autocarro: gtfs/rede-ameno.zip
+    raio_metros: 300
+    esperado_sem_ligacao: 0
