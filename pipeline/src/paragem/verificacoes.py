@@ -183,14 +183,18 @@ def regioes(raiz: Path, *, exigir_construcao: bool = True) -> Resultado:
                 f"as caixas de {a.id} e {b.id} não se sobrepõem",
             )
 
-    # 4. Identificadores de concelho são um espaço global.
-    vistos: dict[str, str] = {}
-    for x in todas:
-        for c in x.concelhos:
-            if c.id in vistos:
-                r.afirmar(False, f"o concelho {c.id!r} está em {vistos[c.id]} e em {x.id}")
-            vistos[c.id] = x.id
-    r.afirmar(True, f"os {len(vistos)} identificadores de concelho são únicos entre regiões")
+    # 4. Identificadores de concelho são um espaço global — e O MESMO CONCELHO
+    #    PODE ESTAR EM DUAS REGIÕES. Um concelho que passou para outra
+    #    comunidade intermunicipal continua servido pela concessão da antiga:
+    #    é membro de uma autoridade e servido pela outra, e as duas declaram-no.
+    #    Isso é o território, não uma colisão. O que reprova é o mesmo
+    #    identificador para dois concelhos diferentes (outro `dico`), ou o
+    #    mesmo concelho com dois identificadores — as páginas e os endereços
+    #    deixavam de concordar sobre qual é qual.
+    for falha in _concelhos_em_conflito(todas):
+        r.afirmar(False, falha)
+    ids = {c.id for x in todas for c in x.concelhos}
+    r.afirmar(True, f"os {len(ids)} identificadores de concelho não colidem entre regiões")
 
     # 5. Fugas: nada de uma região aparece nas saídas da outra.
     if exigir_construcao:
@@ -200,7 +204,8 @@ def regioes(raiz: Path, *, exigir_construcao: bool = True) -> Resultado:
                 r.afirmar(False, f"{alvo.id} está construída em build/{alvo.id}")
                 continue
             proibidos = _palavras_de_outras(alvo, todas)
-            fugas = _procurar(pasta, proibidos)
+            concelhos = _concelhos_de_outras(alvo, todas)
+            fugas = _procurar(pasta, proibidos) + _procurar(pasta, concelhos, palavra_inteira=True)
             r.afirmar(
                 not fugas,
                 f"nada das outras regiões em build/{alvo.id}"
@@ -280,11 +285,79 @@ def _palavras_de_outras(alvo, todas) -> list[str]:
     return sorted({p for p in palavras if len(p) >= 8})
 
 
-def _procurar(pasta: Path, palavras: list[str]) -> list[str]:
+def _concelhos_em_conflito(todas) -> list[str]:
+    """Os concelhos que duas regiões declaram de maneiras que não batem.
+
+    O mesmo concelho em duas regiões é legítimo, e diz-se pelo `dico`, que é
+    o código da carta administrativa: é a mesma terra. Colide o mesmo
+    identificador com dois `dico` — dois concelhos diferentes a disputar o
+    mesmo endereço —, ou o mesmo `dico` com dois identificadores.
+    """
+    falhas: list[str] = []
+    por_id: dict[str, tuple[str, str]] = {}
+    por_dico: dict[str, tuple[str, str]] = {}
+    for x in todas:
+        for c in x.concelhos:
+            if c.id in por_id and por_id[c.id][1] != c.dico:
+                outra, dico = por_id[c.id]
+                falhas.append(
+                    f"o concelho {c.id!r} é um em {outra} (dico {dico}) e outro em {x.id} "
+                    f"(dico {c.dico})"
+                )
+            por_id.setdefault(c.id, (x.id, c.dico))
+            if c.dico and c.dico in por_dico and por_dico[c.dico][1] != c.id:
+                outra, ident = por_dico[c.dico]
+                falhas.append(
+                    f"o concelho de dico {c.dico} chama-se {ident!r} em {outra} "
+                    f"e {c.id!r} em {x.id}"
+                )
+            if c.dico:
+                por_dico.setdefault(c.dico, (x.id, c.id))
+    return falhas
+
+
+def _concelhos_de_outras(alvo, todas) -> list[str]:
+    """Os nomes dos concelhos das outras regiões que não podem aparecer aqui.
+
+    SÓ NAS SAÍDAS DE UMA REGIÃO INVENTADA. As delas saem de ficheiros nossos,
+    congelados: um nome de outra região lá dentro só pode ter vindo do código,
+    e é isso que se procura. As de uma região real saem de fontes vivas e de
+    terceiros — o feed nacional do comboio traz as estações do país inteiro, há
+    carreiras que atravessam a fronteira (e não se cortam, §2), e o
+    OpenStreetMap ganha amanhã um restaurante com o nome de um concelho
+    inventado. Procurar lá nomes de terras é um guarda que parte sozinho, num
+    sítio onde partir bloqueia a publicação (§8). Aí ficam os nomes da região,
+    da autoridade e da rede (`_palavras_de_outras`), que nenhuma fonte de
+    terceiros tem razão para trazer.
+
+    E SEM OS CONCELHOS QUE ESTA REGIÃO TAMBÉM DECLARA: o mesmo concelho servido
+    por uma e membro da outra é das duas, pelo `dico` ou pelo nome.
+    """
+    if not alvo.demonstracao:
+        return []
+    dele_dicos = {c.dico for c in alvo.concelhos if c.dico}
+    dele_nomes = {c.nome for c in alvo.concelhos}
+    nomes = {
+        c.nome
+        for outra in todas
+        if outra.id != alvo.id
+        for c in outra.concelhos
+        if c.dico not in dele_dicos and c.nome not in dele_nomes
+    }
+    return sorted(n for n in nomes if n.strip())
+
+
+def _procurar(pasta: Path, palavras: list[str], *, palavra_inteira: bool = False) -> list[str]:
+    """Onde aparecem estas palavras nos ficheiros de uma construção.
+
+    `palavra_inteira` para os nomes curtos — os de concelho —, que dentro de
+    outra palavra não são o nome de nada.
+    """
     if not palavras:
         return []
     achados: list[str] = []
-    padrao = re.compile("|".join(re.escape(p) for p in palavras))
+    alternativas = "|".join(re.escape(p) for p in palavras)
+    padrao = re.compile(rf"(?<!\w)(?:{alternativas})(?!\w)" if palavra_inteira else alternativas)
     for f in sorted(pasta.rglob("*")):
         if not f.is_file():
             continue

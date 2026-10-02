@@ -63,10 +63,13 @@ cp -r regioes/prova regioes/leziria-do-tejo
 
 Duas regras que não são de estilo:
 
-- **os identificadores de concelho são um espaço global.** Dois concelhos de
-  regiões diferentes não podem partilhar o slug, e o
-  `uv run pipeline check-regioes` conta. Os nomes de concelho são únicos em
-  Portugal; havendo dúvida, desambigua-se com a terra.
+- **os identificadores de concelho são um espaço global.** Dois concelhos
+  diferentes não podem partilhar o slug, e o `uv run pipeline check-regioes`
+  conta. Os nomes de concelho são únicos em Portugal; havendo dúvida,
+  desambigua-se com a terra. **O mesmo concelho em duas regiões não é
+  colisão** — membro de uma autoridade e servido pela concessão de outra, é
+  das duas —, e declara-se igual nas duas: o mesmo slug e o mesmo `dico`. O
+  guarda das fugas também não o conta como fuga.
 - **as caixas geográficas não se sobrepõem.** Também verificado. É o que faz
   com que uma coordenada trocada entre regiões falhe em vez de cair nas duas.
 
@@ -181,7 +184,7 @@ pedir nada a terceiros para desenhar uma página. **Fase 3.**
 ## A lista de verificação
 
 - [ ] `regiao.yaml` com o artigo certo e os dois números do território
-- [ ] `concelhos.yaml` com os slugs únicos entre regiões e o `dico` de cada um
+- [ ] `concelhos.yaml` com o `dico` de cada um, e um identificador que não colida com outra região — o mesmo concelho em duas regiões (membro de uma, servido pela outra) declara-se igual nas duas, com o mesmo identificador e o mesmo `dico`
 - [ ] Caixa geográfica que não se sobrepõe a nenhuma outra
 - [ ] Cada fonte da receita declarada em `data/sources.yaml`
 - [ ] `uv run pipeline check-proveniencia` verde
