@@ -34,7 +34,7 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
   const identificada = process.env.NEXT_PUBLIC_PARAGEM_MEDICAO_IDENTIFICADA === '1';
   // Com motor de viagens, a partida vai-lhe no pedido; sem ele, o planeador
   // corre no navegador e a coordenada não sai de lá (`planeador.ts`).
-  const comMotor = motorDaRegiao(rid) !== '';
+  const comMotor = motorDaRegiao(rid, r.demonstracao) !== '';
   // Uma região sem recorte do OpenStreetMap não tem mapa, nem botão no mapa.
   const comMapa = await temMosaicos(rid);
 

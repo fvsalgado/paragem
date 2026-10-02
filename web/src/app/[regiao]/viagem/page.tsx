@@ -44,7 +44,7 @@ export default async function Viagem({ params }: { params: Promise<{ regiao: str
         pontos={pontos}
         regiao={rid}
         modosDesligados={r.modos_desligados ?? []}
-        motorDaRegiao={motorDaRegiao(rid)}
+        motorDaRegiao={motorDaRegiao(rid, r.demonstracao)}
         servicosSemDatas={servicosSemDatas(l)}
       />
     </>
