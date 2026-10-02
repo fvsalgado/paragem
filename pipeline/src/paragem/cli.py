@@ -336,6 +336,25 @@ def _cmd_publicar(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 2
+    # A CHAVE ERRADA DIZ-SE ANTES DE TENTAR. Com a pública, a listagem do
+    # balde passa — é um balde público — e cada envio é recusado pelas
+    # políticas de acesso, com uma mensagem que não diz qual foi o engano. Na
+    # página das chaves do Supabase a pública vem primeiro, e é fácil copiá-la.
+    tipo = publicacao.tipo_da_chave(chave)
+    if tipo in ("publica", "anonima"):
+        print(
+            "a SUPABASE_SERVICE_ROLE_KEY é a chave PÚBLICA do projeto: lê o balde e não "
+            "escreve nele. Tem de ser uma chave secreta (`sb_secret_…`), da secção "
+            "«Secret keys» em Settings → API Keys.",
+            file=sys.stderr,
+        )
+        return 2
+    print(
+        {
+            "secreta": "   chave: secreta (sb_secret_…), no cabeçalho apikey",
+            "servico": "   chave: a service_role antiga (um JWT)",
+        }.get(tipo, "   chave: de um tipo que não se reconhece — vai como as antigas")
+    )
     sitio = os.environ.get("PARAGEM_SITIO_URL", "").strip()
     segredo = os.environ.get("REVALIDATE_SECRET", "").strip()
     avisar = None
