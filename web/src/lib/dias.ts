@@ -170,6 +170,20 @@ function indiceDosServicos(cal: Calendario): Map<string, number> {
   return m;
 }
 
+/**
+ * PELA HORA, e não pela ordem em que chegam.
+ *
+ * O pipeline manda as partidas de uma paragem pela ordem do horário impresso
+ * — os serviços anuais antes dos escolares, os dias úteis antes dos sábados —,
+ * que é a ordem certa para os quadros e a errada para «a seguir». Numa
+ * paragem servida pela rede anual e por uma circular só de período escolar, o
+ * corte das primeiras cinco ficava com as cinco seguintes da anual, e a
+ * circular que passava dali a um minuto não aparecia. Foi a demonstração, a
+ * primeira região com os dois serviços na mesma paragem, que o mostrou.
+ */
+const pelaHora = <T extends { hora: string }>(ps: T[]): T[] =>
+  [...ps].sort((a, b) => a.hora.localeCompare(b.hora));
+
 /** Uma partida sem `servico_id` anda todos os dias: o feed não declara calendário. */
 const andaEm =
   <T extends { servico_id?: string }>(activos: Set<string>) =>
@@ -205,7 +219,7 @@ export function proximas<T extends { hora: string; servico_id?: string }>(
     const aSeguir = partidas.filter((p) => p.hora >= agora);
     return {
       tipo: 'sem-calendario',
-      partidas: (aSeguir.length ? aSeguir : partidas).slice(0, quantas),
+      partidas: pelaHora(aSeguir.length ? aSeguir : partidas).slice(0, quantas),
     };
   }
 
@@ -228,7 +242,13 @@ export function proximas<T extends { hora: string; servico_id?: string }>(
   const deHoje = partidasDo(chave);
   const aSeguir = deHoje.filter((p) => p.hora >= agora);
   if (aSeguir.length) {
-    return { tipo: 'no-dia', partidas: aSeguir.slice(0, quantas), dias: 0, chave, hoje: 'ha' };
+    return {
+      tipo: 'no-dia',
+      partidas: pelaHora(aSeguir).slice(0, quantas),
+      dias: 0,
+      chave,
+      hoje: 'ha',
+    };
   }
 
   // O PRÓXIMO DIA COM PARTIDAS AQUI, e não o dia seguinte às cegas. Uma
@@ -255,7 +275,7 @@ export function proximas<T extends { hora: string; servico_id?: string }>(
     if (doDia.length) {
       return {
         tipo: 'no-dia',
-        partidas: doDia.slice(0, quantas),
+        partidas: pelaHora(doDia).slice(0, quantas),
         dias: n,
         chave: dia,
         hoje: deHoje.length ? 'ja-passaram' : 'nao-ha',

@@ -141,6 +141,34 @@ test('e no sábado à noite salta o domingo vazio: a próxima é na segunda-feir
   );
 });
 
+test('A SEGUIR É PELA HORA: a circular escolar das 7:51 vem antes da anual das 8:18', () => {
+  // As partidas chegam pela ordem do horário impresso — o serviço anual
+  // primeiro, o escolar depois. Cortadas assim, as cinco «a seguir» eram as
+  // cinco seguintes da anual, e a circular que passava dali a um minuto não
+  // aparecia na folha.
+  const CAL_ESCOLAR: Calendario = {
+    servicos: ['rede:A-U', 'rede:E-U'],
+    datas: { '20261006': [0, 1] },
+  };
+  const anual = (hora: string) => ({ hora, linha: '2', servico_id: 'rede:A-U' });
+  const escolar = (hora: string) => ({ hora, linha: '11', servico_id: 'rede:E-U' });
+  const ESTACAO = [
+    anual('08:18'),
+    anual('09:18'),
+    anual('10:18'),
+    escolar('07:51'),
+    escolar('08:11'),
+    escolar('08:31'),
+  ];
+  const r = proximas(ESTACAO, dia(6, 7, 50), '07:50', CAL_ESCOLAR, 4);
+  assert.equal(r.tipo, 'no-dia');
+  if (r.tipo !== 'no-dia') return;
+  assert.deepEqual(
+    r.partidas.map((p) => `${p.hora} ${p.linha}`),
+    ['07:51 11', '08:11 11', '08:18 2', '08:31 11'],
+  );
+});
+
 test('no caso de todos os dias, as de hoje que faltam — e a frase fica calada', () => {
   const r = proximas(TERMINAL, dia(1), '10:00', CAL, 5);
   assert.equal(r.tipo, 'no-dia');
