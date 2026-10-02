@@ -21,12 +21,17 @@ import {
   prepararRede,
   planearLocal,
   percursoDaPerna,
+  limparPernas,
+  procurarNosDias,
+  semRepetidas,
+  arrumarParaMostrar,
   type GrelhaCrua,
   type Rede,
   type TransbordosCrus,
 } from './viagens';
 import { descodificarLinha } from './otp';
 import { enderecoDosDados } from './dados-do-navegador.ts';
+import { dataDoCampo, horaDoRelogio } from './dias';
 
 export type { Itinerario, Modo };
 export { MODOS };
@@ -143,8 +148,32 @@ export async function capacidadeDe(regiao: string, motor = ''): Promise<Capacida
  * São 122 ficheiros, mediana de 1,7 kB comprimidos e o maior com 5,2 kB. Uma
  * viagem toca duas ou três linhas, por isso desenhar custa uns poucos kB — em
  * vez dos 216 kB que seriam todos juntos.
+ *
+ * **E SÓ SE PEDEM OS QUE EXISTEM (P3-011).** O pipeline só desenha os
+ * traçados da rede própria: o comboio e os expressos não têm ficheiro. O
+ * planeador pedia-os na mesma — `percursos/209.json`, um 400 em cada procura,
+ * um erro na consola por cada um, e os erros que importam escondidos por
+ * baixo deles. O `percursos/indice.json` diz quais há, e lê-se uma vez.
  */
 const percursos = new Map<string, Promise<Record<string, string> | null>>();
+const indices = new Map<string, Promise<Set<number> | null>>();
+
+/** Os índices das linhas que têm traçado — ou `null` se o índice não existir. */
+function comTracado(regiao: string): Promise<Set<number> | null> {
+  let p = indices.get(regiao);
+  if (!p) {
+    p = fetch(enderecoDosDados(regiao, 'percursos/indice.json'))
+      .then((r) => (r.ok ? (r.json() as Promise<number[]>) : null))
+      .then((lista) => (Array.isArray(lista) ? new Set(lista.map(Number)) : null))
+      .catch(() => {
+        // Uma falha não fica guardada: a próxima procura volta a perguntar.
+        indices.delete(regiao);
+        return null;
+      });
+    indices.set(regiao, p);
+  }
+  return p;
+}
 
 function percursosDaLinha(
   regiao: string,
@@ -156,6 +185,10 @@ function percursosDaLinha(
   if (!p) {
     p = (async () => {
       try {
+        // Sem índice publicado (dados de antes dele), não se pede nada: a
+        // reta continua a ser o desenho, e a consola fica limpa.
+        const existem = await comTracado(regiao);
+        if (!existem?.has(indice)) return null;
         const r = await fetch(enderecoDosDados(regiao, `percursos/${indice}.json`));
         if (!r.ok) return null;
         const d = (await r.json()) as { linha: string; trocos: Record<string, string> };
@@ -197,7 +230,10 @@ async function comEstradas(regiao: string, rede: Rede, its: Itinerario[]): Promi
       const trocos = l.traco && tabela.get(l.traco.linha);
       if (!l.traco || !trocos) continue;
       const pol = percursoDaPerna(rede, l.traco, trocos, descodificarLinha);
-      if (pol) l.legGeometry = { points: pol };
+      if (pol) {
+        l.legGeometry = { points: pol };
+        l.aproximado = false;
+      }
     }
   }
   return its;
@@ -216,10 +252,58 @@ export async function planear(
   /** O endereço do motor, quando esta região tem um. */
   motor = '',
 ): Promise<Itinerario[]> {
-  if (motor) return planearComMotor(motor, de, para, data, hora, modo);
+  if (motor)
+    return semRepetidas(
+      (await planearComMotor(motor, de, para, data, hora, modo)).map(limparPernas),
+    );
 
   const rede = await redeDe(regiao, semModos);
   if (!rede) throw new Error('sem horários para esta região');
   if (modo !== 'transporte') return [];
-  return comEstradas(regiao, rede, planearLocal(rede, de, para, data, hora, 5));
+  const its = await comEstradas(regiao, rede, planearLocal(rede, de, para, data, hora, 5));
+  return semRepetidas(its.map(limparPernas));
+}
+
+/**
+ * A PRÓXIMA LIGAÇÃO, quando a janela pedida não tem nenhuma (P2-003).
+ *
+ * O laço dos dias está em `procurarNosDias` (`viagens.ts`), onde se testa sem
+ * rede; aqui só se lhe diz como se planeia um dia.
+ */
+export function proximaLigacao(
+  regiao: string,
+  de: { nome: string; lat: number; lon: number },
+  para: { nome: string; lat: number; lon: number },
+  data: string,
+  semModos: readonly string[] = [],
+  motor = '',
+  ate: string | null = null,
+  dias = 7,
+): Promise<{ its: Itinerario[]; dia: string } | null> {
+  const serve = (its: Itinerario[]) => arrumarParaMostrar(its, { de, para }).opcoes.length > 0;
+  return procurarNosDias(
+    async (dia) => {
+      // O DIA TODO, e não as primeiras cinco opções dele. As primeiras do dia
+      // podiam ser todas voltas de madrugada — o expresso das quatro e meia
+      // para a capital — e a carreira direta do meio-dia nem chegava a ser
+      // vista. Pergunta-se outra vez a partir da última que veio, até haver
+      // uma que sirva ou o dia acabar. As horas são as do relógio de quem
+      // pergunta, como as da procura que trouxe aqui.
+      let hora = '00:00';
+      let its: Itinerario[] = [];
+      for (let vez = 0; vez < 4; vez++) {
+        its = await planear(regiao, de, para, dia, hora, 'transporte', semModos, motor);
+        if (!its.length || serve(its)) return its;
+        const seguinte = new Date(Math.max(...its.map((it) => it.startTime)) + 60_000);
+        if (dataDoCampo(seguinte) !== dia) break;
+        hora = horaDoRelogio(seguinte);
+      }
+      return its;
+    },
+    data,
+    ate,
+    dias,
+    // Um dia conta quando tem uma opção que não é uma volta.
+    serve,
+  );
 }
