@@ -39,7 +39,11 @@ minutos; cada PR tem uma pré-visualização. Deixou de ser exportação estáti
   ficheiro e só o que mudou — o MD5 de cada um diz se mudou. O servidor lê de
   lá (`web/src/lib/dados.ts`); o navegador também, sem passar por nós: as
   partidas, os sítios, a grelha horária e os mosaicos do mapa, que são 60 MB
-  lidos por intervalos de bytes.
+  lidos por intervalos de bytes. As **descargas** dos dados abertos são a
+  exceção visível: a página liga a `/dados-abertos/<caminho>` no domínio da
+  região, e essa rota redireciona (302) para o balde — o endereço que se copia
+  para um portal de dados é o da região, e os bytes continuam a vir do balde,
+  sem nada no meio (P4-025). Só redireciona o que a página lista.
 - **O aviso.** No fim de publicar, o pipeline chama `POST /api/revalidate`
   com a região, e o sítio deita fora as páginas dela. Sem aviso, ficam válidas
   até o prazo de uma hora passar.

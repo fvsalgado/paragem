@@ -2337,9 +2337,11 @@ def _lacunas(raiz: Path, regiao: Regiao) -> dict[str, Any]:
 # dizer a quem o descarrega. Não é jargão: é a diferença entre poder reutilizar
 # e poder olhar.
 #
-#   odbl      deriva SÓ do OpenStreetMap. A ODbL é uma licença aberta com
-#             partilha nos mesmos termos, e a atribuição vai dentro do
-#             ficheiro (`_embutir_atribuicao`).
+#   odbl      a saída (ou a fonte) DECLARA ODbL na receita da região: o que
+#             deriva do OpenStreetMap — só dele, ou com os traçados
+#             encaminhados por ele — leva a partilha nos mesmos termos. É uma
+#             licença aberta, e a atribuição vai dentro do ficheiro
+#             (`_embutir_atribuicao`). Não se infere: declara-se (`licenca:`).
 #   consulta  construído por nós a partir de fontes SEM licença aberta
 #             declarada. Está aqui para se ver e conferir; a publicação com
 #             licença aberta depende da autoridade de transportes (Fase 5).
