@@ -128,3 +128,18 @@ export function porExtenso(iso: string | null | undefined, fuso: string = FUSO):
 export function diaNoFuso(iso: string | Date, fuso: string = FUSO): string {
   return paraCampoLocal(typeof iso === 'string' ? iso : iso.toISOString(), fuso).slice(0, 10);
 }
+
+/**
+ * O fuso com o nome que as pessoas lhe dão: «Portugal continental», e não
+ * «Europe/Lisbon», que é o nome da base de dados dos fusos e a língua de quem
+ * programou (P4-022). Um fuso que não esteja aqui diz-se como vem.
+ */
+const NOMES_DOS_FUSOS: Record<string, string> = {
+  'Europe/Lisbon': 'Portugal continental',
+  'Atlantic/Madeira': 'Madeira',
+  'Atlantic/Azores': 'Açores',
+};
+
+export function nomeDoFuso(fuso: string = FUSO): string {
+  return NOMES_DOS_FUSOS[fuso] ?? fuso;
+}

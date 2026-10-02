@@ -9,6 +9,7 @@ import {
   IDENTIFICADOR,
   etiquetaDaRegiao,
   linhas as linhasNoArmazem,
+  paragens as paragensNoArmazem,
   regiao as regiaoNoArmazem,
 } from '../dados';
 import { doCampoLocal } from '../fuso';
@@ -35,6 +36,7 @@ import { hashDoEmail, hashDoIp } from './ip';
 import { contarFalhada, limparDepoisDeEntrar, verificarEntrada } from './limite';
 import { listarRegioes, type RegiaoNaBase } from './consultas';
 import { confirmacaoBate, naFrase, verificarEndereco } from './ficha';
+import { enderecoValido, entradas, resolverLinhas, resolverParagens } from './escolhas-do-aviso';
 import { ehModulo, nomeDoModulo } from './modulos';
 import { JANELA_DAS_TENTATIVAS_S, LIMITE_DE_TENTATIVAS } from './sessao';
 
@@ -492,14 +494,6 @@ function osAvisos(regiao: string): string {
   return `/admin/regioes/${encodeURIComponent(regiao)}/avisos/`;
 }
 
-/** As linhas e as paragens entram separadas por vírgula. */
-function lista(formData: FormData, campo: string): string[] {
-  return texto(formData, campo)
-    .split(',')
-    .map((x) => x.trim())
-    .filter(Boolean);
-}
-
 /** Os modos entram em caixas — várias com o mesmo nome. */
 function marcados(formData: FormData, campo: string): string[] {
   return formData
@@ -543,41 +537,6 @@ async function exigirModosProprios(id: string, modos: string[]): Promise<void> {
   }
 }
 
-/**
- * A mesma regra ao nível da linha, e uma segunda que não é sobre direitos mas
- * sobre servir: uma linha que não existe.
- *
- * Um aviso preso a um identificador com uma gralha não aparece em lado nenhum
- * — nem na página da linha, nem para quem consome o feed — e ninguém dá por
- * isso, porque o aviso ESTÁ publicado e a lista do painel mostra-o. É a falha
- * mais silenciosa que esta página tem.
- *
- * As linhas de outro operador saem pela mesma razão que os modos deles: o
- * catálogo marca-as com `operador`, que a rede da casa não leva.
- *
- * Sem catálogo — módulo desligado, ou região sem dados — não se valida.
- */
-async function exigirLinhasProprias(id: string, linhas: string[]): Promise<void> {
-  if (linhas.length === 0) return;
-  const catalogo = await linhasNoArmazem(id).catch(() => []);
-  if (catalogo.length === 0) return;
-  const porId = new Map(catalogo.map((l) => [l.id, l]));
-  const inexistentes = linhas.filter((x) => !porId.has(x));
-  if (inexistentes.length) {
-    throw new Error(
-      `não há linha com o identificador ${inexistentes.join(', ')} — um aviso preso a um identificador errado não aparece a ninguém`,
-    );
-  }
-  const alheias = linhas.filter((x) => (porId.get(x)?.operador ?? '') !== '');
-  if (alheias.length) {
-    const nomes = [...new Set(alheias.map((x) => porId.get(x)?.operador))].join(', ');
-    throw new Error(
-      `${alheias.join(', ')} ${alheias.length === 1 ? 'é de' : 'são de'} ${nomes}, que esta região mostra e não gere. ` +
-        'Quem gere o serviço é quem avisa sobre ele.',
-    );
-  }
-}
-
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /**
@@ -588,59 +547,173 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
  * guardado pela base (`upsert_aviso` recusa mudar um aviso de região); estes
  * dois gestos não.
  */
-async function exigirAvisoDaRegiao(id: string, regiao: string): Promise<void> {
+async function exigirAvisoDaRegiao(id: string, regiao: string): Promise<{ publicado: boolean }> {
   const aviso = UUID.test(id) ? await avisoPorId(id) : null;
   if (!aviso || aviso.region_id !== regiao) {
     throw new Error('não há aviso com esse identificador nesta região');
   }
+  return aviso;
 }
 
 /**
- * Gravar um aviso — novo ou editado. NÃO O PUBLICA: é outro gesto, e é
- * deliberado. Quem redige a meio de uma ocorrência não devia ter de escolher
- * entre gravar a meio e mostrar a meio.
+ * O que o editor de avisos recebe de volta quando NÃO gravou (P4-017).
+ *
+ * Gravar acabava num redirecionamento, como as outras ações, e a página
+ * voltava em branco: um identificador de linha errado apagava o título e o
+ * texto que se tinham escrito a meio de uma ocorrência. Agora uma recusa
+ * volta como estado — o editor fica com tudo o que tinha, diz o que falta e
+ * leva o foco ao campo que tem de mudar. Só o sucesso redireciona.
  */
-export async function guardarAviso(formData: FormData): Promise<void> {
+export type EstadoDoAviso = {
+  erro: string | null;
+  /** O campo que tem de mudar: `titulo`, `texto`, `linhas`, `paragens`, `modos`, `fim`, `url`. */
+  campo: string | null;
+  /** Conta as recusas: a mesma mensagem duas vezes seguidas é outra recusa, e volta a dizer-se. */
+  vez: number;
+  /**
+   * O que se escreveu, tal como veio. Com JavaScript o editor já o tem; sem
+   * ele, a página volta inteira, e é daqui que os campos se preenchem.
+   */
+  valores?: Record<string, string | string[]>;
+};
+
+/** Uma recusa que é sobre UM campo — e o foco vai para lá. */
+class RecusaNoCampo extends Error {
+  campo: string;
+  constructor(campo: string, mensagem: string) {
+    super(mensagem);
+    this.campo = campo;
+  }
+}
+
+const CAMPOS_DO_AVISO = ['titulo', 'texto', 'gravidade', 'causa', 'efeito', 'inicio', 'fim', 'url'];
+const LISTAS_DO_AVISO = ['linhas', 'paragens', 'modos', 'linhas_texto', 'paragens_texto'];
+
+function valoresDoAviso(formData: FormData): Record<string, string | string[]> {
+  const valores: Record<string, string | string[]> = {};
+  for (const c of CAMPOS_DO_AVISO) valores[c] = String(formData.get(c) ?? '');
+  for (const c of LISTAS_DO_AVISO) valores[c] = entradas(formData.getAll(c));
+  return valores;
+}
+
+/**
+ * Gravar um aviso — novo ou corrigido —, e publicá-lo se se pediu.
+ *
+ * PUBLICAR CONTINUA A SER UM GESTO À PARTE, mas no mesmo sítio: «Publicar
+ * agora» e «Guardar rascunho» são dois botões do mesmo formulário, com a
+ * pré-visualização ao lado. Gravar a meio de uma ocorrência sem a mostrar
+ * continua a ser possível; mostrar sem ter de ir procurar o aviso na lista,
+ * também.
+ *
+ * As linhas e as paragens chegam pela escolha (o identificador) ou escritas à
+ * mão (o número ou o nome): `escolhas-do-aviso.ts` traduz as duas.
+ */
+export async function guardarAviso(
+  antes: EstadoDoAviso,
+  formData: FormData,
+): Promise<EstadoDoAviso> {
   const regiao = texto(formData, 'regiao');
   const id = texto(formData, 'id');
-  await seguir(
-    async () => {
-      exigirRegiaoValida(regiao);
-      const dentro = await exigirPapel(regiao, 'editor');
-      if (id) await exigirAvisoDaRegiao(id, regiao);
-      const modos = marcados(formData, 'modos');
-      const linhas = lista(formData, 'linhas');
+  const publicar = texto(formData, 'publicar') === '1';
+  let destino: string;
+  try {
+    exigirRegiaoValida(regiao);
+    const dentro = await exigirPapel(regiao, 'editor');
+    const existente = id ? await exigirAvisoDaRegiao(id, regiao) : null;
+
+    const titulo = texto(formData, 'titulo');
+    const corpo = texto(formData, 'texto');
+    if (!titulo)
+      throw new RecusaNoCampo('titulo', 'falta o título — uma linha a dizer o que se passa');
+    if (!corpo) {
+      throw new RecusaNoCampo(
+        'texto',
+        'falta o texto — o que quem está na paragem precisa de saber',
+      );
+    }
+
+    const [catalogoDeLinhas, catalogoDeParagens] = await Promise.all([
+      linhasNoArmazem(regiao).catch(() => []),
+      paragensNoArmazem(regiao).catch(() => []),
+    ]);
+    const linhas = resolverLinhas(
+      entradas([...formData.getAll('linhas'), ...formData.getAll('linhas_texto')]),
+      catalogoDeLinhas,
+    );
+    if (!linhas.ok) throw new RecusaNoCampo('linhas', linhas.erro);
+    const paragens = resolverParagens(
+      entradas([...formData.getAll('paragens'), ...formData.getAll('paragens_texto')]),
+      catalogoDeParagens,
+    );
+    if (!paragens.ok) throw new RecusaNoCampo('paragens', paragens.erro);
+    const modos = marcados(formData, 'modos');
+    try {
       await exigirModosProprios(regiao, modos);
-      await exigirLinhasProprias(regiao, linhas);
-      const novo = await chamar<string>('upsert_aviso', {
-        p_id: id || null,
-        p_region_id: regiao,
-        p_titulo: texto(formData, 'titulo'),
-        p_texto: texto(formData, 'texto'),
-        p_gravidade: texto(formData, 'gravidade'),
-        p_causa: texto(formData, 'causa'),
-        p_efeito: texto(formData, 'efeito'),
-        p_inicio: doCampoLocal(texto(formData, 'inicio')),
-        p_fim: doCampoLocal(texto(formData, 'fim')),
-        p_linhas: linhas,
-        p_paragens: lista(formData, 'paragens'),
-        p_modos: modos,
-        p_url: texto(formData, 'url') || null,
+    } catch (erro) {
+      throw new RecusaNoCampo('modos', mensagemDe(erro));
+    }
+
+    const inicio = doCampoLocal(texto(formData, 'inicio'));
+    const fim = doCampoLocal(texto(formData, 'fim'));
+    if (inicio && fim && Date.parse(fim) < Date.parse(inicio)) {
+      throw new RecusaNoCampo('fim', 'o aviso acaba antes de começar — vê as duas datas');
+    }
+    const url = texto(formData, 'url');
+    if (!enderecoValido(url)) {
+      throw new RecusaNoCampo(
+        'url',
+        'o endereço de «Mais informação» tem de ser completo, como https://exemplo.pt/obras',
+      );
+    }
+
+    const novo = await chamar<string>('upsert_aviso', {
+      p_id: id || null,
+      p_region_id: regiao,
+      p_titulo: titulo,
+      p_texto: corpo,
+      p_gravidade: texto(formData, 'gravidade'),
+      p_causa: texto(formData, 'causa'),
+      p_efeito: texto(formData, 'efeito'),
+      p_inicio: inicio,
+      p_fim: fim,
+      p_linhas: linhas.ids,
+      p_paragens: paragens.ids,
+      p_modos: modos,
+      p_url: url || null,
+      ...(await rasto(dentro)),
+    });
+    if (publicar && !existente?.publicado) {
+      await chamar<null>('set_aviso_publicado', {
+        p_id: novo,
+        p_publicado: true,
         ...(await rasto(dentro)),
       });
-      // Um aviso EDITADO que já esteja publicado muda no sítio agora; um
-      // rascunho não muda nada, e invalidar a etiqueta à mesma não custa.
-      revalidateTag(etiquetaDosAvisos(regiao));
-      return comAviso(
-        osAvisos(regiao),
-        id
-          ? 'Aviso gravado.'
-          : 'Aviso gravado, por publicar. Enquanto não o publicares, não está no sítio nem no feed.',
-        `aviso-${novo}`,
-      );
-    },
-    (mensagem) => comAviso(osAvisos(regiao), `Não foi possível: ${mensagem}`),
-  );
+    }
+    // Um aviso CORRIGIDO que já esteja publicado muda no sítio agora; um
+    // rascunho não muda nada, e invalidar a etiqueta à mesma não custa.
+    revalidateTag(etiquetaDosAvisos(regiao));
+    const noAr = publicar || !!existente?.publicado;
+    destino = comAviso(
+      osAvisos(regiao),
+      noAr
+        ? existente?.publicado
+          ? 'Correções guardadas. O sítio já as mostra.'
+          : 'Aviso publicado. Já está no sítio.'
+        : 'Rascunho guardado. Não está no sítio enquanto não o publicares.',
+      `aviso-${novo}`,
+    );
+  } catch (erro) {
+    if (erro instanceof SemPermissao) {
+      redirect(comAviso('/admin/', `Não foi possível: ${erro.message}`));
+    }
+    return {
+      erro: `Não foi possível gravar: ${erro instanceof RecusaNoCampo ? erro.message : mensagemDe(erro)}.`,
+      campo: erro instanceof RecusaNoCampo ? erro.campo : null,
+      vez: (antes?.vez ?? 0) + 1,
+      valores: valoresDoAviso(formData),
+    };
+  }
+  redirect(destino);
 }
 
 /** Publicar ou retirar — o gesto que muda o que está no ar. */
@@ -662,8 +735,8 @@ export async function publicarAviso(formData: FormData): Promise<void> {
       return comAviso(
         osAvisos(regiao),
         publicar
-          ? 'Aviso publicado. Está no sítio e no feed GTFS-RT.'
-          : 'Aviso retirado. Sai do sítio e do feed; o rasto fica.',
+          ? 'Aviso publicado. Já está no sítio.'
+          : 'Aviso retirado. Saiu do sítio; fica aqui, e na auditoria.',
         `aviso-${id}`,
       );
     },
@@ -684,6 +757,12 @@ export async function apagarAviso(formData: FormData): Promise<void> {
       exigirRegiaoValida(regiao);
       const dentro = await exigirPapel(regiao, 'editor');
       await exigirAvisoDaRegiao(id, regiao);
+      // APAGAR CONFIRMA (P4-018): o botão está dentro de um «Apagar…» que se
+      // abre primeiro, e é esse que manda `confirmado`. Um envio sem ele — um
+      // duplo toque, um formulário antigo — não apaga.
+      if (texto(formData, 'confirmado') !== '1') {
+        throw new Error('apagar pede confirmação — abre «Apagar…» e confirma lá');
+      }
       await chamar<null>('delete_aviso', { p_id: id, ...(await rasto(dentro)) });
       revalidateTag(etiquetaDosAvisos(regiao));
       return comAviso(osAvisos(regiao), 'Aviso apagado. Fica na auditoria, inteiro.');
