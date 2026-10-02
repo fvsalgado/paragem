@@ -240,6 +240,7 @@ function Esboco({
 export default function Mapa({
   centro,
   zoom = 12,
+  tipos,
   pontos,
   aoEscolher,
   aoLocalizar,
@@ -257,6 +258,13 @@ export default function Mapa({
 }: {
   centro: [number, number];
   zoom?: number;
+  /**
+   * Os tipos de ponto que a região tem, para as camadas existirem antes de os
+   * pontos chegarem — que agora chegam depois da página (P3-006). Sem isto,
+   * um mapa que carregasse antes dos pontos ficava sem camada nenhuma onde os
+   * pôr. Sem tipos, valem os dos pontos.
+   */
+  tipos?: string[];
   pontos: Marca[];
   aoEscolher?: (p: Marca) => void;
   /**
@@ -295,6 +303,8 @@ export default function Mapa({
 }) {
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<MapaLibre | null>(null);
+  const tiposDasCamadas = useRef<string[]>([]);
+  tiposDasCamadas.current = tipos ?? pontos.map((p) => p.tipo);
   const escolher = useRef(aoEscolher);
   escolher.current = aoEscolher;
   const localizar = useRef(aoLocalizar);
@@ -494,7 +504,7 @@ export default function Mapa({
           // `pontos-no-mapa.ts` e derivam do que EXISTE nos dados: uma região
           // sem bicicletas não ganha camada de bicicletas, e um modo que nunca
           // vimos ganha uma camada neutra sem se tocar em código.
-          for (const c of camadasDe(pontos.map((p) => p.tipo))) {
+          for (const c of camadasDe(tiposDasCamadas.current)) {
             const id = `pontos-${c.tipo}`;
             const placa = c.forma === 'placa' && juntarPlaca(criado!, c);
             criado!.addLayer(
@@ -640,7 +650,7 @@ export default function Mapa({
   useEffect(() => {
     const m = mapa.current;
     if (!m || estado !== 'pronto') return;
-    for (const c of camadasDe(pontos.map((x) => x.tipo))) {
+    for (const c of camadasDe(tiposDasCamadas.current)) {
       const id = `pontos-${c.tipo}`;
       if (!m.getLayer(id)) continue;
       m.setLayoutProperty(

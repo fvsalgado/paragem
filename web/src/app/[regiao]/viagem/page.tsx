@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { motorDaRegiao } from '@/lib/enderecos';
 import DireccoesDaPagina from '@/componentes/DireccoesDaPagina';
-import { aPedido, exigirRegiao, lacunas, procura, servicosSemDatas, regiao } from '@/lib/dados';
+import { aPedido, exigirRegiao, lacunas, servicosSemDatas, regiao } from '@/lib/dados';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
 export async function generateMetadata({
@@ -30,7 +30,6 @@ export async function generateMetadata({
 export default async function Viagem({ params }: { params: Promise<{ regiao: string }> }) {
   const { regiao: rid } = await params;
   const r = await exigirRegiao(rid);
-  const pontos = await procura(rid);
   const l = await lacunas(rid);
 
   return (
@@ -41,7 +40,6 @@ export default async function Viagem({ params }: { params: Promise<{ regiao: str
           números diferentes para a mesma coisa. */}
       <p>Escreve de onde partes e para onde vais: uma paragem, uma estação ou um sítio {r.em}.</p>
       <DireccoesDaPagina
-        pontos={pontos}
         regiao={rid}
         caixa={r.caixa}
         emDaRegiao={r.em}

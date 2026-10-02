@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import Link from '@/componentes/Ligacao';
 import EscolherPonto from './EscolherPonto';
+import type { PontosNoNavegador } from '@/lib/pontos-do-navegador';
 import Distintivo from './Distintivo';
 import {
   APe,
@@ -142,7 +143,8 @@ export type ViagemAgora = {
 type Proxima = { dia: string; its: Itinerario[] } | null;
 
 export default function Direccoes({
-  pontos,
+  pontos: osPontos,
+  aoTentarOsPontos,
   regiao,
   deInicial = null,
   paraInicial = null,
@@ -161,7 +163,13 @@ export default function Direccoes({
   servicosSemDatas = 0,
   temAPedido = false,
 }: {
-  pontos: Ponto[];
+  /**
+   * Os pontos da região, que chegam DEPOIS da página (`usePontos`): `null` à
+   * espera, `falhou` sem resposta. As caixas dizem qual dos dois é.
+   */
+  pontos: PontosNoNavegador;
+  /** Volta a pedir os pontos que não chegaram. */
+  aoTentarOsPontos?: () => void;
   regiao: string;
   /**
    * Quantos serviços desta região ainda não têm os dias em que circulam
@@ -600,7 +608,7 @@ export default function Direccoes({
     if (p.concelho && p.concelho !== 'fora-da-regiao') return p.concelho;
     if (!Number.isFinite(p.lat)) return null;
     let melhor: { d: number; c: string } | null = null;
-    for (const q of pontos) {
+    for (const q of Array.isArray(osPontos) ? osPontos : []) {
       if (q.tipo !== 'paragem' || !q.concelho) continue;
       const d = Math.hypot(
         (q.lat - p.lat) * 111_320,
@@ -714,7 +722,8 @@ export default function Direccoes({
             // alfinete não diz qual é a partida. A sugestão dá nome à caixa
             // sem lhe roubar altura, que é o que o cartão do mapa não tem.
             sugestao="De onde partes"
-            pontos={pontos}
+            pontos={osPontos}
+            aoTentarDeNovo={aoTentarOsPontos}
             valor={de}
             aoEscolher={escolherDe}
             opcaoEspecial={AQUI}
@@ -734,7 +743,8 @@ export default function Direccoes({
             regiao={regiao}
             etiqueta="Para"
             sugestao="Para onde vais"
-            pontos={pontos}
+            pontos={osPontos}
+            aoTentarDeNovo={aoTentarOsPontos}
             valor={para}
             aoEscolher={setPara}
           />

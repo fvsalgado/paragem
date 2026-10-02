@@ -46,6 +46,37 @@ export type Ponto = {
   classe?: string;
 };
 
+/** O `procura.json` tal como o pipeline o escreve: as chaves no cabeçalho, os pontos em listas. */
+export type ProcuraCrua = { campos: string[]; pontos: unknown[][] };
+
+/**
+ * Os pontos do mapa e da procura, a partir do `procura.json`.
+ *
+ * Num sítio só, para o servidor e para o navegador: o servidor lê o ficheiro
+ * para a ficha de cada paragem e para o centro do mapa, e o navegador lê-o
+ * para desenhar os pontos e procurar neles. Duas leituras do mesmo formato
+ * divergem, e a divergência aparece como um sítio que o mapa mostra e a
+ * procura não encontra.
+ */
+export function pontosDaProcura(d: ProcuraCrua): Ponto[] {
+  return (d.pontos ?? []).map((linha) => ({
+    nome: String(linha[0]),
+    lat: Number(linha[1]),
+    lon: Number(linha[2]),
+    tipo: String(linha[3]),
+    // O NÚMERO DE PARTIDAS VINHA E PERDIA-SE AQUI.
+    //
+    // O `procura.json` sempre o trouxe, e a leitura deitava-o fora — e com
+    // ele a regra que mostra, entre o zoom 11 e o 13, só as paragens com
+    // serviço a sério. Sem o campo, a regra comparava `undefined` com 40 e
+    // dava sempre falso: a esses zooms o mapa ficava sem paragem nenhuma, e
+    // parecia de propósito.
+    partidas: Number(linha[4] ?? 0),
+    id: String(linha[5] ?? ''),
+    concelho: String(linha[6] ?? 'fora-da-regiao'),
+  }));
+}
+
 export type Regiao = {
   id: string;
   nome: string;

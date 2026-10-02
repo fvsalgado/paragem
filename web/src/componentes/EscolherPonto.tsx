@@ -9,6 +9,7 @@ import Distintivo from './Distintivo';
 // a divergência aparece como um ponto que o mapa abre e a procura não.
 export type { Ponto } from '@/lib/formato';
 import type { Ponto } from '@/lib/formato';
+import type { PontosNoNavegador } from '@/lib/pontos-do-navegador';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { aUmaLetra } from '@/lib/letras';
 
@@ -88,6 +89,8 @@ export default function EscolherPonto({
   etiqueta,
   sugestao,
   pontos,
+  aoPrecisarDosPontos,
+  aoTentarDeNovo,
   valor,
   aoEscolher,
   descricao,
@@ -106,7 +109,19 @@ export default function EscolherPonto({
    * para quem vê a caixa a flutuar sobre o mapa sem nada escrito.
    */
   sugestao?: string;
-  pontos: Ponto[];
+  /**
+   * As paragens, estações e pontos dos modos — `null` enquanto não chegaram, e
+   * `falhou` quando não chegaram de todo. Já não vêm com a página (P3-006):
+   * são um ficheiro à parte, pedido depois de ela se pintar.
+   */
+  pontos: PontosNoNavegador;
+  /**
+   * Chamado à primeira tecla, para quem só pede os pontos quando alguém vai
+   * procurar — a caixa de «A rede» não paga o ficheiro a quem não escreve.
+   */
+  aoPrecisarDosPontos?: () => void;
+  /** Volta a pedir os pontos que não chegaram. */
+  aoTentarDeNovo?: () => void;
   valor: Ponto | null;
   aoEscolher: (p: Ponto | null) => void;
   descricao?: string;
@@ -235,7 +250,8 @@ export default function EscolherPonto({
         resultados: opcaoEspecial && q.length === 0 ? [opcaoEspecial] : [],
         parecidos: false,
       };
-    const universo: Ponto[] = sitios ? [...pontos, ...sitios] : pontos;
+    const conhecidos = Array.isArray(pontos) ? pontos : [];
+    const universo: Ponto[] = sitios ? [...conhecidos, ...sitios] : conhecidos;
 
     // AS PALAVRAS PODEM VIR EM QUALQUER ORDEM, e isto é o que faz a caixa
     // deixar de parecer avariada.
@@ -437,10 +453,15 @@ export default function EscolherPonto({
   // NADA ENCONTRADO DIZ-SE, À VISTA (P2-006). A lista simplesmente não abria
   // — nem «sem resultados», nem a explicação de que a procura só conhece o
   // que é desta região. Quem escreve e não vê nada acontecer conclui que o
-  // sítio está avariado. Só depois de os sítios chegarem: antes disso, o
-  // «nada» podia ser só «ainda não».
-  const procurou = simples(texto).length >= 2 && (!regiao || sitios !== null);
+  // sítio está avariado. Só depois de os sítios E as paragens chegarem:
+  // antes disso, o «nada» podia ser só «ainda não».
+  const escreveu = simples(texto).length >= 2;
+  const procurou = escreveu && (!regiao || sitios !== null) && Array.isArray(pontos);
   const nada = procurou && resultados.length === 0 && !(valor && valor.nome === texto);
+  // AS PARAGENS QUE NÃO CHEGARAM NÃO SÃO «NADA COM ESSE NOME». Sem rede, a
+  // procura dizia que não havia o que não pôde ver (P3-022).
+  const semPontos = escreveu && pontos === 'falhou' && resultados.length === 0;
+  const aEspera = escreveu && pontos === null && resultados.length === 0;
 
   return (
     <div className={className ? `escolher ${className}` : 'escolher'}>
@@ -474,8 +495,10 @@ export default function EscolherPonto({
         value={texto}
         onChange={(e) => {
           // À PRIMEIRA TECLA, e não ao carregar a página: é aqui que se paga o
-          // pedido dos sítios, e só quem procura o paga.
+          // pedido dos sítios, e só quem procura o paga. O das paragens também,
+          // onde quem usa a caixa ainda não o fez.
           pedirSitios();
+          if (pontos === null) aoPrecisarDosPontos?.();
           setTexto(e.target.value);
           setAberto(true);
           setActivo(-1);
@@ -493,18 +516,34 @@ export default function EscolherPonto({
       <div className="sugestoes-caixa">
         {/* A lista aparecer em silêncio é a lista não existir para quem não a
           vê. E o «nada» lê-se também à vista: é a mesma frase. */}
-        <p aria-live="polite" className={nada && aberto ? 'sem-resultados' : 'so-para-leitores'}>
-          {nada
-            ? `Nada com «${texto.trim()}» aqui. A procura conhece as paragens, as estações${
-                linhas ? ', as linhas' : ''
-              } e os sítios desta região.`
-            : texto.trim().length >= 2 || (texto.trim().length === 1 && resultados.length > 0)
-              ? `${resultados.length} ${resultados.length === 1 ? 'resultado' : 'resultados'}${
-                  parecidos ? ' com um nome parecido' : ''
-                }`
-              : ''}
+        <p
+          aria-live="polite"
+          className={
+            (nada || semPontos || aEspera) && aberto ? 'sem-resultados' : 'so-para-leitores'
+          }
+        >
+          {semPontos
+            ? 'Não foi possível carregar as paragens — pode ser da ligação à Internet.'
+            : aEspera
+              ? 'A carregar as paragens…'
+              : nada
+                ? `Nada com «${texto.trim()}» aqui. A procura conhece as paragens, as estações${
+                    linhas ? ', as linhas' : ''
+                  } e os sítios desta região.`
+                : texto.trim().length >= 2 || (texto.trim().length === 1 && resultados.length > 0)
+                  ? `${resultados.length} ${resultados.length === 1 ? 'resultado' : 'resultados'}${
+                      parecidos ? ' com um nome parecido' : ''
+                    }`
+                  : ''}
         </p>
 
+        {semPontos && aberto && aoTentarDeNovo && (
+          <p className="sugestoes-nota">
+            <button type="button" className="botao secundario" onClick={aoTentarDeNovo}>
+              Tentar de novo
+            </button>
+          </p>
+        )}
         {/* Quando o que se mostra é PARECIDO e não igual, diz-se — fora da
           lista, que só pode ter opções. */}
         {parecidos && aberto && resultados.length > 0 && (

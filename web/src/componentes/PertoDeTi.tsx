@@ -15,6 +15,7 @@ import {
   type Proximas,
 } from '@/lib/dias';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
+import { pedirPontos } from '@/lib/pontos-do-navegador';
 
 /**
  * As paragens mais perto, e o que passa nelas a seguir (§6, «Perto de ti»).
@@ -80,12 +81,20 @@ const seguro = (s: string) => s.replace(/[^a-zA-Z0-9\-_]/g, '-');
 export default function PertoDeTi({
   regiao,
   pontos,
+  modosDesligados = [],
   variante = 'pagina',
   posicao = null,
   aoEscolher,
 }: {
   regiao: string;
-  pontos: Ponto[];
+  /**
+   * Os pontos, quando quem usa isto já os tem — o mapa tem-nos. Sem eles,
+   * pedem-se quando se souber onde se está (P3-006): «A rede» não os leva na
+   * página, e quem não carrega no botão não os paga.
+   */
+  pontos?: Ponto[];
+  /** Os módulos que o painel desligou: os pontos deles não contam. */
+  modosDesligados?: string[];
   /** `pagina` em «A rede»; `mapa` na folha de baixo da aplicação. */
   variante?: 'pagina' | 'mapa';
   /**
@@ -105,6 +114,8 @@ export default function PertoDeTi({
    * por falta de rede não é uma paragem sem partidas, e a lista diz qual é.
    */
   const [semResposta, setSemResposta] = useState<string[]>([]);
+  /** Em que dias anda cada serviço — ver mais abaixo, onde se usa. */
+  const [calendario, setCalendario] = useState<Calendario | null | undefined>(undefined);
 
   /**
    * UM PEDIDO POR CONCELHO, não um por paragem. Quem está numa paragem está
@@ -135,7 +146,30 @@ export default function PertoDeTi({
     }
   }
 
+  /**
+   * A partir de onde se está: os pontos (os que já cá estão, ou pedidos
+   * agora) e a tabela dos dias, que só aqui passa a fazer falta.
+   */
   function mostrarPerto(aqui: [number, number]) {
+    if (calendario === undefined || calendario === null) {
+      calendarioDe(regiao).then((c) => setCalendario(c));
+    }
+    if (pontos?.length) {
+      mostrarPertoDe(aqui, pontos);
+      return;
+    }
+    setEstado({ tipo: 'a-perguntar' });
+    pedirPontos(regiao, modosDesligados)
+      .then((todos) => mostrarPertoDe(aqui, todos))
+      .catch(() =>
+        setEstado({
+          tipo: 'falhou',
+          razao: 'a lista das paragens não chegou — pode ser da ligação à Internet',
+        }),
+      );
+  }
+
+  function mostrarPertoDe(aqui: [number, number], pontos: Ponto[]) {
     // SÓ PARAGENS E ESTAÇÕES, e não tudo o que o mapa mostra.
     //
     // O índice traz também as estações de bicicletas, as praças de táxi e as
@@ -181,15 +215,9 @@ export default function PertoDeTi({
   const agora = horaDoRelogio(hoje);
   // Em que dias anda cada serviço. `undefined` enquanto se pergunta; `null`
   // quando não se conseguiu saber — e aí as horas vêm com o aviso de que
-  // podem não ser de hoje (`lib/dias.ts`).
-  const [calendario, setCalendario] = useState<Calendario | null | undefined>(undefined);
-  useEffect(() => {
-    let vivo = true;
-    calendarioDe(regiao).then((c) => vivo && setCalendario(c));
-    return () => {
-      vivo = false;
-    };
-  }, [regiao]);
+  // podem não ser de hoje (`lib/dias.ts`). PEDE-SE QUANDO É PRECISA — quando
+  // se sabe onde se está (`mostrarPerto`) —, e não ao abrir a página: o botão
+  // está no ecrã de abertura do mapa, e quase ninguém carrega nele.
   // A MESMA ESCOLHA QUE A FOLHA DO MAPA FAZ (`lib/dias.ts`): duas cópias da
   // mesma regra em dois ficheiros divergiam, e a mesma paragem dizia coisas
   // diferentes conforme se chegasse a ela pelo mapa ou por esta lista.

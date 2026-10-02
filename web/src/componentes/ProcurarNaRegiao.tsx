@@ -1,8 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import EscolherPonto from '@/componentes/EscolherPonto';
 import type { Ponto } from '@/lib/formato';
+import { usePontos } from '@/lib/pontos-do-navegador';
 import { comoProcura, escreverViagem } from '@/lib/endereco-da-viagem';
 
 /** O endereço tem de ser um caminho do sítio: os identificadores trazem vírgulas e pontos. */
@@ -32,14 +34,27 @@ function destinoDe(p: Ponto): string {
  * É a mesma caixa que flutua por cima do mapa — o mesmo combobox, com as
  * mesmas paragens e os mesmos sítios —, e responde à mesma pergunta: «onde
  * está, e o que passa lá?». Sem mapa, a resposta é a página do ponto.
+ *
+ * Os pontos pedem-se À PRIMEIRA TECLA (P3-006): quem abre «A rede» para ler
+ * as listas não paga o ficheiro de quem procura.
  */
-export default function ProcurarNaRegiao({ regiao, pontos }: { regiao: string; pontos: Ponto[] }) {
+export default function ProcurarNaRegiao({
+  regiao,
+  modosDesligados = [],
+}: {
+  regiao: string;
+  modosDesligados?: string[];
+}) {
   const router = useRouter();
+  const [pedir, setPedir] = useState(false);
+  const { pontos, tentar } = usePontos(regiao, modosDesligados, pedir);
   return (
     <EscolherPonto
       etiqueta="Procurar"
       sugestao="Procurar paragem ou sítio"
       pontos={pontos}
+      aoPrecisarDosPontos={() => setPedir(true)}
+      aoTentarDeNovo={tentar}
       valor={null}
       regiao={regiao}
       linhas
