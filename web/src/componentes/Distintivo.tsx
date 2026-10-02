@@ -1,3 +1,5 @@
+import { contraste, MINIMO, normalizar } from '@/lib/cor';
+
 /**
  * O número da linha, com a cor que o feed lhe dá.
  *
@@ -82,32 +84,9 @@ export function corDoTraco(cor?: string | null): string {
   return original ? comContrasteSuficiente(original) : 'var(--marca)';
 }
 
-export function normalizar(cor?: string | null): string | null {
-  if (!cor) return null;
-  const limpa = cor.trim().replace(/^#/, '');
-  return /^[0-9a-fA-F]{6}$/.test(limpa) ? `#${limpa.toLowerCase()}` : null;
-}
-
-/** Luminância relativa, como a WCAG a define. */
-export function luminancia(hex: string): number {
-  const c = hex.replace('#', '');
-  const canais = [0, 2, 4].map((i) => {
-    const v = parseInt(c.slice(i, i + 2), 16) / 255;
-    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * canais[0] + 0.7152 * canais[1] + 0.0722 * canais[2];
-}
-
-export function contraste(a: string, b: string): number {
-  const [x, y] = [luminancia(a), luminancia(b)].sort((p, q) => q - p);
-  return (x + 0.05) / (y + 0.05);
-}
-
 export function textoSobre(fundo: string): string {
   return contraste(fundo, '#ffffff') >= contraste(fundo, '#102c3f') ? '#ffffff' : '#102c3f';
 }
-
-export const MINIMO = 4.5;
 
 /**
  * A mesma cor, escurecida ou aclarada até o texto por cima passar os 4,5:1.

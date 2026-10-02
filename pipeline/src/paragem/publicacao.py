@@ -60,6 +60,11 @@ TIPOS = {
     ".md": "text/markdown; charset=utf-8",
     ".zip": "application/zip",
     ".pdf": "application/pdf",
+    # O logótipo da região (`marca.py`). Com o tipo genérico, o navegador não o
+    # desenhava num `<img>`: um SVG só é imagem quando o servidor o diz.
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".webp": "image/webp",
 }
 
 

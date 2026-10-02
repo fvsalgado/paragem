@@ -3,7 +3,9 @@
 import { useEffect, useRef } from 'react';
 import Link from '@/componentes/Ligacao';
 import { Fechar } from './Icones';
+import AssinaturaDaRegiao from './AssinaturaDaRegiao';
 import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
+import type { Marca } from '@/lib/marca';
 
 /**
  * O MENU DO MAPA — onde vive a navegação quando o mapa ocupa o ecrã todo.
@@ -24,13 +26,21 @@ import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
  */
 export default function MenuDoMapa({
   regiao,
-  nomeDaRegiao,
+  marca,
+  assinatura,
   temAPedido,
   aberto,
   aoFechar,
 }: {
   regiao: string;
-  nomeDaRegiao: string;
+  /**
+   * A marca da região e os nomes da assinatura (`marca.ts`). O menu abria com
+   * «Paragem.pt · <a região>», todo na cor do produto — o único sítio da
+   * aplicação do mapa onde a região aparecia, e aparecia em segundo (P1-048,
+   * P4-008). Abre agora com a assinatura da rede, como o cabeçalho.
+   */
+  marca: Marca;
+  assinatura: { principal: string; secundario: string | null };
   /**
    * A REGIÃO DECIDE O QUE ESTÁ NO MENU, e não uma lista fixa aqui.
    *
@@ -73,7 +83,13 @@ export default function MenuDoMapa({
     <dialog className="menu-do-mapa" ref={caixa} onClose={aoFechar} aria-label="Menu">
       <div className="menu-topo">
         <span className="menu-marca">
-          Paragem.pt <span className="secundario">· {nomeDaRegiao}</span>
+          <AssinaturaDaRegiao
+            regiao={regiao}
+            marca={marca}
+            principal={assinatura.principal}
+            secundario={assinatura.secundario}
+            altura={32}
+          />
         </span>
         <button type="button" className="redondo" onClick={aoFechar} aria-label="Fechar o menu">
           <Fechar />
@@ -91,15 +107,15 @@ export default function MenuDoMapa({
               </Link>
             </li>
           ))}
-          <li>
-            {/* Dizia «Outras regiões», e a página do produto deixou de as
-                listar: mostra só as demonstrações, nunca outro cliente. */}
-            <Link href={ORIGEM_DO_PRODUTO} onClick={aoFechar}>
-              <span>Sobre o Paragem.pt</span>
-            </Link>
-          </li>
         </ul>
       </nav>
+      {/* A ASSINATURA DO PRODUTO, discreta e no fim, como no rodapé das outras
+          páginas — que esta não tem. Era uma entrada do menu, «Sobre o
+          Paragem.pt», ao lado das da rede, e antes disso «Outras regiões»: o
+          menu da autoridade a oferecer o fornecedor (P4-008). */}
+      <p className="feito-com">
+        Feito com <a href={ORIGEM_DO_PRODUTO}>Paragem.pt</a>
+      </p>
     </dialog>
   );
 }

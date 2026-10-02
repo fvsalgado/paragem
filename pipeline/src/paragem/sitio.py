@@ -47,6 +47,7 @@ from .gtfs import Gtfs
 from .leitores import LEITORES_DE_HORARIO
 from .leitores.osm import ATRIBUICAO as ATRIBUICAO_OSM
 from .leitores.osm import LICENCA_URL as LICENCA_ODBL
+from .marca import marca_publicada
 from .quadros import Passagem, ViagemDoSentido, quadro_do_sentido
 from .regiao import Regiao
 from .regiao import Saida as SaidaDaReceita
@@ -326,6 +327,10 @@ class Sitio:
             # quando a região declara os artigos (`Regiao.prosa_da_autoridade`).
             "autoridade": {**r.autoridade, **r.prosa_da_autoridade},
             "rede": {**r.rede, **r.prosa_do_operador},
+            # A MARCA DA REGIÃO: a cor da faixa, a tinta que se lê por cima dela
+            # (já medida aqui, e recusada no carregamento se não chegasse) e o
+            # logótipo publicado ao lado. Sem cor declarada, a do §6.
+            "marca": marca_publicada(r.cor, r.logotipo),
             "dominio_env": r.dominio_env,
             # O domínio canónico, declarado na região. É o que o middleware
             # por host vai comparar com a linha da base (docs/BASE-DE-DADOS.md).
@@ -1532,6 +1537,12 @@ def construir(raiz: Path, regiao: Regiao, destino: Path, territorio=None) -> Sit
         )
 
     s._escrever("regiao.json", s.regiao_json(territorio))
+    # O LOGÓTIPO VAI COM OS DADOS, e não com o código: é do cliente, e entra
+    # sem um commit no produto (§1), como o resto do que é da região.
+    if regiao.logotipo:
+        destino_do_logotipo = s.destino / marca_publicada(regiao.cor, regiao.logotipo)["logotipo"]
+        destino_do_logotipo.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(regiao.logotipo, destino_do_logotipo)
     s._escrever("concelhos.json", s.concelhos_json(indice_paragens))
     s._escrever("paragens.json", indice_paragens)
     s._escrever("linhas.json", indice_linhas)

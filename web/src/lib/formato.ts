@@ -118,6 +118,20 @@ export type Regiao = {
     operador_por?: string;
   };
   dominio_env: string | null;
+  /**
+   * A marca da região: a cor da faixa do cabeçalho, a tinta que se lê por cima
+   * (medida no pipeline) e o logótipo publicado ao lado dos dados. Ausente em
+   * dados de antes disto — e aí vale a do §6, sem logótipo (`marca.ts`).
+   */
+  marca?: {
+    cor?: string;
+    tinta?: string;
+    contraste?: number;
+    propria?: boolean;
+    logotipo?: string | null;
+    /** Largura sobre altura do logótipo, lida do ficheiro no pipeline. */
+    logotipo_proporcao?: number | null;
+  };
   /** Os modos que a região declara — JÁ SEM os que o painel desligou (`dados.ts`). */
   modos: string[];
   /** Os que a região declara e o painel desligou. Vazio quando não há nenhum. */

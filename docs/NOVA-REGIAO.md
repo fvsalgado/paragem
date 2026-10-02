@@ -178,12 +178,38 @@ um domínio da autoridade aponta um CNAME para o que a Vercel indicar. Ver
 `docs/ALOJAMENTO.md`, «Um domínio por região». O `dominio_env` do
 `regiao.yaml` já não é lido por nada e sai na próxima arrumação.
 
-## Passo 5 — as marcas, quando existirem
+## Passo 5 — a marca da rede, se a região a tiver
 
-Cada região terá a sua pasta em `web/public/logos/<regiao>/`, com um
-`PROVENIENCIA.md` a dizer de onde veio cada ficheiro. É a única parte que passa
-pelo repositório — servir imagens do sítio da autoridade violava a regra de não
-pedir nada a terceiros para desenhar uma página. **Fase 3.**
+O sítio de uma região é da autoridade de transportes, e não do produto: o
+cabeçalho é uma faixa com o nome da rede (`rede.nome`) e o que ela é
+(«Transportes da …»), a levar ao início da região, e «Feito com Paragem.pt»
+fica discreto no rodapé. A cor e o logótipo são **dados da região**, como o
+resto — entram no `regiao.yaml`, e não num commit do produto:
+
+```yaml
+# A cor da faixa do cabeçalho. Entre aspas: sem elas, o YAML lê o «#» como um
+# comentário — e o carregamento recusa a chave vazia, em vez de a ignorar.
+cor: "#5fc2b7"
+# O logótipo da rede ou da autoridade: um ficheiro AO LADO deste.
+logotipo: logotipo.svg
+```
+
+- **A cor é validada no pipeline** (`pipeline/src/paragem/marca.py`). A tinta
+  por cima não se declara: escolhe-se pelo contraste, entre o branco e o
+  azul-escuro do texto do §6. Se nenhum dos dois chegar aos 4,5:1, a região
+  **não carrega**, e a mensagem diz a cor mais próxima que passaria — escurecer
+  em silêncio era mudar a marca de alguém sem lhe dizer. Sem `cor:`, a faixa é
+  a do §6 (`#0A5C7A`).
+- **O logótipo** é SVG, PNG ou WebP, até 200 kB, e publica-se com os dados
+  (`marca/logotipo-<soma>.<ext>`). Um SVG não pode trazer programas nem ir
+  buscar nada a outro sítio. No cabeçalho mostra-se com 40 px de altura e a
+  largura da proporção dele; o nome vai sempre escrito ao lado.
+- **De quem é o ficheiro** escreve-se no `REUSE.toml` da raiz da região: a
+  marca é da autoridade ou da operadora, e quem a põe ali tem de poder usá-la.
+
+As regiões de prova não declaram nenhuma das duas, de propósito; a
+demonstração (`regioes/demo/`) declara uma inventada, para mostrar a marca
+branca a funcionar.
 
 ## A lista de verificação
 

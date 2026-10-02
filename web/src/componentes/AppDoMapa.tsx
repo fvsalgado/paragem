@@ -17,6 +17,8 @@ import MenuDoMapa from '@/componentes/MenuDoMapa';
 import { Chegada, DoModo, Hamburguer, Lista } from '@/componentes/Icones';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { usePontos } from '@/lib/pontos-do-navegador';
+import AssinaturaDaRegiao from '@/componentes/AssinaturaDaRegiao';
+import type { Marca as MarcaDaRegiao } from '@/lib/marca';
 import {
   avisoDe,
   comoProcura,
@@ -162,7 +164,8 @@ export default function AppDoMapa({
   contagens,
   mosaicos,
   atribuicaoDoMapa,
-  nomeDaRegiao,
+  marca,
+  assinatura,
   deDaRegiao,
   emDaRegiao,
   modos,
@@ -173,8 +176,13 @@ export default function AppDoMapa({
   servicosSemDatas = 0,
 }: {
   regiao: string;
-  /** «Serra da Pedra Alta», sem artigo — o que o menu põe ao lado da marca. */
-  nomeDaRegiao: string;
+  /**
+   * A marca da região e os nomes da assinatura (`marca.ts`): no alto da folha
+   * de abertura e no menu. O ecrã do mapa esconde o cabeçalho, e o primeiro
+   * ecrã ficava sem marca nenhuma — nem a da rede, nem a do produto (P1-008).
+   */
+  marca: MarcaDaRegiao;
+  assinatura: { principal: string; secundario: string | null };
   /** «da Serra da Pedra Alta», «do Baixo Sável» — para o título do mapa. */
   deDaRegiao: string;
   /** «na Serra da Pedra Alta», «no Baixo Sável» — escrito pela região, não colado aqui. */
@@ -1004,7 +1012,8 @@ export default function AppDoMapa({
 
         <MenuDoMapa
           regiao={regiao}
-          nomeDaRegiao={nomeDaRegiao}
+          marca={marca}
+          assinatura={assinatura}
           temAPedido={temAPedido}
           aberto={menu}
           aoFechar={() => setMenu(false)}
@@ -1046,6 +1055,21 @@ export default function AppDoMapa({
          * serve quem já sabe o nome; isto serve quem não sabe. */}
         {!direcoes && !escolhido && (
           <section className="folha-de-abertura" aria-labelledby="abertura">
+            {/* A MARCA DA REDE NO PRIMEIRO ECRÃ (P1-008). O mapa ocupa o ecrã
+              todo e o cabeçalho sai da frente; sem isto, quem abria o sítio
+              da sua autoridade de transportes não via de quem ele era — e o
+              primeiro ecrã é onde se confirma que se está no serviço oficial,
+              e não numa aplicação qualquer. */}
+            <p className="assinatura-da-folha">
+              <AssinaturaDaRegiao
+                regiao={regiao}
+                marca={marca}
+                principal={assinatura.principal}
+                secundario={assinatura.secundario}
+                altura={28}
+                emLinha
+              />
+            </p>
             <h2 id="abertura" className="so-para-leitores">
               Por onde começar
             </h2>

@@ -1,5 +1,7 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { exigirRegiao, origemDaRegiao, regiao } from '@/lib/dados';
+import { marcaDaRegiao } from '@/lib/marca';
+import { COR_DO_TEMA } from '@/lib/manifesto';
 import { metadadosDaRegiao } from '@/lib/metadados';
 import { origemDoProduto } from '@/lib/produto';
 import Cabecalho from '@/componentes/Cabecalho';
@@ -70,6 +72,20 @@ export async function generateMetadata({
       template: `%s · ${r.nome} · Paragem.pt`,
     },
   };
+}
+
+/**
+ * A BARRA DO NAVEGADOR NA COR DA MARCA DA REGIÃO — a mesma da faixa do
+ * cabeçalho, e não a do produto: é o sítio da autoridade (P4-008).
+ */
+export async function generateViewport({
+  params,
+}: {
+  params: Promise<{ regiao: string }>;
+}): Promise<Viewport> {
+  const { regiao: id } = await params;
+  const r = await regiao(id);
+  return { themeColor: r ? marcaDaRegiao(r).cor : COR_DO_TEMA };
 }
 
 export default async function LayoutDaRegiao({

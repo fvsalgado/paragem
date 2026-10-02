@@ -20,6 +20,8 @@ from typing import Any
 
 import yaml
 
+from .marca import MarcaInvalida, validar_cor, validar_logotipo
+
 # As contrações. A prosa do produto pendura toda daqui — «do Médio Tejo», «na
 # Serra da Pedra Alta» — e nenhuma heurística acerta nos topónimos
 # portugueses. Por isso a região DECLARA o artigo e o resto deriva.
@@ -169,6 +171,12 @@ class Regiao:
     #: camadas que o estilo desenha) e `atribuicao` (de quem é o desenho, que é
     #: o que aparece no canto do mapa). Vazio = o mapa é o do recorte, ou não há.
     mapa: dict[str, Any] = field(default_factory=dict)
+    #: A COR DA MARCA, a da faixa do cabeçalho — `#rrggbb`, já validada para
+    #: se ler com texto por cima (`marca.py`). Sem ela, a do §6.
+    cor: str | None = None
+    #: O LOGÓTIPO da rede ou da autoridade: um ficheiro ao lado do
+    #: `regiao.yaml`, publicado com os dados. Sem ele, o nome por extenso.
+    logotipo: Path | None = None
 
     # --- prosa -----------------------------------------------------------
 
@@ -313,6 +321,8 @@ class Regiao:
                     f"{onde[chave]!r}."
                 )
 
+        cor, logotipo = _marca(pasta, d)
+
         inclui = d.get("inclui") or {}
 
         def incluido(chave: str, omissao: str) -> dict[str, Any]:
@@ -380,6 +390,8 @@ class Regiao:
             limites=dict(df.get("limites") or {}),
             motor=dict(df.get("motor") or {}),
             mapa=dict(df.get("mapa") or {}),
+            cor=cor,
+            logotipo=logotipo,
             raiz=pasta,
         )
         regiao._verificar()
@@ -420,6 +432,35 @@ class Regiao:
                 "na lista de modos da região. Um modo que se constrói e não se declara desenha "
                 "uma secção que o produto diz não ter."
             )
+
+
+def _marca(pasta: Path, d: dict[str, Any]) -> tuple[str | None, Path | None]:
+    """A cor e o logótipo que a região declara — validados, ou a recusa (`marca.py`).
+
+    Os dois são opcionais. O que não pode passar é uma `cor:` VAZIA: é o que o
+    YAML faz a `cor: #5fc2b7` sem aspas — o «#» abre um comentário —, e a
+    região ficava com a cor do produto sem ninguém dar por isso.
+    """
+    if "cor" in d and d["cor"] in (None, ""):
+        raise ErroDeRegiao(
+            f"{pasta.name}: `cor:` está vazia. Se lá escreveste a cor sem aspas, o YAML leu o «#» "
+            'como um comentário: escreve-a entre aspas, `cor: "#rrggbb"`.'
+        )
+    try:
+        cor = validar_cor(d["cor"], f"{pasta.name}: `cor`") if d.get("cor") else None
+        logotipo = None
+        if d.get("logotipo"):
+            caminho = (pasta / str(d["logotipo"])).resolve()
+            # O ficheiro é DA REGIÃO: fica na pasta dela, e não noutro sítio do disco.
+            if pasta.resolve() not in caminho.parents:
+                raise MarcaInvalida(
+                    f"{pasta.name}: o logótipo tem de estar na pasta da região, ao lado do "
+                    f"`regiao.yaml`, e aponta para {d['logotipo']!r}."
+                )
+            logotipo = validar_logotipo(caminho, f"{pasta.name}: `logotipo`")
+    except MarcaInvalida as e:
+        raise ErroDeRegiao(str(e)) from None
+    return cor, logotipo
 
 
 def _ler_yaml(caminho: Path) -> dict[str, Any]:
