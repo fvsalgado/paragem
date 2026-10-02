@@ -1,6 +1,16 @@
 import { test, expect } from '@playwright/test';
 
-import { buscaDeUmaParagem, paragens, sitios, temMosaicos, SEM } from './dados-da-regiao';
+import {
+  buscaDeUmaParagem,
+  concelhos,
+  linhaComMaisViagens,
+  linhas,
+  paragens,
+  pontosDaProcura,
+  sitios,
+  temMosaicos,
+  SEM,
+} from './dados-da-regiao';
 
 /**
  * A procura de SÍTIOS — o que se escreve quando não se procura uma paragem.
@@ -95,15 +105,27 @@ test('cada resultado diz o que é, por baixo do nome', async ({ page }) => {
   ).toBeGreaterThan(0);
 });
 
-test('as paragens vêm antes dos sítios', async ({ page }) => {
+test('as paragens vêm antes dos sítios — salvo a terra com o nome exato', async ({ page }) => {
   // Quem escreve numa aplicação de transportes e escolhe uma terra quer ir
   // para lá, não para a pastelaria com o mesmo nome. O sítio continua na lista.
+  //
+  // A EXCEÇÃO É A TERRA (P2-008): quem escreve o nome de uma vila, tal e
+  // qual, quer a vila — e ela não aparecia entre as doze primeiras. Vem à
+  // cabeça; a seguir, as paragens antes dos outros sítios.
   test.skip(!CRUZADA, SEM.sitios);
   await page.goto(`/`);
-  await page.getByRole('combobox').fill(CRUZADA!);
+  const caixa = page.getByRole('combobox', { name: 'Procurar' });
+  // A ORDEM SÓ SE DECIDE COM OS SÍTIOS, que chegam à primeira tecla. O «nada»
+  // só se diz depois de eles chegarem — e é o sinal de que chegaram.
+  await caixa.fill('xqzwv');
+  await expect(page.getByText(/^Nada com «xqzwv»/)).toBeVisible({ timeout: 15_000 });
+  await caixa.fill(CRUZADA!);
   const opcoes = page.getByRole('option');
   await expect.poll(() => opcoes.count(), { timeout: 15_000 }).toBeGreaterThan(1);
-  await expect(opcoes.first()).toContainText(/paragem|comboio/);
+  const textos = await opcoes.allInnerTexts();
+  const exato = (t: string) => simples(t.split(/\s*·\s*/)[0].trim()) === simples(CRUZADA!);
+  const resto = textos.filter((t) => !exato(t));
+  expect(resto[0], `a ordem foi:\n  ${textos.join('\n  ')}`).toMatch(/paragem|comboio/);
 });
 
 test('nenhum resultado mostra uma etiqueta em inglês', async ({ page }) => {
@@ -138,4 +160,101 @@ test('escolher um ponto leva o mapa até lá', async ({ page }) => {
 
   // O cartão abre com o nome, que é o sinal visível de que a escolha pegou.
   await expect(page.locator('section.cartao-de-baixo')).toContainText(PARAGEM);
+});
+
+/** Sem acentos e em minúsculas — como a procura compara. */
+const simples = (s: string) =>
+  s
+    .normalize('NFD')
+    .replace(/\p{Mn}/gu, '')
+    .toLowerCase();
+
+/**
+ * Uma palavra de uma paragem com UMA LETRA A MENOS, e que não esteja dentro de
+ * nome nenhum que a procura conheça — senão a procura exata acha-a, e o que se
+ * mede deixa de ser a tolerância.
+ */
+const COM_ERRO = (() => {
+  const conhecidos = [
+    ...pontosDaProcura().map((p) => p.nome),
+    ...SITIOS.map((s) => s.nome),
+    ...linhas().map((l) => `${l.codigo} ${l.nome}`),
+  ].map(simples);
+  for (const p of [...paragens()].sort((a, b) => a.id.localeCompare(b.id))) {
+    for (const w of palavras(p.nome).map(simples)) {
+      if (w.length < 6) continue;
+      const erro = w.slice(0, 2) + w.slice(3);
+      if (!conhecidos.some((n) => n.includes(erro))) return { palavra: w, erro };
+    }
+  }
+  return null;
+})();
+
+test('uma letra a menos ainda encontra, e diz que é parecido', async ({ page }) => {
+  // «Corvalnho» não devolvia nada, e a lista nem abria (P2-006): quem escreve
+  // com o polegar concluía que o sítio não existia.
+  test.skip(!COM_ERRO, 'a região não tem um nome com que se faça o erro');
+  await page.goto(`/`);
+  await page.getByRole('combobox', { name: 'Procurar' }).fill(COM_ERRO!.erro);
+  await expect(page.getByText(`Nomes parecidos com «${COM_ERRO!.erro}»:`)).toBeVisible({
+    timeout: 15_000,
+  });
+  const primeira = await page.getByRole('option').first().innerText();
+  expect(simples(primeira)).toContain(COM_ERRO!.palavra);
+});
+
+test('nada encontrado diz-se à vista, e diz o que a procura conhece', async ({ page }) => {
+  // A lista simplesmente não abria (P2-006) — nem «sem resultados», nem a
+  // explicação de que a procura só conhece o que é desta região.
+  await page.goto(`/`);
+  await page.getByRole('combobox', { name: 'Procurar' }).fill('xqzwv');
+  const nada = page.getByText(/^Nada com «xqzwv» aqui\. A procura conhece as paragens/);
+  await expect(nada).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('option')).toHaveCount(0);
+});
+
+test('a procura do mapa encontra uma linha pelo número, e abre o horário dela', async ({
+  page,
+}) => {
+  // Quem conhece o número da carreira escreve o número: a caixa só conhecia
+  // paragens e sítios, e «11» não dava nada (P2-019).
+  test.skip(!temMosaicos(), SEM.mosaicos);
+  const l = linhaComMaisViagens();
+  await page.goto(`/`);
+  await page.getByRole('combobox', { name: 'Procurar' }).fill(l.codigo);
+  const opcao = page.getByRole('option').filter({ hasText: '· linha' }).first();
+  await expect(opcao).toBeVisible({ timeout: 15_000 });
+  await expect(opcao).toContainText(l.nome);
+  await opcao.click();
+  await expect(page).toHaveURL(
+    new RegExp(`/rede/linhas/${l.id.replace(/[^a-zA-Z0-9\-_]/g, '-')}/$`),
+  );
+});
+
+test('dois sítios com o mesmo nome dizem de que concelho são', async ({ page }) => {
+  // O mesmo «<nome> · lugar», duas vezes, a 37 km uma da outra (P2-037): não havia
+  // como saber qual era qual. O caso não existe em todas as regiões, e por
+  // isso PÕE-SE: o índice dos sítios que o navegador recebe ganha dois homónimos,
+  // em dois concelhos da região — o que se mede é a página, não os dados.
+  const [a, b] = concelhos();
+  test.skip(!a || !b, 'a região tem um concelho só');
+  const nome = 'Lugar Homónimo de Ensaio';
+  await page.route('**/sitios.json', (r) =>
+    r.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        campos: ['nome', 'lat', 'lon', 'tipo', 'classe', 'concelho'],
+        sitios: [
+          [nome, 0, 0, 'Lugar', 'place=hamlet', a.id],
+          [nome, 0.5, 0.5, 'Lugar', 'place=hamlet', b.id],
+        ],
+      }),
+    }),
+  );
+  await page.goto(`/`);
+  await page.getByRole('combobox', { name: 'Procurar' }).fill('Homónimo de Ensaio');
+  const opcoes = page.getByRole('option');
+  await expect(opcoes).toHaveCount(2, { timeout: 15_000 });
+  await expect(opcoes.nth(0)).toContainText(`· ${a.nome}`);
+  await expect(opcoes.nth(1)).toContainText(`· ${b.nome}`);
 });

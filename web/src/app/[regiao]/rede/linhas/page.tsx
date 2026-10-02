@@ -1,8 +1,7 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import { exigirModo, linhas, operadorCurto, urlRede, regiao } from '@/lib/dados';
 import { plural, maiuscula } from '@/lib/prosa';
-import Distintivo from '@/componentes/Distintivo';
+import FiltroDasLinhas from '@/componentes/FiltroDasLinhas';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
 export async function generateMetadata({
@@ -43,21 +42,18 @@ export default async function Linhas({ params }: { params: Promise<{ regiao: str
     <>
       <h1>Linhas</h1>
       <p>{plural(ls.length, 'linha', 'linhas')}.</p>
-      <ul className="lista">
-        {ls.map((l) => (
-          <li key={l.id}>
-            <Link href={urlRede(rid, `linhas/${l.id}/`)}>
-              <span>
-                <Distintivo codigo={l.codigo} cor={l.cor} /> {l.nome}
-                {(quantas.get(l.codigo) ?? 0) > 1 && l.operador && (
-                  <span className="secundario"> · {operadorCurto(l.operador)}</span>
-                )}
-              </span>
-              <span className="secundario">{plural(l.viagens, 'viagem', 'viagens')}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <FiltroDasLinhas
+        linhas={ls.map((l) => ({
+          id: l.id,
+          href: urlRede(rid, `linhas/${l.id}/`),
+          codigo: l.codigo,
+          nome: l.nome,
+          cor: l.cor ?? null,
+          operador:
+            (quantas.get(l.codigo) ?? 0) > 1 && l.operador ? operadorCurto(l.operador) : null,
+          viagens: l.viagens,
+        }))}
+      />
     </>
   );
 }
