@@ -160,3 +160,61 @@ def test_a_caop_responde_pelos_treze_concelhos(raiz):
     assert t.concelho_de(39.8064, -8.0972).nome == "Sertã"
     assert t.concelho_de(39.7436, -8.8070) is None, "Leiria não é da região"
     assert t.concelho_de(39.2362, -8.6860) is None, "Santarém não é da região"
+
+
+# --- os limites num GeoJSON ----------------------------------------------------
+
+
+def test_os_limites_tambem_se_leem_de_um_geojson(tmp_path):
+    """Uma região sem carta oficial declara os concelhos num GeoJSON em graus.
+
+    O ficheiro pode trazer mais coisas — a geografia de um mapa traz a água e
+    as estradas —, e só contam as feições da camada pedida, pelo código.
+    """
+    import json
+
+    from paragem.territorio import ler_limites_geojson
+
+    def concelho(dico, nome, x0, x1):
+        return {
+            "type": "Feature",
+            "properties": {"camada": "concelho", "dico": dico, "nome": nome},
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[x0, 0.0], [x1, 0.0], [x1, 1.0], [x0, 1.0], [x0, 0.0]]],
+            },
+        }
+
+    estrada = {
+        "type": "Feature",
+        "properties": {"camada": "transportation", "dico": "0001"},
+        "geometry": {"type": "LineString", "coordinates": [[0.0, 0.0], [2.0, 1.0]]},
+    }
+    caminho = tmp_path / "geografia.geojson"
+    caminho.write_text(
+        json.dumps(
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    concelho("0001", "Poente", 0.0, 1.0),
+                    concelho("0002", "Nascente", 1.0, 2.0),
+                    concelho("0003", "De fora", 2.0, 3.0),
+                    estrada,
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    t = ler_limites_geojson(caminho, ["0001", "0002"])
+    assert t.codigos == {"0001", "0002"}
+    assert t.concelho_de(lat=0.5, lon=1.5).nome == "Nascente"
+    assert t.concelho_de(lat=0.5, lon=2.5) is None
+
+
+def test_um_geojson_ilegivel_da_erro_de_territorio(tmp_path):
+    from paragem.territorio import ler_limites_geojson
+
+    caminho = tmp_path / "estragado.geojson"
+    caminho.write_text("{ não é json", encoding="utf-8")
+    with pytest.raises(ErroDeTerritorio):
+        ler_limites_geojson(caminho, ["0001"])
