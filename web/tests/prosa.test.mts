@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 
 import {
   aAutoridade,
+  aRede,
   linhasNumaFrase,
   lista,
   nomeDaRede,
@@ -52,6 +53,14 @@ test('a rede não se chama «Rede Rede Alta»', () => {
   assert.equal(nomeDaRede({ rede: { nome: 'Sável Bus' } }), 'Rede Sável Bus');
   assert.equal(nomeDaRede({ rede: { nome: 'Rede Alta' } }), 'Rede Alta');
   assert.equal(nomeDaRede({ rede: {} }), 'A rede');
+});
+
+test('a rede como complemento: «a rede Sável Bus», «a Rede Alta»', () => {
+  // «O Município de Sável gere a rede Sável Bus» — e não «gere Rede Sável
+  // Bus», nem «a rede Rede Alta».
+  assert.equal(aRede({ rede: { nome: 'Sável Bus' } }), 'a rede Sável Bus');
+  assert.equal(aRede({ rede: { nome: 'Rede Alta' } }), 'a Rede Alta');
+  assert.equal(aRede({ rede: {} }), 'a rede');
 });
 
 test('com os artigos declarados, a frase do rodapé sai com as contrações certas', () => {

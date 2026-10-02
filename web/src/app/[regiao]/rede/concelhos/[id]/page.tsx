@@ -116,10 +116,15 @@ export default async function Concelho({
   const outros = Object.entries(await lerModos(rid)).map(([m, d]) => ({
     modo: m,
     nome: NOME_DOS_MODOS[m] ?? m,
+    // AS LINHAS CONTAM TAMBÉM: um urbano municipal é um traçado ou um
+    // horário, e não um ponto — e a página dizia «sem registo neste concelho»
+    // do urbano que corre de ponta a ponta da vila.
     quantos:
       d.sistemas.reduce((n, s) => n + s.estacoes.filter((e) => e.concelho === c.id).length, 0) +
       d.pontos.filter((x) => x.concelho === c.id).length +
-      d.paragens.filter((x) => x.concelho === c.id).length,
+      d.paragens.filter((x) => x.concelho === c.id).length +
+      d.percursos.filter((x) => (x.concelhos ?? []).includes(c.id)).length +
+      (d.horarios ?? []).filter((x) => x.concelho === c.id).length,
     incompleto: d.incompleto,
   }));
   const presentes = outros.filter((o) => o.quantos > 0).sort((a, b) => b.quantos - a.quantos);

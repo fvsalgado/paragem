@@ -103,6 +103,12 @@ export type Regiao = {
   modos_de_terceiros?: string[];
   municipios_membros: number;
   concelhos_servidos: number;
+  /**
+   * Se o concelho de cada ponto saiu da carta administrativa. Sem ela, um
+   * ponto sem concelho não está «fora da região» — está por atribuir, e a
+   * página tem de dizer qual das duas é. Ausente em dados de antes disto.
+   */
+  concelhos_pela_carta?: boolean;
   caixa: { lat_min: number; lat_max: number; lon_min: number; lon_max: number };
 };
 
@@ -532,6 +538,12 @@ export type PercursoDeModo = {
   operador: string | null;
   rede: string | null;
   cor: string | null;
+  /**
+   * Os concelhos por onde o traçado passa. É o que deixa a página de um
+   * concelho contar o urbano que lá corre; opcional porque dados construídos
+   * antes disto não o trazem.
+   */
+  concelhos?: string[];
 };
 
 /** Uma paragem de um serviço de terceiro — um expresso, por exemplo. */
@@ -629,6 +641,8 @@ export type HorarioDeModo = {
   coordenadas?: Record<string, { lat: number; lon: number; fonte: string }>;
   /** As que ficaram só com hora. A página nomeia-as — é o pedido concreto. */
   sem_coordenada?: string[];
+  /** O concelho que a receita declara para esta linha, quando declara. */
+  concelho?: string | null;
 };
 
 export type ModoDetalhe = {

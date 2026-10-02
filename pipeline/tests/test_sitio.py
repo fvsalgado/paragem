@@ -810,3 +810,36 @@ def test_a_estacao_tem_as_partidas_de_comboio_da_grelha_do_planeador():
         ("24:15", "R", "Estação Dois", "comboio:S1"),
     ]
     assert "E2" not in p, "de onde a viagem acaba não se parte"
+
+
+def test_sem_carta_os_pontos_dos_modos_ficam_no_concelho_da_vila(raiz, tmp_path):
+    """A demonstração não pode negar o que o mapa mostra a dois passos (P2-032).
+
+    A Serra da Pedra Alta não tem carta administrativa — é inventada, e uma
+    carta inventada não provava nada. As paragens tinham concelho (pelo
+    prefixo), e o resto não: as três estações de bicicletas saíam «Fora da
+    região», incluindo a que está ao lado do terminal, e a página de Pedra
+    Alta dizia «nenhum aqui» das bicicletas, dos táxis e do urbano que lá
+    estão. Sem carta, o concelho é o da paragem da rede mais perto.
+    """
+    from paragem.sitio import construir
+
+    construida = raiz / "build" / "prova"
+    if not (construida / "gtfs" / "rede-alta.zip").exists():
+        pytest.skip("sem build/prova — corre `uv run pipeline build --regiao prova`")
+    for pasta in ("gtfs", "gbfs", "geojson"):
+        shutil.copytree(construida / pasta, tmp_path / pasta)
+    construir(raiz, regiao_ou_salta("prova"), tmp_path)
+
+    sitio = tmp_path / "sitio"
+    regiao = json.loads((sitio / "regiao.json").read_text(encoding="utf-8"))
+    assert regiao["concelhos_pela_carta"] is False, "a página tem de saber que não há carta"
+
+    modos = json.loads((sitio / "modos.json").read_text(encoding="utf-8"))
+    estacoes = {
+        e["nome"]: e["concelho"] for s in modos["bicicleta"]["sistemas"] for e in s["estacoes"]
+    }
+    assert estacoes["AltaBike — Terminal"] == "pedra-alta"
+    assert all(estacoes.values()), f"estações sem concelho: {estacoes}"
+    assert all(p["concelho"] for p in modos["taxi"]["pontos"])
+    assert modos["urbano-municipal"]["percursos"][0]["concelhos"] == ["pedra-alta"]
