@@ -269,3 +269,45 @@ export function Hamburguer(p: Props) {
     </Svg>
   );
 }
+
+/** Um bilhete, com o picotado: o tarifário. */
+export function Bilhete(p: Props) {
+  return (
+    <Svg {...p}>
+      <path d="M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4z" />
+      <path d="M15 7v2M15 11v2M15 15v2" />
+    </Svg>
+  );
+}
+
+/** Um triângulo de aviso: alterações ao serviço. */
+export function Aviso(p: Props) {
+  return (
+    <Svg {...p}>
+      <path d="M12 3.5 2.5 20h19z" />
+      <path d="M12 10v4.5" />
+      <circle cx="12" cy="17.3" r="0.9" fill="currentColor" stroke="none" />
+    </Svg>
+  );
+}
+
+/** Uma seta para dentro de um tabuleiro: os ficheiros que se levam. */
+export function Descarregar(p: Props) {
+  return (
+    <Svg {...p}>
+      <path d="M12 3.5v11M7.5 10 12 14.5 16.5 10" />
+      <path d="M4 15.5V19a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 19v-3.5" />
+    </Svg>
+  );
+}
+
+/** Uma pessoa de braços abertos, num círculo: o símbolo da acessibilidade. */
+export function Acessibilidade(p: Props) {
+  return (
+    <Svg {...p}>
+      <circle cx="12" cy="12" r="9.5" />
+      <circle cx="12" cy="7.2" r="1.1" fill="currentColor" stroke="none" />
+      <path d="M7.5 9.8 12 10.6l4.5-.8M12 10.6v3.4M9.6 17.6 12 14l2.4 3.6" />
+    </Svg>
+  );
+}

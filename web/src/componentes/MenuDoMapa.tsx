@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import Link from '@/componentes/Ligacao';
-import { Fechar } from './Icones';
+import { Acessibilidade, APedido, Aviso, Bilhete, Descarregar, Fechar, Lista } from './Icones';
 import AssinaturaDaRegiao from './AssinaturaDaRegiao';
 import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
 import type { Marca } from '@/lib/marca';
@@ -64,19 +64,21 @@ export default function MenuDoMapa({
 
   // A região é o anfitrião: as ligações são relativas à raiz.
   const url = (caminho: string) => `/${caminho}`;
-  const entradas: [string, string, string][] = [
-    ['rede/', 'A rede', 'Linhas, paragens, estações e concelhos'],
+  // UM PICTOGRAMA POR ENTRADA (P1-048), do mesmo desenho dos modos — traço
+  // de 2 px —, para se reconhecer de relance numa gaveta de navegação. É
+  // ajuda para quem vê: o nome está sempre escrito, e o ícone é `aria-hidden`.
+  type Entrada = [string, string, string, typeof Lista];
+  const entradas: Entrada[] = [
+    ['rede/', 'A rede', 'Linhas, paragens, estações e concelhos', Lista],
     ...(temAPedido
-      ? ([['a-pedido/', 'Transporte a pedido', 'Como se reserva, e as zonas']] as [
-          string,
-          string,
-          string,
-        ][])
+      ? ([
+          ['a-pedido/', 'Transporte a pedido', 'Como se reserva, e as zonas', APedido],
+        ] as Entrada[])
       : []),
-    ['rede/tarifario/', 'Tarifário', 'Bilhetes e passes'],
-    ['avisos/', 'Avisos', 'Alterações ao serviço'],
-    ['dados-abertos/', 'Dados abertos', 'Descargas, licenças e lacunas'],
-    ['acessibilidade/', 'Acessibilidade', 'A declaração, e o que falta'],
+    ['rede/tarifario/', 'Tarifário', 'Bilhetes e passes', Bilhete],
+    ['avisos/', 'Avisos', 'Alterações ao serviço', Aviso],
+    ['dados-abertos/', 'Dados abertos', 'Descargas, licenças e lacunas', Descarregar],
+    ['acessibilidade/', 'Acessibilidade', 'A declaração, e o que falta', Acessibilidade],
   ];
 
   return (
@@ -97,9 +99,10 @@ export default function MenuDoMapa({
       </div>
       <nav>
         <ul className="lista">
-          {entradas.map(([caminho, nome, nota]) => (
+          {entradas.map(([caminho, nome, nota, Icone]) => (
             <li key={caminho}>
               <Link href={url(caminho)} onClick={aoFechar}>
+                <Icone tamanho={22} className="menu-icone" />
                 <span>
                   {nome}
                   <span className="secundario menu-nota">{nota}</span>
