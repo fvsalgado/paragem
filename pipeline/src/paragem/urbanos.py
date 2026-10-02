@@ -237,9 +237,17 @@ def localizar(caminho: Path, indice: Indice) -> dict[str, Any]:
     d = json.loads(caminho.read_text(encoding="utf-8"))
     nomes = nomes_de(d)
 
+    # A COORDENADA QUE A FONTE DÁ GANHA A QUALQUER PROCURA. Um cartaz nunca a
+    # dá, e por isso se procura; uma tabela entregue por quem gere a linha
+    # pode dá-la (`horarios-tabela`), e quem sabe onde fica o poste é ela. Era
+    # deitada fora aqui, e duas paragens com sítio declarado ficavam «sem
+    # coordenada» por não haver outra paragem com o mesmo nome por perto.
+    dadas = d.get("coordenadas") or {}
     coordenadas = {}
     for n in nomes:
-        if ponto := resolver(n, indice):
+        if n in dadas:
+            coordenadas[n] = dadas[n]
+        elif ponto := resolver(n, indice):
             coordenadas[n] = ponto
     d["coordenadas"] = coordenadas
     d["sem_coordenada"] = [n for n in nomes if n not in coordenadas]
