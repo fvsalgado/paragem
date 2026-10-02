@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import EscolherPonto from '@/componentes/EscolherPonto';
 import type { Ponto } from '@/lib/formato';
+import { comoProcura, escreverViagem } from '@/lib/endereco-da-viagem';
 
 /** O endereço tem de ser um caminho do sítio: os identificadores trazem vírgulas e pontos. */
 const seguro = (s: string) => s.replace(/[^a-zA-Z0-9\-_]/g, '-');
@@ -18,7 +19,10 @@ const seguro = (s: string) => s.replace(/[^a-zA-Z0-9\-_]/g, '-');
 function destinoDe(p: Ponto): string {
   if (p.tipo === 'paragem') return `/rede/paragens/${seguro(p.id)}/`;
   if (p.tipo === 'estacao') return `/rede/estacoes/${seguro(p.id)}/`;
-  if (p.tipo === 'sitio') return `/viagem/?${new URLSearchParams({ para: p.nome }).toString()}`;
+  // PELAS COORDENADAS, com o nome para mostrar: um sítio não está no índice
+  // das paragens, e o endereço com o nome dele abria as direções com o
+  // destino em branco (`lib/endereco-da-viagem.ts`).
+  if (p.tipo === 'sitio') return `/viagem/${comoProcura(escreverViagem({ de: null, para: p }))}`;
   return `/modos/${seguro(p.tipo)}/`;
 }
 
@@ -38,6 +42,7 @@ export default function ProcurarNaRegiao({ regiao, pontos }: { regiao: string; p
       pontos={pontos}
       valor={null}
       regiao={regiao}
+      linhas
       aoEscolher={(p) => p && router.push(destinoDe(p))}
     />
   );

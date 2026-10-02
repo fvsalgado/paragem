@@ -948,6 +948,18 @@ details.paragens-do-concelho > summary {
 .procurar-terra .sem-resposta {
   margin: 0.75rem 0 0;
 }
+
+/* O filtro das linhas (P2-019): o campo, à largura da lista, e a frase do
+   «nenhuma» logo por baixo — à vista só quando não sobra nenhuma. */
+.filtro-das-linhas {
+  margin: 0 0 0.75rem;
+}
+.filtro-das-linhas input {
+  width: 100%;
+}
+.filtro-das-linhas p {
+  margin: 0.5rem 0 0;
+}
 ul.terras-encontradas {
   list-style: none;
   margin: 0.75rem 0 0;
@@ -1850,11 +1862,16 @@ button.resumo-opcao:hover {
   max-height: 18rem;
   overflow-y: auto;
 }
+/* Texto CORRIDO, e não uma fila `flex`: o número da linha, o nome e o tipo
+   seguem uns atrás dos outros e partem onde a largura acabar. Em `flex` eram
+   três peças — o tipo fazia uma segunda coluna apertada ao lado de um nome
+   comprido, o nome de uma linha caía inteiro para baixo do número, e o
+   espaço entre o nome e o tipo perdia-se na ponta. */
 .sugestoes li {
-  display: flex;
-  align-items: center;
+  display: block;
   min-height: var(--alvo);
-  padding: 0.5rem 0.7rem;
+  padding: 0.6rem 0.7rem;
+  line-height: 1.5;
   cursor: pointer;
   border-bottom: 1px solid var(--linhas);
 }
@@ -3408,6 +3425,59 @@ ol.percurso li.modo-expresso .fio {
    cores dele — castanho sobre o azul do botão não se lia. */
 .propostas-a-pedido a:not(.botao) {
   color: #5c3700;
+}
+
+/* --- a procura: o «nada» à vista, e os parecidos ------------------------- */
+
+.sem-resultados {
+  margin: 0.35rem 0 0;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  background: #fff;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+.sugestoes-nota {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+}
+
+/* NA CÁPSULA DO MAPA, O QUE SE ABRE DESCE POR BAIXO DELA, e não a estica: com
+   o raio de uma pílula, uma cápsula esticada à altura da lista passava a ser
+   uma elipse do tamanho do ecrã, com o contorno do foco à volta. */
+.app-procura .escolher {
+  position: static;
+}
+.app-procura .sugestoes-caixa {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  right: 0;
+}
+.app-procura .sugestoes,
+.app-procura .sugestoes-nota,
+.app-procura .sem-resultados {
+  box-shadow: 0 2px 10px rgb(16 44 63 / 18%);
+}
+.app-procura .sugestoes-nota {
+  display: inline-block;
+  margin: 0;
+  padding: 0.3rem 0.7rem;
+  background: #fff;
+  border: 1px solid var(--linhas);
+  border-radius: 999px;
+}
+.app-procura .sem-resultados {
+  margin: 0;
+}
+.app-procura .sugestoes {
+  max-height: min(18rem, 55dvh);
+}
+/* A ESCREVER, A PROCURA PASSA À FRENTE DAS FOLHAS (6): a lista desce até
+   onde a folha de baixo começa, e o fim dela ficava por trás. */
+.app-procura:focus-within {
+  z-index: 7;
 }
 
 /* Um endereço de correio não se parte sozinho, e com a letra grande empurrava

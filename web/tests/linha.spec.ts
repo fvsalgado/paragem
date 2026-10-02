@@ -8,7 +8,7 @@
  */
 import { test, expect } from '@playwright/test';
 
-import { fusoDaRegiao, linhaComMaisViagens } from './dados-da-regiao';
+import { fusoDaRegiao, linhaComMaisViagens, linhas } from './dados-da-regiao';
 
 const LINHA = linhaComMaisViagens();
 
@@ -49,4 +49,26 @@ test('o percurso liga a cada paragem, e as pontas destacam-se', async ({ page })
   await expect(percurso.locator('li.ultima')).toHaveCount(1);
   const href = await paragens.first().getAttribute('href');
   expect(href).toMatch(/\/rede\/paragens\//);
+});
+
+test('a lista das linhas filtra-se pelo número, e diz quando não sobra nenhuma', async ({
+  page,
+}) => {
+  // Cento e tal linhas numa coluna, sem maneira de chegar à que se quer sem
+  // rolar até ela (P2-019). Uma lista que cabe num ecrã não tem filtro.
+  const todas = linhas();
+  test.skip(todas.length < 9, 'a região tem poucas linhas: a lista cabe num ecrã');
+  await page.goto('/rede/linhas/');
+  const filtro = page.getByLabel('Filtrar pelo número ou pelo nome');
+  const itens = page.locator('main ul.lista > li');
+  await expect(itens).toHaveCount(todas.length);
+
+  await filtro.fill(LINHA.codigo);
+  // O número exato primeiro: quem escreve «1» quer a 1, e não a 11.
+  await expect(itens.first()).toContainText(LINHA.nome);
+  expect(await itens.count()).toBeLessThan(todas.length);
+
+  await filtro.fill('xqzwv');
+  await expect(itens).toHaveCount(0);
+  await expect(page.getByText(/^Nenhuma linha com «xqzwv»/)).toBeVisible();
 });
