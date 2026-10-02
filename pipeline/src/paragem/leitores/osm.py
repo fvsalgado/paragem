@@ -10,6 +10,13 @@ contribuidores do OpenStreetMap» embutido no próprio ficheiro. Não é uma not
 de rodapé que alguém se lembra de pôr na página — vai no JSON e no GeoJSON,
 onde não se perde.
 
+**E é a da fonte que o produziu, e não a do formato** (`termos_embutidos`).
+As regiões inventadas também têm extratos com a forma do OpenStreetMap, para
+estes leitores correrem contra eles — sem um único objeto do verdadeiro. Um
+ficheiro desses a dizer «© contribuidores do OpenStreetMap, ODbL» atribuía a
+quem não o fez, sob uma licença que não é a dele, ao lado de uma página de
+dados abertos que dizia outra coisa.
+
 **A armadilha do `network`.** No Médio Tejo, `network=TUT` é dos urbanos de
 Torres Novas E dos urbanos de Torres Vedras, que ficam a 130 km. Filtrar por
 rede traz autocarros de outra terra para dentro da região, e ninguém dá por
@@ -35,6 +42,34 @@ from .base import Contexto, Resultado, verificar_esperado
 
 ATRIBUICAO = "© contribuidores do OpenStreetMap"
 LICENCA_URL = "https://opendatacommons.org/licenses/odbl/1-0/"
+
+#: Onde se lê cada licença do registo de fontes, pelo identificador SPDX. Um
+#: GBFS quer um endereço no `license_url`, e não um nome.
+ENDERECO_DA_LICENCA = {
+    "ODBL-1.0": LICENCA_URL,
+    "AGPL-3.0-ONLY": "https://spdx.org/licenses/AGPL-3.0-only.html",
+}
+
+
+def termos_embutidos(ctx: Contexto, saida: Saida) -> tuple[str, str | None]:
+    """A atribuição e a licença que vão DENTRO do ficheiro: as da fonte que o produziu.
+
+    Pela mesma ordem com que a página de dados abertos rotula a descarga
+    (`sitio._termos`): a licença da SAÍDA, quando a receita a declara, e só
+    então a da fonte — para o ficheiro e a página nunca dizerem coisas
+    diferentes. Sob ODbL, o OpenStreetMap vai sempre, que é dele que vem a
+    licença. Fora dela, vale a atribuição que o registo declara para a fonte —
+    numa região inventada, a nossa —; sem nenhuma, o nome da fonte, que é o
+    que se sabe dela.
+    """
+    fonte = ctx.registo.obter(saida.fonte)
+    licenca = (saida.licenca or fonte.licenca or "").upper()
+    propria = fonte.atribuicao
+    if licenca.startswith("ODBL"):
+        if propria and "openstreetmap" in propria.lower():
+            return propria, LICENCA_URL
+        return (f"{ATRIBUICAO}; {propria}" if propria else ATRIBUICAO), LICENCA_URL
+    return propria or fonte.nome, ENDERECO_DA_LICENCA.get(licenca)
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +113,10 @@ def recorte(ctx: Contexto, saida: Saida) -> Resultado:
             "osm.recorte_caixa": caixa_txt,
         },
         saidas={saida.saida or "": str(destino.relative_to(ctx.raiz))},
-        notas=[f"Recorte com margem de {ctx.regiao.margem_recorte_graus}°. {ATRIBUICAO}."],
+        notas=[
+            f"Recorte com margem de {ctx.regiao.margem_recorte_graus}°. "
+            f"{termos_embutidos(ctx, saida)[0]}."
+        ],
     )
 
 
@@ -218,6 +256,7 @@ def bicicletas(ctx: Contexto, saida: Saida) -> Resultado:
     pasta.mkdir(parents=True, exist_ok=True)
     agora = int(datetime.now(UTC).timestamp())
     id_sistema = sistema.get("id", saida.saida or "sistema")
+    atribuicao, licenca = termos_embutidos(ctx, saida)
 
     estacoes = [
         {
@@ -244,8 +283,10 @@ def bicicletas(ctx: Contexto, saida: Saida) -> Resultado:
             "name": sistema.get("nome", id_sistema),
             "operator": sistema.get("operador"),
             "timezone": "Europe/Lisbon",
-            "license_url": LICENCA_URL,
-            "attribution_organization_name": ATRIBUICAO,
+            # Sem endereço conhecido para a licença, o campo não vai: o GBFS
+            # quer um URL, e um nome no lugar dele é um ficheiro inválido.
+            **({"license_url": licenca} if licenca else {}),
+            "attribution_organization_name": atribuicao,
         },
     }
     _escrever_json(pasta / "system_information.json", info)
@@ -290,7 +331,7 @@ def bicicletas(ctx: Contexto, saida: Saida) -> Resultado:
     return Resultado(
         contagens={f"gbfs.{id_sistema}.estacoes": len(estacoes)},
         saidas={saida.saida or "": str(pasta.relative_to(ctx.raiz))},
-        notas=[f"{ATRIBUICAO}. Sem station_status: a disponibilidade não é pública."],
+        notas=[f"{atribuicao}. Sem station_status: a disponibilidade não é pública."],
     )
 
 
@@ -306,6 +347,7 @@ def taxis(ctx: Contexto, saida: Saida) -> Resultado:
     nos = _nos_com(origem, dict(saida.params.get("filtro") or {"amenity": "taxi"}), ctx.dentro)
 
     destino = ctx.caminho_de_saida(saida)
+    atribuicao, licenca = termos_embutidos(ctx, saida)
     _escrever_geojson(
         destino,
         [
@@ -322,6 +364,8 @@ def taxis(ctx: Contexto, saida: Saida) -> Resultado:
             }
             for n in nos
         ],
+        atribuicao,
+        licenca,
     )
 
     verificar_esperado(ctx, saida, "taxis", len(nos), saida.params.get("esperado"))
@@ -342,7 +386,7 @@ def taxis(ctx: Contexto, saida: Saida) -> Resultado:
     return Resultado(
         contagens={"taxis.pracas": len(nos)},
         saidas={saida.saida or "": str(destino.relative_to(ctx.raiz))},
-        notas=[ATRIBUICAO],
+        notas=[atribuicao],
     )
 
 
@@ -433,7 +477,8 @@ def rotas(ctx: Contexto, saida: Saida) -> Resultado:
         )
 
     destino = ctx.caminho_de_saida(saida)
-    _escrever_geojson(destino, feicoes)
+    atribuicao, licenca = termos_embutidos(ctx, saida)
+    _escrever_geojson(destino, feicoes, atribuicao, licenca)
 
     verificar_esperado(ctx, saida, "rotas", len(feicoes), saida.params.get("esperado_linhas"))
 
@@ -454,7 +499,7 @@ def rotas(ctx: Contexto, saida: Saida) -> Resultado:
     return Resultado(
         contagens={f"rotas.{saida.saida}": len(feicoes)},
         saidas={saida.saida or "": str(destino.relative_to(ctx.raiz))},
-        notas=[ATRIBUICAO],
+        notas=[atribuicao],
     )
 
 
@@ -468,13 +513,16 @@ def _escrever_json(caminho: Path, dados: Any) -> None:
         f.write("\n")
 
 
-def _escrever_geojson(caminho: Path, feicoes: list[dict[str, Any]]) -> None:
+def _escrever_geojson(
+    caminho: Path, feicoes: list[dict[str, Any]], atribuicao: str, licenca: str | None
+) -> None:
+    """Um GeoJSON com a atribuição e a licença à frente, onde se veem sem descer."""
     _escrever_json(
         caminho,
         {
             "type": "FeatureCollection",
-            "attribution": ATRIBUICAO,
-            "license": LICENCA_URL,
+            "attribution": atribuicao,
+            **({"license": licenca} if licenca else {}),
             "features": feicoes,
         },
     )

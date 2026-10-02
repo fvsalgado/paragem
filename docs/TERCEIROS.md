@@ -62,6 +62,14 @@ página que ainda não existe: vai **embutida no próprio ficheiro** —
 GBFS. Um rodapé esquece-se numa refatoração; um campo do ficheiro viaja com o
 ficheiro.
 
+**A atribuição embutida é a da fonte que produziu o ficheiro**, e não a do
+formato. Os extratos inventados das regiões de prova e de demonstração
+(`prova-osm`, `demo-osm`) têm a forma do OpenStreetMap e nem um objeto dele: o
+que os leitores fazem a partir deles leva dentro a atribuição que o registo
+declara para a fonte — a nossa — e a licença dela, e a página de dados abertos
+diz o mesmo ao lado de cada ficheiro (`termos_embutidos`, em
+`leitores/osm.py`).
+
 ### A atribuição da Carta Administrativa
 
 A CAOP sai sob **CC BY 4.0** — permissiva, e com atribuição obrigatória. É dela

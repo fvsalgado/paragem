@@ -95,17 +95,56 @@ def test_o_gbfs_nao_promete_disponibilidade(raiz, tmp_path, monkeypatch):
     assert len(estacoes["data"]["stations"]) == 3, "a OutraBike não é da rede"
 
 
-def test_a_atribuicao_do_osm_vai_no_ficheiro(raiz, tmp_path, monkeypatch):
-    """Um rodapé esquece-se numa refatoração; um campo viaja com o ficheiro."""
-    c = _construir(raiz, tmp_path, monkeypatch)
+def _atribuicoes(c) -> list[tuple[str, str | None]]:
+    """A atribuição e a licença de cada ficheiro que os leitores `osm-*` escreveram."""
+    saida = []
     for f in ("geojson/taxis.geojson", "geojson/urbanos.geojson"):
         d = json.loads((c.destino / f).read_text(encoding="utf-8"))
-        assert "OpenStreetMap" in d["attribution"]
-        assert "opendatacommons.org" in d["license"]
+        saida.append((d["attribution"], d.get("license")))
     sistema = json.loads(
         (c.destino / "gbfs" / "altabike" / "system_information.json").read_text(encoding="utf-8")
-    )
-    assert "OpenStreetMap" in sistema["data"]["attribution_organization_name"]
+    )["data"]
+    saida.append((sistema["attribution_organization_name"], sistema.get("license_url")))
+    return saida
+
+
+def test_a_atribuicao_vai_no_ficheiro_e_e_a_da_fonte(raiz, tmp_path, monkeypatch):
+    """Um rodapé esquece-se numa refatoração; um campo viaja com o ficheiro.
+
+    E o campo diz a verdade sobre a fonte. O extrato da prova tem a forma do
+    OpenStreetMap e nem um objeto dele: os ficheiros diziam «© contribuidores
+    do OpenStreetMap», sob ODbL, ao lado de uma página de dados abertos que os
+    dava como obra da casa. Dizem agora o que o registo declara da fonte, com
+    a licença dela.
+    """
+    from paragem.fontes import Registo
+
+    c = _construir(raiz, tmp_path, monkeypatch)
+    fonte = Registo.carregar(tmp_path).obter("prova-osm")
+    assert fonte.atribuicao, "a fonte inventada declara a sua atribuição"
+    for atribuicao, licenca in _atribuicoes(c):
+        assert atribuicao == fonte.atribuicao
+        assert "OpenStreetMap" not in atribuicao
+        assert licenca and "AGPL-3.0-only" in licenca
+
+
+def test_sob_odbl_o_ficheiro_leva_o_openstreetmap(raiz, tmp_path, monkeypatch):
+    """O caminho de uma região a sério: a fonte é o OpenStreetMap, e a ODbL e a
+    atribuição dele vão dentro de cada ficheiro — sem a receita o pedir."""
+    import yaml
+
+    _copiar_repo(raiz, tmp_path)
+    fontes = tmp_path / "data" / "sources.yaml"
+    registo = yaml.safe_load(fontes.read_text(encoding="utf-8"))
+    for f in registo["fontes"]:
+        if f["id"] == "prova-osm":
+            f.update(licenca="ODbL-1.0", atribuicao="© contribuidores do OpenStreetMap")
+    fontes.write_text(yaml.safe_dump(registo, allow_unicode=True), encoding="utf-8")
+
+    c = construir(tmp_path, carregar(tmp_path, "prova"), descarregar=False)
+    for atribuicao, licenca in _atribuicoes(c):
+        assert "OpenStreetMap" in atribuicao
+        assert licenca and "opendatacommons.org" in licenca
 
 
 def test_o_filtro_de_rotas_e_pelo_operador(raiz, tmp_path, monkeypatch):

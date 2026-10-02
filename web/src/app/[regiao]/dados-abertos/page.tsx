@@ -82,10 +82,14 @@ function Ficheiro({ d, regiao }: { d: Descarga; regiao: string }) {
         {d.gerado_em ? ` · ${d.gerado_em}` : ''}
       </span>
       {d.descricao && <div className="secundario">{d.descricao}</div>}
+      {/* A ATRIBUIÇÃO QUE O FICHEIRO LEVA DENTRO, dita aqui também — e não só
+          a obrigatória. Numa região inventada, a página dizia «obra da casa» e
+          o ficheiro, lá dentro, «© contribuidores do OpenStreetMap»; os dois
+          dizem agora a da fonte de onde ele sai (P1-046, P2-026). */}
       <div className="secundario">
         {TERMOS[d.termos ?? 'consulta'] ?? 'termos por confirmar'} · origem: {d.fonte}
-        {d.atribuicao_obrigatoria && d.atribuicao
-          ? ` · atribuição obrigatória: ${d.atribuicao}`
+        {d.atribuicao
+          ? ` · ${d.atribuicao_obrigatoria ? 'atribuição obrigatória' : 'atribuição'}: ${d.atribuicao}`
           : ''}
       </div>
     </li>
@@ -161,6 +165,9 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
                     : ` Os outros ${daCasa.length} são `
                   : 'São '}
                 obra da casa, sob a licença do código — levam-se sem perguntar nada a ninguém.
+                {daCasa.some((d) => d.atribuicao)
+                  ? ' Os que trazem atribuição levam-na dentro: é a da fonte de onde saem, e está também ao lado de cada um.'
+                  : ''}
               </>
             ) : null}
           </p>
