@@ -163,21 +163,26 @@ jobs:
       - name: Dependências de sistema
         run: sudo apt-get update -qq && sudo apt-get install -y -qq osmium-tool
 
-      # AS DUAS regiões de prova são inventadas: constroem-se sem rede e sem
-      # pedir uma linha a ninguém. Uma prova que uma autoridade de transportes
-      # nova entra sem um commit de código; DUAS provam que o produto é
-      # multi-região — uma sozinha não tem com que se comparar.
+      # AS REGIÕES DESTA RAIZ SÃO INVENTADAS: constroem-se sem rede e sem
+      # pedir uma linha a ninguém. As duas de prova provam que uma autoridade
+      # de transportes nova entra sem um commit de código, e que o produto é
+      # multi-região — uma sozinha não tem com que se comparar. A de
+      # demonstração, com os sete modos e o mapa desenhado por nós, prova o
+      # mesmo contrato no caso mais exigente.
       #
-      # É de propósito que nenhuma delas é um cliente. O CI do produto tem de
-      # poder correr inteiro onde não há dados de ninguém (docs/RAIZES.md).
-      - name: Construir as regiões de prova
-        run: |
-          uv run pipeline build --regiao prova --sem-rede
-          uv run pipeline build --regiao prova-municipio --sem-rede
+      # Constroem-se TODAS, e nenhuma pelo nome: uma região nova entra no CI
+      # sem tocar neste ficheiro. É de propósito que nenhuma é um cliente — o
+      # CI do produto corre inteiro onde não há dados de ninguém
+      # (docs/RAIZES.md). A demonstração acrescenta uns dez segundos, quase
+      # todos do validador de GTFS.
+      - name: Construir as regiões desta raiz
+        run: uv run pipeline build --todas --sem-rede
 
-      # Zero fugas: nada de uma região dentro das saídas da outra.
+      # Zero fugas: nada de uma região dentro das saídas das outras — agora
+      # com as saídas construídas aqui mesmo, e com o calendário de cada feed
+      # próprio a ter pelo menos dois meses pela frente.
       - name: Verificar as regiões
-        run: uv run pipeline check-regioes --sem-construcao
+        run: uv run pipeline check-regioes
 
       - name: Guardar o relatório
         if: always()
