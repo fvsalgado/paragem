@@ -235,3 +235,54 @@ def ler_caop(
         limites.append(Limite(codigo=str(codigo), nome=str(nome), geometria=geometria))
 
     return Territorio(sorted(limites, key=lambda x: x.codigo))
+
+
+# ---------------------------------------------------------------------------
+# ler os limites de um GeoJSON
+# ---------------------------------------------------------------------------
+
+
+def ler_limites_geojson(
+    caminho: Path,
+    codigos: list[str],
+    *,
+    camada: str = "concelho",
+    campo_codigo: str = "dico",
+    campo_nome: str = "nome",
+) -> Territorio:
+    """Os limites dos concelhos com estes códigos, de um GeoJSON em graus.
+
+    A CAOP é a carta de Portugal, e uma região que não é de Portugal — ou que
+    não existe, como a de demonstração — não tem CAOP. Tem uma geografia
+    declarada noutro formato, e o GeoJSON é o mais simples de todos: os
+    polígonos já vêm em graus, e cada um diz de que concelho é.
+
+    O ficheiro pode trazer mais do que os concelhos — a geografia da
+    demonstração traz também a água, as estradas e os edifícios do mapa —, e
+    por isso se escolhem as feições pela propriedade `camada`. Pede-se pelo
+    CÓDIGO e não pelo nome, pela mesma razão da CAOP.
+    """
+    import json
+
+    from shapely.geometry import shape
+
+    try:
+        dados = json.loads(Path(caminho).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        raise ErroDeTerritorio(f"não se conseguiu ler {Path(caminho).name}: {e}") from e
+
+    pedidos = set(codigos)
+    limites: list[Limite] = []
+    for f in dados.get("features") or []:
+        props = f.get("properties") or {}
+        if camada and props.get("camada") != camada:
+            continue
+        codigo = str(props.get(campo_codigo, ""))
+        if codigo not in pedidos:
+            continue
+        limites.append(
+            Limite(
+                codigo=codigo, nome=str(props.get(campo_nome, "")), geometria=shape(f["geometry"])
+            )
+        )
+    return Territorio(sorted(limites, key=lambda x: x.codigo))

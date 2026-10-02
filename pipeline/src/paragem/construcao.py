@@ -26,7 +26,7 @@ from .leitores import ESPECIFICOS_DA_FONTE, GENERICOS, LEITORES_DE_HORARIO, obte
 from .leitores.base import Contexto
 from .regiao import Regiao, Saida
 from .relatorio import Relatorio
-from .territorio import Territorio, ler_caop
+from .territorio import Territorio, ler_caop, ler_limites_geojson
 
 
 @dataclass
@@ -191,14 +191,27 @@ def _limites(ctx: Contexto, registo: Registo) -> Territorio | None:
 
     try:
         caminho = registo.caminho(id_fonte, descarregar=ctx.descarregar)
-        territorio = ler_caop(
-            caminho,
-            dicos,
-            camada=decl.get("camada", "cont_municipios"),
-            campo_codigo=decl.get("campo_codigo", "dtmn"),
-            campo_nome=decl.get("campo_nome", "municipio"),
-            cache=ctx.raiz / ".cache" / f"{id_fonte}.gpkg",
-        )
+        # A CAOP é uma base de dados do GeoPackage, em metros; uma geografia
+        # declarada noutro formato — a de uma região sem carta oficial, como a
+        # de demonstração — é um GeoJSON em graus. Decide-o o FORMATO
+        # declarado da fonte, e não a extensão do ficheiro.
+        if registo.obter(id_fonte).formato == "geojson":
+            territorio = ler_limites_geojson(
+                caminho,
+                dicos,
+                camada=decl.get("camada", "concelho"),
+                campo_codigo=decl.get("campo_codigo", "dico"),
+                campo_nome=decl.get("campo_nome", "nome"),
+            )
+        else:
+            territorio = ler_caop(
+                caminho,
+                dicos,
+                camada=decl.get("camada", "cont_municipios"),
+                campo_codigo=decl.get("campo_codigo", "dtmn"),
+                campo_nome=decl.get("campo_nome", "municipio"),
+                cache=ctx.raiz / ".cache" / f"{id_fonte}.gpkg",
+            )
     except Exception as e:  # noqa: BLE001 — os limites são auxiliares; a região constrói na mesma
         # Qualquer razão é razão para voltar à caixa, e nenhuma é razão para a
         # construção inteira morrer: sem rede, sem a carta, com o ficheiro
