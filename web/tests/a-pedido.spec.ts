@@ -14,11 +14,13 @@
  */
 import { test, expect } from '@playwright/test';
 import { PROVA } from './anfitrioes';
-import { aPedido, SEM } from './dados-da-regiao';
+import { aPedido, ehDemonstracao, SEM } from './dados-da-regiao';
 
 const TAP = aPedido();
 const TELEFONE = TAP?.reservas.telefone ?? '';
 const APRESENTADO = TAP?.reservas.telefone_apresentado ?? '';
+/** Zonas que existem e ainda não têm circuito nenhum atribuído — é o que se conta. */
+const POR_LEVANTAR = (TAP?.zonas ?? []).filter((z) => z.circuitos.length === 0);
 /** Uma zona com circuitos, para a página do concelho dela. */
 const ZONA = TAP?.zonas.find((z) => z.circuitos.length > 0 && z.concelho) ?? null;
 /** Uma grelha de viagens e uma tabela de partidas: são coisas diferentes. */
@@ -38,15 +40,36 @@ test('a página diz como se reserva antes de dizer o que existe', async ({ page 
   const y = async (l: typeof reservar) => (await l.boundingBox())!.y;
   expect(await y(reservar), 'a regra de reserva vem antes das zonas').toBeLessThan(await y(zonas));
 
-  // O telefone é uma ligação `tel:`, não texto a fingir.
-  await expect(page.getByRole('link', { name: `Ligar ${APRESENTADO}` })).toHaveAttribute(
-    'href',
-    `tel:${TELEFONE}`,
+  // O telefone é uma ligação `tel:`, não texto a fingir — onde há telefone.
+  if (TELEFONE) {
+    await expect(page.getByRole('link', { name: `Ligar ${APRESENTADO}` })).toHaveAttribute(
+      'href',
+      `tel:${TELEFONE}`,
+    );
+  }
+});
+
+test('numa demonstração sem central de reservas, a página diz o que estaria lá', async ({
+  page,
+}) => {
+  test.skip(!TAP, SEM.aPedido);
+  test.skip(
+    !ehDemonstracao() || !!TELEFONE || !!TAP?.reservas.online,
+    'a região tem por onde reservar',
   );
+  // Um número inventado é o número de alguém, e uma ligação para uma página
+  // de reservas que não existe deixa a caixa a meio. Diz-se o que estaria lá.
+  await page.goto(`/a-pedido/`);
+  await expect(page.getByText(/Isto é uma demonstração: não há central/)).toBeVisible();
+  await expect(page.locator('a[href^="tel:"]')).toHaveCount(0);
 });
 
 test('não promete reserva online para o que não a tem', async ({ page }) => {
   test.skip(!TAP, SEM.aPedido);
+  test.skip(
+    !TAP?.reservas.com_reserva_online?.length,
+    'nesta região a reserva online, se houver, serve todos os circuitos',
+  );
   // Só quatro serviços a têm. Dizer que a têm todos manda alguém a um sítio
   // onde não encontra o que procura.
   await page.goto(`/a-pedido/`);
@@ -55,6 +78,7 @@ test('não promete reserva online para o que não a tem', async ({ page }) => {
 
 test('conta as zonas por levantar em vez de as esconder', async ({ page }) => {
   test.skip(!TAP, SEM.aPedido);
+  test.skip(!POR_LEVANTAR.length, 'nesta região todas as zonas têm os circuitos atribuídos');
   // Uma lista curta a fingir-se de completa é pior do que uma lista curta que
   // se declara incompleta.
   await page.goto(`/a-pedido/`);
@@ -87,6 +111,7 @@ test('o catálogo dos circuitos está lá, com os nomes todos', async ({ page })
 
 test('não inventa a que zona pertence cada circuito', async ({ page }) => {
   test.skip(!TAP, SEM.aPedido);
+  test.skip(!POR_LEVANTAR.length, 'nesta região todas as zonas têm os circuitos atribuídos');
   // A ligação zona→circuito não está na fonte: o formulário do sistema de
   // reservas liga-as quando alguém escolhe uma zona, e o instantâneo tem as
   // duas listas sem a ligação. A página tem de o DIZER — um circuito posto
@@ -112,6 +137,7 @@ test('cada concelho com zona leva o telefone na sua própria página', async ({ 
   // Obrigar quem está na página do concelho a seguir uma ligação antes de ver
   // o número é pôr um passo entre ele e a viagem.
   test.skip(!ZONA, 'nesta região nenhuma zona tem circuitos atribuídos');
+  test.skip(!TELEFONE, 'nesta região não há telefone de reservas');
   await page.goto(`/rede/concelhos/${ZONA!.concelho}/`);
   const seccao = page.locator('section[aria-labelledby="c-a-pedido"]');
   await expect(seccao).toBeVisible();
@@ -153,7 +179,8 @@ test('a grelha de um circuito abre e tem as horas', async ({ page }) => {
   await page.locator('section[aria-labelledby="horarios"]').getByRole('link').first().click();
   await expect(page).toHaveURL(/\/a-pedido\/[^/]+\/$/);
   await page.goto(`/a-pedido/${COM_VIAGENS!.id}/`);
-  const resumo = page.getByText(/viagens? — da .* às \d{2}:\d{2}/).first();
+  // A hora como a folha a escreve: «9:06» e «09:06» são a mesma.
+  const resumo = page.getByText(/viagens? — da .* às \d{1,2}:\d{2}/).first();
   await resumo.click();
   await expect(page.getByRole('table').first()).toBeVisible();
 });
