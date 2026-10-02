@@ -39,11 +39,20 @@ begin
   -- ---- Licenças ----
   -- Cada região de demonstração tem licença sem prazo; o resto não se exige,
   -- porque uma região sem contrato assinado não tem linha, e é a verdade.
-  for r in select id from public.regions where id like 'prova%' loop
+  for r in select id from public.regions where id like 'prova%' or id = 'demo' loop
     select count(*) into n from public.region_licenses
      where region_id = r.id and kind = 'demo' and ends_on is null;
-    assert n >= 1, format('%s: a região de prova devia nascer com licença «demo» sem prazo', r.id);
+    assert n >= 1, format('%s: a região de demonstração devia nascer com licença «demo» sem prazo', r.id);
   end loop;
+
+  -- ---- Os avisos de exemplo ----
+  -- Uma migração só semeia avisos na demonstração, publicados, e a dizer que
+  -- são exemplos. Um aviso inventado sem essa marca, ou noutra região, era
+  -- uma ocorrência falsa a ler-se como verdadeira.
+  select count(*) into n from public.avisos
+   where created_by like 'migracao-%'
+     and (region_id <> 'demo' or not publicado or titulo not like 'Exemplo:%');
+  assert n = 0, format('%s avisos semeados por migração fora da demonstração ou sem a marca', n);
 
   -- ---- As funções de escrita fazem o que prometem ----
   -- Ligar o que já está ligado não é um acontecimento.

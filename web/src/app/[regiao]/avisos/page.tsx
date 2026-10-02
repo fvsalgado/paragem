@@ -38,6 +38,15 @@ export default async function Avisos({ params }: { params: Promise<{ regiao: str
   return (
     <>
       <h1>Avisos</h1>
+      {/* NUMA DEMONSTRAÇÃO OS AVISOS SÃO EXEMPLOS, e diz-se antes deles. O
+          título de cada um já o diz; isto diz porque é que estão aqui — para
+          mostrar o que o painel publica —, e que nenhum é verdadeiro. */}
+      {r.demonstracao && (
+        <p>
+          Nesta demonstração, os avisos são exemplos: mostram como a autoridade de transportes
+          publica uma alteração ao serviço, e nenhum é verdadeiro.
+        </p>
+      )}
 
       {/* TRÊS ESTADOS, E NÃO DOIS. «Não há avisos» e «não consegui ler»
           dizem coisas opostas a quem está à espera do autocarro, e a

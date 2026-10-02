@@ -19,7 +19,11 @@ Três perguntas:
    de prova —, e diz-se, sem reprovar;
 2. onde há os dois, o nome, o artigo e o domínio batem certo, letra a letra;
 3. nenhum módulo desligado na base é um modo que a região nem sequer declara —
-   desligar o que não existe é um sinal de que alguém confundiu regiões.
+   desligar o que não existe é um sinal de que alguém confundiu regiões;
+4. todo o aviso que uma migração semeia é de uma região de DEMONSTRAÇÃO
+   (`demonstracao: true` no regiao.yaml). Os avisos de exemplo existem para a
+   montra mostrar o que o painel faz; numa região real eram uma ocorrência
+   inventada publicada em nome de uma autoridade de transportes.
 """
 
 from __future__ import annotations
@@ -78,8 +82,22 @@ def main() -> int:
                 f"{id_}: o módulo «{modulo}» está desligado na base e a região nem o declara"
             )
 
+    semeados = linhas(
+        "select region_id, titulo from public.avisos "
+        "where created_by like 'migracao-%' order by 1, 2"
+    )
+    for id_, titulo in semeados:
+        regiao = declaradas.get(id_)
+        if regiao is None or not regiao.demonstracao:
+            falhas.append(
+                f"{id_}: o aviso «{titulo}» foi semeado por uma migração e a região não é "
+                "de demonstração"
+            )
+
     for id_ in sorted(set(declaradas) & set(na_base)):
         print(f"  ✓ {id_}: nome, artigo e domínio batem certo")
+    if semeados:
+        print(f"  ✓ {len(semeados)} avisos semeados, todos em regiões de demonstração")
     if falhas:
         print()
         for f in falhas:
