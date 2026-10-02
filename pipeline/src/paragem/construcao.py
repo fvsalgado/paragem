@@ -394,30 +394,101 @@ def _correspondencias(ctx: Contexto, destino: Path) -> None:
     Não é uma curiosidade: quem chega de comboio a uma estação sem paragem a
     menos de 300 m tem de arranjar outra maneira de sair de lá, e é melhor
     saber isso antes de apanhar o comboio do que depois.
+
+    **OS FEEDS SÃO DA RECEITA, e não deste ficheiro.** Estavam cravados aqui
+    com os nomes dos ficheiros da primeira região — e numa região com outros
+    nomes a verificação saltava em silêncio: declarada, sem correr, e sem
+    nada no relatório a dizê-lo. Agora a declaração diz que saídas comparar,
+    uma ou várias de cada lado:
+
+        verificacoes:
+          - tipo: correspondencias-comboio-autocarro
+            comboio: gtfs/<o feed do comboio>.zip
+            autocarro: [gtfs/<a rede>.zip, gtfs/<outra>.zip]
+            raio_metros: 300
+
+    e o que faltar diz-se como lacuna: uma verificação que não corre não
+    pode passar por uma que passou.
     """
     for verificacao in ctx.regiao.verificacoes:
         if verificacao.get("tipo") != "correspondencias-comboio-autocarro":
             continue
-        comboio = destino / "gtfs" / "cp.zip"
-        autocarro = destino / "gtfs" / "meio.zip"
-        if not (comboio.exists() and autocarro.exists()):
+        onde = f"regioes/{ctx.regiao.id}/fontes.yaml → verificacoes"
+        lados = {
+            lado: _saidas_declaradas(verificacao.get(lado)) for lado in LADOS_DA_CORRESPONDENCIA
+        }
+
+        sem_lado = [lado for lado, saidas in lados.items() if not saidas]
+        if sem_lado:
+            ctx.relatorio.lacuna(
+                id="correspondencias.sem-feeds",
+                o_que=(
+                    "A verificação das correspondências comboio–autocarro não diz que feeds "
+                    "comparar"
+                ),
+                onde=onde,
+                porque_importa=(
+                    "Sem os feeds dos dois lados a verificação não corre, e as estações sem "
+                    "autocarro perto ficam por dizer — a quem apanha o comboio a contar com um."
+                ),
+                o_que_fazer=(
+                    "Declarar na verificação `comboio:` e `autocarro:`, cada um com uma saída "
+                    "da receita (`gtfs/<nome>.zip`) ou uma lista delas."
+                ),
+                quais=sem_lado,
+            )
+            continue
+
+        declaradas = {s.saida for s in ctx.regiao.saidas if s.saida}
+        estranhas = sorted({x for xs in lados.values() for x in xs if x not in declaradas})
+        if estranhas:
+            ctx.relatorio.lacuna(
+                id="correspondencias.feed-desconhecido",
+                o_que="A verificação das correspondências aponta para saídas que a receita não tem",
+                onde=onde,
+                porque_importa=(
+                    "Um nome trocado não compara nada: a verificação não corre, e parecia que sim."
+                ),
+                o_que_fazer="Usar os nomes que as saídas da receita declaram em `saida:`.",
+                quais=estranhas,
+            )
+            continue
+
+        em_falta = sorted({x for xs in lados.values() for x in xs if not (destino / x).exists()})
+        if em_falta:
+            ctx.relatorio.lacuna(
+                id="correspondencias.feed-em-falta",
+                o_que=(
+                    "A verificação das correspondências não correu: faltam feeds desta construção"
+                ),
+                onde="build/<regiao>/gtfs/",
+                porque_importa=(
+                    "O leitor destes feeds não os escreveu nesta corrida — os bloqueios dizem "
+                    "porquê. Sem eles não se sabe que estações ficam sem autocarro."
+                ),
+                o_que_fazer="Resolver o bloqueio do feed em falta e construir outra vez.",
+                quais=em_falta,
+            )
             continue
 
         raio = float(verificacao.get("raio_metros", 300)) / 1000
         # `ctx.dentro` e não a caixa: a caixa apanhava 43 estações onde a
         # região tem 28, e com elas 15 estações de outros concelhos que
-        # apareciam como «sem ligação a autocarro» por não terem paragem Meio
-        # perto — coisa que não têm por não serem servidas pela rede Meio.
+        # apareciam como «sem ligação a autocarro» por não terem paragem da
+        # rede perto — coisa que não têm por não serem servidas por ela.
         estacoes = [
             (s["stop_name"], float(s["stop_lat"]), float(s["stop_lon"]))
-            for s in Gtfs.ler(comboio).stops
+            for x in lados["comboio"]
+            for s in Gtfs.ler(destino / x).stops
             if _numero(s.get("stop_lat")) is not None
+            and _numero(s.get("stop_lon")) is not None
             and ctx.dentro(float(s["stop_lat"]), float(s["stop_lon"]))
         ]
         paragens = [
             (float(s["stop_lat"]), float(s["stop_lon"]))
-            for s in Gtfs.ler(autocarro).stops
-            if _numero(s.get("stop_lat")) is not None
+            for x in lados["autocarro"]
+            for s in Gtfs.ler(destino / x).stops
+            if _numero(s.get("stop_lat")) is not None and _numero(s.get("stop_lon")) is not None
         ]
 
         sozinhas = [
@@ -427,6 +498,29 @@ def _correspondencias(ctx: Contexto, destino: Path) -> None:
         ]
         ctx.relatorio.contar("correspondencias.estacoes_na_regiao", len(estacoes))
         ctx.relatorio.contar("correspondencias.estacoes_sem_paragem", len(sozinhas))
+
+        # O NÚMERO QUE A RECEITA ESPERA, quando o declara, compara-se — e a
+        # diferença é um AVISO e não um bloqueio. O feed do comboio é de
+        # terceiros e está vivo: uma estação que abre ou fecha muda a conta
+        # sem que nada esteja errado deste lado, e um número cravado sobre uma
+        # fonte viva é um teste que parte sozinho (CLAUDE.md §8).
+        esperado = verificacao.get("esperado_sem_ligacao")
+        if esperado is not None and int(esperado) != len(sozinhas):
+            ctx.relatorio.aviso(
+                id="correspondencias.diferente-do-esperado",
+                o_que=(
+                    f"Estações sem autocarro a menos de {int(raio * 1000)} m: "
+                    f"{len(sozinhas)}, e a receita espera {int(esperado)}"
+                ),
+                onde=onde,
+                porque_importa=(
+                    "Ou a rede mudou — uma paragem nova, uma estação fechada —, ou um feed "
+                    "deixou de trazer o que trazia. Vale a pena saber qual das duas."
+                ),
+                o_que_fazer="Ver as estações abaixo e atualizar `esperado_sem_ligacao`.",
+                quantos=len(sozinhas),
+                quais=sorted(sozinhas),
+            )
 
         if sozinhas:
             ctx.relatorio.lacuna(
@@ -445,6 +539,19 @@ def _correspondencias(ctx: Contexto, destino: Path) -> None:
                 quantos=len(sozinhas),
                 quais=sorted(sozinhas),
             )
+
+
+#: Os dois lados de uma correspondência, como a receita os declara.
+LADOS_DA_CORRESPONDENCIA = ("comboio", "autocarro")
+
+
+def _saidas_declaradas(valor: Any) -> list[str]:
+    """Uma saída ou uma lista delas, como a receita as escreve — sempre lista."""
+    if isinstance(valor, str):
+        return [valor.strip()] if valor.strip() else []
+    if isinstance(valor, list):
+        return [str(x).strip() for x in valor if str(x).strip()]
+    return []
 
 
 def _numero(v):

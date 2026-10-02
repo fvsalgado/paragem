@@ -118,6 +118,30 @@ abre com lacunas**, e é o que se espera: o tarifário por confirmar, o calendá
 escolar por transcrever, os feriados municipais por preencher. O que não pode
 haver é uma lacuna que **bloqueie** — isso quer dizer que não sai feed nenhum.
 
+### As verificações cruzadas
+
+No fim da receita, `verificacoes:` pede contas que cruzam saídas. A que existe
+hoje diz que estações de comboio ficam sem paragem de autocarro perto — quem
+chega de comboio a uma delas tem de saber antes de partir. **Que feeds se
+comparam diz a receita**, uma saída ou uma lista de cada lado:
+
+```yaml
+verificacoes:
+  - tipo: correspondencias-comboio-autocarro
+    comboio: gtfs/<o feed do comboio>.zip
+    autocarro: [gtfs/<a rede>.zip, gtfs/<outra rede que pare lá>.zip]
+    raio_metros: 300
+    esperado_sem_ligacao: 8   # opcional: se não bater, é um aviso
+```
+
+Sem `comboio:` ou `autocarro:`, com uma saída que a receita não tem, ou com um
+feed que não se construiu nessa corrida, a verificação não corre — **e diz-se**,
+com uma lacuna (`correspondencias.sem-feeds`, `.feed-desconhecido`,
+`.feed-em-falta`). Uma verificação declarada que salta em silêncio passava por
+uma que passou. O número esperado compara-se e a diferença é um aviso, não um
+bloqueio: o feed do comboio é de terceiros e está vivo. A demonstração
+(`regioes/demo/fontes.yaml`) declara-a, e é o exemplo a copiar.
+
 ## Passo 4 — o domínio
 
 O domínio **não se fixa no código** (CLAUDE.md §4.7) — e também não se
