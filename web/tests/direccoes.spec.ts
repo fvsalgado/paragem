@@ -16,9 +16,11 @@ import { test, expect, type Page } from '@playwright/test';
 import {
   diaComMaisServico,
   duasParagens,
+  fusoDaRegiao,
   modosDisponiveis,
   paragemComMaisPartidas,
   paragemPerto,
+  umaPartidaFutura,
   viagensDeProva,
   SEM,
 } from './dados-da-regiao';
@@ -388,39 +390,50 @@ test.describe('as viagens de prova da região, pela interface', () => {
 
 // --- sem motor nenhum, que é o caso normal --------------------------------
 
-test('sem motor de viagens, as direções respondem na mesma', async ({ page }) => {
-  /**
-   * O TESTE QUE JUSTIFICA A MUDANÇA TODA.
-   *
-   * Esta build não tem `NEXT_PUBLIC_PARAGEM_OTP_*` nenhum — é exatamente o
-   * que vai para o ar. Antes, isto era uma caixa de procura que aceitava a
-   * viagem e falhava sempre, e foi assim que esteve em produção.
-   *
-   * Agora responde o planeador que corre no próprio navegador, a partir da
-   * grelha horária de 321 kB. Se este teste passar, o servidor de viagens
-   * deixou de ser preciso.
-   */
-  test.skip(!DUAS, 'a região não tem duas paragens para uma viagem');
-  const [a, b] = DUAS!;
-  await page.goto(`/viagem/?de=${encodeURIComponent(a.nome)}&para=${encodeURIComponent(b.nome)}`);
+test.describe('com o relógio antes da primeira partida', () => {
+  test.use({ timezoneId: fusoDaRegiao() });
 
-  // A procura arranca sozinha quando os dois campos vêm preenchidos.
-  const opcoes = page.locator('ul.opcoes li');
-  await expect(opcoes.first()).toBeVisible({ timeout: 20_000 });
-  expect(await opcoes.count()).toBeGreaterThan(0);
+  test('sem motor de viagens, as direções respondem na mesma', async ({ page }) => {
+    /**
+     * O TESTE QUE JUSTIFICA A MUDANÇA TODA.
+     *
+     * Esta build não tem `NEXT_PUBLIC_PARAGEM_OTP_*` nenhum — é exatamente o
+     * que vai para o ar. Antes, isto era uma caixa de procura que aceitava a
+     * viagem e falhava sempre, e foi assim que esteve em produção.
+     *
+     * Agora responde o planeador que corre no próprio navegador, a partir da
+     * grelha horária de 321 kB. Se este teste passar, o servidor de viagens
+     * deixou de ser preciso.
+     *
+     * O RELÓGIO VAI PARA ANTES DA PRIMEIRA PARTIDA. A procura parte de «agora»,
+     * e numa rede pequena a única viagem entre as duas paragens pode ser de
+     * manhã: corrido às 7h17, o teste via «Sem viagem a partir desta hora» —
+     * que é a resposta certa a essa hora, e não a que se está a medir.
+     */
+    test.skip(!DUAS, 'a região não tem duas paragens para uma viagem');
+    const [a, b] = DUAS!;
+    const partida = umaPartidaFutura();
+    if (partida) await page.clock.setFixedTime(partida.quando);
+    await page.goto(`/viagem/?de=${encodeURIComponent(a.nome)}&para=${encodeURIComponent(b.nome)}`);
 
-  // E cada opção diz a que horas parte e a que horas chega.
-  await expect(page.getByText(/\d{2}:\d{2}\s*[–-]\s*\d{2}:\d{2}/).first()).toBeVisible();
+    // A procura arranca sozinha quando os dois campos vêm preenchidos.
+    const opcoes = page.locator('ul.opcoes li');
+    await expect(opcoes.first()).toBeVisible({ timeout: 20_000 });
+    expect(await opcoes.count()).toBeGreaterThan(0);
 
-  // O QUE É ESTIMADO DIZ-SE. Sem ruas, o troço a pé é uma conta e não um
-  // percurso, e quem lê «6 min a pé» tem o direito de saber a diferença.
-  await expect(page.getByText(/estimadas em linha reta/)).toBeVisible();
+    // E cada opção diz a que horas parte e a que horas chega.
+    await expect(page.getByText(/\d{2}:\d{2}\s*[–-]\s*\d{2}:\d{2}/).first()).toBeVisible();
 
-  // E não se oferece o que não se sabe responder: «a pé» e «de bicicleta»
-  // são a pergunta «por onde», e essa não se responde sem as ruas.
-  const modos = page.getByRole('group', { name: 'Como ir' });
-  await expect(modos).toBeVisible();
-  expect(await modos.getByRole('button').count()).toBe(1);
+    // O QUE É ESTIMADO DIZ-SE. Sem ruas, o troço a pé é uma conta e não um
+    // percurso, e quem lê «6 min a pé» tem o direito de saber a diferença.
+    await expect(page.getByText(/estimadas em linha reta/)).toBeVisible();
+
+    // E não se oferece o que não se sabe responder: «a pé» e «de bicicleta»
+    // são a pergunta «por onde», e essa não se responde sem as ruas.
+    const modos = page.getByRole('group', { name: 'Como ir' });
+    await expect(modos).toBeVisible();
+    expect(await modos.getByRole('button').count()).toBe(1);
+  });
 });
 
 // --- o ecrã de abertura ---------------------------------------------------
