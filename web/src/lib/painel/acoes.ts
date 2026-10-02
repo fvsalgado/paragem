@@ -22,13 +22,20 @@ import {
   type Dentro,
 } from './autenticacao';
 import { avisoPorId } from './avisos';
-import { chamar, ehEsquemaPorAplicar, traduzirErro } from './base';
+import {
+  chamar,
+  dominioValido,
+  ehEsquemaPorAplicar,
+  normalizarDominio,
+  traduzirErro,
+} from './base';
 import { conferirCredenciais } from './entrada';
 import { CAMINHO_DA_ENTRADA, destinoSeguro } from './guarda';
 import { hashDoEmail, hashDoIp } from './ip';
 import { contarFalhada, limparDepoisDeEntrar, verificarEntrada } from './limite';
-import { listarRegioes } from './consultas';
-import { ehModulo } from './modulos';
+import { listarRegioes, type RegiaoNaBase } from './consultas';
+import { confirmacaoBate, naFrase, verificarEndereco } from './ficha';
+import { ehModulo, nomeDoModulo } from './modulos';
 import { JANELA_DAS_TENTATIVAS_S, LIMITE_DE_TENTATIVAS } from './sessao';
 
 /**
@@ -54,10 +61,27 @@ function ficha(regiao: string): string {
   return `/admin/regioes/${encodeURIComponent(regiao)}/`;
 }
 
-/** O aviso vai na barra de endereços, e a âncora leva à secção onde se mexeu. */
-function comAviso(caminho: string, aviso: string, ancora?: string): string {
-  const separador = caminho.includes('?') ? '&' : '?';
-  return `${caminho}${separador}aviso=${encodeURIComponent(aviso)}${ancora ? `#${ancora}` : ''}`;
+/**
+ * O aviso vai na barra de endereços — e a SECÇÃO onde se mexeu também (P4-014).
+ *
+ * A âncora sozinha não chegava: o Next deita-a fora no redirecionamento de uma
+ * ação, e cada gesto devolvia ao topo de uma ficha de quatro mil pixéis, com a
+ * mensagem longe do interruptor que se acabou de mudar. Com `secao`, a página
+ * põe a mensagem DENTRO da secção, e leva lá o ecrã e o foco
+ * (`IrParaSecao`). A âncora fica para quem não tem JavaScript, onde o
+ * navegador a respeita.
+ */
+function comAviso(
+  caminho: string,
+  aviso: string,
+  secao?: string,
+  extra: Record<string, string> = {},
+): string {
+  const url = new URL(caminho, 'http://painel');
+  url.searchParams.set('aviso', aviso);
+  if (secao) url.searchParams.set('secao', secao);
+  for (const [chave, valor] of Object.entries(extra)) url.searchParams.set(chave, valor);
+  return `${url.pathname}${url.search}${secao ? `#${secao}` : ''}`;
 }
 
 function mensagemDe(erro: unknown): string {
@@ -159,6 +183,45 @@ export async function sair(): Promise<void> {
 
 // --- regiões ---------------------------------------------------------------
 
+/** A linha da região na base — o nome é o que se pede na confirmação, e o que as frases dizem. */
+async function regiaoNaBase(id: string): Promise<RegiaoNaBase> {
+  const r = (await listarRegioes()).find((x) => x.id === id);
+  if (!r) throw new Error(`não há região com o identificador ${id}`);
+  return r;
+}
+
+/**
+ * Um domínio como chegou do formulário → o domínio, ou a frase de porque não.
+ * Colar «https://www.exemplo.pt/» é o gesto natural, e devolvia o erro cru da
+ * base, em inglês (P4-012).
+ */
+function dominioDoFormulario(entrada: string): string {
+  const dominio = normalizarDominio(entrada);
+  if (!dominioValido(dominio)) {
+    throw new Error(
+      `«${entrada}» não se lê como um endereço — escreve só o domínio, por exemplo transportes.exemplo.pt, sem https:// nem barras`,
+    );
+  }
+  return dominio;
+}
+
+/** O esquema das ligações para outras origens: `http` nos testes, `https` no resto. */
+const ESQUEMA = process.env.PARAGEM_ESQUEMA === 'http' ? 'http' : 'https';
+
+/**
+ * Ligar e desligar o sítio inteiro de uma região — o gesto mais pesado do
+ * painel, e por isso o que mais pede.
+ *
+ * DESLIGAR PEDE O NOME DA REGIÃO ESCRITO (P4-011). Era um clique, sem
+ * confirmação, no primeiro botão da ficha: um engano tirava do ar os horários
+ * de uma autoridade inteira em cinco minutos. A confirmação vem do formulário
+ * da zona de perigo, e confere-se AQUI — uma ação de servidor recebe o que lhe
+ * mandarem, e a caixa do formulário é uma cortesia.
+ *
+ * LIGAR PEDE DADOS PUBLICADOS (P4-015). O painel deixava ligar uma região sem
+ * nada no armazém e prometia que «responde daqui a cinco minutos» — e o que
+ * respondia era um 404 no domínio de um cliente, no dia da estreia dele.
+ */
 export async function ligarOuDesligarRegiao(formData: FormData): Promise<void> {
   const regiao = texto(formData, 'regiao');
   const ligar = texto(formData, 'ligar') === '1';
@@ -166,26 +229,40 @@ export async function ligarOuDesligarRegiao(formData: FormData): Promise<void> {
     async () => {
       const dentro = await exigirDono();
       exigirRegiaoValida(regiao);
+      const r = await regiaoNaBase(regiao);
+      if (ligar) {
+        if (!(await regiaoNoArmazem(regiao).catch(() => null))) {
+          throw new Error(
+            `ainda não há dados ${naFrase(r).de} publicados, e ligar agora punha ${r.domain} a responder «página não encontrada». O botão volta quando a primeira construção estiver publicada`,
+          );
+        }
+      } else if (!confirmacaoBate(texto(formData, 'confirmacao'), r.name)) {
+        throw new Error(
+          `para desligar, escreve o nome da região — ${r.name} — na caixa da confirmação`,
+        );
+      }
       const mudou = await chamar<boolean>('set_region_enabled', {
         p_region: regiao,
         p_enabled: ligar,
         ...(await rasto(dentro)),
       });
       // A lista das regiões ligadas e o mapa de domínios levam esta etiqueta:
-      // a montra e as páginas sabem-no à próxima visita; o middleware, com a
-      // memória de módulo dele, em cinco minutos.
+      // a página do produto e as da região sabem-no à próxima visita; o
+      // middleware, com a memória de módulo dele, em cinco minutos.
       revalidateTag(ETIQUETA_DAS_REGIOES);
       revalidateTag(etiquetaDaRegiao(regiao));
       return comAviso(
         ficha(regiao),
-        mudou
-          ? ligar
-            ? 'Região ligada. O domínio dela responde daqui a cinco minutos, no máximo.'
-            : 'Região desligada. O domínio dela passa a mostrar a montra daqui a cinco minutos, no máximo.'
-          : 'Já estava assim; nada mudou.',
+        !mudou
+          ? 'Já estava assim; nada mudou.'
+          : ligar
+            ? `${naFrase(r).Com} ${naFrase(r).esta} no ar. Em cinco minutos, no máximo, ${ESQUEMA}://${r.domain}/ mostra os transportes ${naFrase(r).de}.`
+            : `${naFrase(r).Com} ${naFrase(r).esta} ${naFrase(r).adj('desligad')}. Em cinco minutos, no máximo, ${r.domain} passa a mostrar a página do Paragem.pt. Os dados e os avisos ficam guardados: liga-se outra vez aqui.`,
+        'estado',
       );
     },
-    (mensagem) => comAviso(ficha(regiao), `Não foi possível: ${mensagem}`),
+    (mensagem) =>
+      comAviso(ficha(regiao), `Não foi possível: ${mensagem}`, ligar ? 'estado' : 'perigo'),
   );
 }
 
@@ -201,32 +278,66 @@ export async function criarRegiao(formData: FormData): Promise<void> {
   await seguir(
     async () => {
       const dentro = await exigirDono();
+      const dominio = dominioDoFormulario(campos.dominio);
       const id = await chamar<string>('create_region', {
         p_id: campos.id,
         p_name: campos.nome,
         p_article: campos.artigo,
-        p_domain: campos.dominio,
+        p_domain: dominio,
         p_sort_order: Number(campos.ordem || '0') || 0,
         ...(await rasto(dentro)),
       });
       revalidateTag(ETIQUETA_DAS_REGIOES);
       return comAviso(
         ficha(id),
-        `Região «${campos.nome}» criada, desligada. Quando os dados dela estiverem no armazém, liga-se aqui; o domínio entra no projeto da plataforma pelo guia docs/NOVA-REGIAO.md.`,
+        `${campos.nome} existe no painel, desligada, com o endereço ${dominio}. Liga-se aqui quando os dados dela estiverem publicados.`,
+        'estado',
       );
     },
     (mensagem) => comAviso(`/admin/regioes/nova/?${deVolta}`, `Não foi possível: ${mensagem}`),
   );
 }
 
+/**
+ * Trocar o endereço principal — DEPOIS de o endereço novo responder (P4-013).
+ *
+ * Aplicava-se antes de o domínio novo existir, e o antigo passava a levar a
+ * um endereço que não servia nada. Agora o endereço novo entra primeiro como
+ * um que leva ao principal (`acrescentarAlias`); o DNS e a plataforma fazem-se
+ * a seguir; e só quando ele já responde a levar a esta região — que é o que
+ * `verificarEndereco` pergunta — o painel troca. Quem precisar de trocar antes
+ * (um domínio que se sabe estar a caminho) pode, marcando que sabe o que faz,
+ * e a frase de volta di-lo outra vez. Pede o nome da região escrito, como
+ * desligar: é o outro gesto que tira um sítio do ar por engano.
+ */
 export async function mudarDominio(formData: FormData): Promise<void> {
   const regiao = texto(formData, 'regiao');
-  const dominio = texto(formData, 'dominio');
   const manterAlias = texto(formData, 'manter_alias') === '1';
+  const naMesma = texto(formData, 'mesmo_sem_resposta') === '1';
   await seguir(
     async () => {
       const dentro = await exigirDono();
       exigirRegiaoValida(regiao);
+      const r = await regiaoNaBase(regiao);
+      const dominio = dominioDoFormulario(texto(formData, 'dominio'));
+      if (dominio === r.domain) {
+        return comAviso(
+          ficha(regiao),
+          `${dominio} já é o endereço principal; nada mudou.`,
+          'perigo',
+        );
+      }
+      if (!confirmacaoBate(texto(formData, 'confirmacao'), r.name)) {
+        throw new Error(
+          `para mudar o endereço principal, escreve o nome da região — ${r.name} — na caixa da confirmação`,
+        );
+      }
+      const verificacao = await verificarEndereco(dominio, r.domain, fetch, ESQUEMA);
+      if (!verificacao.ok && !naMesma) {
+        throw new Error(
+          `${verificacao.porque}. Mudar agora deixava o sítio sem responder. Acrescenta-o primeiro em «Endereço», trata do DNS e da plataforma, e volta aqui — ou marca que mudas na mesma`,
+        );
+      }
       const mudou = await chamar<boolean>('set_region_domain', {
         p_region: regiao,
         p_domain: dominio,
@@ -234,25 +345,32 @@ export async function mudarDominio(formData: FormData): Promise<void> {
         ...(await rasto(dentro)),
       });
       revalidateTag(ETIQUETA_DAS_REGIOES);
+      revalidateTag(etiquetaDaRegiao(regiao));
       return comAviso(
         ficha(regiao),
-        mudou
-          ? `Domínio mudado para ${dominio.toLowerCase()}.${manterAlias ? ' O antigo fica a redirecionar.' : ''} Falta o domínio no projeto da plataforma e no regiao.yaml — o CI confere.`
-          : 'Já era esse o domínio; nada mudou.',
-        'dominio',
+        !mudou
+          ? `${dominio} já era o endereço principal; nada mudou.`
+          : `O endereço principal ${naFrase(r).de} passa a ser ${dominio}` +
+              (manterAlias ? `, e ${r.domain} fica a levar a ele` : '') +
+              '. ' +
+              (verificacao.ok
+                ? 'Já respondia antes da mudança.'
+                : 'Mudaste sem ele responder: até o DNS e a plataforma estarem feitos, o sítio não responde nele.') +
+              ' Falta a declaração da região dizer o mesmo — ver «Para quem gere a instalação».',
+        'endereco',
       );
     },
-    (mensagem) => comAviso(ficha(regiao), `Não foi possível: ${mensagem}`, 'dominio'),
+    (mensagem) => comAviso(ficha(regiao), `Não foi possível: ${mensagem}`, 'perigo'),
   );
 }
 
 export async function acrescentarAlias(formData: FormData): Promise<void> {
   const regiao = texto(formData, 'regiao');
-  const dominio = texto(formData, 'dominio');
   await seguir(
     async () => {
       const dentro = await exigirDono();
       exigirRegiaoValida(regiao);
+      const dominio = dominioDoFormulario(texto(formData, 'dominio'));
       const mudou = await chamar<boolean>('add_region_alias', {
         p_domain: dominio,
         p_region: regiao,
@@ -262,18 +380,18 @@ export async function acrescentarAlias(formData: FormData): Promise<void> {
       return comAviso(
         ficha(regiao),
         mudou
-          ? `${dominio.toLowerCase()} passa a redirecionar para o canónico daqui a cinco minutos, no máximo — depois de entrar no projeto da plataforma.`
-          : 'Já era alias desta região; nada mudou.',
-        'dominio',
+          ? `Fica ${dominio}. Leva ao endereço principal assim que responder — falta pô-lo no DNS e no projeto da plataforma; depois, até cinco minutos.`
+          : `${dominio} já levava ao endereço principal; nada mudou.`,
+        'endereco',
       );
     },
-    (mensagem) => comAviso(ficha(regiao), `Não foi possível: ${mensagem}`, 'dominio'),
+    (mensagem) => comAviso(ficha(regiao), `Não foi possível: ${mensagem}`, 'endereco'),
   );
 }
 
 export async function retirarAlias(formData: FormData): Promise<void> {
   const regiao = texto(formData, 'regiao');
-  const dominio = texto(formData, 'dominio');
+  const dominio = normalizarDominio(texto(formData, 'dominio'));
   await seguir(
     async () => {
       const dentro = await exigirDono();
@@ -286,17 +404,24 @@ export async function retirarAlias(formData: FormData): Promise<void> {
       return comAviso(
         ficha(regiao),
         mudou
-          ? `${dominio.toLowerCase()} deixa de redirecionar.`
-          : 'Não havia esse alias; nada mudou.',
-        'dominio',
+          ? `${dominio} deixou de levar ao endereço principal: quem o usar fica sem resposta, em cinco minutos no máximo.`
+          : `${dominio} não levava a esta região; nada mudou.`,
+        'endereco',
       );
     },
-    (mensagem) => comAviso(ficha(regiao), `Não foi possível: ${mensagem}`, 'dominio'),
+    (mensagem) => comAviso(ficha(regiao), `Não foi possível: ${mensagem}`, 'endereco'),
   );
 }
 
 // --- módulos ---------------------------------------------------------------
 
+/**
+ * Ligar e desligar um modo — com confirmação para desligar, e «Desfazer» na
+ * mensagem (P4-011). Desligar o táxi tira do sítio a página dele, os pontos do
+ * mapa, a procura e os ficheiros: não apaga nada, mas some-se a quem o
+ * procura, e um clique ao lado do interruptor certo não podia fazer isso
+ * calado. A confirmação chega do formulário (`confirmado`), e confere-se aqui.
+ */
 export async function alternarModulo(formData: FormData): Promise<void> {
   const regiao = texto(formData, 'regiao');
   const modulo = texto(formData, 'modulo');
@@ -305,7 +430,11 @@ export async function alternarModulo(formData: FormData): Promise<void> {
     async () => {
       exigirRegiaoValida(regiao);
       const dentro = await exigirPapel(regiao, 'gestor');
-      if (!ehModulo(modulo)) throw new Error(`não há módulo com o identificador ${modulo}`);
+      if (!ehModulo(modulo)) throw new Error(`não há modo com o identificador ${modulo}`);
+      const nome = nomeDoModulo(modulo);
+      if (!ligar && texto(formData, 'confirmado') !== '1') {
+        throw new Error(`desligar ${nome.toLowerCase()} pede confirmação`);
+      }
       const mudou = await chamar<boolean>('set_modulo', {
         p_region: regiao,
         p_id: modulo,
@@ -316,10 +445,13 @@ export async function alternarModulo(formData: FormData): Promise<void> {
       revalidateTag(etiquetaDaRegiao(regiao));
       return comAviso(
         ficha(regiao),
-        mudou
-          ? `Módulo «${modulo}» ${ligar ? 'ligado' : 'desligado'}.`
-          : 'Já estava assim; nada mudou.',
+        !mudou
+          ? 'Já estava assim; nada mudou.'
+          : ligar
+            ? `${nome}: ligado. Volta ao sítio à próxima visita de cada página.`
+            : `${nome}: desligado. Saiu do sítio — a página, o mapa, a procura e os ficheiros —, e os dados ficam guardados.`,
         'modulos',
+        mudou && !ligar ? { desfazer: modulo } : {},
       );
     },
     (mensagem) => comAviso(ficha(regiao), `Não foi possível: ${mensagem}`, 'modulos'),
@@ -576,7 +708,7 @@ export async function revalidarSitio(): Promise<void> {
       for (const r of regioes) revalidateTag(etiquetaDaRegiao(r.id));
       return comAviso(
         '/admin/',
-        `Sítio revalidado: a lista das regiões e as páginas de ${regioes.length} ${regioes.length === 1 ? 'região' : 'regiões'} rendem-se de novo à próxima visita.`,
+        `Páginas atualizadas: a lista das regiões e as páginas de ${regioes.length} ${regioes.length === 1 ? 'região' : 'regiões'} refazem-se à próxima visita, com os dados publicados.`,
       );
     },
     (mensagem) => comAviso('/admin/', `Não foi possível: ${mensagem}`),

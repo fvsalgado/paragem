@@ -2,9 +2,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import Aviso from '@/componentes/painel/Aviso';
+import IrParaSecao from '@/componentes/painel/IrParaSecao';
 import Mudanca from '@/componentes/painel/Mudanca';
 import SemChaveDeServico from '@/componentes/painel/SemChaveDeServico';
 import { IDENTIFICADOR, regiao as fichaNoArmazem } from '@/lib/dados';
+import { emVigor } from '@/lib/avisos';
 import {
   acrescentarAlias,
   alternarModulo,
@@ -13,11 +15,11 @@ import {
   registarLicenca,
   retirarAlias,
 } from '@/lib/painel/acoes';
-import { diaNoFuso, paraCampoLocal } from '@/lib/fuso';
+import { diaNoFuso, porExtenso } from '@/lib/fuso';
 import { paginaDaRegiao } from '@/lib/painel/autenticacao';
-import { nomeDaAcao } from '@/lib/painel/auditoria';
+import { nomeDaAcao, quemFez } from '@/lib/painel/auditoria';
+import { avisosDaRegiao } from '@/lib/painel/avisos';
 import { temChaveDeServico } from '@/lib/painel/base';
-import { contarAvisosPublicados } from '@/lib/painel/avisos';
 import {
   acoesDaRegiao,
   listarAliases,
@@ -27,43 +29,60 @@ import {
 } from '@/lib/painel/consultas';
 import { dataPorExtenso, estadoDaLicenca } from '@/lib/painel/licencas';
 import { MODULOS, nomeDoModulo } from '@/lib/painel/modulos';
+import { naFrase } from '@/lib/painel/ficha';
+import { nomeDoPapel } from '@/lib/painel/papeis';
+import { pessoasDaRegiao } from '@/lib/painel/pessoas';
+import { lista } from '@/lib/prosa';
 
 export const dynamic = 'force-dynamic';
 
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ aviso?: string }>;
+  searchParams: Promise<{ aviso?: string; secao?: string; desfazer?: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  return { title: id };
+  // O nome e não o identificador: é por ele que se reconhece um separador.
+  const nome = temChaveDeServico()
+    ? (await listarRegioes().catch(() => [])).find((r) => r.id === id)?.name
+    : undefined;
+  return { title: nome ?? 'Região' };
 }
 
-function quandoEQuem(linha: { updated_at: string; updated_by: string | null }): string {
-  // O dia no fuso da casa, e não o do instante em UTC — que à meia-noite e
-  // meia de Lisboa ainda é ontem.
-  const dia = dataPorExtenso(diaNoFuso(linha.updated_at));
-  return linha.updated_by ? `${dia}, por ${linha.updated_by}` : dia;
+/** Quem criou uma linha numa migração não é ninguém da casa: é a instalação. */
+function autor(quem: string | null): string {
+  if (!quem) return '';
+  return quem.startsWith('migracao-') ? 'a instalação' : quemFez(quem);
 }
 
 /**
- * A ficha de uma região: o que se mexe, mexe-se aqui e fica na auditoria.
+ * A ficha de uma região, PELA ORDEM EM QUE SE USA (P4-023).
  *
- * O nome e o artigo NÃO se editam: são identidade da região e vivem no
- * `regiao.yaml` dela; a base guarda uma cópia que o CI confere. O que se mexe
- * é o que só faz sentido em tempo de execução — o interruptor, o domínio, os
- * alias, os módulos, as licenças.
+ * Abria com «Desligar a região» — o gesto mais raro e o mais perigoso, no
+ * primeiro ecrã de um telemóvel — e escondia a tarefa de todos os dias, que é
+ * escrever um aviso, numa ligação de texto mais abaixo. Agora: os avisos; o
+ * endereço; os módulos; quem tem papel; as licenças; o rasto; e, no fim, numa
+ * zona à parte, o que tira o sítio do ar — com o nome da região escrito para
+ * confirmar (P4-011, P4-013).
+ *
+ * CADA UM VÊ O QUE PODE FAZER. A ficha é de quem gere a região e do dono; o
+ * gestor não vê as licenças (o contrato é da casa com o cliente), nem as
+ * pessoas, nem a zona de perigo — e o endereço, para ele, só se lê.
+ *
+ * E FALA A LÍNGUA DE QUEM A USA (P4-022): endereço principal, e não
+ * «canónico»; a página do Paragem.pt, e não a «montra»; os modos pelo nome,
+ * sem os identificadores ao lado. O pormenor técnico — o `regiao.yaml`, o que
+ * o CI confere — está recolhido no fim, para quem gere a instalação.
  */
 export default async function FichaDaRegiao({ params, searchParams }: Props) {
-  const [{ id }, { aviso }] = await Promise.all([params, searchParams]);
+  const [{ id }, { aviso, secao, desfazer }] = await Promise.all([params, searchParams]);
   if (!IDENTIFICADOR.test(id)) notFound();
-  // A ficha é de quem gere a região — e do dono. Para os outros não existe.
   const dentro = await paginaDaRegiao(id, 'gestor');
   const dono = dentro.dono;
-  if (!temChaveDeServico()) return <SemChaveDeServico titulo={id} />;
+  if (!temChaveDeServico()) return <SemChaveDeServico titulo="A região" />;
 
-  const [regioes, aliases, modulos, licencas, acoes, avisosPublicados, noArmazem] =
+  const [regioes, aliases, modulos, licencas, acoes, avisos, noArmazem, pessoas] =
     await Promise.all([
       listarRegioes(),
       listarAliases(),
@@ -71,10 +90,11 @@ export default async function FichaDaRegiao({ params, searchParams }: Props) {
       // As licenças são o contrato da casa com cada cliente: só o dono as lê.
       dono ? listarLicencas() : Promise.resolve([]),
       acoesDaRegiao(id, 10, dono),
-      contarAvisosPublicados(),
-      // O `regiao.yaml` dela, tal como o pipeline o publicou: é daqui que vem
-      // a lista dos modos que a região declara. `null` sem dados no armazém.
+      avisosDaRegiao(id),
+      // A declaração da região, tal como o pipeline a publicou: é daqui que
+      // vem a lista dos modos que ela tem. `null` sem dados publicados.
       fichaNoArmazem(id).catch(() => null),
+      dono ? pessoasDaRegiao(id) : Promise.resolve([]),
     ]);
   const regiao = regioes.find((r) => r.id === id);
   if (!regiao) notFound();
@@ -83,212 +103,286 @@ export default async function FichaDaRegiao({ params, searchParams }: Props) {
   const estadoDoModulo = new Map(modulos.filter((m) => m.region_id === id).map((m) => [m.id, m]));
   const asLicencas = licencas.filter((l) => l.region_id === id);
   const licenca = estadoDaLicenca(asLicencas, diaNoFuso(new Date()));
-  const declarados = noArmazem?.modos ?? null;
-  const publicados = avisosPublicados.get(id) ?? 0;
   const ficha = `/admin/regioes/${encodeURIComponent(id)}/`;
+  const agora = new Date();
+  const noAr = avisos.filter((a) => a.publicado && emVigor(a, agora));
+  const rascunhos = avisos.filter((a) => !a.publicado).length;
+
+  // OS MODOS QUE A REGIÃO TEM — os ligados e os que o painel desligou. Os que
+  // ela não declara não têm interruptor: desligar o que não existe é sinal de
+  // que alguém confundiu regiões, e a ficha deixava escrito «FlixBus» e «CP»
+  // em regiões sem expressos nem comboios (P4-022).
+  const declarados = noArmazem
+    ? MODULOS.filter(
+        (m) => noArmazem.modos.includes(m) || (noArmazem.modos_desligados ?? []).includes(m),
+      )
+    : null;
+  const comInterruptor = declarados ?? [...MODULOS];
+  const semEles = declarados ? MODULOS.filter((m) => !declarados.includes(m)) : [];
+
+  const mensagem = (s: string) => (secao === s ? aviso : undefined);
+  const frase = naFrase(regiao);
 
   return (
     <>
-      <h1>
-        {regiao.name} <span className="secundario-texto">{regiao.id}</span>
-      </h1>
-      <p className="entrada">
-        Tudo o que aqui se grava passa pela função da base e deixa linha na auditoria, com o antes e
-        o depois. O nome e o artigo («{regiao.article} {regiao.name}») vêm do{' '}
-        <code>regiao.yaml</code> e não se mudam aqui.
-      </p>
+      <IrParaSecao secao={secao} />
+      <h1>{regiao.name}</h1>
 
-      <Aviso texto={aviso} />
-
-      <section aria-labelledby="estado" className="cartao">
-        <h2 id="estado">Estado</h2>
-        <p className={regiao.is_enabled ? undefined : 'alerta-texto'}>
-          <strong>{regiao.is_enabled ? 'Ligada.' : 'Desligada.'}</strong>{' '}
-          {regiao.is_enabled
-            ? `A responder em ${regiao.domain}; a montra lista-a.`
-            : 'Fora do mapa: o domínio mostra a montra, e a montra não a lista.'}
-          {noArmazem
-            ? ''
-            : ' Ainda não há dados dela no armazém — ligá-la agora punha o domínio a responder 404.'}
+      {/* O ESTADO É A FRASE DE ENTRADA, e não um cartão: diz-se uma vez, por
+          baixo do nome, e o que se faz com ele está nos sítios próprios — ligar
+          aqui, quando há o que ligar; desligar na zona de perigo. */}
+      <section aria-label="Estado" id="estado" className="estado-da-regiao">
+        <Aviso texto={mensagem('estado') ?? (secao ? undefined : aviso)} />
+        <p className={regiao.is_enabled ? 'entrada' : 'entrada alerta-texto'}>
+          {regiao.is_enabled ? (
+            <>
+              <strong>No ar</strong> em{' '}
+              <a href={`https://${regiao.domain}/`} rel="noreferrer">
+                {regiao.domain}
+              </a>
+              .
+            </>
+          ) : (
+            <>
+              <strong>{frase.adj('Desligad')}.</strong> Quem abre {regiao.domain} vê a página do
+              Paragem.pt, e não os transportes {frase.de}.
+            </>
+          )}
+          {dono ? ` ${licenca.texto}` : null}
         </p>
-        {dono ? (
-          <form action={ligarOuDesligarRegiao} className="em-linha">
-            <input type="hidden" name="regiao" value={regiao.id} />
-            <input type="hidden" name="ligar" value={regiao.is_enabled ? '0' : '1'} />
-            <button type="submit" className={regiao.is_enabled ? 'secundario' : undefined}>
-              {regiao.is_enabled ? 'Desligar a região' : 'Ligar a região'}
-            </button>
-          </form>
-        ) : null}
-        {dono && regiao.is_enabled ? (
-          <p className="secundario-texto">
-            Nunca se desliga a última região ligada — a base recusa, e o painel diz.
-          </p>
+        {/* LIGAR é o gesto de quem estreia uma região, e por isso está aqui e
+            não na zona de perigo — mas só quando há o que ligar (P4-015). */}
+        {dono && !regiao.is_enabled ? (
+          noArmazem ? (
+            <form action={ligarOuDesligarRegiao} className="em-linha">
+              <input type="hidden" name="regiao" value={regiao.id} />
+              <input type="hidden" name="ligar" value="1" />
+              <button type="submit">Ligar {frase.com}</button>
+            </form>
+          ) : (
+            <p className="secundario-texto">
+              Ainda não há dados {frase.de} publicados, e ligar agora punha {regiao.domain} a
+              responder «página não encontrada». O botão aparece aqui quando a primeira construção
+              estiver publicada.
+            </p>
+          )
         ) : null}
       </section>
 
-      <section aria-labelledby="avisos" className="cartao">
-        <h2 id="avisos">Avisos</h2>
-        <p>
-          {publicados === 0
-            ? 'Nada publicado. É o estado normal: um aviso de exemplo publicado é um aviso falso.'
-            : `${publicados} ${publicados === 1 ? 'aviso publicado' : 'avisos publicados'}.`}{' '}
-          O que estiver publicado e em vigor aparece na página de avisos da região e no feed{' '}
-          <code>GTFS-RT Service Alerts</code>.
-        </p>
-        <p>
-          <Link href={`${ficha}avisos/`}>Escrever e publicar avisos</Link>
+      <section aria-labelledby="titulo-avisos" id="avisos" className="cartao">
+        <h2 id="titulo-avisos">Avisos</h2>
+        {noAr.length === 0 ? (
+          <p>Nada no ar agora — que é o estado normal de uma rede sem perturbações.</p>
+        ) : (
+          <>
+            <p>
+              <strong>
+                {noAr.length === 1 ? '1 aviso no ar' : `${noAr.length} avisos no ar`}:
+              </strong>{' '}
+              {lista(noAr.map((a) => `«${a.titulo}»`))}.
+            </p>
+          </>
+        )}
+        <p className="linha-accoes">
+          <Link href={`${ficha}avisos/#escrever`} className="botao primario">
+            Escrever um aviso
+          </Link>
+          <Link href={`${ficha}avisos/`}>
+            {rascunhos > 0
+              ? `Ver todos, com ${rascunhos === 1 ? 'o rascunho' : `os ${rascunhos} rascunhos`}`
+              : 'Ver todos os avisos'}
+          </Link>
         </p>
       </section>
 
-      <section aria-labelledby="dominio" className="cartao">
-        <h2 id="dominio">Domínio</h2>
+      <section aria-labelledby="titulo-endereco" id="endereco" className="cartao">
+        <h2 id="titulo-endereco">Endereço</h2>
+        <Aviso texto={mensagem('endereco')} />
         <dl className="pares">
-          <dt>Canónico</dt>
+          <dt>Endereço principal</dt>
           <dd>
-            <a href={`https://${regiao.domain}/`}>{regiao.domain}</a>
+            <a href={`https://${regiao.domain}/`} rel="noreferrer">
+              {regiao.domain}
+            </a>
           </dd>
-          <dt>Alias</dt>
+          <dt>Outros endereços</dt>
           <dd>
             {osAlias.length === 0 ? (
-              'nenhum — um alias redireciona (308) para o canónico, nunca serve'
+              'nenhum'
             ) : (
               <ul className="lista-simples">
                 {osAlias.map((alias) => (
                   <li key={alias.domain}>
+                    {alias.domain}
                     {dono ? (
-                      <form action={retirarAlias} className="em-linha">
-                        <input type="hidden" name="regiao" value={regiao.id} />
-                        <input type="hidden" name="dominio" value={alias.domain} />
-                        <span>{alias.domain}</span>
-                        <button type="submit" className="secundario pequeno">
-                          Retirar
-                        </button>
-                      </form>
-                    ) : (
-                      <span>{alias.domain}</span>
-                    )}
+                      <details className="perigo em-linha-curta">
+                        <summary>Retirar…</summary>
+                        <p>
+                          {alias.domain} deixa de levar ao endereço principal: quem o usar fica sem
+                          resposta.
+                        </p>
+                        <form action={retirarAlias}>
+                          <input type="hidden" name="regiao" value={regiao.id} />
+                          <input type="hidden" name="dominio" value={alias.domain} />
+                          <button type="submit" className="perigo">
+                            Retirar {alias.domain}
+                          </button>
+                        </form>
+                      </details>
+                    ) : null}
                   </li>
                 ))}
               </ul>
             )}
           </dd>
         </dl>
+        <p className="secundario-texto">
+          Um endereço a mais leva sempre ao principal — nunca mostra uma cópia do sítio.
+        </p>
         {dono ? (
-          <>
-            <form action={acrescentarAlias} className="formulario">
-              <input type="hidden" name="regiao" value={regiao.id} />
-              <label htmlFor="alias">Acrescentar um alias</label>
-              <input
-                id="alias"
-                name="dominio"
-                type="text"
-                required
-                inputMode="url"
-                autoComplete="off"
-                aria-describedby="alias-ajuda"
-              />
-              <p id="alias-ajuda" className="secundario-texto">
-                Um domínio, sem esquema nem barra: <code>www.{regiao.domain}</code>. Tem de entrar
-                também no projeto da plataforma para responder.
-              </p>
-              <button type="submit" className="secundario">
-                Acrescentar
-              </button>
-            </form>
-            <form action={mudarDominio} className="formulario">
-              <input type="hidden" name="regiao" value={regiao.id} />
-              <label htmlFor="dominio-novo">Mudar o domínio canónico</label>
-              <input
-                id="dominio-novo"
-                name="dominio"
-                type="text"
-                required
-                inputMode="url"
-                autoComplete="off"
-                defaultValue={regiao.domain}
-                aria-describedby="dominio-ajuda"
-              />
-              <p id="dominio-ajuda" className="secundario-texto">
-                É o dia em que a autoridade traz o domínio dela. O <code>regiao.yaml</code> e o
-                projeto da plataforma têm de dizer o mesmo — o CI confere o primeiro (
-                <code>docs/NOVA-REGIAO.md</code>).
-              </p>
-              <label className="caixa">
-                <input type="checkbox" name="manter_alias" value="1" defaultChecked />O domínio
-                antigo fica a redirecionar para o novo
-              </label>
-              <button type="submit" className="secundario">
-                Mudar o domínio
-              </button>
-            </form>
-          </>
+          <form action={acrescentarAlias} className="formulario">
+            <input type="hidden" name="regiao" value={regiao.id} />
+            <label htmlFor="alias">Acrescentar um endereço que leve ao principal</label>
+            <input
+              id="alias"
+              name="dominio"
+              type="text"
+              required
+              inputMode="url"
+              autoComplete="off"
+              spellCheck={false}
+              aria-describedby="alias-ajuda"
+            />
+            <p id="alias-ajuda" className="secundario-texto">
+              Só o domínio, sem https:// — por exemplo, <code>www.{regiao.domain}</code>. Se colares
+              o endereço inteiro, o painel fica só com o domínio. Responde depois de entrar também
+              no DNS e no projeto da plataforma.
+            </p>
+            <button type="submit" className="secundario">
+              Acrescentar
+            </button>
+          </form>
         ) : null}
       </section>
 
-      <section aria-labelledby="modulos" className="cartao">
-        <h2 id="modulos">Módulos</h2>
+      <section aria-labelledby="titulo-modulos" id="modulos" className="cartao">
+        <h2 id="titulo-modulos">Modos de transporte</h2>
+        <Aviso texto={mensagem('modulos')}>
+          {desfazer && MODULOS.includes(desfazer as (typeof MODULOS)[number]) ? (
+            <form action={alternarModulo}>
+              <input type="hidden" name="regiao" value={regiao.id} />
+              <input type="hidden" name="modulo" value={desfazer} />
+              <input type="hidden" name="ligar" value="1" />
+              <button type="submit" className="secundario">
+                Desfazer: voltar a ligar {nomeDoModulo(desfazer).toLowerCase()}
+              </button>
+            </form>
+          ) : null}
+        </Aviso>
         <p className="secundario-texto">
-          Um módulo é um modo de transporte. Desligar «expresso» é tirar a FlixBus do sítio;
-          desligar «comboio» é tirar a CP. Que fonte alimenta cada modo é da receita da região, não
-          daqui.
+          Desligar um modo tira-o do sítio — a página dele, os pontos no mapa, a procura, os
+          ficheiros e as viagens do planeador — sem apagar nada: volta quando o ligares.
           {declarados === null
-            ? ' Sem dados no armazém não se sabe que modos a região declara: mostram-se os sete.'
+            ? ' Sem dados publicados não se sabe que modos a região tem: mostram-se os sete.'
             : ''}
         </p>
         <ul className="interruptores">
-          {MODULOS.map((modulo) => {
+          {comInterruptor.map((modulo) => {
             const linha = estadoDoModulo.get(modulo);
             const ligado = linha?.is_enabled ?? true;
-            const declarado = declarados === null || declarados.includes(modulo);
+            const nome = nomeDoModulo(modulo);
             return (
               <li key={modulo}>
                 <div>
                   <p>
-                    <strong>{nomeDoModulo(modulo)}</strong>{' '}
-                    <span className="secundario-texto">{modulo}</span>
+                    <strong>{nome}</strong>{' '}
+                    <span className={`estado${ligado ? '' : ' alerta-texto'}`}>
+                      {ligado ? '— no sítio' : '— desligado'}
+                    </span>
                   </p>
-                  {!declarado ? (
+                  {!ligado && linha ? (
                     <p className="secundario-texto">
-                      A região não declara este modo no <code>regiao.yaml</code>: não há nada para
-                      ligar.
+                      Desligado a {dataPorExtenso(diaNoFuso(linha.updated_at))}
+                      {linha.updated_by ? `, por ${autor(linha.updated_by)}` : ''}.
                     </p>
                   ) : null}
-                  {!ligado && linha ? (
-                    <p className="alerta-texto">Desligado em {quandoEQuem(linha)}.</p>
-                  ) : null}
                 </div>
-                {declarado || !ligado ? (
+                {ligado ? (
+                  <details className="perigo">
+                    <summary>Desligar…</summary>
+                    <p>
+                      {nome} sai do sítio {frase.de} à próxima visita de cada página. Os dados ficam
+                      guardados.
+                    </p>
+                    <form action={alternarModulo}>
+                      <input type="hidden" name="regiao" value={regiao.id} />
+                      <input type="hidden" name="modulo" value={modulo} />
+                      <input type="hidden" name="ligar" value="0" />
+                      <input type="hidden" name="confirmado" value="1" />
+                      <button type="submit" className="perigo">
+                        Desligar {nome.toLowerCase()}
+                      </button>
+                    </form>
+                  </details>
+                ) : (
                   <form action={alternarModulo}>
                     <input type="hidden" name="regiao" value={regiao.id} />
                     <input type="hidden" name="modulo" value={modulo} />
-                    <input type="hidden" name="ligar" value={ligado ? '0' : '1'} />
-                    <span className={`estado${ligado ? '' : ' alerta-texto'}`}>
-                      {ligado ? 'Ligado' : 'Desligado'}
-                    </span>
+                    <input type="hidden" name="ligar" value="1" />
                     <button type="submit" className="secundario pequeno">
-                      {ligado ? 'Desligar' : 'Ligar'}
+                      Ligar {nome.toLowerCase()}
                     </button>
                   </form>
-                ) : (
-                  <span className="estado secundario-texto">Não declarado</span>
                 )}
               </li>
             );
           })}
         </ul>
+        {semEles.length > 0 ? (
+          <p className="secundario-texto">
+            {frase.Com} não tem {lista(semEles.map((m) => nomeDoModulo(m).toLowerCase()))}: não há
+            nada para ligar.
+          </p>
+        ) : null}
       </section>
 
       {dono ? (
-        <section aria-labelledby="licencas" className="cartao">
-          <h2 id="licencas">Licenças</h2>
+        <section aria-labelledby="titulo-pessoas" id="pessoas" className="cartao">
+          <h2 id="titulo-pessoas">Quem trabalha nesta região</h2>
+          {pessoas.length === 0 ? (
+            <p>Ninguém, além de ti.</p>
+          ) : (
+            <ul className="lista-simples">
+              {pessoas.map((p) => (
+                <li key={p.id}>
+                  <strong>{p.nome}</strong>, {nomeDoPapel(p.papel)}
+                  {p.ativa ? '' : ' (desativada)'}
+                </li>
+              ))}
+            </ul>
+          )}
+          <p>
+            <Link href="/admin/pessoas/">Convidar ou mudar papéis em «Pessoas»</Link>
+          </p>
+        </section>
+      ) : null}
+
+      {dono ? (
+        <section aria-labelledby="titulo-licencas" id="licencas" className="cartao">
+          <h2 id="titulo-licencas">Licenças</h2>
+          <Aviso texto={mensagem('licencas')} />
           <p className={licenca.alerta ? 'alerta-texto' : undefined}>{licenca.texto}</p>
           <p className="secundario-texto">
             Uma linha por contrato ou renovação, nunca reescrita. Expirar avisa; desligar é sempre
-            um gesto humano, no interruptor lá em cima.
+            um gesto de alguém, na zona de perigo.
           </p>
           {asLicencas.length > 0 ? (
-            <div className="rolavel">
+            <div
+              className="rolavel"
+              tabIndex={0}
+              role="region"
+              aria-label="As licenças, deslocável na horizontal"
+            >
               <table className="registo">
                 <caption className="so-para-leitores">
                   O histórico das licenças desta região
@@ -309,90 +403,205 @@ export default async function FichaDaRegiao({ params, searchParams }: Props) {
                       <td>{l.ends_on ? dataPorExtenso(l.ends_on) : 'sem prazo'}</td>
                       <td>{l.kind}</td>
                       <td>{l.notes ?? '—'}</td>
-                      <td>{l.created_by}</td>
+                      <td>{autor(l.created_by)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : null}
-          <form action={registarLicenca} className="formulario">
-            <input type="hidden" name="regiao" value={regiao.id} />
-            <h3>Registar uma licença</h3>
-            <div className="em-linha">
-              <div>
-                <label htmlFor="inicio">Início</label>
-                <input id="inicio" name="inicio" type="date" required />
+          <details className="mexer">
+            <summary>Registar uma licença</summary>
+            <form action={registarLicenca} className="formulario">
+              <input type="hidden" name="regiao" value={regiao.id} />
+              <div className="em-linha">
+                <div>
+                  <label htmlFor="inicio">Início</label>
+                  <input id="inicio" name="inicio" type="date" required />
+                </div>
+                <div>
+                  <label htmlFor="fim">Fim</label>
+                  <input id="fim" name="fim" type="date" aria-describedby="fim-ajuda" />
+                  <p id="fim-ajuda" className="secundario-texto">
+                    Em branco: sem prazo.
+                  </p>
+                </div>
               </div>
-              <div>
-                <label htmlFor="fim">Fim</label>
-                <input id="fim" name="fim" type="date" aria-describedby="fim-ajuda" />
-                <p id="fim-ajuda" className="secundario-texto">
-                  Em branco: sem prazo.
-                </p>
-              </div>
-            </div>
-            <label htmlFor="tipo">Tipo</label>
-            <input
-              id="tipo"
-              name="tipo"
-              type="text"
-              required
-              placeholder="contrato, piloto, demo, cortesia"
-            />
-            <label htmlFor="notas">Notas</label>
-            <input id="notas" name="notas" type="text" />
-            <button type="submit" className="secundario">
-              Registar
-            </button>
-          </form>
+              <label htmlFor="tipo">Tipo</label>
+              <input
+                id="tipo"
+                name="tipo"
+                type="text"
+                required
+                placeholder="contrato, piloto, demonstração"
+              />
+              <label htmlFor="notas">Notas</label>
+              <input id="notas" name="notas" type="text" />
+              <button type="submit" className="secundario">
+                Registar
+              </button>
+            </form>
+          </details>
         </section>
       ) : null}
 
-      <section aria-labelledby="rasto" className="cartao">
-        <h2 id="rasto">As últimas ações sobre esta região</h2>
+      <section aria-labelledby="titulo-rasto" id="rasto" className="cartao">
+        <h2 id="titulo-rasto">O que se mexeu nesta região</h2>
         {acoes.length === 0 ? (
           <p className="secundario-texto">Ainda ninguém mexeu nesta região pelo painel.</p>
         ) : (
-          <div className="rolavel">
-            <table className="registo">
-              <caption className="so-para-leitores">As últimas dez ações sobre esta região</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Quando</th>
-                  <th scope="col">Quem</th>
-                  <th scope="col">O quê</th>
-                  <th scope="col">Sobre</th>
-                  <th scope="col">O que mudou</th>
-                </tr>
-              </thead>
-              <tbody>
-                {acoes.map((acao) => (
-                  <tr key={acao.id}>
-                    <td>{paraCampoLocal(acao.created_at).replace('T', ' ')}</td>
-                    <td>{acao.actor}</td>
-                    <td>{nomeDaAcao(acao.action)}</td>
-                    <td>
-                      <code>{acao.entity_id}</code>
-                    </td>
-                    <td>
-                      <Mudanca before={acao.before} after={acao.after} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ul className="lista-simples rasto">
+            {acoes.map((acao) => (
+              <li key={acao.id}>
+                <p>
+                  <strong>{quemFez(acao.actor)}</strong> {nomeDaAcao(acao.action)}
+                  <span className="secundario-texto"> · {porExtenso(acao.created_at)}</span>
+                </p>
+                <Mudanca before={acao.before} after={acao.after} />
+              </li>
+            ))}
+          </ul>
         )}
         <p>
-          <Link href={`/admin/auditoria/?tipo=region`}>Toda a auditoria</Link>
+          <Link href="/admin/auditoria/">Toda a auditoria</Link>
         </p>
       </section>
 
+      {dono ? (
+        <section aria-labelledby="titulo-perigo" id="perigo" className="cartao zona-de-perigo">
+          <h2 id="titulo-perigo">Zona de perigo</h2>
+          <Aviso texto={mensagem('perigo')} />
+          <p>
+            O que está aqui tira o sítio {frase.de} do ar, ou muda onde ele responde. Cada gesto
+            pede o nome da região escrito, e fica na auditoria.
+          </p>
+
+          {regiao.is_enabled ? (
+            <details className="perigo">
+              <summary>Desligar {frase.com}…</summary>
+              <p>
+                Em cinco minutos, no máximo, {regiao.domain} deixa de mostrar os transportes e passa
+                a mostrar a página do Paragem.pt. Os dados e os avisos ficam guardados, e volta-se a
+                ligar no topo desta página. Nunca se desliga a última região ligada.
+              </p>
+              <form action={ligarOuDesligarRegiao} className="formulario">
+                <input type="hidden" name="regiao" value={regiao.id} />
+                <input type="hidden" name="ligar" value="0" />
+                <label htmlFor="confirmar-desligar">
+                  Para confirmar, escreve <strong>{regiao.name}</strong>
+                </label>
+                <input
+                  id="confirmar-desligar"
+                  name="confirmacao"
+                  type="text"
+                  required
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <button type="submit" className="perigo">
+                  Desligar {frase.com}
+                </button>
+              </form>
+            </details>
+          ) : null}
+
+          <details className="perigo">
+            <summary>Mudar o endereço principal…</summary>
+            <p>
+              É o dia em que a autoridade traz o domínio dela. Pela ordem: (1) acrescenta o endereço
+              novo em «Endereço», mais acima; (2) trata do DNS e do projeto da plataforma; (3) volta
+              aqui. O painel confirma que o endereço novo já responde antes de mudar — mudar antes
+              punha o sítio em baixo.
+            </p>
+            <form action={mudarDominio} className="formulario">
+              <input type="hidden" name="regiao" value={regiao.id} />
+              <label htmlFor="dominio-novo">O endereço novo</label>
+              {osAlias.length > 0 ? (
+                <select id="dominio-novo" name="dominio" required defaultValue="">
+                  <option value="" disabled>
+                    Escolher um dos outros endereços…
+                  </option>
+                  {osAlias.map((a) => (
+                    <option key={a.domain} value={a.domain}>
+                      {a.domain}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  id="dominio-novo"
+                  name="dominio"
+                  type="text"
+                  required
+                  inputMode="url"
+                  autoComplete="off"
+                  spellCheck={false}
+                  aria-describedby="dominio-novo-ajuda"
+                />
+              )}
+              {osAlias.length === 0 ? (
+                <p id="dominio-novo-ajuda" className="secundario-texto">
+                  Ainda não há outros endereços: acrescenta primeiro o novo em «Endereço».
+                </p>
+              ) : null}
+              <label className="caixa">
+                <input type="checkbox" name="manter_alias" value="1" defaultChecked />
+                {regiao.domain} fica a levar ao endereço novo
+              </label>
+              <label className="caixa">
+                <input type="checkbox" name="mesmo_sem_resposta" value="1" />
+                Mudar mesmo que o endereço novo ainda não responda — sei que o sítio fica em baixo
+                até responder
+              </label>
+              <label htmlFor="confirmar-dominio">
+                Para confirmar, escreve <strong>{regiao.name}</strong>
+              </label>
+              <input
+                id="confirmar-dominio"
+                name="confirmacao"
+                type="text"
+                required
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <button type="submit" className="perigo">
+                Mudar o endereço principal
+              </button>
+            </form>
+          </details>
+        </section>
+      ) : null}
+
+      {dono ? (
+        <details className="para-quem-gere">
+          <summary>Para quem gere a instalação</summary>
+          <dl className="pares">
+            <dt>Identificador</dt>
+            <dd>
+              <code>{regiao.id}</code>
+            </dd>
+            <dt>Nome e artigo</dt>
+            <dd>
+              «{regiao.article} {regiao.name}» — vêm do <code>regiao.yaml</code> da região e não se
+              mudam aqui; o CI confere que a base diz o mesmo.
+            </dd>
+            <dt>Endereço</dt>
+            <dd>
+              O <code>dominio:</code> do <code>regiao.yaml</code> tem de dizer o mesmo que o
+              endereço principal (o CI reprova a diferença), e o domínio tem de estar no projeto da
+              plataforma (<code>docs/NOVA-REGIAO.md</code>, passo 4).
+            </dd>
+            <dt>Modos</dt>
+            <dd>
+              Que fonte alimenta cada modo é da receita da região (<code>fontes.yaml</code>), e não
+              daqui. Os interruptores guardam-se em <code>modulos</code>, com rasto.
+            </dd>
+          </dl>
+        </details>
+      ) : null}
+
       <p>
-        <Link href="/admin/">Todas as regiões</Link>
-        {' · '}
-        <Link href={ficha}>Esta ficha</Link>
+        <Link href="/admin/">{dono ? 'Todas as regiões' : 'O início'}</Link>
       </p>
     </>
   );

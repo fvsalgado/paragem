@@ -28,13 +28,18 @@ export function nomeDoModulo(id: string): string {
   return NOME_DOS_MODOS[id] ?? id;
 }
 
-/** «os 7 ligados», ou «5 de 7 ligados — sem comboio e expresso». */
+/**
+ * «nenhum desligado», ou «desligados: comboio e expresso».
+ *
+ * Dizia «os 7 ligados» — numa região com três modos, que nunca teve os
+ * outros quatro para ligar (P4-022). Sem ler a declaração de cada região, a
+ * lista das regiões só sabe o que o painel DESLIGOU, e é isso que diz.
+ */
 export function resumoDosModulos(desligados: readonly string[]): string {
-  const total = MODULOS.length;
   const fora = MODULOS.filter((m) => desligados.includes(m));
-  if (fora.length === 0) return `os ${total} ligados`;
+  if (fora.length === 0) return 'nenhum desligado';
   const nomes = fora.map((m) => nomeDoModulo(m).toLowerCase());
   const lista =
     nomes.length === 1 ? nomes[0] : `${nomes.slice(0, -1).join(', ')} e ${nomes[nomes.length - 1]}`;
-  return `${total - fora.length} de ${total} ligados — sem ${lista}`;
+  return `${fora.length === 1 ? 'desligado' : 'desligados'}: ${lista}`;
 }

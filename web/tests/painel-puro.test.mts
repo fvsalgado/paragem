@@ -16,15 +16,12 @@ test('são os sete modos do produto, pela ordem da grelha', () => {
   assert.equal(ehModulo('teleferico'), false);
 });
 
-test('o resumo diz quantos e quais faltam, em português', () => {
-  assert.equal(resumoDosModulos([]), 'os 7 ligados');
-  assert.equal(resumoDosModulos(['comboio']), '6 de 7 ligados — sem comboio');
-  assert.equal(
-    resumoDosModulos(['expresso', 'comboio']),
-    '5 de 7 ligados — sem comboio e expresso',
-  );
+test('o resumo diz o que o painel desligou, e não conta modos que a região não tem', () => {
+  assert.equal(resumoDosModulos([]), 'nenhum desligado');
+  assert.equal(resumoDosModulos(['comboio']), 'desligado: comboio');
+  assert.equal(resumoDosModulos(['expresso', 'comboio']), 'desligados: comboio e expresso');
   // O que não é módulo não conta — nem rebenta.
-  assert.equal(resumoDosModulos(['teleferico']), 'os 7 ligados');
+  assert.equal(resumoDosModulos(['teleferico']), 'nenhum desligado');
 });
 
 test('a diferença só lista o que mudou', () => {
@@ -45,6 +42,6 @@ test('sem antes, tudo o que há é novo; sem nada, não há linhas', () => {
 });
 
 test('as ações têm nome de gente', () => {
-  assert.equal(nomeDaAcao('module.disable'), 'desligou um módulo');
+  assert.equal(nomeDaAcao('module.disable'), 'desligou um modo');
   assert.equal(nomeDaAcao('qualquer.coisa'), 'qualquer.coisa');
 });

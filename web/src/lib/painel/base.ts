@@ -18,7 +18,14 @@ import 'server-only';
 
 import { ErroDaBase, cabecalhosDaChave } from './base-pura.ts';
 
-export { ErroDaBase, cabecalhosDaChave, ehEsquemaPorAplicar, traduzirErro } from './base-pura.ts';
+export {
+  ErroDaBase,
+  cabecalhosDaChave,
+  dominioValido,
+  ehEsquemaPorAplicar,
+  normalizarDominio,
+  traduzirErro,
+} from './base-pura.ts';
 
 const PRAZO_MS = 8000;
 

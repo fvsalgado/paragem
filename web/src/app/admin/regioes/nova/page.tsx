@@ -25,7 +25,7 @@ const ARTIGOS = [
   ['o', 'o — «o Baixo Sável»'],
   ['a', 'a — «a Serra da Pedra Alta»'],
   ['os', 'os'],
-  ['as', 'as — «as Terras de …»'],
+  ['as', 'as — «as Terras do Ameno»'],
 ] as const;
 
 /**
@@ -34,9 +34,10 @@ const ARTIGOS = [
  * NÃO É UMA MIGRAÇÃO, e é por isso que este formulário existe: as migrações
  * trazem o produto e a sua demonstração, e o nome de um cliente numa migração
  * era o nome de um cliente publicado (`docs/BASE-DE-DADOS.md`). A região
- * nasce DESLIGADA — liga-se na ficha quando os dados dela estiverem no
- * armazém. Os quatro valores são os do `regiao.yaml` dela, letra a letra; o
- * CI compara os dois e reprova a diferença.
+ * nasce DESLIGADA — liga-se na ficha quando os dados dela estiverem
+ * publicados. Os quatro valores são os do `regiao.yaml` dela, letra a letra; o
+ * CI compara os dois e reprova a diferença — e isso diz-se a quem gere a
+ * instalação, no fim, e não a quem preenche o formulário, no meio dele.
  */
 export default async function NovaRegiao({ searchParams }: Props) {
   const params = await searchParams;
@@ -48,10 +49,8 @@ export default async function NovaRegiao({ searchParams }: Props) {
     <>
       <h1>Nova região</h1>
       <p className="entrada">
-        A região nasce desligada, com o que o <code>regiao.yaml</code> dela declara: o identificador
-        é a pasta em <code>regioes/</code>, o nome e o artigo são os que lá estão, o domínio é o{' '}
-        <code>dominio:</code>. O CI confere que a base e o ficheiro dizem o mesmo (
-        <code>docs/NOVA-REGIAO.md</code>).
+        A região nasce desligada: ninguém a vê até a ligares na ficha dela, depois de os dados
+        estarem publicados. O nome e o artigo não se mudam depois — são os da declaração da região.
       </p>
 
       <Aviso texto={params.aviso} />
@@ -65,11 +64,12 @@ export default async function NovaRegiao({ searchParams }: Props) {
           required
           pattern="[a-z0-9][a-z0-9-]{0,63}"
           autoComplete="off"
+          spellCheck={false}
           defaultValue={params.id ?? ''}
           aria-describedby="id-ajuda"
         />
         <p id="id-ajuda" className="secundario-texto">
-          Minúsculas, dígitos e hífens; não muda depois.
+          Minúsculas, algarismos e hífens, como <code>serra-da-pedra-alta</code>. Não muda depois.
         </p>
 
         <label htmlFor="nome">Nome</label>
@@ -84,7 +84,7 @@ export default async function NovaRegiao({ searchParams }: Props) {
           ))}
         </select>
 
-        <label htmlFor="dominio">Domínio canónico</label>
+        <label htmlFor="dominio">Endereço</label>
         <input
           id="dominio"
           name="dominio"
@@ -92,15 +92,16 @@ export default async function NovaRegiao({ searchParams }: Props) {
           required
           inputMode="url"
           autoComplete="off"
+          spellCheck={false}
           defaultValue={params.dominio ?? ''}
           aria-describedby="dominio-ajuda"
         />
         <p id="dominio-ajuda" className="secundario-texto">
-          Sem esquema nem barra: <code>&lt;subdominio&gt;.paragem.pt</code>, ou o domínio da
-          autoridade. Entra também no projeto da plataforma, à parte.
+          Só o domínio, sem https:// — um subdomínio do Paragem.pt (<code>serra.paragem.pt</code>)
+          ou o domínio da autoridade.
         </p>
 
-        <label htmlFor="ordem">Ordem na montra</label>
+        <label htmlFor="ordem">Posição na lista</label>
         <input
           id="ordem"
           name="ordem"
@@ -109,10 +110,24 @@ export default async function NovaRegiao({ searchParams }: Props) {
           min={0}
           step={1}
           defaultValue={params.ordem ?? '10'}
+          aria-describedby="ordem-ajuda"
         />
+        <p id="ordem-ajuda" className="secundario-texto">
+          Os números mais baixos aparecem primeiro, aqui e na página do Paragem.pt.
+        </p>
 
         <button type="submit">Criar a região, desligada</button>
       </form>
+
+      <details className="para-quem-gere">
+        <summary>Para quem gere a instalação</summary>
+        <p>
+          O identificador é a pasta da região em <code>regioes/</code>; o nome, o artigo e o
+          endereço são os do <code>regiao.yaml</code> dela (<code>dominio:</code>), letra a letra —
+          o CI compara a base com o ficheiro e reprova a diferença. O domínio tem de entrar também
+          no projeto da plataforma (<code>docs/NOVA-REGIAO.md</code>, passo 4).
+        </p>
+      </details>
 
       <p>
         <Link href="/admin/">Todas as regiões</Link>

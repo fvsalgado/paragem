@@ -3833,6 +3833,81 @@ dialog.menu-do-mapa .lista .secundario {
   font-size: 0.85rem;
 }
 
+/* O GESTO DE TODOS OS DIAS, COM ASPETO DE GESTO (P4-023). «Escrever um aviso»
+   era uma ligação de texto de 21 px, mais abaixo do «Desligar a região». */
+.painel a.botao.primario {
+  background: var(--marca);
+  border-color: var(--marca);
+  color: #fff;
+}
+.painel a.botao.primario:hover,
+.painel a.botao.primario:focus-visible {
+  background: var(--marca-hover);
+  border-color: var(--marca-hover);
+}
+.painel .linha-accoes > a:not(.botao) {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+}
+
+/* O «Retirar…» de um endereço, ao lado dele. */
+.painel details.em-linha-curta {
+  display: inline-block;
+  margin: 0 0 0 0.75rem;
+  vertical-align: middle;
+}
+.painel details.em-linha-curta[open] {
+  display: block;
+  margin: 0.5rem 0;
+}
+
+/* O estado da região, por baixo do nome: a frase de entrada, e o «Ligar» quando há. */
+.painel .estado-da-regiao .entrada {
+  margin-top: 0;
+}
+
+/* A ZONA DE PERIGO é um cartão à parte, no fim, com a borda do alerta — o
+   lugar que o GitHub e a Vercel ensinaram a quem gere sítios (P4-011). */
+.painel .cartao.zona-de-perigo {
+  border: 2px solid var(--alerta);
+}
+
+/* O rasto lê-se como frases: quem, o quê, sobre o quê; a hora por baixo, e o
+   que mudou — à vista quando é pouco, numa gaveta quando é muito. */
+.painel ol.rasto,
+.painel ul.rasto {
+  list-style: none;
+  margin: 0.75rem 0;
+  padding: 0;
+}
+.painel .rasto > li {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--linhas);
+}
+.painel .rasto > li > p {
+  margin: 0;
+}
+.painel dl.mudanca-lista {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+}
+.painel dl.mudanca-lista > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.5rem;
+}
+.painel dl.mudanca-lista dt {
+  color: var(--texto-secundario);
+}
+.painel dl.mudanca-lista dt::after {
+  content: ':';
+}
+.painel dl.mudanca-lista dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 /* A lista de descargas da página de dados abertos.
  *
  * Sem marcador e com espaço entre ficheiros: cada item tem três linhas — o

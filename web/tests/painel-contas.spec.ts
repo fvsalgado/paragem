@@ -129,7 +129,7 @@ test('uma pessoa da região A não vê nem escreve na região B', async ({ brows
     await pessoa.getByLabel('Título').fill(`${titulo} (legítimo)`);
     await pessoa.locator('textarea[name="texto"]').fill('Um aviso de A, de A.');
     await pessoa.locator('form:has(textarea[name="texto"]) button[type="submit"]').first().click();
-    await expect(pessoa.locator('p[role="status"]').first()).toContainText('Aviso gravado');
+    await expect(pessoa.locator('[role="status"]').first()).toContainText('Aviso gravado');
   }
   const publicar = await idDaAcao(pessoa, 'form:has(input[name="publicar"])');
   for (const regiao of [B, A]) {
@@ -141,8 +141,8 @@ test('uma pessoa da região A não vê nem escreve na região B', async ({ brows
       maxRedirects: 0,
     });
     expect([303, 307, 200]).toContain(resposta.status());
-    const destino = resposta.headers()['location'] ?? '';
-    expect(decodeURIComponent(destino), `publicar com a região ${regiao}`).toMatch(
+    const destino = new URL(resposta.headers()['location'] ?? '/', PRODUTO);
+    expect(destino.searchParams.get('aviso'), `publicar com a região ${regiao}`).toMatch(
       /Não foi possível: (não tens permissão|não há aviso com esse identificador nesta região)/,
     );
   }
@@ -154,15 +154,15 @@ test('uma pessoa da região A não vê nem escreve na região B', async ({ brows
 
   // A AUDITORIA ESCREVE QUEM: a ativação está em nome dela.
   await dono.goto(`${PRODUTO}/admin/auditoria/`);
-  await expect(dono.locator('table.registo')).toContainText(nome);
-  await expect(dono.locator('table.registo')).toContainText(email);
+  await expect(dono.locator('.rasto')).toContainText(nome);
+  await expect(dono.locator('.rasto')).toContainText(email);
 
   // DESATIVAR TEM EFEITO NO CLIQUE SEGUINTE — a sessão aberta dela cai.
   await dono.goto(`${PRODUTO}/admin/pessoas/`);
   const ficha = dono.locator('li.pessoa', { hasText: email });
   await ficha.locator('summary', { hasText: 'Desativar' }).click();
   await ficha.getByRole('button', { name: `Desativar ${nome}` }).click();
-  await expect(dono.locator('p[role="status"]').first()).toContainText('deixou de poder entrar');
+  await expect(dono.locator('[role="status"]').first()).toContainText('deixou de poder entrar');
   await pessoa.goto(`${PRODUTO}/admin/regioes/${A}/avisos/`);
   await expect(pessoa).toHaveURL(/\/admin\/entrar\//);
 });
