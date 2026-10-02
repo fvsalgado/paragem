@@ -701,17 +701,21 @@ def _lacunas_de_declaracao(ctx: Contexto) -> None:
         id="calendario.feriados-municipais-por-aplicar",
         o_que="Os feriados municipais estão levantados mas não afetam os horários",
         onde=f"regioes/{r.id}/calendario.yaml",
+        # O texto é o MESMO em todas as regiões, as inventadas incluídas, e por
+        # isso não pode citar o caso medido: dizia o feriado de uma terra real
+        # aplicado a uma linha real, e saía no relatório de lacunas das
+        # demonstrações, publicado com elas.
         porque_importa=(
             "Um feriado municipal vale num concelho e não no resto do território, e boa parte "
-            "das linhas atravessa concelhos. Aplicar o feriado de Tomar a uma linha "
-            "Abrantes–Tomar suprimia viagens que existem; não o aplicar anuncia viagens que "
-            "não existem. As duas hipóteses erram, em sentidos opostos, e a escolha é de quem "
-            "conhece a operação — não do pipeline."
+            "das linhas atravessa concelhos. Aplicar o feriado de um concelho a uma linha que "
+            "sai dele suprimia viagens que existem no resto do percurso; não o aplicar anuncia "
+            "viagens que não existem. As duas hipóteses erram, em sentidos opostos, e a "
+            "escolha é de quem conhece a operação — não do pipeline."
         ),
         o_que_fazer=(
             "Perguntar à operadora o que faz num feriado municipal: suspende a linha inteira, "
-            "só o troço do concelho, ou nada. Os `service_id` com prefixo de concelho "
-            "(ABT_, ORM_, TMR_ …) dão o caminho para o aplicar assim que a resposta existir."
+            "só o troço do concelho, ou nada. Onde os `service_id` trazem o concelho no nome, "
+            "são o caminho para o aplicar assim que a resposta existir."
         ),
         quantos=len(cal.feriados_municipais(2026)),
     )
