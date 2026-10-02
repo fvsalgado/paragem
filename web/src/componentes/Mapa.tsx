@@ -411,6 +411,18 @@ export default function Mapa({
           localizar.current?.(pos.coords.latitude, pos.coords.longitude),
         );
         criado.addControl(localizacao, 'bottom-right');
+        // O BOTÃO NASCE SEM NOME. O MapLibre cria-o desativado e só lhe dá o
+        // nome quando o navegador responde se sabe dar a localização — e nesse
+        // intervalo o axe encontrava um botão sem nome nenhum, que é a
+        // violação mais grave que ele conhece. Com o mapa a chegar mais cedo
+        // (P3-023), o intervalo passou a apanhar-se. O nome vem já daqui; o
+        // MapLibre troca-o pelo seu quando souber a resposta.
+        const botaoDaLocalizacao = caixa.current?.querySelector('.maplibregl-ctrl-geolocate');
+        if (botaoDaLocalizacao && !botaoDaLocalizacao.getAttribute('aria-label')) {
+          const nome = NOMES_DOS_CONTROLOS['GeolocateControl.FindMyLocation'];
+          botaoDaLocalizacao.setAttribute('aria-label', nome);
+          botaoDaLocalizacao.setAttribute('title', nome);
+        }
         criado.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left');
 
         // O erro vai para a consola: um mapa que falha em silêncio é uma
