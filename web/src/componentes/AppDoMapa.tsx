@@ -16,6 +16,7 @@ import Link from '@/componentes/Ligacao';
 import MenuDoMapa from '@/componentes/MenuDoMapa';
 import { Chegada, DoModo, Hamburguer, Lista } from '@/componentes/Icones';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
+import { usePontos } from '@/lib/pontos-do-navegador';
 import {
   avisoDe,
   comoProcura,
@@ -45,6 +46,9 @@ import {
  * dados — a melhor para quem vê, e nunca a única.
  */
 const seguro = (s: string) => s.replace(/[^a-zA-Z0-9\-_]/g, '-');
+
+/** Uma lista vazia que é sempre a MESMA: o mapa compara-a, e uma nova a cada pintura refazia a fonte. */
+const SEM_PONTOS: Ponto[] = [];
 
 /** O que sobe do fundo por cima do mapa. A folha das direções numa página própria não conta. */
 const FOLHAS = '.folha-de-abertura, .cartao-de-baixo, .folha:not(.em-pagina)';
@@ -154,7 +158,8 @@ export default function AppDoMapa({
   regiao,
   centro,
   caixa = null,
-  pontos,
+  tipos,
+  contagens,
   mosaicos,
   atribuicaoDoMapa,
   nomeDaRegiao,
@@ -177,7 +182,13 @@ export default function AppDoMapa({
   centro: [number, number];
   /** A caixa da região: um ponto pedido por coordenadas tem de cair perto dela. */
   caixa?: Caixa | null;
-  pontos: Ponto[];
+  /**
+   * Os tipos de ponto que a região tem — as camadas e as pílulas existem
+   * desde o primeiro pixel, antes de os pontos chegarem.
+   */
+  tipos: string[];
+  /** Quantas paragens e estações — para quem não vê o mapa, dito à entrada. */
+  contagens: { paragens: number; estacoes: number };
   mosaicos: string;
   /**
    * De quem é o mapa de fundo, como o MapLibre o escreve no canto. Vem dos
@@ -197,6 +208,13 @@ export default function AppDoMapa({
 }) {
   const [menu, setMenu] = useState(false);
 
+  // OS PONTOS CHEGAM DEPOIS DA PÁGINA (P3-006). Vinham embutidos no HTML —
+  // 410 kB em bruto, numa página de 431 —, e o texto da folha de abertura
+  // esperava por eles para se pintar. Agora pedem-se assim que a aplicação
+  // acorda, e entretanto já se vê a procura, a folha e os modos.
+  const { pontos: osPontos, tentar: tentarOsPontos } = usePontos(regiao, modosDesligados);
+  const pontos = Array.isArray(osPontos) ? osPontos : SEM_PONTOS;
+
   // O MAPA OCUPA O ECRÃ TODO, e a faixa do sítio sai da frente — pelo CSS,
   // com `body:has(.app-mapa)`, e já no HTML que vem do servidor. Era uma
   // classe posta num efeito: o cabeçalho chegava, aparecia, e desaparecia na
@@ -214,7 +232,7 @@ export default function AppDoMapa({
   // porque seguia a ordem de empilhamento das camadas. A rede da autoridade
   // vem primeiro, os privados no fim, como na folha logo por baixo.
   const camadas = ordemDeApresentacao(
-    camadasDe(pontos.map((p) => p.tipo)),
+    camadasDe(tipos),
     modos.map((m) => m.id),
   );
   const [visiveis, setVisiveis] = useState<Set<string>>(() => new Set(camadas.map((c) => c.tipo)));
@@ -262,13 +280,10 @@ export default function AppDoMapa({
    * «hoje não anda nada», que é uma resposta (`lib/dias.ts`).
    */
   const [calendario, setCalendario] = useState<Calendario | null | undefined>(undefined);
-  useEffect(() => {
-    let vivo = true;
-    calendarioDe(regiao).then((c) => vivo && setCalendario(c));
-    return () => {
-      vivo = false;
-    };
-  }, [regiao]);
+  // A TABELA DOS DIAS PEDE-SE QUANDO É PRECISA — ao abrir o cartão de uma
+  // paragem (`carregarPartidas`), e não ao abrir a aplicação (P3-006). Era
+  // pedida logo à entrada: 1,9 MB de JSON a analisar no telemóvel de quem
+  // talvez só quisesse ver o mapa.
   // AS CORES DAS LINHAS, do índice que o sítio já publica.
   //
   // Vêm de um ficheiro à parte e não dentro de cada partida, e a razão é
@@ -488,7 +503,9 @@ export default function AppDoMapa({
       })
       .then((mapa: Record<string, Partida[]>) => setPartidas(mapa[p.id] ?? []))
       .catch(() => setPartidas('falhou'));
-    if (calendario === null) calendarioDe(regiao).then(setCalendario);
+    // A tabela pede-se uma vez por visita (`calendarioDe` guarda-a), e outra
+    // vez se da primeira não chegou.
+    if (!calendario) calendarioDe(regiao).then(setCalendario);
   }
 
   /**
@@ -631,19 +648,24 @@ export default function AppDoMapa({
     }
   }
 
+  // O ENDEREÇO LÊ-SE QUANDO OS PONTOS CHEGAREM: `?ponto=` e `?para=<nome>`
+  // procuram-se neles. Sem eles (não chegaram), as pontas por coordenadas
+  // continuam a abrir-se, e as que precisavam de um nome dizem-no.
+  const pontosLidos = osPontos !== null;
+  const aplicar = useRef(aplicarEndereco);
+  aplicar.current = aplicarEndereco;
   useEffect(() => {
-    aplicarEndereco(new URLSearchParams(window.location.search));
+    if (!pontosLidos) return;
+    aplicar.current(new URLSearchParams(window.location.search));
     const aoVoltar = () => {
       // O foco estava numa camada que vai mudar: a que fica recebe-o.
       tinhaFoco.current = true;
       focarCartao.current = true;
-      aplicarEndereco(new URLSearchParams(window.location.search));
+      aplicar.current(new URLSearchParams(window.location.search));
     };
     window.addEventListener('popstate', aoVoltar);
     return () => window.removeEventListener('popstate', aoVoltar);
-    // Só ao abrir: os pontos são os da região, e não mudam depois disso.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [pontosLidos]);
 
   // O ESC FECHA O QUE ESTÁ POR CIMA — as direções, ou o cartão. Não fechava
   // nada (P3-014). Uma lista de sugestões aberta fecha-se primeiro: a caixa de
@@ -673,10 +695,10 @@ export default function AppDoMapa({
     escolhido?.tipo === 'paragem' &&
     (partidas === null || (Array.isArray(partidas) && calendario === undefined));
 
-  // O que o mapa mostra, contado, para quem não o vê (P3-018).
-  const quantas = (tipo: string) => pontos.filter((p) => p.tipo === tipo).length;
-  const nParagens = quantas('paragem');
-  const nEstacoes = quantas('estacao');
+  // O que o mapa mostra, contado, para quem não o vê (P3-018). Contado no
+  // servidor, para estar no HTML antes de os pontos chegarem.
+  const nParagens = contagens.paragens;
+  const nEstacoes = contagens.estacoes;
 
   return (
     <DisponibilidadeBicicletas endereco={disponibilidadeDaRegiao}>
@@ -722,7 +744,8 @@ export default function AppDoMapa({
             <EscolherPonto
               etiqueta="Procurar"
               sugestao="Procurar paragem ou sítio"
-              pontos={pontos}
+              pontos={osPontos}
+              aoTentarDeNovo={tentarOsPontos}
               valor={null}
               regiao={regiao}
               linhas
@@ -875,7 +898,8 @@ export default function AppDoMapa({
           <Direccoes
             key={direcoes.vez}
             regiao={regiao}
-            pontos={pontos}
+            pontos={osPontos}
+            aoTentarOsPontos={tentarOsPontos}
             modosDesligados={modosDesligados}
             motorDaRegiao={motorDaRegiao}
             servicosSemDatas={servicosSemDatas}
@@ -978,6 +1002,7 @@ export default function AppDoMapa({
             demonstrações (P2-041). */}
         <Mapa
           centro={centro}
+          tipos={tipos}
           pontos={pontos as Marca[]}
           aoEscolher={abrir}
           aoLocalizar={(lat, lon) => setAqui([lat, lon])}

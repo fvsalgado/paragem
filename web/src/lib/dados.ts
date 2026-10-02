@@ -206,7 +206,7 @@ async function regiaoLigada(r: string): Promise<boolean> {
 // Os tipos e as funções puras vivem em `formato.ts` — ver lá porquê.
 export * from './formato';
 // O `export *` reexporta, mas não traz os nomes para ESTE ficheiro.
-import { IDENTIFICADOR, seguro } from './formato';
+import { IDENTIFICADOR, pontosDaProcura, seguro, type ProcuraCrua } from './formato';
 import type {
   APedido,
   Concelho,
@@ -408,30 +408,10 @@ export const dadosAbertos = cache(async (r: string): Promise<Descarga[]> => {
  * outra não.
  */
 export const procura = cache(async (r: string): Promise<Ponto[]> => {
-  const d = await ler<{ campos: string[]; pontos: unknown[][] }>(r, 'procura.json', {
-    campos: [],
-    pontos: [],
-  });
+  const d = await ler<ProcuraCrua>(r, 'procura.json', { campos: [], pontos: [] });
   // Os pontos de um módulo desligado saem do mapa, da procura e do «Perto de
   // ti» — é este índice que os três leem.
-  const fora = await modulosDesligados(r);
-  const pontos = d.pontos.map((linha) => ({
-    nome: String(linha[0]),
-    lat: Number(linha[1]),
-    lon: Number(linha[2]),
-    tipo: String(linha[3]),
-    // O NÚMERO DE PARTIDAS VINHA E PERDIA-SE AQUI.
-    //
-    // O `procura.json` sempre o trouxe, e este mapeamento deitava-o fora — e
-    // com ele a regra que mostra, entre o zoom 11 e o 13, só as paragens com
-    // serviço a sério. Sem o campo, a regra comparava `undefined` com 40 e
-    // dava sempre falso: a esses zooms o mapa ficava sem paragem nenhuma, e
-    // parecia de propósito.
-    partidas: Number(linha[4] ?? 0),
-    id: String(linha[5] ?? ''),
-    concelho: String(linha[6] ?? 'fora-da-regiao'),
-  }));
-  return semModulosDesligados(pontos, fora);
+  return semModulosDesligados(pontosDaProcura(d), await modulosDesligados(r));
 });
 
 /**

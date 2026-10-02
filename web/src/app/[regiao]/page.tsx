@@ -59,7 +59,18 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
   // mapa sem tocar em código. Quem sabe é o inventário do que se publicou.
   if (!(await temMosaicos(rid))) return <CatalogoDaRegiao regiao={rid} inicio />;
 
+  // OS PONTOS LEEM-SE AQUI E NÃO VÃO NA PÁGINA (P3-006). Iam para o
+  // componente do mapa, e com isso para o HTML: 410 kB dos 431 do início da
+  // região real, e outra vez em cada pré-carregamento desta página. O
+  // navegador pede-os à parte, depois de pintar (`lib/pontos-do-navegador.ts`).
+  // Daqui saem só as contas que o primeiro pixel precisa: onde abrir, que
+  // camadas há, e quantas paragens e estações dizer a quem não vê o mapa.
   const pontos = await procura(rid);
+  const tipos = [...new Set(pontos.map((p) => p.tipo))];
+  const contagens = {
+    paragens: pontos.filter((p) => p.tipo === 'paragem').length,
+    estacoes: pontos.filter((p) => p.tipo === 'estacao').length,
+  };
 
   // O MAPA ABRE ONDE HÁ TRANSPORTES, e não no centro geométrico da caixa.
   //
@@ -108,7 +119,8 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
       emDaRegiao={r.em}
       centro={centro}
       caixa={r.caixa}
-      pontos={pontos}
+      tipos={tipos}
+      contagens={contagens}
       mosaicos={enderecoDosDados(rid, 'regiao.pmtiles')}
       atribuicaoDoMapa={r.mapa?.atribuicao}
       modos={modos}

@@ -12,7 +12,6 @@ import {
   NOME_DOS_MODOS,
   url,
   urlRede,
-  procura,
   modos as lerModos,
   caminhoDoModo,
 } from '@/lib/dados';
@@ -58,8 +57,10 @@ export default async function CatalogoDaRegiao({
   const ps = await paragens(rid);
   const es = await estacoes(rid);
   const as = await avisosEmVigor(rid);
-  const pontos = await procura(rid);
   const pedido = await aPedido(rid);
+  // OS PONTOS NÃO VÃO NA PÁGINA (P3-006): a procura pede-os à primeira tecla,
+  // o «Perto de ti» quando sabe onde se está, e o planeador ao abrir.
+  const desligados = r.modos_desligados ?? [];
   const dosModos = await lerModos(rid);
   const temMapa = await temMosaicos(rid);
   const temPagina = (m: string) => m in dosModos;
@@ -98,14 +99,13 @@ export default async function CatalogoDaRegiao({
           <section aria-labelledby="procurar-ponto">
             <h2 id="procurar-ponto">Procurar</h2>
             <div className="procura-sem-mapa">
-              <ProcurarNaRegiao regiao={rid} pontos={pontos} />
+              <ProcurarNaRegiao regiao={rid} modosDesligados={desligados} />
             </div>
           </section>
 
           <section aria-labelledby="planear">
             <h2 id="planear">Para onde vais?</h2>
             <DireccoesDaPagina
-              pontos={pontos}
               regiao={rid}
               caixa={r.caixa}
               emDaRegiao={r.em}
@@ -150,7 +150,7 @@ export default async function CatalogoDaRegiao({
 
       <FaixaDeAvisos avisos={as} />
 
-      <PertoDeTi regiao={rid} pontos={pontos} />
+      <PertoDeTi regiao={rid} modosDesligados={desligados} />
 
       {/* O TELEFONE FICA AQUI, e não só na página própria. Quem chega a esta
           página a procurar transporte numa freguesia sem carreira precisa do

@@ -115,6 +115,12 @@ por nome, 41 kB com gzip. O `paragens.json` tem 843 kB e serve para construir
 as páginas — mandá-lo para o telemóvel de quem só quer escrever «Tomar» era
 gastar-lhe os dados por nada.
 
+**E o índice não vai dentro da página.** Pede-se à parte, depois de ela se
+pintar (`src/lib/pontos-do-navegador.ts`): embutido, era quase todo o HTML do
+início, e outra vez em cada pré-carregamento. A tabela dos dias também se pede
+à parte, e só onde faz falta — no mapa, ao abrir uma paragem —, na forma em
+máscaras (`calendario.json`), vinte vezes mais pequena do que a lista de datas.
+
 ## O que falta
 
 - **O mapa**, com MapLibre GL e PMTiles gerados do mesmo OpenStreetMap e

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Direccoes from './Direccoes';
 import type { Ponto } from '@/lib/formato';
+import { usePontos } from '@/lib/pontos-do-navegador';
 import {
   avisoDe,
   comoProcura,
@@ -32,9 +33,12 @@ import {
  *
  * O endereço lê-se do `window` e não do `useSearchParams`: a página é servida
  * da cache, igual para toda a gente, e a pergunta só existe no navegador.
+ *
+ * **E OS PONTOS TAMBÉM CHEGAM DEPOIS (P3-006).** Iam embutidos no HTML — os
+ * 2 573 da região real, 410 kB em bruto. Pedem-se ao abrir, e o endereço lê-se
+ * quando chegam: as pontas escritas por nome procuram-se neles.
  */
 export default function DireccoesDaPagina({
-  pontos,
   regiao,
   caixa = null,
   emDaRegiao = '',
@@ -43,7 +47,6 @@ export default function DireccoesDaPagina({
   servicosSemDatas = 0,
   temAPedido = false,
 }: {
-  pontos: Ponto[];
   regiao: string;
   /** A caixa da região: uma ponta pedida por coordenadas tem de cair perto dela. */
   caixa?: Caixa | null;
@@ -63,13 +66,23 @@ export default function DireccoesDaPagina({
     vez: number;
   }>({ de: null, para: null, dia: null, hora: null, aviso: null, vez: 0 });
 
+  const { pontos, tentar } = usePontos(regiao, modosDesligados);
+
   // O ENDEREÇO LÊ-SE ANTES DE SE ESCREVER. Os efeitos dos filhos correm antes
   // dos do pai: sem esta marca, as direções escreviam o endereço vazio da
-  // primeira montagem por cima do que se ia ler a seguir.
+  // primeira montagem por cima do que se ia ler a seguir. E lê-se quando os
+  // pontos chegarem — ou quando se souber que não chegam: as pontas por
+  // coordenadas abrem-se na mesma, e as outras dizem que não se encontraram.
   const lido = useRef(false);
+  const pontosLidos = pontos !== null;
   useEffect(() => {
+    if (!pontosLidos) return;
     lido.current = true;
-    const v = lerViagem(new URLSearchParams(window.location.search), pontos, caixa);
+    const v = lerViagem(
+      new URLSearchParams(window.location.search),
+      Array.isArray(pontos) ? pontos : [],
+      caixa,
+    );
     const ponto = (l: typeof v.de) => (l?.tipo === 'ponto' ? l.ponto : null);
     // Sem nada no endereço não há nada a ler: os campos ficam como estão, e
     // não se volta a montar o formulário por baixo de quem já está a escrever.
@@ -82,9 +95,9 @@ export default function DireccoesDaPagina({
       aviso: avisoDe(v.de, v.para, emDaRegiao),
       vez: 1,
     });
-    // Só à entrada: o endereço é o de chegada.
+    // Só à entrada, quando há pontos: o endereço é o de chegada.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [pontosLidos]);
 
   return (
     <Direccoes
@@ -93,6 +106,7 @@ export default function DireccoesDaPagina({
       key={inicial.vez}
       regiao={regiao}
       pontos={pontos}
+      aoTentarOsPontos={tentar}
       deInicial={inicial.de}
       paraInicial={inicial.para}
       diaInicial={inicial.dia}
