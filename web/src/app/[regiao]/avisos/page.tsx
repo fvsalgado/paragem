@@ -86,7 +86,8 @@ export default async function Avisos({ params }: { params: Promise<{ regiao: str
       </p>
       <p className="secundario">
         Os avisos publicados saem também em <a href="gtfs-rt/alerts.pb">GTFS-RT Service Alerts</a>,
-        para quem os quiser mostrar noutro lado.
+        para quem os quiser mostrar noutro lado — menos os que só dizem respeito a um modo inteiro,
+        como as bicicletas, que esse formato não tem como dizer.
       </p>
     </>
   );

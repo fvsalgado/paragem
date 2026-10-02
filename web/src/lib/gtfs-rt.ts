@@ -73,9 +73,12 @@ function periodo(inicio?: number, fim?: number): number[] {
 /**
  * `EntitySelector`: a que é que o aviso diz respeito.
  *
- * VAZIO QUER DIZER «A REDE TODA», e é o que a especificação manda: um alerta
- * sem `informed_entity` aplica-se a tudo. É raro e deve ser deliberado — por
- * isso o painel avisa quem o deixar assim.
+ * A ESPECIFICAÇÃO EXIGE PELO MENOS UMA ENTIDADE — «At least one
+ * informed_entity must be provided» (`reference.md`, `Alert`). Esteve aqui
+ * escrito o contrário, que um alerta sem entidades se aplicava a tudo, e por
+ * isso um aviso da rede toda ainda sai vazio. A forma certa de o dizer são as
+ * operadoras, por `agency_id`, e isso pede a lista delas por região, que o
+ * sítio ainda não publica. Fica escrito em vez de esquecido.
  */
 function entidades(linhas: string[], paragens: string[]): number[] {
   return [
@@ -141,6 +144,7 @@ export type AvisoRT = {
   fim?: string | Date | null;
   linhas?: string[];
   paragens?: string[];
+  modos?: string[];
   url?: string | null;
 };
 
@@ -148,12 +152,30 @@ const segundos = (d: string | Date | null | undefined): number | undefined =>
   d === null || d === undefined ? undefined : Math.floor(new Date(d).getTime() / 1000);
 
 /**
+ * Um aviso que só nomeia MODOS — «as bicicletas», «os comboios» —, sem uma
+ * linha nem uma paragem, NÃO SAI NESTE FEED. Fica nas páginas do sítio, que
+ * sabem mostrar um modo inteiro.
+ *
+ * O GTFS-RT não tem como o dizer sem mentir. Sem entidade nenhuma, a
+ * especificação não o aceita e quem o lesse aplicava-o à rede inteira — o
+ * aviso das bicicletas aparecia nos autocarros. O `route_type` também não
+ * serve: pode haver na mesma região várias redes de autocarro com o mesmo
+ * tipo, e o aviso de uma aparecia nas outras; e as bicicletas e os táxis nem
+ * tipo têm. Das maneiras de o pôr no feed, ficar de fora é a única que não diz
+ * nada de falso.
+ */
+export function soDeModos(a: Pick<AvisoRT, 'linhas' | 'paragens' | 'modos'>): boolean {
+  return !a.linhas?.length && !a.paragens?.length && Boolean(a.modos?.length);
+}
+
+/**
  * O feed inteiro, pronto a servir.
  *
  * `incrementality` fica no valor por omissão (`FULL_DATASET`): cada pedido traz
- * TODOS os avisos em vigor, e o que não vier deixou de valer. É o modo certo
- * para quem publica dezenas de avisos por ano e não milhares por minuto — e é
- * o único que se pode servir de uma cache sem mentir.
+ * TODOS os avisos em vigor que o formato sabe dizer (`soDeModos`), e o que não
+ * vier deixou de valer. É o modo certo para quem publica dezenas de avisos por
+ * ano e não milhares por minuto — e é o único que se pode servir de uma cache
+ * sem mentir.
  */
 export function feedDeAvisos(avisos: AvisoRT[], lingua = 'pt', agora = new Date()): Uint8Array {
   const cabecalho = [
@@ -161,19 +183,21 @@ export function feedDeAvisos(avisos: AvisoRT[], lingua = 'pt', agora = new Date(
     ...campoVarint(3, Math.floor(agora.getTime() / 1000)),
   ];
 
-  const entidades_ = avisos.flatMap((a) => {
-    const alerta = [
-      ...periodo(segundos(a.inicio), segundos(a.fim)),
-      ...entidades(a.linhas ?? [], a.paragens ?? []),
-      ...campoVarint(6, CAUSA[a.causa as Causa] ?? CAUSA.UNKNOWN_CAUSE),
-      ...campoVarint(7, EFEITO[a.efeito as Efeito] ?? EFEITO.OTHER_EFFECT),
-      ...textoTraduzido(8, a.url, lingua),
-      ...textoTraduzido(10, a.titulo, lingua),
-      ...textoTraduzido(11, a.texto, lingua),
-      ...campoVarint(14, GRAVIDADE[a.gravidade as Gravidade] ?? GRAVIDADE.UNKNOWN_SEVERITY),
-    ];
-    return campoBytes(2, [...campoTexto(1, a.id), ...campoBytes(5, alerta)]);
-  });
+  const entidades_ = avisos
+    .filter((a) => !soDeModos(a))
+    .flatMap((a) => {
+      const alerta = [
+        ...periodo(segundos(a.inicio), segundos(a.fim)),
+        ...entidades(a.linhas ?? [], a.paragens ?? []),
+        ...campoVarint(6, CAUSA[a.causa as Causa] ?? CAUSA.UNKNOWN_CAUSE),
+        ...campoVarint(7, EFEITO[a.efeito as Efeito] ?? EFEITO.OTHER_EFFECT),
+        ...textoTraduzido(8, a.url, lingua),
+        ...textoTraduzido(10, a.titulo, lingua),
+        ...textoTraduzido(11, a.texto, lingua),
+        ...campoVarint(14, GRAVIDADE[a.gravidade as Gravidade] ?? GRAVIDADE.UNKNOWN_SEVERITY),
+      ];
+      return campoBytes(2, [...campoTexto(1, a.id), ...campoBytes(5, alerta)]);
+    });
 
   return new Uint8Array([...campoBytes(1, cabecalho), ...entidades_]);
 }

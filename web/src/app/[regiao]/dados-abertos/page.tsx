@@ -236,10 +236,12 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
         informação de serviço de outra entidade, que a pode corrigir sem nos dizer.
       </p>
       <p>
-        Cada pedido traz <strong>todos</strong> os avisos em vigor, e o que não vier deixou de
-        valer. Sem avisos, o feed sai válido e vazio — que é diferente de não responder: se não
-        conseguirmos ler a base, o endereço responde com um erro e não com um feed vazio, porque
-        dizer «não há avisos» por cima de uma greve é pior do que não responder.
+        Cada pedido traz <strong>todos</strong> os avisos em vigor, e o que não vier deixou de valer
+        — com uma exceção: um aviso que só diga respeito a um modo inteiro, como as bicicletas, sem
+        nomear linhas nem paragens, fica só nas páginas do sítio, porque o formato não tem como o
+        dizer sem o aplicar à rede toda. Sem avisos, o feed sai válido e vazio — que é diferente de
+        não responder: se não conseguirmos ler a base, o endereço responde com um erro e não com um
+        feed vazio, porque dizer «não há avisos» por cima de uma greve é pior do que não responder.
       </p>
 
       <h2>O que falta</h2>

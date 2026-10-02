@@ -219,10 +219,27 @@ Por esta ordem, um PR de cada vez: (0) a base, provada num Postgres real;
 AGPL-3.0-only. `LICENSE`, `AUTORIA.md`, `REUSE.toml`, `CONTRIBUTING.md` com
 cláusula de entrada, `SECURITY.md` e `docs/TERCEIROS.md`.
 
-**Os feeds construídos não levam licença declarada.** Há fontes que não
-declaram licença nenhuma, outras com termos por confirmar, e o que deriva do
-OpenStreetMap é ODbL com atribuição obrigatória. Publicá-los com licença aberta
-depende de a autoridade de transportes autorizar a reutilização.
+**Cada ficheiro que se descarrega diz os seus termos, e o rótulo sai do
+código** (`_termos`, em `pipeline/src/paragem/sitio.py`), e não de uma frase
+escrita à parte:
+
+- **ODbL** — a receita da região declara-a (`licenca:`), na saída ou na fonte.
+  É o que deriva do OpenStreetMap, só dele ou com os traçados encaminhados por
+  ele: a partilha nos mesmos termos ganha a tudo o resto, e a atribuição vai
+  dentro do próprio ficheiro. Não se infere; declara-se.
+- **Para consulta** — construído por nós a partir de fontes sem licença aberta
+  declarada. É o rótulo por omissão: vê-se e confere-se, e publicá-lo com
+  licença aberta depende de a autoridade de transportes autorizar a
+  reutilização (Fase 5).
+- **De terceiros** — o ficheiro de outra entidade, filtrado à região. Os termos
+  são os dela.
+- **Obra da casa** — as regiões de prova, sob a licença do código, e o
+  relatório da construção, sob CC BY 4.0.
+
+Estava aqui escrito que os feeds construídos não levavam licença declarada.
+Deixou de ser verdade quando uma região passou a declarar ODbL nas saídas que
+assentam no OpenStreetMap — e uma frase que o código desmente é pior do que
+frase nenhuma.
 
 **«Paragem.pt» é o nome do produto e não é coberto pela licença do código.**
 
