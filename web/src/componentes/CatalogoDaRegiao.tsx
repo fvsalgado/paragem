@@ -127,22 +127,26 @@ export default async function CatalogoDaRegiao({
             ou não quer usar um mapa.{' '}
             {temMapa ? (
               <>
-                Para planear uma viagem, o <Link href={url(rid)}>mapa</Link> é mais rápido.
+                Para saber como chegar, o <Link href={url(rid)}>mapa</Link> é mais rápido.
               </>
             ) : (
               <>
-                Para planear uma viagem, o <Link href={url(rid)}>início</Link> tem o planeador à
+                Para saber como chegar, o <Link href={url(rid)}>início</Link> tem o planeador à
                 cabeça.
               </>
             )}
           </p>
           <MarcaDeDados regiao={rid} detalhe />
 
+          {/* «PARA ONDE VAIS?» É A PERGUNTA, E «COMO CHEGAR» É O NOME (P2-042): a
+              mesma pergunta do botão da folha do mapa, e o mesmo nome do botão
+              das paragens e do título da página. Era «Planear uma viagem» — um
+              terceiro nome para a mesma página. */}
           <section aria-labelledby="planear">
             <h2 id="planear">Para onde vais?</h2>
             <p>
-              <Link href={url(rid, '/viagem/')}>Planear uma viagem</Link> — de uma paragem a outra,
-              com transbordos.
+              <Link href={url(rid, '/viagem/')}>Como chegar</Link> — de uma paragem a outra, com
+              transbordos.
             </p>
           </section>
         </>

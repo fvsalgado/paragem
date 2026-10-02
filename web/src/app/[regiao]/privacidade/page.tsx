@@ -105,7 +105,7 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
       <p>
         As medições são processadas pelo PostHog, em servidores na União Europeia. Os dados de
         transporte {r.de} são públicos e estão descritos em{' '}
-        <Link href={url(rid, '/dados-abertos/')}>Dados e licenças</Link>.
+        <Link href={url(rid, '/dados-abertos/')}>Dados abertos</Link>.
       </p>
 
       <h2>Se quiseres saber mais</h2>
