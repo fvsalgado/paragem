@@ -316,6 +316,8 @@ export type Estacao = {
   paragens_perto: { id: string; nome: string; metros: number }[];
   /** Quem chega aqui de comboio não tem autocarro a menos de 300 m. */
   sem_ligacao: boolean;
+  /** Quem opera os comboios, tirado do feed. Ausente nos dados de antes. */
+  operador?: { nome: string; sitio: string | null } | null;
 };
 
 export type Titulo = {

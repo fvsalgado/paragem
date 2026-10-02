@@ -63,6 +63,7 @@ export default async function Estacao({
   await exigirModo(rid, 'comboio');
   const e = (await estacoes(rid)).find((x) => seguro(x.id) === id);
   if (!e) notFound();
+  const r = await regiao(rid);
   const concelho = (await concelhos(rid)).find((c) => c.id === e.concelho);
   const ficha = await estacaoDetalhe(rid, e.id);
   const temMapa = await temMosaicos(rid);
@@ -137,10 +138,7 @@ export default async function Estacao({
             </p>
           </>
         )}
-        <p className="secundario">
-          Horário planeado do operador ferroviário. Bilhetes e perturbações em{' '}
-          <a href="https://www.cp.pt">cp.pt</a>.
-        </p>
+        <OperadorFerroviario operador={e.operador} demonstracao={!!r?.demonstracao} />
       </section>
 
       <section aria-labelledby="autocarro">
@@ -178,5 +176,47 @@ export default async function Estacao({
         )}
       </section>
     </>
+  );
+}
+
+/**
+ * QUEM OPERA OS COMBOIOS, e onde se compram os bilhetes — do feed dele.
+ *
+ * Estava escrito «Bilhetes e perturbações em cp.pt», à mão, em todas as
+ * estações de todas as regiões. Numa região servida por outro operador isso
+ * mandava quem lá estivesse para o sítio de outra empresa; vem agora do
+ * próprio feed (`agency.txt`). Dados de antes disso não trazem o operador, e
+ * aí fica a frase de antes, sem nomear ninguém.
+ *
+ * Numa demonstração o operador é inventado, e o sítio dele também: não se
+ * manda ninguém lá.
+ */
+function OperadorFerroviario({
+  operador,
+  demonstracao,
+}: {
+  operador?: { nome: string; sitio: string | null } | null;
+  demonstracao: boolean;
+}) {
+  if (!operador?.nome) {
+    return <p className="secundario">Horário planeado do operador ferroviário.</p>;
+  }
+  const sitio = !demonstracao && operador.sitio ? operador.sitio : null;
+  const legivel = sitio
+    ? sitio
+        .replace(/^https?:\/\//, '')
+        .replace(/^www\./, '')
+        .replace(/\/$/, '')
+    : '';
+  return (
+    <p className="secundario">
+      Horário planeado do operador ferroviário ({operador.nome}).
+      {sitio ? (
+        <>
+          {' '}
+          Bilhetes e perturbações em <a href={sitio}>{legivel}</a>.
+        </>
+      ) : null}
+    </p>
   );
 }
