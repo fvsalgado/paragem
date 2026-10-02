@@ -196,3 +196,135 @@ export const avisosEmVigor = cache(async (regiao: string): Promise<Aviso[] | nul
   if (todos === null) return null;
   return ordenar(todos.filter((a) => emVigor(a)));
 });
+
+// --- onde um aviso aparece (P4-019, P2-025, P1-045) ------------------------
+//
+// Um aviso publicado só aparecia na página «Avisos» e na faixa de «A rede»: não
+// no mapa, onde se procura e se planeia, nem na página da linha desviada, nem
+// na das paragens dela. Quem abria a linha 1 para ver a hora não sabia que ela
+// estava desviada — e quem o publicou achava que a ferramenta não funcionava.
+// Estas funções dizem a que páginas cada aviso pertence, e são as mesmas que
+// a pré-visualização do painel usa para dizer «aparece também em…».
+
+/** Sem linhas, paragens nem modos: a rede toda — o que o GTFS-RT manda, e é raro. */
+export function redeToda(a: Pick<Aviso, 'linhas' | 'paragens' | 'modos'>): boolean {
+  return a.linhas.length === 0 && a.paragens.length === 0 && a.modos.length === 0;
+}
+
+/** Só modos, sem linhas nem paragens: todo o serviço desses modos. */
+function soModos(a: Pick<Aviso, 'linhas' | 'paragens' | 'modos'>): boolean {
+  return a.linhas.length === 0 && a.paragens.length === 0 && a.modos.length > 0;
+}
+
+/**
+ * O aviso diz respeito a esta LINHA: nomeia-a, nomeia uma paragem dela, é do
+ * modo dela sem nomear linhas nem paragens, ou é da rede toda.
+ */
+export function aplicaALinha(
+  a: Pick<Aviso, 'linhas' | 'paragens' | 'modos'>,
+  linha: { id: string; modo: string; paragens: readonly string[] },
+): boolean {
+  if (redeToda(a)) return true;
+  if (a.linhas.includes(linha.id)) return true;
+  if (a.paragens.some((p) => linha.paragens.includes(p))) return true;
+  return soModos(a) && a.modos.includes(linha.modo);
+}
+
+/**
+ * O aviso diz respeito a esta PARAGEM: nomeia-a, nomeia uma linha que lá
+ * passa, é de um modo que lá para sem nomear linhas nem paragens, ou é da
+ * rede toda.
+ */
+export function aplicaAParagem(
+  a: Pick<Aviso, 'linhas' | 'paragens' | 'modos'>,
+  paragem: { id: string; linhas: readonly string[]; modos: readonly string[] },
+): boolean {
+  if (redeToda(a)) return true;
+  if (a.paragens.includes(paragem.id)) return true;
+  if (a.linhas.some((l) => paragem.linhas.includes(l))) return true;
+  return soModos(a) && a.modos.some((m) => paragem.modos.includes(m));
+}
+
+/**
+ * O EFEITO E A CAUSA SÓ SE DIZEM QUANDO FORAM DECLARADOS (P4-018). O público via
+ * «causa não declarada · outro efeito» — os valores por omissão do formulário,
+ * que são ruído com ar de dado. «Não se sabe» e «outro» não dizem nada a quem
+ * está na paragem; a especificação precisa deles, a página não.
+ */
+export function efeitoDeclarado(efeito: string): boolean {
+  return efeito !== 'UNKNOWN_EFFECT' && efeito !== 'OTHER_EFFECT' && efeito in EFEITOS;
+}
+export function causaDeclarada(causa: string): boolean {
+  return causa !== 'UNKNOWN_CAUSE' && causa !== 'OTHER_CAUSE' && causa in CAUSAS;
+}
+
+/**
+ * Quando é que vale, numa frase que se lê sozinha: «Desde 1 de outubro de
+ * 2026, 07:00, sem fim previsto», «Até 1 de dezembro de 2026, 18:00». Vazio
+ * quando não tem prazo nenhum — está a acontecer, e é tudo o que se sabe.
+ */
+export function quandoVale(a: Pick<Aviso, 'inicio' | 'fim'>, fuso?: string): string {
+  if (a.inicio && a.fim) return `De ${porExtenso(a.inicio, fuso)} até ${porExtenso(a.fim, fuso)}`;
+  if (a.inicio) return `Desde ${porExtenso(a.inicio, fuso)}, sem fim previsto`;
+  if (a.fim) return `Até ${porExtenso(a.fim, fuso)}`;
+  return '';
+}
+
+/**
+ * Um aviso como vai para o MAPA, que corre no navegador: o mínimo para dizer
+ * que existe, a que diz respeito, e com que número de linha. O texto inteiro
+ * fica na página de avisos, a uma ligação de distância.
+ */
+export type AvisoNoMapa = Pick<
+  Aviso,
+  'id' | 'titulo' | 'gravidade' | 'linhas' | 'paragens' | 'modos'
+> & {
+  distintivos: { id: string; codigo: string; cor: string | null; modo?: string }[];
+};
+
+/** Uma linha como a pré-visualização a conhece. */
+export type LinhaDoAviso = { id: string; codigo: string; nome: string; cor: string | null };
+
+/**
+ * Onde é que este aviso vai aparecer, dito a quem o escreve — antes de o
+ * publicar. Era o que faltava para se confiar na ferramenta: publicava-se, e
+ * não se sabia onde procurar.
+ *
+ * São as mesmas regras que as páginas usam (`aplicaALinha`, `aplicaAParagem`):
+ * o que isto diz é o que acontece, e não uma promessa escrita à parte.
+ */
+export function ondeAparece(
+  a: Pick<Aviso, 'linhas' | 'paragens' | 'modos'>,
+  catalogo: { linhas: ReadonlyMap<string, LinhaDoAviso>; paragens: ReadonlyMap<string, string> },
+  nomeDoModo: (m: string) => string = (m) => m,
+): string[] {
+  const sitios = ['na página «Avisos»', 'na página inicial'];
+  if (redeToda(a)) {
+    sitios.push('nas páginas de todas as linhas e de todas as paragens, e nos cartões do mapa');
+    return sitios;
+  }
+  const linhas = a.linhas.map((id) => catalogo.linhas.get(id)?.codigo ?? id);
+  if (linhas.length) {
+    sitios.push(`na página ${linhas.length === 1 ? 'da linha' : 'das linhas'} ${juntar(linhas)}`);
+    sitios.push(
+      `nas páginas das paragens ${linhas.length === 1 ? 'dela' : 'delas'} e nos cartões delas no mapa`,
+    );
+  }
+  const paragens = a.paragens.map((id) => catalogo.paragens.get(id) ?? id);
+  if (paragens.length) {
+    sitios.push(
+      `na página ${paragens.length === 1 ? 'da paragem' : 'das paragens'} ${juntar(paragens)}, no cartão do mapa e nas páginas das linhas que lá param`,
+    );
+  }
+  if (soModos(a)) {
+    sitios.push(
+      `nas páginas e nos pontos do mapa de ${juntar(a.modos.map((m) => nomeDoModo(m).toLowerCase()))}`,
+    );
+  }
+  return sitios;
+}
+
+function juntar(nomes: string[]): string {
+  if (nomes.length <= 1) return nomes[0] ?? '';
+  return `${nomes.slice(0, -1).join(', ')} e ${nomes[nomes.length - 1]}`;
+}

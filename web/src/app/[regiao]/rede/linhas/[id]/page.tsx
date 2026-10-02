@@ -16,6 +16,8 @@ import {
   urlRede,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
+import { AvisosDaPagina } from '@/componentes/Avisos';
+import { avisosDaLinha, catalogoDosAvisos } from '@/lib/avisos-do-sitio';
 import { lista, plural } from '@/lib/prosa';
 import Distintivo, { corDoTraco } from '@/componentes/Distintivo';
 import QuadrosPorDia, { type QuadroDoDia } from '@/componentes/QuadrosPorDia';
@@ -200,6 +202,17 @@ export default async function Linha({
   // A COR DA LINHA NO PERCURSO, com o contraste garantido: um fio amarelo-claro
   // num fundo claro não se via (`corDoTraco`).
   const cor = { '--cor-da-linha': corDoTraco(l.cor) } as CSSProperties;
+  // OS AVISOS DESTA LINHA, antes do horário (P4-019): os que a nomeiam, os de
+  // uma paragem do percurso, e os do modo dela. Quem abria a linha desviada
+  // para ver a hora não sabia que ela estava desviada.
+  const [avisos, catalogo] = await Promise.all([
+    avisosDaLinha(rid, {
+      id: l.id,
+      modo: l.modo,
+      paragens: l.sentidos.flatMap((s) => s.paragens.map((p) => p.id)),
+    }),
+    catalogoDosAvisos(rid),
+  ]);
   const sentidos = await Promise.all(
     l.sentidos.map(async (s, i) => {
       const titulo = tituloDoSentido(s);
@@ -235,6 +248,7 @@ export default async function Linha({
         )}
       </p>
       <MarcaDeDados regiao={rid} />
+      <AvisosDaPagina avisos={avisos} catalogo={catalogo} titulo="Avisos nesta linha" />
 
       {/* Com dois sentidos, a página é comprida: o segundo começa depois do
           horário e do percurso do primeiro. Os dois à mão, logo em cima. */}

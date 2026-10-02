@@ -18,6 +18,8 @@ import {
   quadrosDeHoje,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
+import { AvisosDaPagina } from '@/componentes/Avisos';
+import { avisosDaParagem, catalogoDosAvisos } from '@/lib/avisos-do-sitio';
 import Distintivo from '@/componentes/Distintivo';
 import PartidasDaParagem from '@/componentes/PartidasDaParagem';
 import type { QuadroDoDia } from '@/componentes/QuadrosPorDia';
@@ -74,8 +76,31 @@ export default async function Paragem({
   // A COR PELO IDENTIFICADOR DA LINHA, e não pelo número: há números que se
   // repetem entre concessões (a rede da região e a vizinha têm cada uma a sua
   // linha com o mesmo número), e pelo número a segunda herdava a cor da primeira.
-  const cores = Object.fromEntries((await linhas(rid)).map((l) => [l.id, l.cor]));
+  const catalogoDeLinhas = await linhas(rid);
+  const cores = Object.fromEntries(catalogoDeLinhas.map((l) => [l.id, l.cor]));
   const partidas = ficha.partidas;
+
+  // OS AVISOS DESTA PARAGEM, antes das partidas (P4-019): os que a nomeiam, os
+  // das linhas que lá passam e os do modo dela. As linhas são as das partidas
+  // (pelo identificador, que é o que o aviso guarda) e, para uma paragem sem
+  // partidas, as que a ficha lhe dá pelo número — só quando o número é de UMA
+  // linha, que há números repetidos entre concessões.
+  const porCodigo = new Map<string, string[]>();
+  for (const l of catalogoDeLinhas)
+    porCodigo.set(l.codigo, [...(porCodigo.get(l.codigo) ?? []), l.id]);
+  const idsDasLinhas = new Set(partidas.map((d) => d.linha_id));
+  for (const codigo of p.linhas) {
+    const ids = porCodigo.get(codigo) ?? [];
+    if (ids.length === 1) idsDasLinhas.add(ids[0]);
+  }
+  const modosDaParagem = new Set(
+    catalogoDeLinhas.filter((l) => idsDasLinhas.has(l.id)).map((l) => l.modo),
+  );
+  if (modosDaParagem.size === 0) modosDaParagem.add('autocarro');
+  const [avisos, catalogo] = await Promise.all([
+    avisosDaParagem(rid, { id: p.id, linhas: [...idsDasLinhas], modos: [...modosDaParagem] }),
+    catalogoDosAvisos(rid),
+  ]);
 
   // Por serviço, que é como um horário impresso se lê: «Anual · Dias úteis»,
   // e não «hoje». Uma paragem não tem um horário — tem vários, conforme o dia.
@@ -213,6 +238,7 @@ export default async function Paragem({
         {noMapa && <a href={noMapa}>Ver no mapa</a>}
       </p>
       <MarcaDeDados regiao={rid} />
+      <AvisosDaPagina avisos={avisos} catalogo={catalogo} titulo="Avisos nesta paragem" />
 
       {partidas.length === 0 ? (
         <div className="faixa">

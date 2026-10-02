@@ -20,6 +20,8 @@ import type { Ponto } from '@/lib/formato';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { disponibilidadeDaRegiao, motorDaRegiao } from '@/lib/enderecos';
 import { metadadosDaRegiao } from '@/lib/metadados';
+import { avisosEmVigor, type AvisoNoMapa } from '@/lib/avisos';
+import { catalogoDosAvisos } from '@/lib/avisos-do-sitio';
 
 /** O início fica com o título do invólucro («Transportes da …»); a frase é dele. */
 export async function generateMetadata({
@@ -140,6 +142,28 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
     })
     .filter((x): x is { id: string; nome: string; href: string } => x !== null);
 
+  // OS AVISOS EM VIGOR, para o ecrã do mapa (P4-019): só o que o mapa precisa
+  // de saber — o título, a gravidade, a que diz respeito e o número das
+  // linhas. São poucos, e o texto inteiro fica na página de avisos.
+  //
+  // O QUE ISTO CUSTA: o início passa a refazer-se ao minuto em vez de à hora,
+  // como o catálogo (`lib/avisos.ts`, `VALIDADE_S`). Os dados dele continuam
+  // guardados por uma hora; o que se repete é render o HTML, e só quando
+  // alguém o pede.
+  const [emVigor, catalogo] = await Promise.all([avisosEmVigor(rid), catalogoDosAvisos(rid)]);
+  const avisos: AvisoNoMapa[] = (emVigor ?? []).map((a) => ({
+    id: a.id,
+    titulo: a.titulo,
+    gravidade: a.gravidade,
+    linhas: a.linhas,
+    paragens: a.paragens,
+    modos: a.modos,
+    distintivos: a.linhas.map((id) => {
+      const l = catalogo.linhas.get(id);
+      return { id, codigo: l?.codigo ?? id, cor: l?.cor ?? null, modo: l?.modo };
+    }),
+  }));
+
   return (
     <>
       {/* O `preloadModule` do React não deixa dizer a prioridade; o `<link>`
@@ -165,6 +189,7 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
         motorDaRegiao={motorDaRegiao(rid, r.demonstracao)}
         disponibilidadeDaRegiao={disponibilidadeDaRegiao(rid, r.demonstracao)}
         servicosSemDatas={servicosSemDatas(await lacunas(rid))}
+        avisos={avisos}
       />
     </>
   );
