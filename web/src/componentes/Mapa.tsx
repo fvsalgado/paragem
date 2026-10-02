@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { Map as MapaLibre, GeoJSONSource } from 'maplibre-gl';
 // A FOLHA DE ESTILO DA BIBLIOTECA, que faltava — e que se notava em tudo
 // menos no mapa. Sem ela os controlos ficam sem tamanho nem ícone e apanham
@@ -738,8 +738,22 @@ export default function Mapa({
     });
   }, [enquadrar, estado, margemInferior, margemEsquerda, margemSuperior]);
 
+  // OS AVISOS FICAM NO QUE SE VÊ DO MAPA (P3-023). O meio da caixa é, num
+  // telemóvel, a beira da folha de abertura: «A carregar o mapa…» ficava por
+  // baixo dela, a espreitar como um defeito, e o aviso de falha ficava meio
+  // tapado. As margens são as que o mapa recebe, com os mesmos tetos, e vão
+  // para o CSS como variáveis — com nome próprio: as `--tapado-*` da
+  // `AppDoMapa` são outra medida (o que cada canto tem tapado), e herdam-se
+  // até aos botões do mapa, que estão aqui dentro.
+  const baixo = tamanho ? Math.min(margemInferior, tamanho.h * MARGEM_MAXIMA) : margemInferior;
+  const esquerda = tamanho ? Math.min(margemEsquerda, tamanho.w * 0.5) : margemEsquerda;
+  const margensDosAvisos = {
+    '--aviso-em-baixo': `${Math.round(baixo)}px`,
+    '--aviso-a-esquerda': `${Math.round(esquerda)}px`,
+  } as CSSProperties;
+
   return (
-    <div className="mapa-caixa">
+    <div className="mapa-caixa" style={margensDosAvisos}>
       {/* A TELA de mosaicos não é legível, e dizer que é com uma etiqueta é
           enganar quem depende dela: esconde-se ela (ver acima), e não a caixa
           inteira, que tem os botões. O caminho sem mapa está na procura e nas

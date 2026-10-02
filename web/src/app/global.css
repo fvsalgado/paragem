@@ -2469,9 +2469,16 @@ main.pagina:has(.app-mapa) {
 
 .mapa-aviso {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  /* NO FUNDO DO QUE SE VÊ DO MAPA, e não no meio da caixa (P3-023). Num
+     telemóvel o meio da caixa é a beira da folha de abertura, e o aviso ficava
+     meio por baixo dela; no meio do que sobra tapava os pontos do esboço, e
+     encostado ao alto ficava por baixo da procura, que flutua sem tirar
+     margem ao mapa. Acima da folha — e da escala e da atribuição, que sobem
+     com ela — o de carregar e o de falha ficam no mesmo sítio: um troca pelo
+     outro. As variáveis dizem quanto as folhas tapam (`Mapa.tsx`). */
+  left: calc(var(--aviso-a-esquerda, 0px) + (100% - var(--aviso-a-esquerda, 0px)) / 2);
+  bottom: calc(var(--aviso-em-baixo, 0px) + 3.5rem);
+  transform: translateX(-50%);
   background: #fff;
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
@@ -2479,9 +2486,10 @@ main.pagina:has(.app-mapa) {
   margin: 0;
   /* A LARGURA É A DO TEXTO, até ao limite. Com `left: 50%` e sem largura, a
      caixa só podia ocupar a metade da direita do mapa, e o aviso de falha —
-     duas frases — saía numa coluna de seis palavras por cima da atribuição. */
+     duas frases — saía numa coluna de seis palavras por cima da atribuição.
+     O limite deixa livre, dos dois lados, a coluna dos botões do mapa. */
   width: max-content;
-  max-width: min(20rem, calc(100% - 2rem));
+  max-width: min(20rem, calc(100% - var(--aviso-a-esquerda, 0px) - 8rem));
   text-align: center;
 }
 .mapa-aviso.alerta {
@@ -3747,11 +3755,9 @@ ol.percurso li.modo-expresso .fio {
   inset: 0;
   pointer-events: none;
 }
-/* «A carregar o mapa…» sai do meio — onde tapava os pontos do esboço — para
-   o alto, pequeno. */
+/* «A carregar o mapa…» é pequeno: o esboço por trás é que diz que o mapa
+   está a chegar. */
 .mapa-aviso.a-carregar {
-  top: auto;
-  bottom: 45%;
   font-size: 0.9rem;
   padding: 0.35rem 0.8rem;
 }
