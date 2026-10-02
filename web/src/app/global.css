@@ -2194,11 +2194,14 @@ ul.produto-botoes {
   color: var(--texto-secundario);
   margin: 0 0 0.75rem;
 }
+/* `balance` reparte o título pelas linhas: sem ele, num telemóvel, o «só.»
+   ficava sozinho na terceira. */
 .produto-heroi h1 {
   font-size: 2.1rem;
   line-height: 1.1;
   margin: 0 0 1rem;
-  max-width: 18ch;
+  max-width: 20ch;
+  text-wrap: balance;
 }
 .produto-chamada {
   font-size: 1.15rem;
