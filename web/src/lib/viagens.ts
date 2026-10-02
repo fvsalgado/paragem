@@ -26,7 +26,7 @@
  * RONDAS, e uma ronda é um transbordo. Isso dá de graça a coisa que quem viaja
  * mais quer — «e sem mudar de autocarro?» — sem a procurar à parte.
  */
-import type { Itinerario, Perna } from './otp';
+import { descodificarLinha, type Itinerario, type Perna } from './otp.ts';
 
 // --- o que se lê do disco --------------------------------------------------
 
@@ -468,7 +468,8 @@ function meiaNoiteDe(data: string, fuso: string): number {
   return palpite - desvioDoFuso(uma, fuso);
 }
 
-function diaMais(data: string, dias: number): string {
+/** `AAAA-MM-DD` mais `dias` dias, sem a mudança da hora a comer um dia. */
+export function diaMais(data: string, dias: number): string {
   const d = new Date(`${data}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + dias);
   return d.toISOString().slice(0, 10);
@@ -581,6 +582,10 @@ function perna(
     // traçado da linha não chegar — e o que fica se ele não existir.
     legGeometry: { points: codificarLinha(pontos) },
     traco: { linha: a.v.linha, paragens: padrao.paragens.slice(e.deIdx, e.paraIdx + 1) },
+    modo: linha?.[3] || undefined,
+    // Até o traçado chegar, é a reta — e diz-se (`planeador.ts` desfaz isto
+    // nas pernas que o tiverem).
+    aproximado: true,
   };
 }
 
@@ -926,4 +931,269 @@ function arrumar(todos: Itinerario[], janelaInicio: number): Itinerario[] {
         ),
     )
     .sort((a, b) => a.startTime - b.startTime);
+}
+
+// --- o que se mostra, e por que ordem --------------------------------------
+
+/** Quantas vezes se muda de veículo — as pernas a pé e de bicicleta não contam. */
+export function contarTransbordos(it: Itinerario): number {
+  return Math.max(0, it.legs.filter((p) => p.mode !== 'WALK' && p.mode !== 'BICYCLE').length - 1);
+}
+
+/**
+ * AS PERNAS A PÉ, SEM REPETIÇÕES NEM PASSOS DE ZERO MINUTOS (P2-011).
+ *
+ * A linha do tempo dizia «<Terminal> · A pé · 0 min · 19 m · <Terminal> ·
+ * A pé · 1 min · 55 m»: duas pernas a pé seguidas, a primeira da paragem para
+ * ela própria. Lê-se como um erro, e enche de passos inúteis o
+ * sítio onde se lê a viagem de relance.
+ *
+ * Duas regras, e valem para o motor e para o planeador do navegador:
+ *
+ * - **pernas a pé seguidas são uma só**: quem anda da paragem para a
+ *   estação e da estação para o cais está a andar, e não a fazer duas coisas;
+ * - **um passo que não se anda não se mostra**: menos de um minuto entre duas
+ *   paragens com o mesmo nome, ou menos de meio minuto e trinta metros — a
+ *   largura de uma rua, que ninguém precisa de instruções para atravessar.
+ */
+export function limparPernas(it: Itinerario): Itinerario {
+  const juntas: Perna[] = [];
+  for (const p of semVoltas(it.legs)) {
+    const antes = juntas[juntas.length - 1];
+    if (antes && antes.mode === 'WALK' && p.mode === 'WALK') {
+      const pontos = [antes, p].flatMap((l) =>
+        l.legGeometry?.points
+          ? descodificarLinha(l.legGeometry.points).map(
+              ([lon, lat]) => [lat, lon] as [number, number],
+            )
+          : [],
+      );
+      juntas[juntas.length - 1] = {
+        ...antes,
+        duration: antes.duration + p.duration,
+        distance: antes.distance + p.distance,
+        endTime: p.endTime,
+        to: p.to,
+        legGeometry: pontos.length > 1 ? { points: codificarLinha(pontos) } : antes.legGeometry,
+      };
+      continue;
+    }
+    juntas.push(p);
+  }
+  const ficam = juntas.filter(
+    (p) =>
+      p.mode !== 'WALK' ||
+      !((p.from.name === p.to.name && p.duration < 60) || (p.duration < 30 && p.distance < 30)),
+  );
+  if (!ficam.length) return it;
+  // A viagem começa na primeira perna que fica e acaba na última: cortada
+  // uma volta à cabeça, parte-se mais tarde — e é essa a hora a dizer.
+  const comeco = ficam[0].startTime;
+  const fim = ficam[ficam.length - 1].endTime;
+  return {
+    ...it,
+    legs: ficam,
+    startTime: comeco,
+    endTime: fim,
+    duration: Math.round((fim - comeco) / 1000),
+    walkDistance: ficam.filter((p) => p.mode === 'WALK').reduce((s, p) => s + p.distance, 0),
+  };
+}
+
+/** Uma perna em que se vai num veículo — não a pé nem de bicicleta. */
+const deVeiculo = (p: Perna) => p.mode !== 'WALK' && p.mode !== 'BICYCLE';
+
+/** A mesma perna a horas diferentes: `d` milissegundos mais tarde (ou mais cedo). */
+const mexida = (p: Perna, d: number): Perna =>
+  d ? { ...p, startTime: p.startTime + d, endTime: p.endTime + d } : p;
+
+/**
+ * AS VOLTAS QUE NÃO LEVAM A LADO NENHUM SAEM (P2-009).
+ *
+ * Numa linha circular, o planeador propunha embarcar no terminal, dar a volta
+ * à cidade, voltar ao MESMO terminal e esperar lá uma hora pela carreira que
+ * se queria — com mais uma hora na duração e um transbordo que não existe.
+ * Quem está no terminal espera no terminal. Corta-se tudo o que vai de um
+ * embarque num sítio até à última vez que se parte do mesmo sítio — à cabeça,
+ * o caminho a pé até lá passa para a hora certa —, e no fim o mesmo ao
+ * contrário: o que se anda depois de já se ter chegado ao último sítio.
+ */
+export function semVoltas(legs: Perna[]): Perna[] {
+  let r = [...legs];
+  for (let i = 0; i < r.length; i++) {
+    if (!deVeiculo(r[i])) continue;
+    const onde = r[i].from.name;
+    let k = -1;
+    for (let j = r.length - 1; j > i; j--) {
+      if (r[j].from.name === onde) {
+        k = j;
+        break;
+      }
+    }
+    if (k < 0) continue;
+    // Antes do primeiro veículo só há caminho a pé, e esse faz-se mais tarde.
+    // E se depois da volta já só se anda a pé, anda-se logo à chegada. As
+    // duas coisas juntas são uma volta e mais nada: fica a primeira hora.
+    const primeiro = r.slice(0, i).every((p) => !deVeiculo(p));
+    const ultimo = i > 0 && r.slice(k).every((p) => !deVeiculo(p));
+    const adiante = primeiro && !ultimo ? r[k].startTime - r[i].startTime : 0;
+    const atras = ultimo ? r[i - 1].endTime - r[k].startTime : 0;
+    r = [
+      ...r.slice(0, i).map((p) => mexida(p, adiante)),
+      ...r.slice(k).map((p) => mexida(p, atras)),
+    ];
+  }
+  let m = -1;
+  for (let j = r.length - 1; j >= 0; j--) {
+    if (deVeiculo(r[j])) {
+      m = j;
+      break;
+    }
+  }
+  if (m > 0) {
+    const onde = r[m].to.name;
+    const k = r.findIndex((p, j) => j < m && p.to.name === onde);
+    if (k >= 0) {
+      const antes = r[m].endTime - r[k].endTime;
+      r = [...r.slice(0, k + 1), ...r.slice(m + 1).map((p) => mexida(p, -antes))];
+    }
+  }
+  return r;
+}
+
+/**
+ * Sem opções repetidas: cortadas as voltas, duas opções podem ficar a ser a
+ * mesma viagem — a mesma carreira, à mesma hora —, e a lista dizia-a duas vezes.
+ */
+export function semRepetidas(its: Itinerario[]): Itinerario[] {
+  const vistas = new Set<string>();
+  return its.filter((it) => {
+    const chave = [
+      it.startTime,
+      it.endTime,
+      ...it.legs.map((p) => `${p.mode}:${p.route?.shortName ?? ''}:${p.from.name}:${p.startTime}`),
+    ].join('|');
+    if (vistas.has(chave)) return false;
+    vistas.add(chave);
+    return true;
+  });
+}
+
+export type OpcoesArrumadas = {
+  /** As que se mostram, por ordem de partida. */
+  opcoes: Itinerario[];
+  /** As que dão uma volta desproporcionada — à parte, em «mais opções». */
+  desvios: Itinerario[];
+  /** Qual das `opcoes` se abre e desenha sozinha. */
+  recomendada: number;
+};
+
+/** Quanto se anda, de ponta a ponta, em todas as pernas. */
+const percorrido = (it: Itinerario) => it.legs.reduce((s, p) => s + (p.distance || 0), 0);
+
+/**
+ * O QUE SE MOSTRA PRIMEIRO, E O QUE SE ABRE SOZINHO (P2-009).
+ *
+ * Para duas cidades a 35 km, «agora» às duas da manhã, a primeira opção — já
+ * aberta e desenhada no mapa — era ir à capital e voltar: 260 km e 4 h 32 por
+ * fora da região. A lista por ordem de partida é defensável; abrir e desenhar
+ * sozinha uma opção dessas não é. Duas decisões:
+ *
+ * **Um desvio vai para «mais opções»**, e não se apaga — continua a ser uma
+ * viagem que existe. É desvio a opção que:
+ *
+ * - demora mais do DOBRO da mais curta e chega DEPOIS dela — a regra de
+ *   dominação do planeador deixava-a passar por partir mais cedo; ou
+ * - anda mais do dobro do que a que menos anda (e pelo menos mais 20 km),
+ *   sem ser mais rápida do que ela. É a volta pela capital: chega primeiro
+ *   porque parte três horas antes, e é por isso que a duração sozinha não a
+ *   apanha. Um expresso que vai pela autoestrada, anda mais e chega antes,
+ *   não é desvio nenhum — é mais rápido.
+ *
+ * **E há desvios que o são sozinhos**, sem precisar de outra opção ao lado:
+ * quando se sabem as pontas, uma viagem que anda mais do QUÁDRUPLO da
+ * distância entre elas (e pelo menos mais 25 km) é uma volta. Num sábado à
+ * noite, entre duas cidades vizinhas a 27 km, as três opções que havia iam
+ * todas à capital — 213 a 232 km — e comparadas umas com as outras nenhuma era
+ * desvio. O quádruplo e não o triplo, e foi medido: a ligação regional da
+ * manhã, por duas vilas e um comboio, anda 82 km para os mesmos 27 — dá uma
+ * volta, e é a que lá passa.
+ *
+ * **Abre-se a que se recomendaria**, e não a primeira da lista: a que chega
+ * primeiro, contando cada transbordo como dez minutos — quem chega cinco
+ * minutos mais cedo com duas mudanças de autocarro não fez melhor viagem do
+ * que quem vai sentado. A lista continua por ordem de partida; o que muda é
+ * qual delas se abre e se desenha.
+ */
+export function arrumarParaMostrar(
+  its: Itinerario[],
+  pontas: { de: Lugar; para: Lugar } | null = null,
+): OpcoesArrumadas {
+  const reta = pontas
+    ? metros([pontas.de.lat, pontas.de.lon], [pontas.para.lat, pontas.para.lon])
+    : 0;
+  const volta = (it: Itinerario) => reta > 0 && percorrido(it) > Math.max(4 * reta, reta + 25_000);
+  if (its.length <= 1) {
+    const sozinhas = its.filter((it) => !volta(it));
+    return { opcoes: sozinhas, desvios: its.filter(volta), recomendada: 0 };
+  }
+  const curta = its.reduce((a, b) => (b.duration < a.duration ? b : a));
+  const menosAnda = its.reduce((a, b) => (percorrido(b) < percorrido(a) ? b : a));
+  const minimo = percorrido(menosAnda);
+  const desvio = (it: Itinerario) =>
+    volta(it) ||
+    (it.duration > 2 * curta.duration && it.endTime > curta.endTime) ||
+    (minimo > 0 &&
+      percorrido(it) > Math.max(2 * minimo, minimo + 20_000) &&
+      it.duration >= menosAnda.duration);
+  const desvios = its.filter(desvio);
+  const opcoes = its.filter((it) => !desvio(it)).sort((a, b) => a.startTime - b.startTime);
+  const DEZ_MIN = 10 * 60 * 1000;
+  const nota = (it: Itinerario) => it.endTime + contarTransbordos(it) * DEZ_MIN;
+  const recomendada = opcoes.reduce(
+    (melhor, it, i) =>
+      nota(it) < nota(opcoes[melhor]) ||
+      (nota(it) === nota(opcoes[melhor]) && it.duration < opcoes[melhor].duration)
+        ? i
+        : melhor,
+    0,
+  );
+  return {
+    opcoes,
+    desvios: desvios.sort((a, b) => a.startTime - b.startTime),
+    recomendada,
+  };
+}
+
+/**
+ * A PRÓXIMA LIGAÇÃO, quando a janela pedida não tem nenhuma (P2-003).
+ *
+ * «Sem viagem neste dia» respondia-se a quem perguntava depois da única
+ * carreira do dia: a ligação existia às 07:00 de cada dia útil, e a página
+ * não dizia nem que a de hoje já tinha partido, nem quando era a próxima. Num
+ * território de baixa densidade, «não há» quando há uma por dia é dizer a
+ * quem mora numa aldeia que não pode ir à cidade.
+ *
+ * Procura-se dia a dia, a partir do dia seguinte ao que se perguntou (quem
+ * planeia cada dia começa à meia-noite), até uma semana — e nunca para lá do
+ * que os horários carregados cobrem (`ate`, `AAAAMMDD`): para lá disso, «não
+ * há» passava a querer dizer «não sabemos». Devolve as opções do primeiro dia
+ * que as tiver, e o dia.
+ */
+export async function procurarNosDias(
+  planearNoDia: (dia: string) => Promise<Itinerario[]>,
+  data: string,
+  ate: string | null = null,
+  dias = 7,
+  serve: (its: Itinerario[]) => boolean = (its) => its.length > 0,
+): Promise<{ its: Itinerario[]; dia: string } | null> {
+  for (let n = 1; n <= dias; n++) {
+    const dia = diaMais(data, n);
+    if (ate && dia.replace(/-/g, '') > ate) break;
+    const its = await planearNoDia(dia);
+    // `serve` decide o que é uma ligação: um dia que só tem voltas pela
+    // capital não é «a próxima ligação» entre duas cidades vizinhas.
+    if (serve(its)) return { its, dia };
+  }
+  return null;
 }

@@ -53,6 +53,19 @@ export type Perna = {
    * feita — e a página não precisa de saber a diferença.
    */
   traco?: { linha: number; paragens: number[] };
+  /**
+   * O MODO NO VOCABULÁRIO DA REGIÃO — `expresso`, `urbano-municipal` —, que
+   * o `BUS` do GTFS não distingue. É o que separa um expresso privado, com
+   * bilhete próprio, de um autocarro da rede (P2-010). Só o planeador do
+   * navegador o sabe; do motor vem sem ele, e a perna é o que o GTFS disser.
+   */
+  modo?: string;
+  /**
+   * O desenho desta perna é uma linha reta entre paragens — não há traçado
+   * para ela. O mapa desenha-a mais fina e a tracejado (P1-038): um traço
+   * cheio diz «é por aqui», e o que se sabe é «mais ou menos por aqui».
+   */
+  aproximado?: boolean;
 };
 
 export type Itinerario = {
@@ -269,7 +282,7 @@ export type PercursoGeo = {
   type: 'FeatureCollection';
   features: {
     type: 'Feature';
-    properties: { modo: string; cor: string; linha: string };
+    properties: { modo: string; cor: string; linha: string; aproximado: boolean };
     geometry: { type: 'LineString'; coordinates: [number, number][] };
   }[];
 };
@@ -290,8 +303,12 @@ export function percursoDe(it: Itinerario): PercursoGeo {
         type: 'Feature' as const,
         properties: {
           modo: p.mode,
-          cor: COR_DO_MODO[p.mode] ?? '#0a5c7a',
+          // O EXPRESSO PRIVADO NÃO LEVA A COR DA REDE (§6, P1-037): era
+          // desenhado com a cor dos autocarros da autoridade, e quem olhava
+          // para o mapa lia-o como parte dela. Vai a neutro.
+          cor: p.modo === 'expresso' ? '#4a5c66' : (COR_DO_MODO[p.mode] ?? '#0a5c7a'),
           linha: p.route?.shortName ?? '',
+          aproximado: !!p.aproximado,
         },
         geometry: {
           type: 'LineString' as const,
