@@ -37,7 +37,10 @@
 
   --raio: 10px;
   --alvo: 44px;
+  /* DUAS MEDIDAS (P1-014): a de ler, curta, para o texto corrido; e a dos
+     dados, larga, para as páginas de horários num ecrã de secretária. */
   --medida: 38rem;
+  --medida-dados: 72rem;
 }
 
 *,
@@ -107,6 +110,7 @@ h3 {
 }
 h1 {
   font-size: 1.75rem;
+  margin-bottom: 0.75rem;
 }
 h2 {
   font-size: 1.3rem;
@@ -121,7 +125,59 @@ h3 {
 .pagina {
   max-width: var(--medida);
   margin: 0 auto;
-  padding: 0 1rem 4rem;
+  /* O TÍTULO NÃO SE COLA AO CABEÇALHO (P1-015). A caixa do `h1` começava
+     exatamente onde a faixa acabava, e a folga que se via era só a entrelinha
+     do título: o ritmo da página começava mal em todas as páginas. */
+  padding: 1.5rem 1rem 4rem;
+}
+
+/* AS PÁGINAS DE HORÁRIOS ALARGAM NUM ECRÃ LARGO (P1-014). Eram uma coluna de
+   608 px em qualquer ecrã: a 1440 px, a paragem usava 576 px no meio e
+   deixava 400 de cada lado, com o «A seguir» a quilómetros do horário. A
+   medida larga vale para as páginas que têm colunas (`.em-colunas`), e o
+   cabeçalho e o rodapé acompanham-nas, para as margens alinharem. */
+.pagina:has(.em-colunas),
+body:has(.pagina .em-colunas) .cabecalho-da-regiao .interior,
+body:has(.pagina .em-colunas) .rodape .interior {
+  max-width: var(--medida-dados);
+}
+@media (min-width: 64rem) {
+  .em-colunas {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 22rem;
+    grid-template-areas: 'principal lateral';
+    column-gap: 2.5rem;
+    align-items: start;
+  }
+  .em-colunas > .coluna-principal {
+    grid-area: principal;
+    min-width: 0;
+  }
+  .em-colunas > .coluna-lateral {
+    grid-area: lateral;
+    min-width: 0;
+  }
+  /* O «A seguir» fica à vista enquanto se desce pelos quadros: é curto, e é a
+     resposta à pergunta de quem abriu a paragem. */
+  .partidas-e-horario > .coluna-lateral {
+    position: sticky;
+    top: 1rem;
+  }
+  .em-colunas > * > .parte-do-sentido:first-child {
+    margin-top: 0;
+  }
+}
+
+/* O CÓDIGO NO MEIO DE UMA FRASE — um nome de ficheiro, um campo (P1-046). Na
+   monoespaçada do sistema ao tamanho do texto, destoava da Atkinson e lia-se
+   maior do que ela. Mais pequeno, num fundo claro que o separa da frase. */
+code {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  background: #eef2f0;
+  border-radius: 4px;
+  padding: 0.05em 0.3em;
+  overflow-wrap: anywhere;
 }
 
 .cabecalho {
@@ -286,15 +342,17 @@ h3 {
   flex-wrap: wrap;
   gap: 0.5rem 1.25rem;
 }
-.rodape a {
+/* OS 44 PX SÃO DAS LIGAÇÕES DA NAVEGAÇÃO, e não das que estão numa frase
+   (P1-022). A regra apanhava as duas, e a linha do «OpenStreetMap», no meio
+   da frase da atribuição, ficava muito mais alta do que as outras — a
+   entrelinha do rodapé saía aos saltos. A ligação dentro de uma frase está
+   isenta do critério 2.5.8; a da navegação não, e leva 44 px também de
+   largura: «Avisos», a mais curta, dava um alvo de 40. */
+.rodape nav a {
   display: inline-flex;
   align-items: center;
-  min-height: var(--alvo);
-}
-/* E 44 px também de largura nas ligações da navegação: «Avisos», a mais
-   curta, dava um alvo de 40 px. */
-.rodape nav a {
   justify-content: center;
+  min-height: var(--alvo);
   min-width: var(--alvo);
 }
 
