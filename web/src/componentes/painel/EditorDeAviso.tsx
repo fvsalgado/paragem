@@ -3,7 +3,7 @@
 import { startTransition, useActionState, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { CartaoDeAviso, type CatalogoDosAvisos } from '@/componentes/Avisos';
-import EscolherVarios, { type OpcaoDeEscolha } from '@/componentes/painel/EscolherVarios';
+import EscolherVarios, { type OpcaoDeEscolha } from '@/componentes/EscolherVarios';
 import { CAUSAS, ondeAparece, type Aviso } from '@/lib/avisos';
 import { doCampoLocal } from '@/lib/fuso';
 import { guardarAviso, type EstadoDoAviso } from '@/lib/painel/acoes';

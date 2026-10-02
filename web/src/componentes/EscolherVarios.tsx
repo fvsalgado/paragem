@@ -61,6 +61,7 @@ export default function EscolherVarios({
   descritoPor,
   invalido = false,
   rotuloDoTirar,
+  um = false,
 }: {
   id: string;
   etiqueta: string;
@@ -74,6 +75,8 @@ export default function EscolherVarios({
   descritoPor?: string;
   invalido?: boolean;
   rotuloDoTirar: (o: OpcaoDeEscolha) => string;
+  /** Escolher UMA: a escolha nova substitui a anterior (a paragem de uma caixa). */
+  um?: boolean;
 }) {
   const base = useId();
   const idDaLista = `${base}-lista`;
@@ -104,7 +107,7 @@ export default function EscolherVarios({
   const mostrar = aberta && resultados.length > 0;
 
   function escolher(o: OpcaoDeEscolha) {
-    aoMudar([...escolhidos, o.valor]);
+    aoMudar(um ? [o.valor] : [...escolhidos, o.valor]);
     setTermo('');
     setAberta(false);
     setAtivo(0);

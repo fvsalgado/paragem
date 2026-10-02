@@ -44,7 +44,13 @@ aumenta as hipóteses de alguém olhar para ela.
   desligado: apanharia cliques em elementos com texto lá dentro, e o texto aqui
   são nomes de paragens que a pessoa escreveu;
 - a gravação de sessão, desligada;
-- o endereço IP.
+- o endereço IP;
+- **nada nas caixas que as câmaras colam nos sítios delas** (`/widget/…`,
+  P4-007). Quem as vê está a visitar o sítio da câmara, e não o nosso: a
+  medição nem arranca lá dentro (`Medicao.tsx`). É a promessa da página que
+  dá o código — «não mede quem a vê» —, e cumpre-se no código. Uma procura
+  feita a partir da caixa «Para onde vais?» abre o planeador no domínio da
+  região, e aí mede-se como qualquer outra.
 
 ## O que a medição custa a quem a usa
 

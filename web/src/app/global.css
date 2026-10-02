@@ -4841,3 +4841,94 @@ body:has(.app-mapa) .marca-demonstracao {
   font-weight: 700;
   padding: 0 0.35rem;
 }
+
+/* --- as caixas para os sítios das câmaras (P4-007) ---------------------- */
+
+/* A caixa num sítio alheio: o fundo é o do sítio que a acolhe, e quem pinta
+   é ela — uma moldura, a superfície, e nada à volta. */
+body:has(main.widget) {
+  background: transparent;
+}
+main.widget {
+  max-width: 30rem;
+  margin: 0;
+  padding: 0;
+}
+.widget .caixa {
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  background: var(--superficie);
+  padding: 0.75rem 1rem;
+}
+.widget .titulo-da-caixa {
+  font-size: 1.15rem;
+  margin: 0 0 0.5rem;
+}
+.widget .titulo-da-caixa a {
+  color: var(--texto);
+}
+.widget .titulo-da-caixa label {
+  margin: 0;
+  font-size: inherit;
+}
+.widget .rodape-da-caixa,
+.widget .assinatura-da-caixa {
+  font-size: 0.9rem;
+  color: var(--texto-secundario);
+  margin: 0.5rem 0 0;
+}
+.widget .campo-e-botao {
+  display: flex;
+  gap: 0.5rem;
+}
+.widget .campo-e-botao input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* O construtor: escolhe-se em cima, vê-se a caixa a sério, copia-se em baixo. */
+.construtor-da-caixa {
+  display: grid;
+  gap: 1rem;
+}
+/* Sem isto, a linha de código mais comprida alargava a grelha — e a página
+   inteira deslizava para o lado num telemóvel. O código desliza por dentro. */
+.construtor-da-caixa > * {
+  min-width: 0;
+}
+.construtor-previa {
+  border: 1px dashed var(--borda-campo);
+  border-radius: var(--raio);
+  padding: 0.75rem;
+}
+.construtor-previa h3,
+.construtor-codigo h3 {
+  margin-top: 0;
+}
+.previa-da-caixa {
+  display: block;
+  width: 100%;
+  max-width: 30rem;
+  border: 0;
+}
+pre.codigo-para-copiar {
+  overflow-x: auto;
+  margin: 0.5rem 0;
+  padding: 0.75rem;
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  background: var(--superficie);
+  font-size: 0.85rem;
+}
+.tabela-de-opcoes {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+.tabela-de-opcoes th,
+.tabela-de-opcoes td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid var(--linhas);
+}

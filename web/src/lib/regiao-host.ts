@@ -294,6 +294,20 @@ export const PAGINAS_DO_PRODUTO = ['/', '/contacto/', '/privacidade/', '/acessib
 export const SEGMENTO_DO_PRODUTO = '/-produto';
 
 /**
+ * As caixas que as câmaras e as juntas colam nos sítios delas (P4-007):
+ * `/widget/paragem/<id>/`, `/widget/viagem/`, `/widget/embed.js`.
+ *
+ * Vivem fora do segmento da região, em `SEGMENTO_DOS_WIDGETS/<regiao>/…`, e
+ * não dentro dele: lá dentro levavam o cabeçalho, o rodapé e a faixa da
+ * demonstração do invólucro da região — e uma caixa num sítio alheio é só a
+ * caixa. Começa por hífen como os outros segmentos internos, e por isso não
+ * se alcança de fora: numa região vai para dentro dela e dá 404; num
+ * anfitrião desconhecido não é nada.
+ */
+export const CAMINHO_DOS_WIDGETS = '/widget/';
+export const SEGMENTO_DOS_WIDGETS = '/-widget';
+
+/**
  * Um segmento que nenhuma região pode ter: começa por hífen, e o leitor de
  * dados recusa-o sem ir à rede. É para onde vai o que não é endereço num
  * anfitrião desconhecido — cai no 404 de qualquer página inexistente.
@@ -340,7 +354,14 @@ export function decidir(
       para: (doProduto ? SEGMENTO_DO_PRODUTO : NAO_E_ENDERECO) + pathname,
     };
   }
-  // Numa região vai TUDO para dentro dela, o `robots.txt` incluído: é o dela,
-  // e diz o que ela diz.
+  // As caixas para os sítios das câmaras saem sem o invólucro da região.
+  if (pathname.startsWith(CAMINHO_DOS_WIDGETS)) {
+    return {
+      tipo: 'reescrever',
+      para: `${SEGMENTO_DOS_WIDGETS}/${regiao}${pathname.slice(CAMINHO_DOS_WIDGETS.length - 1)}`,
+    };
+  }
+  // Numa região vai TUDO o resto para dentro dela, o `robots.txt` incluído: é
+  // o dela, e diz o que ela diz.
   return { tipo: 'reescrever', para: `/${regiao}${pathname}` };
 }

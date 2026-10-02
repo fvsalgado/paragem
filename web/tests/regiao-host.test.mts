@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import {
   NAO_E_ENDERECO,
   SEGMENTO_DO_PRODUTO,
+  SEGMENTO_DOS_WIDGETS,
   decidir,
   dominioDaRegiao,
   esquecerMapa,
@@ -224,4 +225,27 @@ test('sem base configurada, o mapa é o do ambiente; com a base a falhar, serve-
     if (guardado.dom) process.env.PARAGEM_DOMINIOS = guardado.dom;
     else delete process.env.PARAGEM_DOMINIOS;
   }
+});
+
+test('as caixas para os sítios das câmaras saem sem o invólucro da região (P4-007)', () => {
+  assert.deepEqual(decidir('prova.exemplo.pt', '/widget/paragem/pa_mercado/', MAPA), {
+    tipo: 'reescrever',
+    para: `${SEGMENTO_DOS_WIDGETS}/prova/paragem/pa_mercado/`,
+  });
+  assert.deepEqual(decidir('prova.exemplo.pt', '/widget/embed.js', MAPA), {
+    tipo: 'reescrever',
+    para: `${SEGMENTO_DOS_WIDGETS}/prova/embed.js`,
+  });
+  // De fora, o segmento interno não se alcança — nem numa região, nem fora.
+  assert.deepEqual(
+    decidir('prova.exemplo.pt', `${SEGMENTO_DOS_WIDGETS}/prova-municipio/viagem/`, MAPA),
+    {
+      tipo: 'reescrever',
+      para: `/prova${SEGMENTO_DOS_WIDGETS}/prova-municipio/viagem/`,
+    },
+  );
+  assert.deepEqual(decidir('paragem-abc.vercel.app', '/widget/viagem/', MAPA), {
+    tipo: 'reescrever',
+    para: `${NAO_E_ENDERECO}/widget/viagem/`,
+  });
 });
