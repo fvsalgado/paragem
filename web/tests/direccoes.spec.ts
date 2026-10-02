@@ -14,13 +14,16 @@
 import { test, expect, type Page } from '@playwright/test';
 
 import {
+  caixaDaRegiao,
   diaComMaisServico,
   duasParagens,
   fusoDaRegiao,
   modosDisponiveis,
+  ondeHaParagens,
   paragemComMaisPartidas,
   paragemPerto,
   temMosaicos,
+  umaLigacaoSoNoutroDia,
   umaPartidaFutura,
   viagensDeProva,
   SEM,
@@ -160,7 +163,12 @@ test('a página de uma paragem leva às direções com o destino preenchido', as
   await expect(page.getByRole('combobox', { name: 'Para', exact: true })).toHaveValue(nome);
 });
 
-test('no mapa, «Como chegar» abre as direções ali e não noutra página', async ({ page }) => {
+/** Um parâmetro do endereço atual — lido, e não comparado como texto codificado. */
+const doEndereco = (page: Page, nome: string) => new URL(page.url()).searchParams.get(nome);
+
+test('no mapa, «Como chegar aqui» abre as direções ali, e o endereço acompanha', async ({
+  page,
+}) => {
   // Sem mosaicos não há mapa onde as abrir: o início é a vista sem mapa, que
   // tem os seus próprios testes (`sem-mapa.spec.ts`).
   test.skip(!temMosaicos(), SEM.mosaicos);
@@ -169,17 +177,134 @@ test('no mapa, «Como chegar» abre as direções ali e não noutra página', as
   await procura.fill(PARAGEM.nome);
   await page.getByRole('listbox').getByRole('option').first().click();
 
-  const endereco = page.url();
-  await page.getByRole('button', { name: 'Como chegar' }).click();
+  // O CARTÃO FICA NO ENDEREÇO (P2-027): é o que o «voltar» do telemóvel
+  // percorre, e o que se copia para mandar a alguém.
+  await expect.poll(() => doEndereco(page, 'ponto')).toBe(PARAGEM.id);
+  // Uma marca no `window`: uma navegação a sério apagava-a. Escrever no
+  // endereço não é mudar de página — o mapa não se carrega outra vez.
+  await page.evaluate(() => ((window as unknown as { marca: number }).marca = 1));
 
-  // A mesma página: sem navegação, sem recarregar o mapa, sem perder onde se
-  // estava. É a diferença que o pedido descrevia.
-  expect(page.url()).toBe(endereco);
+  await page.getByRole('button', { name: 'Como chegar aqui' }).click();
+  await expect.poll(() => doEndereco(page, 'para')).toBe(PARAGEM.id);
+  expect(await page.evaluate(() => (window as unknown as { marca?: number }).marca)).toBe(1);
   await expect(page.getByRole('heading', { name: 'Transportes públicos' })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Para', exact: true })).toHaveValue(PARAGEM.nome);
+  // O foco vai para o campo que falta: é o que se escreve a seguir.
+  await expect(page.getByRole('combobox', { name: 'De', exact: true })).toBeFocused();
   // Duas cartas, e o mapa entre elas: é a forma que se pediu.
   await expect(page.locator('.cartao-de-cima')).toBeVisible();
   await expect(page.locator('.folha')).toBeVisible();
+
+  // O «VOLTAR» FECHA UMA CAMADA DE CADA VEZ, e não sai da aplicação: das
+  // direções para o cartão, do cartão para o mapa.
+  await page.goBack();
+  await expect(page.getByRole('heading', { name: 'Transportes públicos' })).toBeHidden();
+  await expect(page.locator('section.cartao-de-baixo h2')).toHaveText(PARAGEM.nome);
+  await page.goBack();
+  await expect(page.locator('section.cartao-de-baixo')).toHaveCount(0);
+  expect(doEndereco(page, 'ponto')).toBeNull();
+  expect(await page.evaluate(() => (window as unknown as { marca?: number }).marca)).toBe(1);
+});
+
+test('«Partir daqui» põe o ponto na partida, e o foco no destino', async ({ page }) => {
+  // O cartão só sabia pôr o ponto no DESTINO (P2-001): quem estava na
+  // paragem e queria ir a outro lado tinha de a escrever outra vez.
+  test.skip(!temMosaicos(), SEM.mosaicos);
+  await page.goto(`/?ponto=${encodeURIComponent(PARAGEM.id)}`);
+  await expect(page.locator('section.cartao-de-baixo h2')).toHaveText(PARAGEM.nome);
+  // Os dois gestos estão à cabeça do cartão, antes das horas que chegam.
+  const gestos = page.locator('section.cartao-de-baixo .cartao-accoes').first();
+  await expect(gestos.getByRole('button')).toHaveText(['Como chegar aqui', 'Partir daqui']);
+
+  await page.getByRole('button', { name: 'Partir daqui' }).click();
+  await expect(page.getByRole('combobox', { name: 'De', exact: true })).toHaveValue(PARAGEM.nome);
+  await expect(page.getByRole('combobox', { name: 'Para', exact: true })).toHaveValue('');
+  await expect(page.getByRole('combobox', { name: 'Para', exact: true })).toBeFocused();
+  await expect.poll(() => doEndereco(page, 'de')).toBe(PARAGEM.id);
+});
+
+test('o Esc fecha o cartão, e o foco volta à procura', async ({ page }) => {
+  // O cartão abria em silêncio, com o foco deixado na procura, e o Esc não
+  // fechava nada (P3-014). Agora o título recebe o foco — e é lido —, e o
+  // Esc devolve-o à caixa de onde se partiu.
+  test.skip(!temMosaicos(), SEM.mosaicos);
+  await page.goto('/');
+  const procura = page.getByRole('combobox', { name: 'Procurar' });
+  await procura.fill(PARAGEM.nome);
+  await page.getByRole('listbox').getByRole('option').first().click();
+  const titulo = page.locator('section.cartao-de-baixo h2');
+  await expect(titulo).toBeFocused();
+
+  await page.keyboard.press('Escape');
+  await expect(page.locator('section.cartao-de-baixo')).toHaveCount(0);
+  await expect(procura).toBeFocused();
+});
+
+test('a viagem escolhida fica no endereço, e o endereço volta a abri-la', async ({ page }) => {
+  // É o endereço que se partilha (P2-027): «a viagem das 9h» manda-se a
+  // alguém, e abre igual do outro lado.
+  test.skip(!DUAS, 'a região não tem duas paragens para uma viagem');
+  test.skip(!DIA, 'a região não tem dias com serviço');
+  const [a, b] = DUAS!;
+  await page.goto('/viagem/');
+  await escolher(page, 'De', a.nome);
+  await escolher(page, 'Para', b.nome);
+  await expect.poll(() => doEndereco(page, 'de')).toBe(a.id);
+  expect(doEndereco(page, 'para')).toBe(b.id);
+  // «Agora» não é uma hora que se guarde: quem abrir isto amanhã quer agora.
+  expect(doEndereco(page, 'hora')).toBeNull();
+
+  await marcarHora(page, DIA, '09:00');
+  await expect.poll(() => doEndereco(page, 'hora')).toBe('09:00');
+  expect(doEndereco(page, 'dia')).toBe(DIA);
+
+  const outra = await page.context().newPage();
+  await outra.goto(page.url());
+  await expect(outra.getByRole('combobox', { name: 'De', exact: true })).toHaveValue(a.nome);
+  await expect(outra.getByRole('combobox', { name: 'Para', exact: true })).toHaveValue(b.nome);
+  await expect(outra.getByRole('button', { name: /^Partir às 09:00/ })).toBeVisible();
+});
+
+test('um destino por coordenadas chega com o nome que se lhe deu', async ({ page }) => {
+  // A forma que a agenda cultural usa para o «Como chegar» de um evento
+  // (`docs/ENDERECOS.md`): um ponto, e o nome a mostrar. É um ponto e não
+  // uma paragem — a pé até à mais perto —, e o nome é texto, nunca HTML.
+  const c = caixaDaRegiao();
+  test.skip(!c, 'a região não declara a caixa');
+  const lat = ((c!.lat_min + c!.lat_max) / 2).toFixed(5);
+  const lon = ((c!.lon_min + c!.lon_max) / 2).toFixed(5);
+  const nome = 'Feira do Livro <b>no largo</b>';
+  await page.goto(`/viagem/?para=${lat},${lon}&nome=${encodeURIComponent(nome)}`);
+  await expect(page.getByRole('combobox', { name: 'Para', exact: true })).toHaveValue(nome);
+  await expect(page.locator('b', { hasText: 'no largo' })).toHaveCount(0);
+});
+
+test('um destino longe da região diz-se, em vez de «sem viagem»', async ({ page }) => {
+  // Coordenadas trocadas, ou um evento noutra terra: dizer «não há viagem»
+  // escondia que o problema é o sítio, e não o horário.
+  const c = caixaDaRegiao();
+  test.skip(!c, 'a região não declara a caixa');
+  await page.goto(`/viagem/?para=${(c!.lat_max + 2).toFixed(5)},${c!.lon_min}&nome=Longe`);
+  await expect(page.getByText(/O destino pedido, «Longe», fica longe de mais/)).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Para', exact: true })).toHaveValue('');
+});
+
+test('sem ligação no dia pedido, a página diz qual é a próxima — e mostra-a', async ({ page }) => {
+  // «Sem viagem neste dia» a quem pergunta ao domingo por uma aldeia com
+  // carreira nos dias úteis era dizer-lhe que não pode ir à cidade (P2-003).
+  const caso = umaLigacaoSoNoutroDia();
+  test.skip(!caso, 'a região não tem uma ligação que falte num dia e exista noutro');
+  await page.goto(
+    `/viagem/?de=${encodeURIComponent(caso!.de.id)}&para=${encodeURIComponent(caso!.para.id)}&dia=${caso!.dia}`,
+  );
+  const resposta = page.locator('[aria-live="polite"]').last();
+  await expect(resposta.getByRole('heading', { name: /^A próxima ligação é/ })).toBeVisible({
+    timeout: 30_000,
+  });
+  // E as opções desse dia estão lá, com a recomendada aberta.
+  await expect(page.locator('article.opcao').first()).toBeVisible();
+  await expect(page.locator('article.opcao.escolhida')).toHaveCount(1);
+  await expect(resposta).not.toContainText('Sem viagem a partir desta hora');
 });
 
 test('trocar de e para inverte mesmo a viagem', async ({ page }) => {
@@ -237,7 +362,9 @@ test.describe('as viagens de prova da região, pela interface', () => {
       // não haver nenhuma — o que não pode é ficar em branco.
       const opcoes = page.locator('article.opcao');
       const resposta = page.locator('[aria-live="polite"]').last();
-      await expect(resposta).toContainText(/opção|opções|Sem viagem/, { timeout: 30_000 });
+      await expect(resposta).toContainText(/opção|opções|Sem viagem|grandes desvios/, {
+        timeout: 30_000,
+      });
 
       // SEM VIAGEM NESTE DIA NÃO É DEFEITO DA PÁGINA, e é preciso dizê-lo
       // aqui: o dia é um só para todas as viagens — o de mais serviço da rede
@@ -247,6 +374,12 @@ test.describe('as viagens de prova da região, pela interface', () => {
       // uma lacuna do calendário de um defeito nosso; o que se mede aqui é a
       // interface, e a interface tem de explicar-se em vez de ficar calada.
       if ((await opcoes.count()) === 0) {
+        // SÓ COM VOLTAS GRANDES também é uma resposta: os caminhos existem, e
+        // ficam a um toque — mas não se abrem sozinhos (P2-009).
+        const desvios = resposta.getByRole('heading', {
+          name: 'Só há caminhos com grandes desvios',
+        });
+        if (await desvios.isVisible()) return;
         await expect(
           resposta.getByRole('heading', { name: 'Sem viagem a partir desta hora' }),
         ).toBeVisible();
@@ -276,7 +409,9 @@ test.describe('as viagens de prova da região, pela interface', () => {
     // que não pode é ficar em branco: uma página que não diz nada deixa quem
     // procura a achar que se enganou a escrever.
     const resposta = page.locator('[aria-live="polite"]').last();
-    await expect(resposta).toContainText(/opção|opções|Sem viagem/, { timeout: 30_000 });
+    await expect(resposta).toContainText(/opção|opções|Sem viagem|grandes desvios/, {
+      timeout: 30_000,
+    });
 
     // E o vazio manda para as páginas das DUAS pontas — e não para o índice
     // por letra, onde era preciso procurar outra vez a paragem que estava
@@ -326,30 +461,32 @@ test.describe('as viagens de prova da região, pela interface', () => {
     cortar = false;
     await page.getByRole('button', { name: 'Tentar de novo' }).click();
     const resposta = page.locator('[aria-live="polite"]').last();
-    await expect(resposta).toContainText(/opção|opções|Sem viagem/, { timeout: 30_000 });
+    await expect(resposta).toContainText(/opção|opções|Sem viagem|grandes desvios/, {
+      timeout: 30_000,
+    });
     await expect(page.getByText('Não foi possível descarregar os horários')).toHaveCount(0);
   });
 
-  test('no mapa, a primeira opção fica logo desenhada', async ({ page }) => {
-    // Cinco cartões e um mapa vazio é fazer a pergunta outra vez.
+  test('no mapa, a opção recomendada fica logo desenhada', async ({ page }) => {
+    // Cinco cartões e um mapa vazio é fazer a pergunta outra vez. E a que se
+    // abre é a RECOMENDADA, não a primeira da lista (P2-009): por ordem de
+    // partida, a primeira chegou a ser uma volta de 260 km.
     const v = VIAGENS.find((x) => x.de && x.para);
     test.skip(!v, SEM.regiaoReal);
     test.skip(!temMosaicos(), SEM.mosaicos);
     await page.goto('/');
     await page.getByRole('combobox', { name: 'Procurar' }).fill(v!.para!.nome);
     await page.getByRole('listbox').getByRole('option').first().click();
-    await page.getByRole('button', { name: 'Como chegar' }).click();
+    await page.getByRole('button', { name: 'Como chegar aqui' }).click();
 
     await escolher(page, 'De', v!.de!.nome);
     await marcarHora(page, DIA, '09:00');
 
     const opcoes = page.locator('article.opcao');
     await expect(opcoes.first()).toBeVisible({ timeout: 30_000 });
-    await expect(opcoes.first()).toHaveClass(/escolhida/);
-    await expect(opcoes.first().getByRole('button').first()).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    );
+    const escolhida = page.locator('article.opcao.escolhida');
+    await expect(escolhida).toHaveCount(1);
+    await expect(escolhida.getByRole('button').first()).toHaveAttribute('aria-expanded', 'true');
     // E a fila dos modos diz quanto demora cada um: é a primeira resposta à
     // primeira pergunta, que é se vale a pena esperar pelo autocarro.
     await expect(page.locator('.modos button.activo')).toContainText(/min|h/);
@@ -366,7 +503,7 @@ test.describe('as viagens de prova da região, pela interface', () => {
     await page.goto('/');
     await page.getByRole('combobox', { name: 'Procurar' }).fill(v!.para!.nome);
     await page.getByRole('listbox').getByRole('option').first().click();
-    await page.getByRole('button', { name: 'Como chegar' }).click();
+    await page.getByRole('button', { name: 'Como chegar aqui' }).click();
     await escolher(page, 'De', v!.de!.nome);
     await marcarHora(page, DIA, '09:00');
 
@@ -378,7 +515,8 @@ test.describe('as viagens de prova da região, pela interface', () => {
     const alto = async () => (await folha.boundingBox())!.height;
     const aberta = await alto();
 
-    await opcoes.nth(1).getByRole('button').first().click();
+    // Uma que não esteja já aberta: escolher a aberta não muda nada.
+    await page.locator('article.opcao:not(.escolhida)').first().getByRole('button').first().click();
     await expect(folha).toHaveClass(/encolhida/);
     expect(await alto(), 'descida, a folha tem de ocupar menos ecrã').toBeLessThan(aberta);
 
@@ -478,8 +616,9 @@ test.describe('a abertura de uma região', () => {
 
   test('os modos da região aparecem em círculos, e levam à página de cada um', async ({ page }) => {
     await page.goto('/');
-    const abertura = page.getByRole('region', { name: /O que há/ });
+    const abertura = page.getByRole('region', { name: 'Por onde começar' });
     await expect(abertura).toBeVisible();
+    await expect(abertura.getByRole('heading', { name: /^O que há / })).toBeVisible();
 
     // Os que a região declara, e não uma lista escrita no código.
     const seus = modosDisponiveis();
@@ -496,6 +635,51 @@ test.describe('a abertura de uma região', () => {
       .first()
       .click();
     await expect(page).toHaveURL(new RegExp(`/modos/${comPagina}/?$`));
+  });
+
+  test('«Para onde vais?» abre as direções com o foco no destino', async ({ page }) => {
+    // A primeira pergunta da página inicial (§6), onde o polegar chega. A
+    // nota que lá estava mandava escrever primeiro DE ONDE se parte — o
+    // contrário do que o cartão fazia (P2-001).
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Para onde vais?' }).click();
+    await expect(page.getByRole('combobox', { name: 'Para', exact: true })).toBeFocused();
+    // E a partida oferece logo «A minha localização», sem a pedir sozinha.
+    const de = page.getByRole('combobox', { name: 'De', exact: true });
+    await de.click();
+    await expect(page.getByRole('listbox', { name: /de/i }).getByRole('option').first()).toHaveText(
+      /A minha localização/,
+    );
+  });
+
+  test('«Paragens perto de mim» diz no mapa o que passa ali perto', async ({ page, context }) => {
+    // O botão da localização só punha um ponto azul, e o «Perto de ti» vivia
+    // em «A rede» (P2-016). As duas portas dão agora ao mesmo sítio: a folha
+    // diz que paragens estão perto e o que passa nelas, e tocar numa abre-a.
+    await context.grantPermissions(['geolocation']);
+    await context.setGeolocation(ondeHaParagens());
+    const partida = umaPartidaFutura();
+    if (partida) await page.clock.setFixedTime(partida.quando);
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Paragens perto de mim' }).click();
+
+    const bloco = page.locator('section.perto-no-mapa');
+    const perto = bloco.locator('button.perto-paragem');
+    await expect(perto.first()).toBeVisible({ timeout: 15_000 });
+    expect(await perto.count(), 'a folha é pequena: três chegam').toBeLessThanOrEqual(3);
+    // A distância, em metros — e não num mapa que é preciso saber ler.
+    await expect(perto.first()).toContainText(/\d+\s?m|\d+,\d\s?km/);
+    if (partida) {
+      // Cada partida diz PARA ONDE VAI (P2-017): numa paragem com os dois
+      // sentidos, o número da linha sozinho não diz qual é o nosso.
+      await expect(bloco.locator('.perto-destino').first()).toHaveText(/^(para \S|circular)/, {
+        timeout: 15_000,
+      });
+    }
+
+    const nome = (await perto.first().locator('.perto-nome').innerText()).trim();
+    await perto.first().click();
+    await expect(page.locator('section.cartao-de-baixo h2')).toHaveText(nome);
   });
 
   test('a caixa de procura diz o que se escreve nela', async ({ page }) => {
