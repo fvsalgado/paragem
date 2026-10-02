@@ -35,6 +35,10 @@ const TIPOS = {
   '.md': 'text/markdown; charset=utf-8',
   '.zip': 'application/zip',
   '.pdf': 'application/pdf',
+  // O logótipo da região: um SVG só se desenha num `<img>` com o tipo certo.
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
 };
 
 const regioes = () =>

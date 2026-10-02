@@ -148,21 +148,6 @@ h3 {
   align-items: center;
   min-height: var(--alvo);
 }
-/* O nome da região no cabeçalho era um `<span>` e passou a LIGAÇÃO quando o
-   sítio começou a servir mais do que uma região — leva ao início dela. Uma
-   ligação autónoma leva os 44 px, e o teste apanhou-a a 25. */
-.cabecalho a.marca-dados {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--alvo);
-  text-decoration: none;
-  color: var(--marca);
-}
-.cabecalho a.marca-dados:hover,
-.cabecalho a.marca-dados:focus-visible {
-  text-decoration: underline;
-}
-
 .cabecalho nav ul {
   display: flex;
   gap: 0.25rem 1rem;
@@ -176,6 +161,111 @@ h3 {
   align-items: center;
   min-height: var(--alvo);
   padding: 0 0.25rem;
+}
+
+/* O CABEÇALHO DE UMA REGIÃO É A FAIXA DA MARCA DELA (P4-008, P1-007): a cor
+   dela, e a tinta que se lê por cima. As duas vêm da região já medidas — no
+   pipeline, e outra vez no sítio (`lib/marca.ts`) — e chegam aqui em
+   `--cor-da-marca` e `--tinta-da-marca`; sem elas, a cor do §6 com branco. O
+   do produto e o do painel continuam brancos: não são de região nenhuma.
+
+   Num telemóvel, duas filas fixas: a assinatura, e as duas ligações por
+   baixo. A altura não depende do nome da região — um nome comprido corta-se
+   com reticências, em vez de empurrar a navegação para uma terceira linha
+   (P1-043). A partir de 48 rem, uma fila só. */
+.cabecalho-da-regiao {
+  border-bottom: 0;
+  background: var(--cor-da-marca, var(--marca));
+  color: var(--tinta-da-marca, #fff);
+}
+.cabecalho-da-regiao .interior {
+  padding: 0.25rem 1rem;
+  justify-content: space-between;
+  gap: 0 1.5rem;
+}
+.cabecalho-da-regiao a {
+  color: inherit;
+}
+/* O FOCO, DENTRO DA FAIXA, NA COR DA TINTA. O amarelo do sítio não se vê
+   sobre uma faixa clara, e a tinta foi medida para se ler sobre ela. */
+.cabecalho-da-regiao :focus-visible {
+  outline-color: var(--tinta-da-marca, #fff);
+}
+.cabecalho-da-regiao a.marca-da-regiao {
+  display: flex;
+  align-items: center;
+  flex: 1 1 100%;
+  min-width: 0;
+  min-height: 3.5rem;
+  text-decoration: none;
+}
+.cabecalho-da-regiao a.marca-da-regiao:hover .nome-principal {
+  text-decoration: underline;
+}
+.cabecalho-da-regiao nav ul {
+  flex-wrap: nowrap;
+}
+@media (min-width: 48rem) {
+  .cabecalho-da-regiao .interior {
+    flex-wrap: nowrap;
+  }
+  .cabecalho-da-regiao a.marca-da-regiao {
+    flex: 0 1 auto;
+  }
+  .cabecalho-da-regiao nav {
+    flex: none;
+  }
+}
+
+/* A ASSINATURA DA REGIÃO — o logótipo e os dois nomes —, a mesma no
+   cabeçalho, na folha do mapa e no menu (`AssinaturaDaRegiao.tsx`). Os nomes
+   cortam-se numa linha cada, e o inteiro fica no `title`. */
+.assinatura {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+.assinatura .logotipo {
+  flex: none;
+  display: block;
+  object-fit: contain;
+}
+.assinatura .nomes {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+.assinatura .nome-principal,
+.assinatura .nome-secundario,
+.assinatura .nomes.em-linha {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Numa linha só, as reticências são da linha inteira: os dois nomes são
+   texto corrido dentro dela, e não colunas. */
+.assinatura .nomes.em-linha {
+  display: block;
+}
+.assinatura .nomes.em-linha > span {
+  overflow: visible;
+}
+.assinatura .nome-principal {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+.assinatura .nome-secundario {
+  font-size: 0.85rem;
+}
+
+/* A ASSINATURA DO PRODUTO: discreta, no fim do rodapé, da folha do mapa e do
+   menu. A ligação está no meio de uma frase, e por isso não leva os 44 px das
+   ligações de navegação (critério 2.5.8, a exceção das ligações no texto). */
+.feito-com {
+  font-size: 0.85rem;
+  color: var(--texto-secundario);
 }
 
 .rodape {
@@ -3119,8 +3209,18 @@ dialog.menu-do-mapa::backdrop {
   border-bottom: 1px solid var(--linhas);
 }
 .menu-marca {
-  font-weight: 700;
-  color: var(--marca);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.menu-marca .nome-principal {
+  font-size: 1rem;
+}
+.menu-marca .nome-secundario,
+.assinatura-da-folha .nome-secundario {
+  color: var(--texto-secundario);
+}
+dialog.menu-do-mapa .feito-com {
+  margin: 0.75rem;
 }
 /* A LISTA DO MENU NÃO É A LISTA DA REDE.
  *
@@ -3495,6 +3595,21 @@ button.para-onde-vais svg {
   gap: 0.4rem;
   min-height: var(--alvo);
   font-weight: 700;
+}
+/* A marca da rede no alto da folha (P1-008). Numa linha, e com a folha a
+   começar mais acima: cada linha da folha é uma linha de mapa a menos — e é
+   por isso que a do produto fica no menu, e não no fundo da folha. */
+.folha-de-abertura:has(.assinatura-da-folha) {
+  padding-top: 0.6rem;
+}
+.folha-de-abertura .assinatura-da-folha {
+  margin: 0 0.6rem 0.5rem;
+}
+.assinatura-da-folha .nome-principal {
+  font-size: 1rem;
+}
+.assinatura-da-folha .nome-secundario {
+  font-size: 0.9rem;
 }
 
 /* --- «Perto de ti» dentro da folha do mapa ------------------------------ */

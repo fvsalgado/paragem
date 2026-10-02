@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- O logótipo da Rede Ameno: inventado, como a região. Um sol sobre uma onda, num quadrado da cor da marca. -->
+  <rect width="64" height="64" rx="14" fill="#f2a541"/>
+  <circle cx="32" cy="25" r="9.5" fill="#102c3f"/>
+  <path d="M11 45c5.5-6 15.5-6 21 0s15.5 6 21 0" fill="none" stroke="#102c3f" stroke-width="5.5" stroke-linecap="round"/>
+</svg>

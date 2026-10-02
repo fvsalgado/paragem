@@ -175,9 +175,19 @@ export type DeclaracaoDaRegiao = {
   demonstracao?: boolean;
   caixa?: { lat_min: number; lat_max: number; lon_min: number; lon_max: number };
   mapa?: { atribuicao: string; fonte: 'openstreetmap' | 'propria' } | null;
+  rede?: { nome?: string };
+  de: string;
+  marca?: { cor: string; tinta: string; propria: boolean; logotipo: string | null };
 };
 export const declaracao = (regiao = REGIAO): DeclaracaoDaRegiao | null =>
   ler<DeclaracaoDaRegiao>(regiao, 'regiao.json');
+
+/**
+ * A cor da faixa da região, como a página a pinta: a que a região declara, ou
+ * a do §6. Dados de antes da marca não a trazem, e aí vale a do §6.
+ */
+export const corDaMarca = (regiao = REGIAO): string =>
+  (declaracao(regiao)?.marca?.cor ?? '#0a5c7a').toLowerCase();
 
 /** A região é uma demonstração? É o que ela diz de si própria (`demonstracao`). */
 export const ehDemonstracao = (regiao = REGIAO): boolean =>

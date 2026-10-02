@@ -9,6 +9,14 @@
  */
 import { test, expect, type APIRequestContext } from '@playwright/test';
 import { PORTA, PRODUTO, anfitriao, regioes } from './anfitrioes';
+import { corDaMarca } from './dados-da-regiao';
+
+/**
+ * A COR DE TEMA é a da marca de quem é o sítio: a do produto na montra, e a
+ * da região em cada região — a cor que ela declara, ou a do §6 (P4-008).
+ */
+const corDoTema = (host: string | null) =>
+  host ? corDaMarca(host.replace(/\.localhost$/, '')) : '#0a5c7a';
 
 /** Um pedido pelo endereço da máquina, com o `Host` de quem se quer ser. */
 async function pedir(request: APIRequestContext, host: string | null, caminho: string) {
@@ -42,7 +50,7 @@ test('cada anfitrião tem o seu manifesto, e os ícones dele existem', async ({ 
     expect(m.start_url).toBe('/');
     expect(m.display).toBe('standalone');
     expect(m.lang).toBe('pt-PT');
-    expect(m.theme_color).toBe('#0A5C7A');
+    expect(m.theme_color.toLowerCase(), host ?? 'produto').toBe(corDoTema(host));
     // O da região chama-se como ela; o do produto, como o produto.
     if (host) expect(m.name).toMatch(/^Transportes /);
     else expect(m.name).toBe('Paragem.pt');
@@ -56,11 +64,11 @@ test('cada anfitrião tem o seu manifesto, e os ícones dele existem', async ({ 
 test('cada página diz ao navegador onde estão o ícone, o manifesto e a cor de tema', async ({
   page,
 }) => {
-  for (const endereco of [
-    `${PRODUTO}/`,
-    `${PRODUTO}/contacto/`,
-    `${anfitriao(regioes()[0])}/rede/`,
-  ]) {
+  for (const [endereco, host] of [
+    [`${PRODUTO}/`, null],
+    [`${PRODUTO}/contacto/`, null],
+    [`${anfitriao(regioes()[0])}/rede/`, `${regioes()[0]}.localhost`],
+  ] as const) {
     await page.goto(endereco);
     await expect(page.locator('link[rel="icon"][type="image/svg+xml"]')).toHaveCount(1);
     await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveCount(1);
@@ -68,6 +76,9 @@ test('cada página diz ao navegador onde estão o ícone, o manifesto e a cor de
       'href',
       '/manifest.webmanifest',
     );
-    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#0A5C7A');
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
+      'content',
+      new RegExp(`^${corDoTema(host)}$`, 'i'),
+    );
   }
 });

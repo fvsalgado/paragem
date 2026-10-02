@@ -1,5 +1,6 @@
 import { regiao } from '@/lib/dados';
 import { manifesto, respostaDeManifesto } from '@/lib/manifesto';
+import { marcaDaRegiao } from '@/lib/marca';
 
 /**
  * `GET /manifest.webmanifest` no anfitrião de uma região: o que fica no ecrã
@@ -29,6 +30,7 @@ export async function GET(
       nome: `Transportes ${r.de}`,
       nomeCurto: r.nome,
       descricao: `Todos os transportes ${r.de}, num sítio só.`,
+      corDoTema: marcaDaRegiao(r).cor,
     }),
   );
 }

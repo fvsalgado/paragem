@@ -36,7 +36,13 @@ export const ICONES = [
   },
 ] as const;
 
-export function manifesto(p: { nome: string; nomeCurto: string; descricao: string }) {
+export function manifesto(p: {
+  nome: string;
+  nomeCurto: string;
+  descricao: string;
+  /** A cor da marca da região, quando é dela; sem ela, a do produto. */
+  corDoTema?: string;
+}) {
   return {
     name: p.nome,
     short_name: p.nomeCurto,
@@ -48,7 +54,7 @@ export function manifesto(p: { nome: string; nomeCurto: string; descricao: strin
     scope: '/',
     display: 'standalone',
     background_color: COR_DE_FUNDO,
-    theme_color: COR_DO_TEMA,
+    theme_color: p.corDoTema ?? COR_DO_TEMA,
     icons: ICONES,
   };
 }

@@ -46,6 +46,15 @@ rede:
   operador: Transportes do Ameno
   operador_artigo: os
 
+# A MARCA DA REDE, inventada como o resto — é o que mostra o sítio com a marca
+# de quem o licencia, e não com a do produto. A cor pinta a faixa do
+# cabeçalho, e a tinta por cima escolhe-a o sítio pelo contraste (sobre este
+# âmbar, sai o azul-escuro do texto). O logótipo é o ficheiro ao lado deste.
+# As regiões de prova não declaram nenhuma das duas, de propósito: ficam com a
+# do produto, que é o que uma região sem marca mostra.
+cor: "#f2a541"
+logotipo: logotipo.svg
+
 # O domínio em que esta região responde. É uma demonstração: o identificador
 # tal e qual, como as de prova.
 dominio: demo.paragem.pt
