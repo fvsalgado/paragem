@@ -94,7 +94,16 @@ def jar(raiz: Path) -> Path:
 
 
 def construir(raiz: Path, regiao: Regiao, *, memoria: str = MEMORIA) -> Mosaicos:
-    """Gera `build/<regiao>/mosaicos/regiao.pmtiles` a partir do recorte OSM."""
+    """Gera `build/<regiao>/mosaicos/regiao.pmtiles` a partir do recorte OSM.
+
+    Uma região que declare a sua própria geografia (`mapa:` na receita) não
+    passa por aqui: o mapa dela desenha-se a partir dessa geografia, sem o
+    Planetiler e sem o OpenStreetMap (`mosaicos_proprios.py`).
+    """
+    if regiao.mapa.get("fonte"):
+        from . import mosaicos_proprios
+
+        return mosaicos_proprios.construir(raiz, regiao)
     raiz = Path(raiz)
     entrada = raiz / "build" / regiao.id / "osm" / "regiao.osm.pbf"
     if not entrada.exists():
