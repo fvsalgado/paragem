@@ -776,6 +776,19 @@ class Sitio:
         if cp is None:
             return []
 
+        # QUEM OPERA, do próprio feed. A página dizia «bilhetes e perturbações
+        # em cp.pt» escrito à mão — e numa região com outro operador
+        # ferroviário mandava quem lá estivesse para o sítio de outra empresa.
+        agencias = list(cp.obter("agency.txt"))
+        operador = (
+            {
+                "nome": str(agencias[0].get("agency_name") or "").strip(),
+                "sitio": (agencias[0].get("agency_url") or "").strip() or None,
+            }
+            if len(agencias) == 1
+            else None
+        )
+
         autocarro = [(p["lat"], p["lon"], p["id"], p["nome"]) for p in paragens]
         saida: list[dict] = []
         for s in cp.stops:
@@ -815,6 +828,7 @@ class Sitio:
                     ],
                     # A frase que a página tem de dizer, decidida aqui uma vez.
                     "sem_ligacao": not any(d <= RAIO_CORRESPONDENCIA_KM for d, _, _ in perto),
+                    "operador": operador,
                 }
             )
         saida.sort(key=lambda e: e["ordem"])
@@ -2624,12 +2638,20 @@ def _descricao_da_saida(s: SaidaDaReceita) -> str:
             "reserva vai no próprio feed (`booking_rules.txt`)"
         )
     if s.papel == "feed-de-terceiro":
-        return "o feed de outra entidade, recortado à região"
+        # Só o recortado é recortado: o de um leitor que copia o feed inteiro
+        # sai como a outra entidade o publica, e dizer o contrário a quem o
+        # descarrega era mandá-lo procurar viagens que estão lá.
+        if s.leitor == "gtfs-filtrado":
+            return "o feed de outra entidade, recortado às viagens que servem a região"
+        return "o feed de outra entidade, inteiro"
     if (s.saida or "").startswith("gbfs/"):
         return "as estações de bicicletas partilhadas, em GBFS estático (sem disponibilidade)"
     if (s.saida or "").startswith("geojson/"):
         return "pontos e percursos em GeoJSON, para abrir num mapa"
     if s.papel == "catalogo-proprio":
+        # Uma tabela entregue já como tabela não foi transcrita de nada.
+        if s.leitor == "horarios-tabela":
+            return "os horários deste serviço como o sítio os lê, da tabela de quem o gere"
         return (
             "os horários deste serviço como o sítio os lê, transcritos do que a operadora publica"
         )
