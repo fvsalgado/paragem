@@ -66,7 +66,7 @@ export function nomeDoPapel(papel: Papel): string {
 /** O que o papel deixa fazer, dito a quem o vai atribuir. */
 export function oQueOPapelFaz(papel: Papel): string {
   return papel === 'gestor'
-    ? 'a ficha da região: módulos, avisos, contactos e o relatório da procura'
+    ? 'a ficha da região: modos, avisos, contactos e o relatório das procuras'
     : 'os avisos da região — escrever, publicar e retirar';
 }
 

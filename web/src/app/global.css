@@ -4827,3 +4827,17 @@ body:has(.app-mapa) .marca-demonstracao {
 .painel details.apagar-aviso[open] {
   flex-basis: 100%;
 }
+
+/* Os contactos da declaração e da privacidade: dois grupos, cada um com o
+   nome por cima — o que é de quê lê-se sem ler os campos todos. */
+.painel fieldset.grupo-de-campos {
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  padding: 0.25rem 1rem 1rem;
+  margin: 1rem 0 0;
+  min-width: 0;
+}
+.painel fieldset.grupo-de-campos > legend {
+  font-weight: 700;
+  padding: 0 0.35rem;
+}

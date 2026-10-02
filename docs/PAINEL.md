@@ -111,6 +111,22 @@ Três coisas que o editor diz e convém saber antes:
 depois — a ação recusa um envio sem a confirmação —, e guarda o aviso inteiro
 na auditoria: apagar não é esquecer.
 
+### A declaração de acessibilidade e a privacidade
+
+A ficha tem uma secção «Acessibilidade e privacidade» (P4-024), de quem gere a
+região: o email (e, se houver, o telefone) para problemas de acessibilidade,
+a página onde se reclama, quem responde pelos dados das medições — a
+autoridade de transportes da região, outra entidade, ou «ainda não se sabe» —
+e o email para questões de privacidade. Guardam-se na base com rasto
+(`set_region_contactos`, 0010), e a declaração e a página de privacidade da
+região mostram-nos à visita seguinte.
+
+**O artigo nunca se adivinha.** A autoridade leva o que a região declara
+(`autoridade.com_artigo`, no `regiao.yaml`); outra entidade leva o artigo que
+se escolhe ao lado do nome, e sem artigo vai sozinha. O que fica em branco
+aparece como «Por preencher»: um contacto inventado é pior do que nenhum,
+porque quem reclama fica à espera.
+
 ### O que um módulo desligado tira do sítio
 
 O interruptor é do painel; o efeito é do sítio, e está num sítio só:

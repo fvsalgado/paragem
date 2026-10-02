@@ -10,6 +10,7 @@ import { emVigor } from '@/lib/avisos';
 import {
   acrescentarAlias,
   alternarModulo,
+  guardarContactos,
   ligarOuDesligarRegiao,
   mudarDominio,
   registarLicenca,
@@ -32,13 +33,20 @@ import { MODULOS, nomeDoModulo } from '@/lib/painel/modulos';
 import { naFrase } from '@/lib/painel/ficha';
 import { nomeDoPapel } from '@/lib/painel/papeis';
 import { pessoasDaRegiao } from '@/lib/painel/pessoas';
-import { lista } from '@/lib/prosa';
+import { contactosDoPainel } from '@/lib/painel/contactos';
+import { aAutoridade, lista } from '@/lib/prosa';
 
 export const dynamic = 'force-dynamic';
 
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ aviso?: string; secao?: string; desfazer?: string }>;
+  searchParams: Promise<{
+    aviso?: string;
+    secao?: string;
+    desfazer?: string;
+    /** O que se escreveu nos contactos, de volta depois de uma recusa (`c_<campo>`). */
+    [campo: `c_${string}`]: string | undefined;
+  }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -49,6 +57,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : undefined;
   return { title: nome ?? 'Região' };
 }
+
+const maiusculaInicial = (s: string): string => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 /** Quem criou uma linha numa migração não é ninguém da casa: é a instalação. */
 function autor(quem: string | null): string {
@@ -76,13 +86,14 @@ function autor(quem: string | null): string {
  * o CI confere — está recolhido no fim, para quem gere a instalação.
  */
 export default async function FichaDaRegiao({ params, searchParams }: Props) {
-  const [{ id }, { aviso, secao, desfazer }] = await Promise.all([params, searchParams]);
+  const [{ id }, pedidos] = await Promise.all([params, searchParams]);
+  const { aviso, secao, desfazer } = pedidos;
   if (!IDENTIFICADOR.test(id)) notFound();
   const dentro = await paginaDaRegiao(id, 'gestor');
   const dono = dentro.dono;
   if (!temChaveDeServico()) return <SemChaveDeServico titulo="A região" />;
 
-  const [regioes, aliases, modulos, licencas, acoes, avisos, noArmazem, pessoas] =
+  const [regioes, aliases, modulos, licencas, acoes, avisos, noArmazem, pessoas, contactos] =
     await Promise.all([
       listarRegioes(),
       listarAliases(),
@@ -95,6 +106,7 @@ export default async function FichaDaRegiao({ params, searchParams }: Props) {
       // vem a lista dos modos que ela tem. `null` sem dados publicados.
       fichaNoArmazem(id).catch(() => null),
       dono ? pessoasDaRegiao(id) : Promise.resolve([]),
+      contactosDoPainel(id),
     ]);
   const regiao = regioes.find((r) => r.id === id);
   if (!regiao) notFound();
@@ -344,6 +356,170 @@ export default async function FichaDaRegiao({ params, searchParams }: Props) {
             nada para ligar.
           </p>
         ) : null}
+      </section>
+
+      {/* OS CONTACTOS DA DECLARAÇÃO E DA PRIVACIDADE (P4-024). A declaração de
+          acessibilidade dizia «Por preencher» também na região a sério, e não
+          havia onde a autoridade pusesse o contacto. São da autoridade, e por
+          isso de quem gere a região — guardados na base, com rasto. */}
+      <section aria-labelledby="titulo-contactos" id="contactos" className="cartao">
+        <h2 id="titulo-contactos">Acessibilidade e privacidade</h2>
+        <Aviso texto={mensagem('contactos')} />
+        {contactos === 'por-aplicar' ? (
+          <>
+            <p>
+              Esta instalação ainda não guarda estes contactos: a declaração de acessibilidade e a
+              página de privacidade dizem «Por preencher».
+            </p>
+            <details className="para-quem-gere">
+              <summary>Para quem gere a instalação</summary>
+              <p>
+                Falta aplicar à base a migração <code>0010_os_contactos</code> (
+                <code>supabase/migrations/</code>), como as anteriores. Este ecrã muda sozinho
+                quando ela lá estiver.
+              </p>
+            </details>
+          </>
+        ) : (
+          <>
+            <p className="secundario-texto">
+              O que as páginas{' '}
+              <a href={`https://${regiao.domain}/acessibilidade/`}>Acessibilidade</a> e{' '}
+              <a href={`https://${regiao.domain}/privacidade/`}>Privacidade</a> {frase.de} dizem a
+              quem quer reclamar ou saber dos dados. O que ficar em branco aparece como «Por
+              preencher»: um contacto inventado é pior do que nenhum, porque quem reclama fica à
+              espera.
+            </p>
+            <form action={guardarContactos} className="formulario formulario-largo">
+              <input type="hidden" name="regiao" value={regiao.id} />
+              <fieldset className="grupo-de-campos">
+                <legend>Acessibilidade</legend>
+                <label htmlFor="acessibilidade_email">Email para problemas de acessibilidade</label>
+                <input
+                  id="acessibilidade_email"
+                  name="acessibilidade_email"
+                  type="email"
+                  autoComplete="off"
+                  spellCheck={false}
+                  defaultValue={
+                    pedidos.c_acessibilidade_email ?? contactos?.acessibilidade_email ?? ''
+                  }
+                />
+                <label htmlFor="acessibilidade_telefone">
+                  Telefone <span className="opcional">(opcional)</span>
+                </label>
+                <input
+                  id="acessibilidade_telefone"
+                  name="acessibilidade_telefone"
+                  type="tel"
+                  autoComplete="off"
+                  defaultValue={
+                    pedidos.c_acessibilidade_telefone ?? contactos?.acessibilidade_telefone ?? ''
+                  }
+                />
+                <label htmlFor="reclamacao_url">
+                  Onde se reclama <span className="opcional">(opcional)</span>
+                </label>
+                <input
+                  id="reclamacao_url"
+                  name="reclamacao_url"
+                  type="url"
+                  inputMode="url"
+                  autoComplete="off"
+                  spellCheck={false}
+                  defaultValue={pedidos.c_reclamacao_url ?? contactos?.reclamacao_url ?? ''}
+                  aria-describedby="reclamacao-ajuda"
+                />
+                <p id="reclamacao-ajuda" className="secundario-texto">
+                  A página onde se apresenta uma reclamação quando a resposta não chega ou não
+                  resolve. Sem ela, a declaração diz que o mecanismo está por indicar.
+                </p>
+              </fieldset>
+              <fieldset className="grupo-de-campos">
+                <legend>Privacidade</legend>
+                <fieldset className="pilulas-de-escolha">
+                  <legend>Quem responde pelos dados das medições do sítio</legend>
+                  <div className="pilulas">
+                    {(
+                      [
+                        [
+                          'autoridade',
+                          maiusculaInicial(
+                            aAutoridade(noArmazem ?? { autoridade: {} }, 'com_artigo'),
+                          ),
+                        ],
+                        ['outra', 'Outra entidade'],
+                        ['por-preencher', 'Ainda não se sabe'],
+                      ] as const
+                    ).map(([valor, nome]) => (
+                      <label key={valor}>
+                        <input
+                          type="radio"
+                          name="responsavel"
+                          value={valor}
+                          defaultChecked={
+                            (pedidos.c_responsavel ?? contactos?.responsavel ?? 'por-preencher') ===
+                            valor
+                          }
+                        />
+                        {nome}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                <div className="em-linha">
+                  <div>
+                    <label htmlFor="responsavel_nome">Nome da outra entidade</label>
+                    <input
+                      id="responsavel_nome"
+                      name="responsavel_nome"
+                      type="text"
+                      defaultValue={pedidos.c_responsavel_nome ?? contactos?.responsavel_nome ?? ''}
+                      aria-describedby="responsavel-ajuda"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="responsavel_artigo">Artigo</label>
+                    <select
+                      id="responsavel_artigo"
+                      name="responsavel_artigo"
+                      defaultValue={
+                        pedidos.c_responsavel_artigo ?? contactos?.responsavel_artigo ?? ''
+                      }
+                    >
+                      <option value="">sem artigo</option>
+                      <option value="a">a</option>
+                      <option value="o">o</option>
+                      <option value="as">as</option>
+                      <option value="os">os</option>
+                    </select>
+                  </div>
+                </div>
+                <p id="responsavel-ajuda" className="secundario-texto">
+                  Só com «Outra entidade». O artigo é o da frase «o responsável pelo tratamento é a
+                  …» — sem artigo, o nome vai sozinho, e nunca se adivinha um.
+                </p>
+                <label htmlFor="privacidade_email">
+                  Email para questões de privacidade <span className="opcional">(opcional)</span>
+                </label>
+                <input
+                  id="privacidade_email"
+                  name="privacidade_email"
+                  type="email"
+                  autoComplete="off"
+                  spellCheck={false}
+                  defaultValue={pedidos.c_privacidade_email ?? contactos?.privacidade_email ?? ''}
+                />
+              </fieldset>
+              <button type="submit">Guardar os contactos</button>
+            </form>
+            {contactos ? (
+              <p className="secundario-texto">
+                Mudados pela última vez a {porExtenso(contactos.updated_at)}.
+              </p>
+            ) : null}
+          </>
+        )}
       </section>
 
       {dono ? (

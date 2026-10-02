@@ -4,6 +4,7 @@ import { revalidateTag } from 'next/cache';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { etiquetaDosAvisos } from '../avisos';
+import { etiquetaDosContactos } from '../contactos';
 import {
   ETIQUETA_DAS_REGIOES,
   IDENTIFICADOR,
@@ -484,6 +485,90 @@ export async function registarLicenca(formData: FormData): Promise<void> {
       return comAviso(ficha(regiao), 'Licença registada.', 'licencas');
     },
     (mensagem) => comAviso(ficha(regiao), `Não foi possível: ${mensagem}`, 'licencas'),
+  );
+}
+
+// --- os contactos da declaração e da privacidade (P4-024) -----------------
+
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const TELEFONE = /^[0-9+() -]{6,20}$/;
+const ARTIGOS = new Set(['', 'o', 'a', 'os', 'as']);
+
+/**
+ * Os contactos que a declaração de acessibilidade e a privacidade mostram.
+ * De quem gere a região — é a autoridade que decide a quem se escreve.
+ *
+ * O que se escreveu volta na barra de endereços quando há uma recusa, como no
+ * «Nova região»: um email com uma gralha não obriga a escrever os outros
+ * quatro campos outra vez. São contactos públicos — os que a página vai
+ * mostrar —, e não há nada neles que não possa ir num endereço.
+ */
+export async function guardarContactos(formData: FormData): Promise<void> {
+  const regiao = texto(formData, 'regiao');
+  const campos = {
+    acessibilidade_email: texto(formData, 'acessibilidade_email').toLowerCase(),
+    acessibilidade_telefone: texto(formData, 'acessibilidade_telefone'),
+    reclamacao_url: texto(formData, 'reclamacao_url'),
+    responsavel: texto(formData, 'responsavel') || 'por-preencher',
+    responsavel_nome: texto(formData, 'responsavel_nome'),
+    responsavel_artigo: texto(formData, 'responsavel_artigo'),
+    privacidade_email: texto(formData, 'privacidade_email').toLowerCase(),
+  };
+  await seguir(
+    async () => {
+      exigirRegiaoValida(regiao);
+      const dentro = await exigirPapel(regiao, 'gestor');
+      if (campos.acessibilidade_email && !EMAIL.test(campos.acessibilidade_email)) {
+        throw new Error(`«${campos.acessibilidade_email}» não se lê como um email`);
+      }
+      if (campos.privacidade_email && !EMAIL.test(campos.privacidade_email)) {
+        throw new Error(`«${campos.privacidade_email}» não se lê como um email`);
+      }
+      if (campos.acessibilidade_telefone && !TELEFONE.test(campos.acessibilidade_telefone)) {
+        throw new Error('o telefone só leva algarismos, espaços, o sinal + e parênteses');
+      }
+      if (campos.reclamacao_url && !enderecoValido(campos.reclamacao_url)) {
+        throw new Error(
+          'o endereço de reclamação tem de ser completo, como https://exemplo.pt/reclamar',
+        );
+      }
+      if (!['por-preencher', 'autoridade', 'outra'].includes(campos.responsavel)) {
+        throw new Error('escolhe quem responde pelos dados');
+      }
+      if (campos.responsavel === 'outra' && !campos.responsavel_nome) {
+        throw new Error('com «outra entidade», falta o nome dela');
+      }
+      if (!ARTIGOS.has(campos.responsavel_artigo)) {
+        throw new Error('o artigo tem de ser o, a, os, as, ou nenhum');
+      }
+      const mudou = await chamar<boolean>('set_region_contactos', {
+        p_region_id: regiao,
+        p_acessibilidade_email: campos.acessibilidade_email || null,
+        p_acessibilidade_telefone: campos.acessibilidade_telefone || null,
+        p_reclamacao_url: campos.reclamacao_url || null,
+        p_responsavel: campos.responsavel,
+        p_responsavel_nome: campos.responsavel_nome || null,
+        p_responsavel_artigo: campos.responsavel_artigo,
+        p_privacidade_email: campos.privacidade_email || null,
+        ...(await rasto(dentro)),
+      });
+      revalidateTag(etiquetaDosContactos(regiao));
+      return comAviso(
+        ficha(regiao),
+        mudou
+          ? 'Contactos guardados. A declaração de acessibilidade e a página de privacidade já os mostram.'
+          : 'Nada mudou: os contactos já eram estes.',
+        'contactos',
+      );
+    },
+    (mensagem) =>
+      comAviso(ficha(regiao), `Não foi possível: ${mensagem}`, 'contactos', {
+        ...Object.fromEntries(
+          Object.entries(campos)
+            .filter(([, v]) => v)
+            .map(([k, v]) => [`c_${k}`, v]),
+        ),
+      }),
   );
 }
 

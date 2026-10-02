@@ -147,6 +147,25 @@ test('uma pessoa da região A não vê nem escreve na região B', async ({ brows
     );
   }
 
+  // E O QUE É DO GESTOR NÃO É DO EDITOR, nem na região dela: os contactos da
+  // declaração (0010), com a ação tirada da ficha que só o dono e o gestor veem.
+  await dono.goto(`${PRODUTO}/admin/regioes/${A}/`);
+  if (await dono.locator('form:has(input[name="acessibilidade_email"])').count()) {
+    const contactos = await idDaAcao(dono, 'form:has(input[name="acessibilidade_email"])');
+    const resposta = await pessoa.request.post(`${PRODUTO}/admin/regioes/${A}/avisos/`, {
+      headers: { origin: PRODUTO },
+      multipart: {
+        [contactos]: '',
+        regiao: A,
+        acessibilidade_email: 'intruso@exemplo.pt',
+        responsavel: 'por-preencher',
+      },
+      maxRedirects: 0,
+    });
+    const destino = new URL(resposta.headers()['location'] ?? '/', PRODUTO);
+    expect(destino.searchParams.get('aviso')).toMatch(/Não foi possível: não tens permissão/);
+  }
+
   // E O AVISO DE B CONTINUA COMO ESTAVA, publicado — visto pelo dono.
   await dono.goto(`${PRODUTO}/admin/regioes/${B}/avisos/`);
   await expect(dono.locator(`#aviso-${AVISO_DE_B}`)).toContainText('Publicado');
