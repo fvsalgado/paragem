@@ -27,10 +27,13 @@ test('a omissão do contacto é a que o repositório já publica', () => {
   }
 });
 
+// Os valores passam-se À MÃO, e nunca `undefined`: `undefined` é «lê o
+// ambiente», e o CI define as variáveis do sítio antes de correr isto. Foi
+// assim que este teste passou aqui e chumbou com o ambiente do CI.
 test('o contacto vem do ambiente, e uma variável que não é um endereço não chega à página', () => {
   assert.equal(contactoDoProduto('  ola@exemplo.pt '), 'ola@exemplo.pt');
-  assert.equal(contactoDoProduto(undefined), CONTACTO_PUBLICADO);
   assert.equal(contactoDoProduto(''), CONTACTO_PUBLICADO);
+  assert.equal(contactoDoProduto('   '), CONTACTO_PUBLICADO);
   for (const mal of [
     'mailto:ola@exemplo.pt',
     'Ana <ola@exemplo.pt>',
@@ -53,8 +56,8 @@ test('o mailto leva o assunto com espaços de verdade, e não com «+»', () => 
 test('a morada do produto só vale inteira e em http(s)', () => {
   assert.equal(origemDoProduto('https://www.exemplo.pt/')?.origin, 'https://www.exemplo.pt');
   assert.equal(origemDoProduto('http://127.0.0.1:4321')?.host, '127.0.0.1:4321');
-  for (const mal of [undefined, '', '/', 'www.exemplo.pt', 'ftp://exemplo.pt']) {
-    assert.equal(origemDoProduto(mal), null, String(mal));
+  for (const mal of ['', '/', 'www.exemplo.pt', 'ftp://exemplo.pt']) {
+    assert.equal(origemDoProduto(mal), null, mal);
   }
 });
 
