@@ -172,3 +172,16 @@ def test_horas_depois_da_meia_noite():
 """
     v = pdf.viagens(pdf.ler(texto))[0]
     assert [p.partida for p in v.paragens] == ["23:50:00", "24:20:00"]
+
+
+def test_as_contagens_do_feed_chamam_se_como_o_ficheiro_que_a_receita_declara():
+    """Estavam cravadas com a marca da rede do primeiro cliente: o relatório de
+    outra região que usasse este leitor sairia com as contagens em nome dele."""
+    from paragem.leitores.horarios_pdf_operadora import prefixo_das_contagens
+    from paragem.regiao import Saida
+
+    def saida(caminho):
+        return Saida(fonte="f", leitor="horarios-pdf-operadora", saida=caminho)
+
+    assert prefixo_das_contagens(saida("gtfs/rede-do-vale.zip")) == "rede-do-vale"
+    assert prefixo_das_contagens(saida(None)) == "horarios-pdf-operadora"

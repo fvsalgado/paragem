@@ -96,21 +96,26 @@ def ler(ctx: Contexto, saida: Saida) -> Resultado:
     tracados = _tracar(ctx, saida, completas, camadas)
     formas, forma_de = numerar(tracados)
 
-    feed, contagens, lacunas = _escrever(ctx, doc, completas, resolucao, camadas, formas, forma_de)
+    prefixo = prefixo_das_contagens(saida)
+    feed, contagens, lacunas = _escrever(
+        ctx, doc, completas, resolucao, camadas, formas, forma_de, prefixo
+    )
     destino = ctx.caminho_de_saida(saida)
     feed.escrever(destino)
 
     _escrever_decisoes(ctx, resolucao, completas, segmentos, tracados, forma_de)
     contagens.update(
         {
-            "meio.pares_linha_nome": len(resolucao.decisoes),
-            "meio.pares_resolvidos": len(resolucao.resolvidas),
-            "meio.pares_sem_coordenada": len(resolucao.sem_coordenada),
-            "meio.viagens_alinhadas": sum(1 for c in completas if c.alinhada),
-            "meio.intermedias": sum(c.intermedias for c in completas),
-            "meio.tracados": len(formas),
-            "meio.tracados_da_camada": sum(1 for t in tracados.values() if t.metodo == "camada"),
-            "meio.tracados_encaminhados": sum(
+            f"{prefixo}.pares_linha_nome": len(resolucao.decisoes),
+            f"{prefixo}.pares_resolvidos": len(resolucao.resolvidas),
+            f"{prefixo}.pares_sem_coordenada": len(resolucao.sem_coordenada),
+            f"{prefixo}.viagens_alinhadas": sum(1 for c in completas if c.alinhada),
+            f"{prefixo}.intermedias": sum(c.intermedias for c in completas),
+            f"{prefixo}.tracados": len(formas),
+            f"{prefixo}.tracados_da_camada": sum(
+                1 for t in tracados.values() if t.metodo == "camada"
+            ),
+            f"{prefixo}.tracados_encaminhados": sum(
                 1 for t in tracados.values() if t.metodo == "encaminhamento"
             ),
         }
@@ -223,6 +228,18 @@ def _depois_da_meia_noite(completas: list[ViagemCompleta]) -> dict[int, int]:
     return deslocadas
 
 
+def prefixo_das_contagens(saida: Saida) -> str:
+    """O prefixo das contagens deste feed no relatório: o nome da saída.
+
+    Estava cravado com a marca da rede do primeiro cliente, e o relatório de
+    qualquer outra região que usasse este leitor sairia com as contagens
+    dele em nome de outro. O nome do ficheiro que a receita declara é o da
+    região — `gtfs/<isto>.zip` —, e é o mesmo que o validador usa para o
+    mesmo feed: as contagens de um ficheiro chamam-se como ele.
+    """
+    return Path(saida.saida).stem if saida.saida else saida.leitor
+
+
 def _escrever(
     ctx: Contexto,
     doc: pdf.Documento,
@@ -231,6 +248,7 @@ def _escrever(
     camadas: dict[str, Any],
     formas: dict[str, list[list[float]]],
     forma_de: dict[int, str],
+    prefixo: str,
 ) -> tuple[Gtfs, dict[str, Any], list[Any]]:
     hoje = date.today()
     fim = hoje + timedelta(days=JANELA_DIAS)
@@ -474,17 +492,21 @@ def _escrever(
     _quem_fez(ctx, feed, doc, hoje, fim)
 
     contagens = {
-        "meio.linhas": len(rotas),
-        "meio.blocos": len(doc.blocos),
-        "meio.viagens": len(viagens_gtfs),
-        "meio.paragens": len(paragens),
-        "meio.stop_times": len(horarios),
-        "meio.stop_times_marcados_no_papel": sum(1 for h in horarios if h["timepoint"] == "1"),
-        "meio.stop_times_estimados": sum(1 for h in horarios if h["timepoint"] == "0"),
-        "meio.paragens_consecutivas_fundidas": fundidas,
-        "meio.servicos": len(servicos),
-        "meio.datas_de_servico": len(datas),
-        "meio.paragens_por_fonte": dict(collections.Counter(i.split(":")[0] for i in paragens)),
+        f"{prefixo}.linhas": len(rotas),
+        f"{prefixo}.blocos": len(doc.blocos),
+        f"{prefixo}.viagens": len(viagens_gtfs),
+        f"{prefixo}.paragens": len(paragens),
+        f"{prefixo}.stop_times": len(horarios),
+        f"{prefixo}.stop_times_marcados_no_papel": sum(
+            1 for h in horarios if h["timepoint"] == "1"
+        ),
+        f"{prefixo}.stop_times_estimados": sum(1 for h in horarios if h["timepoint"] == "0"),
+        f"{prefixo}.paragens_consecutivas_fundidas": fundidas,
+        f"{prefixo}.servicos": len(servicos),
+        f"{prefixo}.datas_de_servico": len(datas),
+        f"{prefixo}.paragens_por_fonte": dict(
+            collections.Counter(i.split(":")[0] for i in paragens)
+        ),
     }
     lacunas = _lacunas(ctx, resolucao, completas, sem_cor, por_confirmar, sem_datas, servicos)
     return feed, contagens, lacunas
