@@ -1,22 +1,34 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { CartaoDeAviso } from '@/componentes/Avisos';
 import Aviso from '@/componentes/painel/Aviso';
+import EditorDeAviso, { type ValoresDoEditor } from '@/componentes/painel/EditorDeAviso';
+import IrParaSecao from '@/componentes/painel/IrParaSecao';
 import SemChaveDeServico from '@/componentes/painel/SemChaveDeServico';
-import { IDENTIFICADOR, NOME_DOS_MODOS, regiao as fichaNoArmazem } from '@/lib/dados';
-import { CAUSAS, EFEITOS, GRAVIDADES, emVigor } from '@/lib/avisos';
-import { FUSO, paraCampoLocal, porExtenso } from '@/lib/fuso';
-import { apagarAviso, guardarAviso, publicarAviso } from '@/lib/painel/acoes';
+import {
+  IDENTIFICADOR,
+  NOME_DOS_MODOS,
+  concelhos as concelhosNoArmazem,
+  linhas as linhasNoArmazem,
+  paragens as paragensNoArmazem,
+  regiao as fichaNoArmazem,
+} from '@/lib/dados';
+import { emVigor } from '@/lib/avisos';
+import { FUSO, nomeDoFuso, paraCampoLocal, porExtenso } from '@/lib/fuso';
+import { apagarAviso, publicarAviso } from '@/lib/painel/acoes';
+import { quemFez } from '@/lib/painel/auditoria';
 import { paginaDaRegiao } from '@/lib/painel/autenticacao';
 import { temChaveDeServico } from '@/lib/painel/base';
-import { avisosDaRegiao } from '@/lib/painel/avisos';
+import { avisosDaRegiao, type Aviso as AvisoNaBase } from '@/lib/painel/avisos';
 import { listarRegioes } from '@/lib/painel/consultas';
+import { naFrase } from '@/lib/painel/ficha';
 
 export const dynamic = 'force-dynamic';
 
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ aviso?: string; editar?: string }>;
+  searchParams: Promise<{ aviso?: string; editar?: string; secao?: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -24,34 +36,71 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: `Avisos · ${id}` };
 }
 
+const VAZIO: ValoresDoEditor = {
+  titulo: '',
+  texto: '',
+  gravidade: 'WARNING',
+  causa: 'UNKNOWN_CAUSE',
+  efeito: 'OTHER_EFFECT',
+  inicio: '',
+  fim: '',
+  url: '',
+  linhas: [],
+  paragens: [],
+  modos: [],
+};
+
+function valoresDe(a: AvisoNaBase): ValoresDoEditor {
+  return {
+    titulo: a.titulo,
+    texto: a.texto,
+    gravidade: a.gravidade,
+    causa: a.causa,
+    efeito: a.efeito,
+    inicio: paraCampoLocal(a.inicio),
+    fim: paraCampoLocal(a.fim),
+    url: a.url ?? '',
+    linhas: a.linhas,
+    paragens: a.paragens,
+    modos: a.modos,
+  };
+}
+
 /**
- * Os avisos de uma região: escrever, publicar, retirar, apagar.
+ * Os avisos de uma região: escrever, ver como fica, publicar, retirar, apagar
+ * (P4-017, P4-018).
  *
- * UM FORMULÁRIO SÓ, e não um por aviso. Editar é o mesmo formulário com
- * `?editar=<id>`, preenchido — o que evita ter dezenas de formulários abertos
- * numa página e um leitor de ecrã a anunciar vinte «Título» seguidos.
+ * UM EDITOR SÓ, e não um por aviso. Corrigir é o mesmo editor com
+ * `?editar=<id>`, preenchido — o que evita dezenas de formulários abertos numa
+ * página e um leitor de ecrã a anunciar vinte «Título» seguidos.
  *
- * E PUBLICAR É UM BOTÃO À PARTE de gravar, porque são dois gestos com
- * consequências diferentes: gravar é para mim, publicar é para toda a gente.
+ * A LISTA MOSTRA CADA AVISO COMO O PÚBLICO O VÊ — o mesmo cartão da página de
+ * avisos —, com o estado por cima e os gestos por baixo. Apagar abre-se
+ * primeiro e confirma-se depois: é o único gesto daqui que não se desfaz.
  */
 export default async function AvisosDaRegiao({ params, searchParams }: Props) {
-  const [{ id }, { aviso, editar }] = await Promise.all([params, searchParams]);
+  const [{ id }, { aviso, editar, secao }] = await Promise.all([params, searchParams]);
   if (!IDENTIFICADOR.test(id)) notFound();
   // Os avisos de uma região são de quem tem papel nela — editor, gestor — e do dono.
   await paginaDaRegiao(id, 'editor');
   if (!temChaveDeServico()) return <SemChaveDeServico titulo={`Avisos · ${id}`} />;
 
-  const [regioes, avisos, noArmazem] = await Promise.all([
+  const [regioes, avisos, noArmazem, linhas, paragens, concelhos] = await Promise.all([
     listarRegioes(),
     avisosDaRegiao(id),
     fichaNoArmazem(id).catch(() => null),
+    linhasNoArmazem(id).catch(() => []),
+    paragensNoArmazem(id).catch(() => []),
+    concelhosNoArmazem(id).catch(() => []),
   ]);
   const regiao = regioes.find((r) => r.id === id);
   if (!regiao) notFound();
+  const frase = naFrase(regiao);
 
   const aEditar = editar ? (avisos.find((a) => a.id === editar) ?? null) : null;
   const agora = new Date();
   const noAr = avisos.filter((a) => a.publicado && emVigor(a, agora));
+  const rascunhos = avisos.filter((a) => !a.publicado).length;
 
   // OS MODOS SOBRE QUE ESTA AUTORIDADE PODE ESCREVER.
   //
@@ -64,298 +113,171 @@ export default async function AvisosDaRegiao({ params, searchParams }: Props) {
   // sítio: a receita da região, não uma lista de modos escrita aqui.
   const declarados = noArmazem?.modos ?? [];
   const deTerceiros = noArmazem?.modos_de_terceiros ?? [];
-  const modos = declarados.filter((m) => !deTerceiros.includes(m));
+  const modos = declarados
+    .filter((m) => !deTerceiros.includes(m))
+    .map((m) => ({ id: m, nome: NOME_DOS_MODOS[m] ?? m }));
+  const nomeDoConcelho = new Map(concelhos.map((c) => [c.id, c.nome]));
+  // As linhas da casa: as de outro operador não se escolhem (`resolverLinhas`).
+  const linhasDaCasa = linhas
+    .filter((l) => !l.operador && !deTerceiros.includes(l.modo))
+    .map((l) => ({ id: l.id, codigo: l.codigo, nome: l.nome, cor: l.cor, modo: l.modo }));
+  const catalogo = {
+    linhas: new Map(linhas.map((l) => [l.id, l])),
+    paragens: new Map(paragens.map((p) => [p.id, p.nome])),
+    modos: NOME_DOS_MODOS,
+  };
+  // A mensagem de um gesto num aviso fica AO PÉ DELE, e o ecrã vai lá (P4-014).
+  const noAviso = secao?.startsWith('aviso-') && avisos.some((a) => `aviso-${a.id}` === secao);
 
   return (
     <>
-      <h1>
-        Avisos <span className="secundario-texto">{regiao.name}</span>
-      </h1>
+      <IrParaSecao secao={noAviso ? secao : undefined} />
+      <h1>Avisos {frase.de}</h1>
       <p className="entrada">
-        O que a autoridade de transportes tem a dizer hoje: supressões, desvios, greves. O que
-        estiver publicado e em vigor aparece na página de avisos da região, na faixa do catálogo e
-        no feed <code>GTFS-RT Service Alerts</code>, que outras aplicações leem.
+        O que a autoridade de transportes tem a dizer hoje a quem viaja: desvios, supressões,
+        greves. Publicado, o aviso aparece no sítio de imediato — na página de avisos, na página
+        inicial e nas páginas das linhas e das paragens a que diz respeito.
       </p>
 
-      <Aviso texto={aviso} />
+      {noAviso ? null : <Aviso texto={aviso} />}
 
       <section aria-labelledby="estado" className="cartao">
-        <h2 id="estado">Agora no ar</h2>
+        <h2 id="estado">No ar agora</h2>
         {noAr.length === 0 ? (
           <p>
-            Nada publicado e em vigor. A página de avisos de{' '}
-            <a href={`https://${regiao.domain}/avisos/`}>{regiao.domain}</a> diz que não há avisos,
-            e o feed sai vazio — que é o estado normal.
+            Nenhum aviso. A página de avisos de{' '}
+            <a href={`https://${regiao.domain}/avisos/`}>{regiao.domain}</a> diz que não há avisos —
+            que é o estado normal.
           </p>
         ) : (
           <p>
             <strong>
-              {noAr.length} {noAr.length === 1 ? 'aviso' : 'avisos'} no ar.
-            </strong>{' '}
-            Em <a href={`https://${regiao.domain}/avisos/`}>{regiao.domain}/avisos/</a> e em{' '}
-            <a href={`https://${regiao.domain}/gtfs-rt/alerts.pb`}>gtfs-rt/alerts.pb</a>.
+              {noAr.length} {noAr.length === 1 ? 'aviso' : 'avisos'} no ar
+            </strong>
+            , em <a href={`https://${regiao.domain}/avisos/`}>{regiao.domain}/avisos/</a>.
           </p>
         )}
+        {rascunhos > 0 ? (
+          <p>
+            <a href="#todos">
+              {rascunhos === 1 ? 'Um rascunho' : `${rascunhos} rascunhos`} por publicar
+            </a>
+            .
+          </p>
+        ) : null}
       </section>
 
       <section aria-labelledby="escrever" className="cartao">
         <h2 id="escrever">{aEditar ? 'Corrigir este aviso' : 'Escrever um aviso'}</h2>
-        <form action={guardarAviso} className="formulario">
-          <input type="hidden" name="regiao" value={regiao.id} />
-          {aEditar ? <input type="hidden" name="id" value={aEditar.id} /> : null}
-
-          <label htmlFor="titulo">Título</label>
-          <input
-            id="titulo"
-            name="titulo"
-            type="text"
-            required
-            maxLength={120}
-            defaultValue={aEditar?.titulo ?? ''}
-            aria-describedby="titulo-ajuda"
-          />
-          <p id="titulo-ajuda" className="secundario-texto">
-            Uma linha, a dizer o que aconteceu: «Linha 10 desviada em Vale Escuro».
-          </p>
-
-          <label htmlFor="texto">Texto</label>
-          <textarea
-            id="texto"
-            name="texto"
-            required
-            rows={4}
-            defaultValue={aEditar?.texto ?? ''}
-            aria-describedby="texto-ajuda"
-          />
-          <p id="texto-ajuda" className="secundario-texto">
-            O que quem está na paragem precisa de saber para decidir: por onde passa, que paragens
-            não são servidas, o que fazer em vez disso.
-          </p>
-
-          <div className="em-linha">
-            <div>
-              <label htmlFor="gravidade">Gravidade</label>
-              <select
-                id="gravidade"
-                name="gravidade"
-                defaultValue={aEditar?.gravidade ?? 'WARNING'}
-              >
-                {Object.entries(GRAVIDADES).map(([v, nome]) => (
-                  <option key={v} value={v}>
-                    {nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="causa">Causa</label>
-              <select id="causa" name="causa" defaultValue={aEditar?.causa ?? 'UNKNOWN_CAUSE'}>
-                {Object.entries(CAUSAS).map(([v, nome]) => (
-                  <option key={v} value={v}>
-                    {nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="efeito">Efeito</label>
-              <select id="efeito" name="efeito" defaultValue={aEditar?.efeito ?? 'OTHER_EFFECT'}>
-                {Object.entries(EFEITOS).map(([v, nome]) => (
-                  <option key={v} value={v}>
-                    {nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+        <EditorDeAviso
+          key={aEditar?.id ?? 'novo'}
+          regiao={regiao.id}
+          idDoAviso={aEditar?.id}
+          publicado={!!aEditar?.publicado}
+          inicial={aEditar ? valoresDe(aEditar) : VAZIO}
+          linhas={linhasDaCasa}
+          paragens={paragens.map((p) => [
+            p.id,
+            p.nome,
+            (p.concelho && nomeDoConcelho.get(p.concelho)) || '',
+          ])}
+          modos={modos}
+          fuso={FUSO}
+          nomeDoFuso={nomeDoFuso(FUSO)}
+        />
+        {deTerceiros.length > 0 ? (
           <p className="secundario-texto">
-            A gravidade decide a cor da faixa; a causa e o efeito são os campos que o GTFS-RT leva,
-            e é por eles que outra aplicação sabe se isto é um desvio ou uma supressão.
+            {deTerceiros.map((m) => NOME_DOS_MODOS[m] ?? m).join(' e ')}{' '}
+            {deTerceiros.length === 1 ? 'aparece' : 'aparecem'} no sítio e não{' '}
+            {deTerceiros.length === 1 ? 'está' : 'estão'} aqui: esta região mostra esses serviços e
+            não os gere, e <strong>quem gere o serviço é quem avisa sobre ele</strong>.
           </p>
-
-          <div className="em-linha">
-            <div>
-              <label htmlFor="inicio">Começa</label>
-              <input
-                id="inicio"
-                name="inicio"
-                type="datetime-local"
-                defaultValue={paraCampoLocal(aEditar?.inicio ?? null)}
-                aria-describedby="prazo-ajuda"
-              />
-            </div>
-            <div>
-              <label htmlFor="fim">Acaba</label>
-              <input
-                id="fim"
-                name="fim"
-                type="datetime-local"
-                defaultValue={paraCampoLocal(aEditar?.fim ?? null)}
-              />
-            </div>
-          </div>
-          <p id="prazo-ajuda" className="secundario-texto">
-            Horas de <strong>{FUSO}</strong>. Em branco no começo quer dizer «já está a acontecer»;
-            em branco no fim quer dizer «não se sabe quando acaba», que é o caso mais honesto numa
-            avaria — e é assim que sai no feed. Passado o fim, o aviso deixa de aparecer sozinho.
-          </p>
-
-          <label htmlFor="linhas">Linhas</label>
-          <input
-            id="linhas"
-            name="linhas"
-            type="text"
-            defaultValue={(aEditar?.linhas ?? []).join(', ')}
-            aria-describedby="entidades-ajuda"
-          />
-          <label htmlFor="paragens">Paragens</label>
-          <input
-            id="paragens"
-            name="paragens"
-            type="text"
-            defaultValue={(aEditar?.paragens ?? []).join(', ')}
-          />
-          <p id="entidades-ajuda" className="secundario-texto">
-            Identificadores do GTFS desta região, separados por vírgula — os mesmos que aparecem nos
-            endereços das páginas de linha e de paragem.{' '}
-            <strong>Deixar tudo em branco quer dizer «a rede toda»</strong>, que é o que a
-            especificação manda e é raro: convém ser de propósito.
-          </p>
-
-          <fieldset>
-            <legend>Modos</legend>
-            {modos.length === 0 ? (
-              <p className="secundario-texto">
-                {declarados.length === 0
-                  ? 'Sem dados no armazém, não se sabe que modos esta região declara.'
-                  : 'Esta região mostra serviços de transporte, mas não gere nenhum deles.'}
-              </p>
-            ) : (
-              modos.map((m) => (
-                <label key={m} className="caixa">
-                  <input
-                    type="checkbox"
-                    name="modos"
-                    value={m}
-                    defaultChecked={(aEditar?.modos ?? []).includes(m)}
-                  />
-                  {NOME_DOS_MODOS[m] ?? m}
-                </label>
-              ))
-            )}
-            {deTerceiros.length > 0 ? (
-              <p className="secundario-texto">
-                Aqui não estão {deTerceiros.map((m) => NOME_DOS_MODOS[m] ?? m).join(' e ')}: esta
-                região mostra esses serviços e não os gere, e{' '}
-                <strong>quem gere o serviço é quem avisa sobre ele</strong>. Um aviso nosso sobre
-                uma greve de outro operador era redistribuir informação de serviço que não é nossa e
-                que ele pode desmentir sem nos dizer. É a mesma regra que tira os feeds dele das
-                descargas.
-              </p>
-            ) : null}
-          </fieldset>
-
-          <label htmlFor="url">Mais informação (endereço)</label>
-          <input
-            id="url"
-            name="url"
-            type="url"
-            defaultValue={aEditar?.url ?? ''}
-            aria-describedby="url-ajuda"
-          />
-          <p id="url-ajuda" className="secundario-texto">
-            Opcional: a página da autoridade ou da operadora com o pormenor.
-          </p>
-
-          <div className="em-linha">
-            <button type="submit">{aEditar ? 'Gravar as correções' : 'Gravar'}</button>
-            {aEditar ? (
-              <Link href={`/admin/regioes/${encodeURIComponent(id)}/avisos/`}>
-                Deixar de corrigir
-              </Link>
-            ) : null}
-          </div>
-          <p className="secundario-texto">
-            Gravar não publica. Um aviso nasce por publicar — quem o escreve a meio de uma
-            ocorrência não devia ter de escolher entre gravar a meio e mostrar a meio.
-          </p>
-        </form>
+        ) : null}
       </section>
 
       <section aria-labelledby="todos" className="cartao">
-        <h2 id="todos">Todos os avisos desta região</h2>
+        <h2 id="todos">Todos os avisos {frase.de}</h2>
         {avisos.length === 0 ? (
           <p className="secundario-texto">Ainda não há nenhum.</p>
         ) : (
-          <ul className="lista-simples">
+          <ul className="lista-simples lista-de-avisos">
             {avisos.map((a) => {
               const vigente = emVigor(a, agora);
+              const estado = a.publicado
+                ? vigente
+                  ? 'Publicado · no ar'
+                  : 'Publicado · fora de prazo, não aparece no sítio'
+                : 'Rascunho · não aparece em lado nenhum';
               return (
-                <li key={a.id} id={`aviso-${a.id}`} className="cartao">
-                  <h3>{a.titulo}</h3>
-                  <p>
-                    <strong className={a.publicado ? undefined : 'secundario-texto'}>
-                      {a.publicado ? 'Publicado' : 'Rascunho'}
+                <li key={a.id} id={`aviso-${a.id}`}>
+                  {secao === `aviso-${a.id}` ? <Aviso texto={aviso} /> : null}
+                  <p className="estado-do-aviso">
+                    <strong className={a.publicado && vigente ? undefined : 'secundario-texto'}>
+                      {estado}
                     </strong>
-                    {a.publicado && !vigente ? (
-                      <span className="secundario-texto">
-                        {' '}
-                        · fora de prazo, não aparece no sítio
-                      </span>
-                    ) : null}
+                    <span className="secundario-texto">
+                      {' '}
+                      · escrito por {quemFez(a.created_by)}, {porExtenso(a.created_at)}
+                    </span>
                   </p>
-                  <p>{a.texto}</p>
-                  <p className="secundario-texto">
-                    {GRAVIDADES[a.gravidade as keyof typeof GRAVIDADES] ?? a.gravidade} ·{' '}
-                    {CAUSAS[a.causa as keyof typeof CAUSAS] ?? a.causa} ·{' '}
-                    {EFEITOS[a.efeito as keyof typeof EFEITOS] ?? a.efeito}
-                    {a.inicio ? ` · desde ${porExtenso(a.inicio)}` : ' · já a acontecer'}
-                    {a.fim ? ` até ${porExtenso(a.fim)}` : ', sem fim previsto'}
-                  </p>
-                  <p className="secundario-texto">
-                    {a.linhas.length || a.paragens.length || a.modos.length
-                      ? [
-                          a.linhas.length ? `linhas ${a.linhas.join(', ')}` : '',
-                          a.paragens.length ? `paragens ${a.paragens.join(', ')}` : '',
-                          a.modos.length ? `modos ${a.modos.join(', ')}` : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')
-                      : 'a rede toda'}
-                    {' · '}escrito por {a.created_by}
-                  </p>
-                  <div className="em-linha">
+                  <CartaoDeAviso aviso={a} catalogo={catalogo} ligacoes={false} nivel={3} />
+                  <div className="accoes-do-aviso">
                     <form action={publicarAviso}>
                       <input type="hidden" name="regiao" value={regiao.id} />
                       <input type="hidden" name="id" value={a.id} />
                       <input type="hidden" name="publicar" value={a.publicado ? '0' : '1'} />
                       <button type="submit" className={a.publicado ? 'secundario' : undefined}>
                         {a.publicado ? 'Retirar' : 'Publicar'}
+                        <span className="so-para-leitores"> «{a.titulo}»</span>
                       </button>
                     </form>
                     <Link
+                      className="botao"
                       href={`/admin/regioes/${encodeURIComponent(id)}/avisos/?editar=${encodeURIComponent(a.id)}#escrever`}
                     >
-                      Corrigir
+                      Corrigir<span className="so-para-leitores"> «{a.titulo}»</span>
                     </Link>
-                    <form action={apagarAviso}>
-                      <input type="hidden" name="regiao" value={regiao.id} />
-                      <input type="hidden" name="id" value={a.id} />
-                      <button type="submit" className="secundario pequeno">
-                        Apagar
-                      </button>
-                    </form>
+                    {/* APAGAR CONFIRMA (P4-018), e diz o que custa: é o único
+                        gesto daqui que não se desfaz. */}
+                    <details className="perigo apagar-aviso">
+                      <summary>
+                        Apagar…<span className="so-para-leitores"> «{a.titulo}»</span>
+                      </summary>
+                      <p>
+                        Apagar não é retirar: retirar é «isto deixou de ser verdade», apagar é «isto
+                        nunca devia ter sido escrito». O aviso sai daqui e do sítio, e fica inteiro
+                        na auditoria.
+                      </p>
+                      <form action={apagarAviso}>
+                        <input type="hidden" name="regiao" value={regiao.id} />
+                        <input type="hidden" name="id" value={a.id} />
+                        <input type="hidden" name="confirmado" value="1" />
+                        <button type="submit" className="perigo">
+                          Apagar este aviso
+                        </button>
+                      </form>
+                    </details>
                   </div>
                 </li>
               );
             })}
           </ul>
         )}
-        <p className="secundario-texto">
-          Retirar é «isto deixou de ser verdade»; apagar é «isto nunca devia ter sido escrito».
-          Apagar guarda o aviso inteiro na auditoria — apagar não é esquecer.
-        </p>
       </section>
+
+      <details className="para-quem-gere">
+        <summary>Para quem gere a instalação</summary>
+        <p>
+          Os avisos publicados e em vigor saem também no feed GTFS-RT Service Alerts da região (
+          <a href={`https://${regiao.domain}/gtfs-rt/alerts.pb`}>gtfs-rt/alerts.pb</a>), que as
+          aplicações de terceiros leem. «O que se passa», «Porquê» e «Quão grave» são os campos
+          desse feed (<code>effect</code>, <code>cause</code>, <code>severity_level</code>); «Outra
+          coisa» e «Não dizer» são <code>OTHER_EFFECT</code> e <code>UNKNOWN_CAUSE</code>, que o
+          sítio não mostra. As linhas e as paragens guardam-se pelos identificadores do GTFS da
+          região. As horas são de <code>{FUSO}</code> (variável <code>PARAGEM_FUSO</code>). Os modos
+          de outras entidades vêm de <code>modos_de_terceiros</code>, na receita da região.
+        </p>
+      </details>
 
       <p>
         <Link href={`/admin/regioes/${encodeURIComponent(id)}/`}>Voltar à ficha da região</Link>

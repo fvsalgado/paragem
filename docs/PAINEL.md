@@ -42,20 +42,41 @@ Três regras que o painel herda da base e mostra a quem carrega no botão:
   `modos:` não tem interruptor: desligar o que não existe é sinal de que alguém
   confundiu regiões.
 
-### Os avisos, e porque é que publicar é um botão à parte
+### Os avisos: escrever, ver como fica, publicar
 
-Um aviso — uma supressão, um desvio por obra, uma greve — **nasce por
-publicar**. Quem o redige a meio de uma ocorrência não devia ter de escolher
-entre gravar a meio e mostrar a meio, e por isso gravar e publicar são dois
-gestos, com duas funções e duas linhas diferentes na auditoria. Quem depois
-perguntar «porque é que este aviso esteve no ar entre as 7h e as 9h» tem a
-resposta separada de uma correção de gralha.
+O editor (`EditorDeAviso.tsx`) foi desenhado para quem escreve a meio de uma
+ocorrência (P4-017, P4-018):
 
-Publicado **e em vigor**, um aviso aparece em três sítios ao mesmo tempo: na
-página de avisos da região, na faixa do catálogo, e em
-`<dominio>/gtfs-rt/alerts.pb`, que é o feed GTFS-RT Service Alerts que outras
-aplicações leem. Publicar invalida a cache da região: a visita seguinte já o
-mostra.
+- **as linhas escolhem-se pelo número e pelo nome que o público vê** — «1»,
+  «Circular de Pedra Alta» —, numa procura; as paragens pelo nome, com o
+  concelho a distinguir as que se chamam igual. O aviso guarda os
+  identificadores do GTFS, mas ninguém tem de os escrever: a ação resolve o
+  que vier escrito à mão (`escolhas-do-aviso.ts`), e um número de duas linhas
+  da casa não se adivinha — pede-se que se escolha na lista;
+- **uma recusa não apaga nada.** A ação devolve o que falta e o campo onde
+  falta; o editor fica com tudo o que tinha e leva o foco a esse campo. Só o
+  sucesso sai da página;
+- **a pré-visualização é o cartão público**, o mesmo componente do sítio, ao
+  vivo — e diz por extenso onde é que o aviso vai aparecer;
+- **«O que se passa» e «Porquê» são opcionais**, e não aparecem no sítio quando
+  não se dizem («Outra coisa» e «Não dizer»). O público lia «causa não
+  declarada · outro efeito», que eram os valores por omissão do formulário.
+
+**Publicar continua a ser um gesto à parte de gravar**, mas no mesmo sítio:
+«Guardar rascunho» e «Publicar agora» são dois botões do editor, com duas
+linhas diferentes na auditoria. O rascunho vem primeiro de propósito: o Enter
+num campo de texto carrega no primeiro botão, e publicar a meio por causa de
+uma tecla não pode acontecer. Um aviso já publicado corrige-se no ar.
+
+Publicado **e em vigor**, um aviso aparece onde o utente olha (P4-019): na
+página de avisos; na página inicial (no mapa, logo a seguir a «Para onde
+vais?», como o §6 manda, ou na faixa da vista sem mapa); na página de cada
+linha a que diz respeito e na de cada paragem dela; no cartão dessas paragens
+no mapa; e em `<dominio>/gtfs-rt/alerts.pb`, o feed GTFS-RT Service Alerts que
+outras aplicações leem. Diz respeito a uma linha o aviso que a nomeia, que
+nomeia uma paragem dela, ou que é do modo dela sem nomear mais nada
+(`aplicaALinha` e `aplicaAParagem`, em `lib/avisos.ts`). Publicar invalida a
+cache dos avisos da região: a visita seguinte já o mostra.
 
 **Um aviso é sobre o que esta autoridade GERE.** É a mesma regra que tira os
 feeds de terceiros das descargas, e vale pela mesma razão: um modo alimentado
@@ -66,27 +87,29 @@ canais dele, por que responde, e que pode desmentir uma hora depois sem nos
 dizer. Quem gere o serviço é quem avisa sobre ele.
 
 Sai da receita da região e não de uma lista escrita no código
-(`modos_de_terceiros`, em `regiao.json`): o formulário só oferece os modos
-próprios, e a ação recusa os outros — e recusa também uma linha de um operador
-de fora, ou um identificador de linha que não existe, que é a falha mais
-silenciosa desta página (o aviso fica publicado e não aparece a ninguém). Um
-modo sem feed nenhum — bicicletas, táxis, urbanos municipais — é compilado por
-nós de fontes abertas, e sobre esse a autoridade da região escreve.
+(`modos_de_terceiros`, em `regiao.json`): o editor só oferece os modos e as
+linhas próprios, e a ação recusa os outros — e recusa também uma linha ou uma
+paragem que não existe, que é a falha mais silenciosa desta página (o aviso
+fica publicado e não aparece a ninguém). Um modo sem feed nenhum —
+bicicletas, táxis, urbanos municipais — é compilado por nós de fontes abertas,
+e sobre esse a autoridade da região escreve.
 
-Três coisas que o formulário diz e convém saber antes:
+Três coisas que o editor diz e convém saber antes:
 
 - **as horas são de parede, no fuso declarado** (`PARAGEM_FUSO`, por omissão
-  `Europe/Lisbon`). O servidor corre em UTC; sem isto um aviso das 8h ficava
-  guardado uma hora adiantado no verão, sem erro nenhum;
-- **em branco no fim quer dizer «não se sabe quando acaba»**, que é o caso mais
+  `Europe/Lisbon`, que o editor escreve «Portugal continental»). O servidor
+  corre em UTC; sem isto um aviso das 8h ficava guardado uma hora adiantado no
+  verão, sem erro nenhum;
+- **em branco no fim quer dizer «ainda não se sabe»**, que é o caso mais
   honesto numa avaria, e é assim que sai no feed. Não se inventa um fim.
   Passado o fim declarado, o aviso deixa de aparecer sozinho;
-- **sem linhas, paragens nem modos quer dizer «a rede toda»** — é o que a
-  especificação manda, é raro, e convém ser de propósito.
+- **sem linhas, paragens nem serviço quer dizer «a rede toda»** — o editor
+  di-lo a negro, e o cartão público também.
 
 **Retirar não é apagar.** Retirar é «isto deixou de ser verdade»; apagar é
-«isto nunca devia ter sido escrito». Apagar guarda o aviso inteiro na
-auditoria: apagar não é esquecer.
+«isto nunca devia ter sido escrito». Apagar abre-se primeiro e confirma-se
+depois — a ação recusa um envio sem a confirmação —, e guarda o aviso inteiro
+na auditoria: apagar não é esquecer.
 
 ### O que um módulo desligado tira do sítio
 

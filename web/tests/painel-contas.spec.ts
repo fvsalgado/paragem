@@ -129,7 +129,7 @@ test('uma pessoa da região A não vê nem escreve na região B', async ({ brows
     await pessoa.getByLabel('Título').fill(`${titulo} (legítimo)`);
     await pessoa.locator('textarea[name="texto"]').fill('Um aviso de A, de A.');
     await pessoa.locator('form:has(textarea[name="texto"]) button[type="submit"]').first().click();
-    await expect(pessoa.locator('[role="status"]').first()).toContainText('Aviso gravado');
+    await expect(pessoa.locator('[data-mensagem]').first()).toContainText('Rascunho guardado');
   }
   const publicar = await idDaAcao(pessoa, 'form:has(input[name="publicar"])');
   for (const regiao of [B, A]) {
