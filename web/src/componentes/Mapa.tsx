@@ -254,6 +254,7 @@ export default function Mapa({
   margemInferior = 260,
   margemEsquerda = 0,
   margemSuperior = 0,
+  margensMedidas = true,
   modosVisiveis,
 }: {
   centro: [number, number];
@@ -295,6 +296,12 @@ export default function Mapa({
   margemEsquerda?: number;
   /** Quanto está tapado em cima — o cartão das direções, num telemóvel. */
   margemSuperior?: number;
+  /**
+   * Se as margens já são as medidas. Antes disso o esboço e o aviso «A
+   * carregar o mapa…» não se desenham: ficavam no sítio errado e saltavam
+   * para o certo uma imagem depois.
+   */
+  margensMedidas?: boolean;
   /**
    * Os tipos de ponto a mostrar. `undefined` mostra tudo — é o que serve a
    * página de direções, que não tem filtro nenhum por cima.
@@ -345,7 +352,12 @@ export default function Mapa({
           style: estiloDoMapa(mosaicos, atribuicao || undefined),
           center: [centro[1], centro[0]],
           zoom,
-          attributionControl: { compact: false },
+          // A ATRIBUIÇÃO JÁ ESCRITA QUANDO O CONTROLO NASCE. Vinha só da fonte
+          // dos mosaicos, e o MapLibre só a escrevia quando a fonte respondia —
+          // segundos depois, a alargar o canto de baixo para a esquerda: era o
+          // salto que restava no ecrã de abertura (CLS 0,015, P3-023). É a
+          // mesma frase que a fonte traz, e o MapLibre não a repete.
+          attributionControl: { compact: false, customAttribution: atribuicao || ATRIBUICAO_OSM },
           // OS NOMES DOS CONTROLOS EM PORTUGUÊS. O MapLibre traz os seus em
           // inglês: quem parava o rato no botão da localização lia «Find my
           // location», numa página que é toda em português.
@@ -819,7 +831,7 @@ export default function Mapa({
           inteira, que tem os botões. O caminho sem mapa está na procura e nas
           listas, que são HTML a sério. */}
       <div ref={caixa} className="mapa" />
-      {estado === 'a-carregar' && tamanho && (
+      {estado === 'a-carregar' && tamanho && margensMedidas && (
         <Esboco
           pontos={pontos}
           centro={centro}
@@ -830,7 +842,9 @@ export default function Mapa({
           margemEsquerda={margemEsquerda}
         />
       )}
-      {estado === 'a-carregar' && <p className="mapa-aviso a-carregar">A carregar o mapa…</p>}
+      {estado === 'a-carregar' && margensMedidas && (
+        <p className="mapa-aviso a-carregar">A carregar o mapa…</p>
+      )}
       {/* O AVISO MANDA PARA ONDE HÁ RESPOSTA. Prometia «a lista de paragens
           em baixo», e não há lista nenhuma por baixo do mapa: quem a ia
           procurar ficava sem caminho no momento em que precisava dele. */}

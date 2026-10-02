@@ -329,6 +329,13 @@ export default function AppDoMapa({
    * e contam na margem desse lado.
    */
   const [tapadoEmBaixo, setTapadoEmBaixo] = useState(0);
+  /**
+   * SE AS FOLHAS JÁ FORAM MEDIDAS. Até lá não se sabe onde fica o fundo do que
+   * se vê do mapa, e o aviso «A carregar o mapa…» aparecia no fundo da caixa e
+   * saltava para cima da folha um instante depois — era metade do salto que o
+   * ecrã de abertura dava sozinho (CLS 0,033 na região real).
+   */
+  const [medido, setMedido] = useState(false);
   useEffect(() => {
     const largo = window.matchMedia('(min-width: 64rem)');
     const deitado = window.matchMedia('(orientation: landscape) and (max-height: 500px)');
@@ -441,6 +448,13 @@ export default function AppDoMapa({
         const cabe = base.bottom - tapa - c.height >= teto;
         el.style.setProperty(variavel, `${cabe ? Math.round(tapa) : 0}px`);
       }
+      setMedido(true);
+      // OS CONTROLOS SÓ SE MOSTRAM DEPOIS DE ESTAREM NO SÍTIO. O MapLibre
+      // põe-nos no fundo do mapa, e esta medição sobe-os para cima da folha
+      // na imagem seguinte: viam-se a nascer por baixo dela e a saltar — a
+      // outra metade do salto do ecrã de abertura. Escondidos até aqui pelo
+      // CSS, aparecem já onde ficam.
+      if (alto) el.dataset.cantos = 'medidos';
     };
     // Uma medição por imagem, por muitas mudanças que cheguem juntas.
     const pedir = () => {
@@ -1017,6 +1031,7 @@ export default function AppDoMapa({
           margemInferior={lateral ? 48 : tapadoEmBaixo}
           margemEsquerda={lateral}
           margemSuperior={lateral ? 0 : tapadoEmCima}
+          margensMedidas={medido}
           modosVisiveis={visiveis}
         />
 

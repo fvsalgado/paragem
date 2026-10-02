@@ -57,6 +57,17 @@ const config = {
         source: '/maplibre/:versao/:ficheiro',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
+      // OS GLIFOS DO MAPA (70 kB por gama de letras) não mudam de uma visita
+      // para a outra: sem isto, cada abertura do mapa voltava a perguntar por
+      // eles ao servidor — uma ida e volta inteira, em 4G, antes de os nomes
+      // das terras se poderem desenhar. Não levam versão no caminho, por isso
+      // uma semana e não um ano: um glifo novo chega na semana em que muda.
+      {
+        source: '/glifos/:fonte/:gama',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400' },
+        ],
+      },
     ];
   },
 };

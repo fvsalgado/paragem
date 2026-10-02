@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { preconnect, preload } from 'react-dom';
 import AppDoMapa from '@/componentes/AppDoMapa';
 import CatalogoDaRegiao from '@/componentes/CatalogoDaRegiao';
 import {
@@ -59,6 +60,33 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
   // mapa sem tocar em código. Quem sabe é o inventário do que se publicou.
   if (!(await temMosaicos(rid))) return <CatalogoDaRegiao regiao={rid} inicio />;
 
+  // O MAPA COMEÇA A CHEGAR COM A PÁGINA, e não depois dela (P3-023).
+  //
+  // O MapLibre só se pedia quando a aplicação acordava, e o processador só
+  // depois de o MapLibre chegar: medido em 4G lenta na região real, o primeiro
+  // mosaico pedia-se aos 8 s. Os três módulos e a folha de estilo pedem-se
+  // agora logo no `<head>`, ao lado do JavaScript da página — o tempo de os
+  // descarregar sobrepõe-se ao dela, e quando a aplicação os pede já cá estão.
+  // E abre-se já a ligação ao armazém dos dados, de onde vêm os pontos e os
+  // mosaicos: num telemóvel em 4G são duas idas e voltas a menos.
+  //
+  // COM PRIORIDADE BAIXA: chegam DEPOIS do JavaScript da página, que é o que
+  // a acorda — e o esboço dos pontos e a procura estão à espera dela.
+  const pasta = `/maplibre/${process.env.NEXT_PUBLIC_MAPLIBRE}`;
+  const modulos = ['maplibre-gl.mjs', 'maplibre-gl-shared.mjs', 'maplibre-gl-worker.mjs'];
+  preload(`${pasta}/maplibre-gl.css`, { as: 'style', fetchPriority: 'low' });
+  const dados = enderecoDosDados(rid, '');
+  if (/^https?:\/\//.test(dados)) preconnect(new URL(dados).origin, { crossOrigin: 'anonymous' });
+  // OS PONTOS TAMBÉM, MAS DEPOIS DO QUE PINTA A PÁGINA. Saíram do HTML
+  // (P3-006) e pedem-se à parte; com prioridade baixa, o navegador só os vai
+  // buscar depois da folha de estilo e do JavaScript da página — e quando a
+  // aplicação os pede, já vêm a caminho, e o esboço do mapa aparece cedo.
+  preload(enderecoDosDados(rid, 'procura.json'), {
+    as: 'fetch',
+    crossOrigin: 'anonymous',
+    fetchPriority: 'low',
+  });
+
   // OS PONTOS LEEM-SE AQUI E NÃO VÃO NA PÁGINA (P3-006). Iam para o
   // componente do mapa, e com isso para o HTML: 410 kB dos 431 do início da
   // região real, e outra vez em cada pré-carregamento desta página. O
@@ -112,23 +140,30 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
     .filter((x): x is { id: string; nome: string; href: string } => x !== null);
 
   return (
-    <AppDoMapa
-      regiao={rid}
-      nomeDaRegiao={r.nome}
-      deDaRegiao={r.de}
-      emDaRegiao={r.em}
-      centro={centro}
-      caixa={r.caixa}
-      tipos={tipos}
-      contagens={contagens}
-      mosaicos={enderecoDosDados(rid, 'regiao.pmtiles')}
-      atribuicaoDoMapa={r.mapa?.atribuicao}
-      modos={modos}
-      temAPedido={temAPedido}
-      modosDesligados={r.modos_desligados ?? []}
-      motorDaRegiao={motorDaRegiao(rid, r.demonstracao)}
-      disponibilidadeDaRegiao={disponibilidadeDaRegiao(rid, r.demonstracao)}
-      servicosSemDatas={servicosSemDatas(await lacunas(rid))}
-    />
+    <>
+      {/* O `preloadModule` do React não deixa dizer a prioridade; o `<link>`
+          deixa, e o React leva-o para o `<head>` na mesma. */}
+      {modulos.map((m) => (
+        <link key={m} rel="modulepreload" href={`${pasta}/${m}`} fetchPriority="low" />
+      ))}
+      <AppDoMapa
+        regiao={rid}
+        nomeDaRegiao={r.nome}
+        deDaRegiao={r.de}
+        emDaRegiao={r.em}
+        centro={centro}
+        caixa={r.caixa}
+        tipos={tipos}
+        contagens={contagens}
+        mosaicos={enderecoDosDados(rid, 'regiao.pmtiles')}
+        atribuicaoDoMapa={r.mapa?.atribuicao}
+        modos={modos}
+        temAPedido={temAPedido}
+        modosDesligados={r.modos_desligados ?? []}
+        motorDaRegiao={motorDaRegiao(rid, r.demonstracao)}
+        disponibilidadeDaRegiao={disponibilidadeDaRegiao(rid, r.demonstracao)}
+        servicosSemDatas={servicosSemDatas(await lacunas(rid))}
+      />
+    </>
   );
 }
