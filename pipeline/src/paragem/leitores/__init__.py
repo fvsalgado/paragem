@@ -22,6 +22,7 @@ from . import (
     horarios_pdf_cartaz,
     horarios_pdf_operadora,
     horarios_reservas,
+    horarios_tabela,
     osm,
     osm_sitios,
     stepp,
@@ -44,6 +45,7 @@ LEITORES: dict[str, Callable] = {
     horarios_pdf_cartaz.nome: horarios_pdf_cartaz.ler,
     horarios_manuais.nome: horarios_manuais.ler,
     horarios_reservas.nome: horarios_reservas.ler,
+    horarios_tabela.nome: horarios_tabela.ler,
     stepp.nome: stepp.ler,
     universo_paragens.nome: universo_paragens.ler,
 }
@@ -62,6 +64,7 @@ GENERICOS = {
     horarios_pdf_cartaz.nome,
     horarios_manuais.nome,
     horarios_reservas.nome,
+    horarios_tabela.nome,
     stepp.nome,
     universo_paragens.nome,
 }
@@ -79,7 +82,15 @@ ESPECIFICOS_DA_FONTE = {horarios_pdf_operadora.nome}
 # transcrições construíam-se sem chegar a página nenhuma, e a contagem de
 # brochuras no relatório dizia catorze onde havia dezassete. Um leitor novo
 # com esta forma entra aqui, uma vez.
-LEITORES_DE_HORARIO = {horarios_pdf_cartaz.nome, horarios_manuais.nome, horarios_reservas.nome}
+#
+# O QUARTO é o horário que já chega em tabela (`horarios-tabela`): a mesma
+# forma, sem papel por trás — a tabela é a fonte.
+LEITORES_DE_HORARIO = {
+    horarios_pdf_cartaz.nome,
+    horarios_manuais.nome,
+    horarios_reservas.nome,
+    horarios_tabela.nome,
+}
 
 
 def obter(nome: str) -> Callable:
