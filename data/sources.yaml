@@ -351,6 +351,11 @@ fontes:
       essa a questão: a região de prova demonstra o produto sem pedir uma linha
       a ninguém.
 
+      SEM `calendar.txt`, de propósito: os dias de cada serviço saem das
+      regras do `regioes/prova/calendario.yaml`, a contar do dia da construção
+      (`calendario: regras` na receita). O feed trazia «de 1/1/2025 a
+      31/12/2026» escrito, e a 1 de janeiro de 2027 ficava sem horários.
+
   - id: prova-osm
     nome: Extrato OSM da região de prova
     url: null
@@ -396,3 +401,6 @@ fontes:
       pobre do que o outro — a autoridade de transportes é um MUNICÍPIO e não
       uma comunidade intermunicipal, e o produto tem de nascer inteiro com uma
       câmara sozinha (CLAUDE.md §11.3).
+
+      Sem `calendar.txt`, como o da Serra: os dias saem das regras do
+      calendário da região, a contar do dia da construção.

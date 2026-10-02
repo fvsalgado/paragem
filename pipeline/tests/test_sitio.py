@@ -49,8 +49,9 @@ def test_nenhum_quadro_da_paragem_tem_por_titulo_um_codigo(raiz, tmp_path):
     Dois defeitos que a página mostrava ao mesmo tempo. O primeiro, o código
     cru no título («E-235»). O segundo, «Não se sabe em que dias este serviço
     circula» em vermelho por baixo de serviços com os dias no `calendar.txt`
-    — que é como a demonstração os declara, e que a grelha do planeador lia
-    bem. A paragem dizia que não sabia o que o planeador sabia.
+    — que era como a demonstração os declarava (hoje saem das regras, no
+    `calendar_dates.txt`), e que a grelha do planeador lia bem. A paragem
+    dizia que não sabia o que o planeador sabia.
     """
     from paragem.sitio import construir
 
@@ -67,7 +68,7 @@ def test_nenhum_quadro_da_paragem_tem_por_titulo_um_codigo(raiz, tmp_path):
     crus = {p["servico_nome"] for p in partidas if p["servico_nome"] == p["servico"]}
     assert not crus, f"quadros com o código por título: {sorted(crus)}"
     sem_dias = {p["servico"] for p in partidas if not p["tem_datas"]}
-    assert not sem_dias, f"serviços com dias no calendar.txt dados como sem datas: {sem_dias}"
+    assert not sem_dias, f"serviços com dias dados como sem datas: {sem_dias}"
 
 
 def test_a_linha_tem_horario_por_sentido_e_diz_de_onde_parte_e_para_onde_vai(raiz, tmp_path):

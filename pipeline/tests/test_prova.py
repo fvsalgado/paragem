@@ -5,13 +5,17 @@ de transportes nova sem escrever código — que é a promessa comercial inteira
 """
 
 import json
+from datetime import date, timedelta
 from pathlib import Path
 
-from conftest import regiao_ou_salta
+import pytest
+
+from conftest import RAIZ, regiao_ou_salta
 from paragem.construcao import construir
+from paragem.grelha import _datas_de_servico
 from paragem.gtfs import Gtfs
 from paragem.leitores import ESPECIFICOS_DA_FONTE, GENERICOS
-from paragem.regiao import carregar
+from paragem.regiao import carregar, carregar_todas
 from paragem.verificacoes import proveniencia, regioes
 
 
@@ -203,3 +207,49 @@ def test_exigir_validador_transforma_o_silencio_em_bloqueio(raiz, tmp_path, monk
         tmp_path, carregar(tmp_path, "prova"), descarregar=False, exigir_validador=True
     )
     assert exigente.tem_bloqueios_do_validador()
+
+
+# ---------------------------------------------------------------------------
+# o calendário que não envelhece
+# ---------------------------------------------------------------------------
+
+#: As regiões inventadas — pela propriedade, e não pelo nome: uma nova entra
+#: aqui sozinha, e é nela que um calendário escrito à mão voltaria a envelhecer.
+INVENTADAS = sorted(r.id for r in carregar_todas(RAIZ) if r.demonstracao)
+
+
+@pytest.mark.parametrize("id_regiao", INVENTADAS)
+def test_construida_num_dia_qualquer_tem_servico_nos_meses_seguintes(
+    raiz, tmp_path, monkeypatch, id_regiao
+):
+    """A PERGUNTA QUE AS REGIÕES DE PROVA FALHARAM A 1 DE JANEIRO DE 2027.
+
+    O calendário delas acabava a 31/12/2026, escrito no feed. Construídas em
+    qualquer dia depois disso, respondiam «não temos os horários desse dia» a
+    toda a gente — na demonstração que se mostra a quem decide, e na prova que
+    o CI constrói.
+
+    Prova-se construindo «noutro dia» (`PARAGEM_HOJE`), longe de hoje e de
+    qualquer data que alguém tenha escrito num ficheiro: os feeds próprios têm
+    de ter serviço em cada um dos seis meses seguintes.
+    """
+    dia = date(2031, 3, 3)
+    monkeypatch.setenv("PARAGEM_HOJE", dia.isoformat())
+    _copiar_repo(raiz, tmp_path)
+    regiao = carregar(tmp_path, id_regiao)
+    c = construir(tmp_path, regiao, descarregar=False)
+    assert not c.relatorio.tem_bloqueios, [x.o_que for x in c.relatorio.bloqueios]
+
+    proprios = [
+        s.saida
+        for s in regiao.saidas
+        if s.papel in {"feed-proprio", "horarios"} and s.saida and s.saida.endswith(".zip")
+    ]
+    assert proprios, f"{id_regiao} não declara feed próprio"
+    for saida in proprios:
+        datas = _datas_de_servico(Gtfs.ler(c.destino / saida))
+        meses = {d[:6] for d, servicos in datas.items() if servicos}
+        for n in range(6):
+            mes = (dia.replace(day=1) + timedelta(days=32 * n)).strftime("%Y%m")
+            assert mes in meses, f"{id_regiao}: {saida} sem serviço em {mes}"
+        assert min(datas) >= dia.strftime("%Y%m%d"), "a janela começa no dia da construção"

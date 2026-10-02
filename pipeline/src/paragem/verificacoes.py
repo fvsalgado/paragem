@@ -204,7 +204,56 @@ def regioes(raiz: Path, *, exigir_construcao: bool = True) -> Resultado:
                 + (f" — encontrei {'; '.join(fugas[:5])}" if fugas else ""),
             )
 
+    # 6. O calendário de cada feed próprio não está a acabar.
+    if exigir_construcao:
+        for alvo in todas:
+            _calendario_com_folga(r, raiz, alvo)
+
     return r
+
+
+#: Os papéis de um feed que a região constrói ela própria — os de terceiros
+#: acabam quando a entidade deles os deixa acabar, e isso é outra conversa.
+PAPEIS_PROPRIOS = {"horarios", "feed-proprio", "feed-proprio-flex"}
+
+#: Quantos dias de serviço, pelo menos, um feed próprio tem de ter pela frente.
+FOLGA_DO_CALENDARIO_DIAS = 60
+
+
+def _calendario_com_folga(r: Resultado, raiz: Path, regiao) -> None:
+    """Um feed próprio que acaba daqui a menos de dois meses reprova.
+
+    AS DUAS REGIÕES DE PROVA ACABAVAM A 31/12/2026, e ninguém deu por isso
+    porque nada falhava: o feed era válido, o validador passava, e as páginas
+    abriam. Faltava só o futuro — a 1 de janeiro, toda a pergunta ao planeador
+    dava «não temos os horários desse dia». Um calendário que envelhece não dá
+    erro; dá silêncio, e no dia mais à frente.
+
+    Não é um número cravado sobre uma fonte viva (CLAUDE.md §8): é o que tem
+    de ser verdade em qualquer dia — que o que se publica hoje ainda serve
+    daqui a dois meses. Os feeds de outras entidades ficam de fora: acabam
+    quando quem os publica os deixa acabar, e o relatório diz-se deles.
+    """
+    from datetime import timedelta
+
+    from .calendario import hoje
+    from .grelha import _datas_de_servico
+    from .gtfs import Gtfs
+
+    limite = hoje() + timedelta(days=FOLGA_DO_CALENDARIO_DIAS)
+    for s in regiao.saidas:
+        if s.papel not in PAPEIS_PROPRIOS or not s.saida or not s.saida.endswith(".zip"):
+            continue
+        feed = Path(raiz) / "build" / regiao.id / s.saida
+        if not feed.exists():
+            continue
+        datas = sorted(d for d, servicos in _datas_de_servico(Gtfs.ler(feed)).items() if servicos)
+        ultimo = datas[-1] if datas else None
+        r.afirmar(
+            ultimo is not None and ultimo >= limite.strftime("%Y%m%d"),
+            f"{regiao.id}: {s.saida} tem serviço pelo menos até {limite:%d/%m/%Y}"
+            + (f" (acaba a {ultimo[6:]}/{ultimo[4:6]}/{ultimo[:4]})" if ultimo else " (sem dias)"),
+        )
 
 
 def _palavras_de_outras(alvo, todas) -> list[str]:

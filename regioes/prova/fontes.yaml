@@ -13,6 +13,13 @@ saidas:
     modo: autocarro
     params:
       recortar: false
+      # OS DIAS SAEM DAS REGRAS DO `calendario.yaml`, a contar do dia da
+      # construção — e não de duas datas escritas no feed. Estavam lá «de
+      # 1/1/2025 a 31/12/2026», e a 1 de janeiro de 2027 esta região passava a
+      # responder «não temos os horários desse dia» a toda a gente, sem ninguém
+      # ter mexido em nada. Os `service_id` já eram códigos da região (A-U,
+      # A-S); construída em qualquer dia, tem um ano de serviço pela frente.
+      calendario: regras
 
   - fonte: prova-osm
     leitor: osm-bicicletas

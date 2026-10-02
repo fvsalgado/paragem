@@ -13,9 +13,35 @@ conseguiu, para o relatório contar.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Any
+
+
+def hoje() -> date:
+    """O dia da construção — de onde parte a janela de serviço de cada feed.
+
+    É uma função, e não um `date.today()` espalhado pelos leitores, por duas
+    razões. A primeira é poder perguntar «e se esta região fosse construída
+    noutro dia?» sem esperar por esse dia: `PARAGEM_HOJE=2031-03-03` constrói
+    como se fosse então, e é assim que se prova que um calendário não
+    envelhece — a pergunta que as regiões inventadas falharam a 1 de janeiro
+    de 2027, quando os horários delas acabavam a 31 de dezembro. A segunda é
+    os testes poderem fazer a mesma pergunta trocando esta função, sem tocar
+    no relógio da máquina.
+
+    Um valor que não se leia como data não se adivinha: rebenta, e diz qual.
+    """
+    valor = os.environ.get("PARAGEM_HOJE", "").strip()
+    if not valor:
+        return date.today()
+    try:
+        return date.fromisoformat(valor)
+    except ValueError as e:
+        raise ErroDeCalendario(
+            f"PARAGEM_HOJE={valor!r} não é uma data AAAA-MM-DD — não se constrói «em» que dia."
+        ) from e
 
 
 class ErroDeCalendario(Exception):
@@ -54,6 +80,7 @@ class Calendario:
         self.d = declaracao or {}
         self.concelhos = concelhos or []
         self._cache_feriados: dict[int, set[date]] = {}
+        self._cache_periodos: dict[int, list[dict[str, Any]]] = {}
 
     # --- feriados --------------------------------------------------------
 
@@ -131,19 +158,53 @@ class Calendario:
         ]
 
     # --- períodos escolares ----------------------------------------------
+    #
+    # DUAS FORMAS DE OS DECLARAR, e a segunda existe para não envelhecer.
+    #
+    #   `periodos`     datas de um ano letivo concreto — é o que uma região real
+    #                  tem, transcrito do despacho e do calendário da operadora,
+    #                  e que se volta a transcrever todos os anos;
+    #   `regra_anual`  dia e mês, sem ano — o mesmo ano letivo repetido para
+    #                  sempre. NÃO é o que uma escola faz (o despacho muda as
+    #                  datas de ano para ano) e por isso não serve a uma região
+    #                  real; serve a uma região INVENTADA, que não tem despacho
+    #                  nenhum e não pode ficar sem aulas no dia em que o ano
+    #                  que alguém lá escreveu passar.
+    #
+    # Um período da regra que acabe «antes» de começar — férias de Natal, de
+    # 17 de dezembro a 4 de janeiro — atravessa o ano, e acaba no seguinte.
 
-    def _periodos(self, tipo: str) -> list[tuple[date, date]]:
-        out = []
-        for p in (self.d.get("ano_letivo") or {}).get("periodos") or []:
-            if p.get("tipo") != tipo:
-                continue
-            out.append((_d(p["inicio"]), _d(p["fim"])))
-        return out
+    def _concretos(self, ano: int) -> list[dict[str, Any]]:
+        """Todos os períodos que tocam o ano civil `ano`, já com datas.
+
+        Os escritos com data entram tal e qual; os da regra anual entram para
+        o ano anterior e para este — um período que começa em dezembro do ano
+        anterior pode ainda estar a correr em janeiro deste.
+        """
+        if ano in self._cache_periodos:
+            return self._cache_periodos[ano]
+        ano_letivo = self.d.get("ano_letivo") or {}
+        saida: list[dict[str, Any]] = []
+        for p in ano_letivo.get("periodos") or []:
+            saida.append({**p, "inicio": _d(p["inicio"]), "fim": _d(p["fim"])})
+        for p in ano_letivo.get("regra_anual") or []:
+            for a in (ano - 1, ano):
+                comeca = date(a, int(p["inicio"]["mes"]), int(p["inicio"]["dia"]))
+                acaba = date(a, int(p["fim"]["mes"]), int(p["fim"]["dia"]))
+                if acaba < comeca:
+                    acaba = date(a + 1, acaba.month, acaba.day)
+                saida.append({**p, "inicio": comeca, "fim": acaba})
+        self._cache_periodos[ano] = saida
+        return saida
+
+    def _periodos(self, tipo: str, ano: int) -> list[tuple[date, date]]:
+        return [(p["inicio"], p["fim"]) for p in self._concretos(ano) if p.get("tipo") == tipo]
 
     @property
     def ano_letivo_tem_datas(self) -> bool:
         """Há períodos escritos. NÃO diz que estão certos — diz que existem."""
-        return bool((self.d.get("ano_letivo") or {}).get("periodos"))
+        ano_letivo = self.d.get("ano_letivo") or {}
+        return bool(ano_letivo.get("periodos") or ano_letivo.get("regra_anual"))
 
     @property
     def ano_letivo_confirmado(self) -> bool:
@@ -158,10 +219,9 @@ class Calendario:
         return bool((self.d.get("ano_letivo") or {}).get("confirmado"))
 
     def _em_aulas(self, dia: date) -> bool | None:
-        periodos = self._periodos("aulas")
-        if not periodos:
+        if not self.ano_letivo_tem_datas:
             return None
-        return any(i <= dia <= f for i, f in periodos)
+        return any(i <= dia <= f for i, f in self._periodos("aulas", dia.year))
 
     def _em_periodos(self, ids: set[str], dia: date) -> bool:
         """Está num destes períodos, pelo `id` declarado.
@@ -172,16 +232,14 @@ class Calendario:
         que existe — e o defeito esteve escondido enquanto não houve calendário
         nenhum para o revelar.
         """
-        for p in (self.d.get("ano_letivo") or {}).get("periodos") or []:
-            if p.get("id") in ids and _d(p["inicio"]) <= dia <= _d(p["fim"]):
-                return True
-        return False
+        return any(
+            p.get("id") in ids and p["inicio"] <= dia <= p["fim"] for p in self._concretos(dia.year)
+        )
 
     def _em_ferias_escolares(self, dia: date) -> bool | None:
-        periodos = self._periodos("ferias")
-        if not periodos:
+        if not self.ano_letivo_tem_datas:
             return None
-        return any(i <= dia <= f for i, f in periodos)
+        return any(i <= dia <= f for i, f in self._periodos("ferias", dia.year))
 
     def _incerto(self, dia: date) -> bool:
         """Um dia em que nem sequer se sabe se há aulas.
@@ -196,7 +254,7 @@ class Calendario:
         não passar deixa alguém à espera; dizer que não passa manda-o procurar
         outra coisa. Os dois são erros, mas só um deles perde o dia a alguém.
         """
-        return any(i <= dia <= f for i, f in self._periodos("incerto"))
+        return any(i <= dia <= f for i, f in self._periodos("incerto", dia.year))
 
     def dias_incertos(self, inicio: date, fim: date) -> list[date]:
         """Para o relatório de lacunas contar o que isto custa, em dias úteis."""
@@ -219,9 +277,9 @@ class Calendario:
         Um ano cujo arranque não esteja declarado devolve None, e quem depende
         dele di-lo no relatório em vez de produzir um calendário vazio.
         """
-        for p in (self.d.get("ano_letivo") or {}).get("periodos") or []:
-            if p.get("tipo") == "aulas" and p.get("arranque") and _d(p["inicio"]).year == ano:
-                return _d(p["inicio"])
+        for p in self._concretos(ano):
+            if p.get("tipo") == "aulas" and p.get("arranque") and p["inicio"].year == ano:
+                return p["inicio"]
         return None
 
     # --- resolver um código ----------------------------------------------
