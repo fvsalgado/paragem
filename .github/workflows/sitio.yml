@@ -462,7 +462,7 @@ jobs:
           PARAGEM_OTP: http://127.0.0.1:8801
         run: npm run test:a11y
 
-      # E a nota que o §9 exige: ≥ 95 em telemóvel.
+      # E a nota que o §9 exige: ≥ 95 em telemóvel, nos dois temas.
       #
       # E O QUE SE PUBLICA, MEDIDO COMO O TELEMÓVEL O VÊ: o desempenho, com um
       # piso folgado por molde, o salto da página e o peso de cada molde contra
@@ -470,7 +470,7 @@ jobs:
       # acessibilidade, e o início da região real chegou a produção com 1,1 MB
       # e 3,6 s de bloqueio sem o CI dar por nada (P3-006). Os pisos e o
       # orçamento estão em `web/tests/lighthouse.mjs`, com a medição que os deu.
-      - name: Lighthouse — acessibilidade, desempenho e peso
+      - name: Lighthouse — acessibilidade nos dois temas, desempenho e peso
         working-directory: web
         run: npm run test:lighthouse
 

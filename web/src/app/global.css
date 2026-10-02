@@ -35,12 +35,68 @@
   --alerta-fundo: #fbe9e6;
   --foco: #f2b705;
 
+  /* AS CORES QUE MUDAM COM O TEMA (P1-044). No claro são as do §6, ou o
+     branco que estava escrito à mão em quarenta sítios; no escuro, as do
+     bloco mais abaixo. A marca e os modos têm DOIS papéis, e só um muda: como
+     fundo de um botão ou de um círculo, com o branco por cima, ficam como
+     estão; como texto, traço ou contorno sobre o fundo da página, clareiam —
+     o azul da marca dava 2,6:1 sobre o fundo escuro. */
+  --superficie: #fff;
+  --superficie-suave: #eef2f0;
+  --realce: #e8f1f4;
+  --realce-forte: #dfeaef;
+  --fundo-do-mapa: #e6ebe3;
+  --marca-texto: var(--marca);
+  --marca-texto-hover: var(--marca-hover);
+  --alerta-texto: var(--alerta);
+  --alerta-texto-forte: #6d1912;
+  --a-pedido-texto: #5c3700;
+  --desligado: #4a5c66;
+
   --raio: 10px;
   --alvo: 44px;
   /* DUAS MEDIDAS (P1-014): a de ler, curta, para o texto corrido; e a dos
      dados, larga, para as páginas de horários num ecrã de secretária. */
   --medida: 38rem;
   --medida-dados: 72rem;
+}
+
+/* O TEMA ESCURO, quando o sistema o pede (P1-044). De noite, numa paragem, um
+   ecrã claro encandeia — e as aplicações de transportes que as pessoas
+   conhecem têm todas o seu. A paleta é a que a auditoria visual propôs, com
+   os contrastes medidos: o texto a 14,9:1 sobre o fundo, o secundário a
+   8,7:1, a marca a 7,5:1, o alerta a 7,0:1 sobre o seu fundo, o a pedido a
+   6,9:1 — todos acima dos 4,5:1, também sobre as superfícies e os realces,
+   e os traços de estado acima dos 3:1. O foco continua o amarelo do §6, que
+   se vê nos dois.
+
+   O que NÃO muda: a faixa da marca de cada região (traz a sua própria tinta,
+   medida), os botões e os círculos dos modos (fundo cheio com branco por
+   cima, que se lê nos dois temas), os distintivos das linhas (a cor delas,
+   já escurecida para o branco) e os controlos do mapa. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --fundo: #0f1a20;
+    --superficie: #16242c;
+    --superficie-suave: #1d2e37;
+    --realce: #1f3a47;
+    --realce-forte: #21404f;
+    --fundo-do-mapa: #1b262c;
+    --texto: #e6edf0;
+    --texto-secundario: #a9b8bf;
+    --linhas: #2a3a43;
+    --borda-campo: #7f95a0;
+    --marca-texto: #5fb3d3;
+    --marca-texto-hover: #8fcbe2;
+    --alerta-texto: #ff8a7a;
+    --alerta-texto-forte: #ff8a7a;
+    --alerta-fundo: #3a1714;
+    --a-pedido-texto: #e0a24a;
+    --a-pedido-fundo: #2e2310;
+    --bicicleta-fundo: #16301f;
+    --desligado: #3a4a52;
+  }
 }
 
 *,
@@ -92,11 +148,11 @@ body {
 }
 
 a {
-  color: var(--marca);
+  color: var(--marca-texto);
   text-underline-offset: 0.2em;
 }
 a:hover {
-  color: var(--marca-hover);
+  color: var(--marca-texto-hover);
 }
 
 h1,
@@ -174,7 +230,7 @@ body:has(.pagina .em-colunas) .rodape .interior {
 code {
   font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   font-size: 0.85em;
-  background: #eef2f0;
+  background: var(--superficie-suave);
   border-radius: 4px;
   padding: 0.05em 0.3em;
   overflow-wrap: anywhere;
@@ -182,7 +238,7 @@ code {
 
 .cabecalho {
   border-bottom: 1px solid var(--linhas);
-  background: #fff;
+  background: var(--superficie);
 }
 .cabecalho .interior {
   max-width: var(--medida);
@@ -196,7 +252,7 @@ code {
 .cabecalho a.marca {
   font-weight: 700;
   font-size: 1.1rem;
-  color: var(--marca);
+  color: var(--marca-texto);
   text-decoration: none;
   /* É uma ligação autónoma, não uma ligação no meio de uma frase: leva os
      44 px como qualquer outra. */
@@ -362,7 +418,7 @@ code {
    iguais com sombra». Uma borda distingue sem pesar, e o que distingue um
    cartão de outro é a cor do modo, não o relevo. */
 .cartao {
-  background: #fff;
+  background: var(--superficie);
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
   padding: 1rem;
@@ -423,7 +479,7 @@ code {
   position: relative;
   list-style: none;
   font-weight: 700;
-  color: var(--marca);
+  color: var(--marca-texto);
 }
 /* A SETA QUE O `display: flex` TIRAVA. Com ele, o Chromium deixa de desenhar
    o triângulo do `<details>`, e o resumo («26 viagens — da Centro de Saúde às
@@ -443,8 +499,8 @@ details.lista-fechada > summary::after {
   width: 0.55rem;
   height: 0.55rem;
   margin-top: -0.4rem;
-  border-right: 2px solid var(--marca);
-  border-bottom: 2px solid var(--marca);
+  border-right: 2px solid var(--marca-texto);
+  border-bottom: 2px solid var(--marca-texto);
   transform: rotate(45deg);
 }
 .quadro-de-horario[open] > summary::after,
@@ -562,7 +618,7 @@ details.lista-fechada[open] > summary::after {
 }
 .lista a:hover,
 .lista a:focus-visible {
-  background: #fff;
+  background: var(--superficie);
 }
 /* O TEXTO SECUNDÁRIO, em todo o lado e não só nas listas. A classe existia
    em dezenas de sítios — «Gerido por …», «hora estimada», as coordenadas, as
@@ -599,17 +655,17 @@ details.lista-fechada[open] > summary::after {
   border-radius: var(--raio);
   padding: 0.75rem 1rem;
   margin: 1rem 0;
-  background: #fff;
+  background: var(--superficie);
 }
 .faixa.alerta {
   border-left-color: var(--alerta);
   background: var(--alerta-fundo);
-  color: #6d1912;
+  color: var(--alerta-texto-forte);
 }
 .faixa.a-pedido {
   border-left-color: var(--a-pedido);
   background: var(--a-pedido-fundo);
-  color: #5c3700;
+  color: var(--a-pedido-texto);
 }
 
 .marca-dados {
@@ -619,7 +675,7 @@ details.lista-fechada[open] > summary::after {
   border: 1px solid var(--linhas);
   border-radius: 999px;
   padding: 0.1rem 0.6rem;
-  background: #fff;
+  background: var(--superficie);
 }
 
 /* O NÚMERO DA LINHA, num desenho só e em três tamanhos (`Distintivo.tsx`).
@@ -783,8 +839,8 @@ details.quadro-do-dia > summary::after {
   width: 0.55rem;
   height: 0.55rem;
   margin-top: -0.4rem;
-  border-right: 2px solid var(--marca);
-  border-bottom: 2px solid var(--marca);
+  border-right: 2px solid var(--marca-texto);
+  border-bottom: 2px solid var(--marca-texto);
   transform: rotate(45deg);
 }
 details.quadro-do-dia[open] > summary::after {
@@ -792,7 +848,7 @@ details.quadro-do-dia[open] > summary::after {
   margin-top: -0.1rem;
 }
 details.quadro-do-dia > summary:hover {
-  background: #fff;
+  background: var(--superficie);
 }
 details.quadro-do-dia > summary:focus-visible {
   outline-offset: -3px;
@@ -825,7 +881,7 @@ details.quadro-do-dia[open] {
    do horário. A altura mínima guarda o lugar das partidas enquanto o
    navegador faz as contas, para o resto da página não saltar quando chegam. */
 .a-seguir {
-  background: #fff;
+  background: var(--superficie);
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
   padding: 0.1rem 1rem 0.5rem;
@@ -961,7 +1017,7 @@ ol.percurso-da-linha li::after {
   margin-top: -0.425rem;
   border-radius: 999px;
   border: 3px solid var(--cor-da-linha, var(--marca));
-  background: #fff;
+  background: var(--superficie);
 }
 ol.percurso-da-linha li.ponta::after {
   background: var(--cor-da-linha, var(--marca));
@@ -979,7 +1035,7 @@ ol.percurso-da-linha li.ponta a {
   font-weight: 700;
 }
 ol.percurso-da-linha a:hover {
-  color: var(--marca);
+  color: var(--marca-texto);
   text-decoration: underline;
 }
 
@@ -1000,7 +1056,7 @@ ul.saidas {
   }
 }
 ul.saidas > li {
-  background: #fff;
+  background: var(--superficie);
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
   padding: 0.75rem 1rem 0.25rem;
@@ -1051,7 +1107,7 @@ ul.linhas-do-concelho a {
 }
 ul.linhas-do-concelho a:hover,
 ul.linhas-do-concelho a:focus-visible {
-  background: #fff;
+  background: var(--superficie);
 }
 ul.linhas-do-concelho a > span:last-child {
   min-width: 0;
@@ -1071,7 +1127,7 @@ details.paragens-do-concelho > summary {
   min-height: var(--alvo);
   cursor: pointer;
   font-weight: 700;
-  color: var(--marca);
+  color: var(--marca-texto);
 }
 .paragens-com-linhas a {
   flex-direction: column;
@@ -1088,7 +1144,7 @@ details.paragens-do-concelho > summary {
 /* «Há na tua terra?»: o campo, e por baixo as terras encontradas, cada uma
    com os circuitos que lá passam e a ligação para o horário. */
 .procurar-terra {
-  background: #fff;
+  background: var(--superficie);
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
   padding: 0.25rem 1rem 0.75rem;
@@ -1171,7 +1227,7 @@ details.zona-a-pedido > summary::-webkit-details-marker {
   display: none;
 }
 details.zona-a-pedido > summary:hover {
-  background: #fff;
+  background: var(--superficie);
 }
 details.zona-a-pedido .nome-da-zona {
   font-weight: 700;
@@ -1197,7 +1253,7 @@ details.lista-fechada > summary {
   cursor: pointer;
   list-style: none;
   font-weight: 700;
-  color: var(--marca);
+  color: var(--marca-texto);
 }
 details.lista-fechada > summary::-webkit-details-marker {
   display: none;
@@ -1295,7 +1351,7 @@ ul.pontos-de-modo .accoes a {
 /* --- «Que título me serve?» -------------------------------------------------- */
 
 .ajuda-da-rede {
-  background: #fff;
+  background: var(--superficie);
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
   padding: 0.25rem 1rem 0.75rem;
@@ -1310,7 +1366,7 @@ dl.qual-titulo {
 dl.qual-titulo dt {
   font-weight: 700;
   margin-top: 0.75rem;
-  color: var(--marca);
+  color: var(--marca-texto);
 }
 dl.qual-titulo dd {
   margin: 0.25rem 0 0;
@@ -1331,7 +1387,7 @@ dl.qual-titulo dd {
    e a região parece em crise. */
 .faixa.informacao {
   border-left-color: var(--texto-secundario);
-  background: #eef2f0;
+  background: var(--superficie-suave);
   color: var(--texto);
 }
 
@@ -1355,7 +1411,7 @@ select {
   padding: 0.5rem 0.7rem;
   border: 1px solid var(--borda-campo);
   border-radius: var(--raio);
-  background: #fff;
+  background: var(--superficie);
   color: var(--texto);
 }
 button {
@@ -1373,8 +1429,9 @@ button:hover {
   border-color: var(--marca-hover);
 }
 button.secundario {
-  background: #fff;
-  color: var(--marca);
+  background: var(--superficie);
+  color: var(--marca-texto);
+  border-color: var(--marca-texto);
 }
 
 /* O «Como chegar» é um BOTÃO e não uma ligação — abre as direções onde se
@@ -1448,8 +1505,8 @@ button.botao {
 /* A opção que está desenhada no mapa. A cor sozinha não chega (1.4.1): a
    barra à esquerda é a diferença que se vê sem distinguir cores. */
 .cartao.escolhido {
-  border-left: 4px solid var(--marca);
-  background: #fff;
+  border-left: 4px solid var(--marca-texto);
+  background: var(--superficie);
 }
 
 /* --- as direções: duas cartas, e o mapa entre elas ----------------------- */
@@ -1463,7 +1520,7 @@ button.botao {
   left: 0.6rem;
   right: 0.6rem;
   max-width: 30rem;
-  background: #fff;
+  background: var(--superficie);
   border-radius: 1rem;
   padding: 0.5rem 0.65rem;
   box-shadow: 0 2px 12px rgb(16 44 63 / 18%);
@@ -1495,11 +1552,11 @@ button.botao {
 }
 .marca-campo.partida {
   grid-area: pa;
-  color: var(--marca);
+  color: var(--marca-texto);
 }
 .marca-campo.chegada {
   grid-area: ch;
-  color: var(--alerta);
+  color: var(--alerta-texto);
 }
 .campos-viagem .escolher:nth-of-type(1) {
   grid-area: de;
@@ -1561,15 +1618,15 @@ button.trocar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #fff;
-  color: var(--marca);
+  background: var(--superficie);
+  color: var(--marca-texto);
   border: 1px solid var(--linhas);
   border-radius: 999px;
 }
 button.trocar:hover {
   background: var(--fundo);
-  border-color: var(--marca);
-  color: var(--marca);
+  border-color: var(--marca-texto);
+  color: var(--marca-texto);
 }
 
 .aviso-localizacao {
@@ -1594,7 +1651,7 @@ button.trocar:hover {
   /* O deslize não sai daqui: sem isto, chegar ao fim da folha continuava a
      deslizar a página — e a página, por baixo do mapa, tem rodapé. */
   overscroll-behavior: contain;
-  background: #fff;
+  background: var(--superficie);
   border-radius: 1rem 1rem 0 0;
   box-shadow: 0 -2px 14px rgb(16 44 63 / 16%);
   padding: 0 0 1rem;
@@ -1717,8 +1774,8 @@ button.modo:hover {
   color: var(--texto);
 }
 button.modo.activo {
-  color: var(--marca);
-  border-bottom-color: var(--marca);
+  color: var(--marca-texto);
+  border-bottom-color: var(--marca-texto);
   font-weight: 700;
 }
 
@@ -1755,7 +1812,7 @@ button.modo.activo {
   padding: 0.3rem 0.7rem;
 }
 button.etiqueta {
-  background: #fff;
+  background: var(--superficie);
   color: var(--texto);
   border: 1px solid var(--linhas);
   border-radius: 999px;
@@ -1768,8 +1825,8 @@ button.etiqueta:hover {
   color: var(--texto);
 }
 button.etiqueta[aria-expanded='true'] {
-  border-color: var(--marca);
-  color: var(--marca);
+  border-color: var(--marca-texto);
+  color: var(--marca-texto);
   font-weight: 700;
 }
 button.etiqueta.so-icone {
@@ -1778,7 +1835,7 @@ button.etiqueta.so-icone {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--marca);
+  color: var(--marca-texto);
 }
 
 .folha .quando-escolha,
@@ -1800,8 +1857,8 @@ ul.opcoes > li + li {
   border-top: 1px solid var(--linhas);
 }
 .opcao.escolhida {
-  background: #e8f1f4;
-  box-shadow: inset 4px 0 0 var(--marca);
+  background: var(--realce);
+  box-shadow: inset 4px 0 0 var(--marca-texto);
 }
 
 /* O resumo é um BOTÃO que ocupa a linha toda: o alvo é a linha, como num
@@ -1831,7 +1888,7 @@ button.resumo-opcao:hover {
   color: var(--texto);
 }
 .opcao.escolhida button.resumo-opcao:hover {
-  background: #dfeaef;
+  background: var(--realce-forte);
 }
 .resumo-opcao .tira {
   flex: 1 1 11rem;
@@ -1914,10 +1971,12 @@ button.resumo-opcao:hover {
 .maplibregl-ctrl button.maplibregl-ctrl-compass,
 .maplibregl-ctrl button.maplibregl-ctrl-attrib-button,
 .maplibregl-ctrl button.maplibregl-ctrl-fullscreen {
+  /* Brancos nos dois temas, com as cores do claro escritas por extenso: os
+     ícones são desenhos escuros da biblioteca, e não mudam com o tema. */
   background-color: #fff;
   border: 0;
   border-radius: 0;
-  color: var(--texto);
+  color: #102c3f;
   min-height: 0;
   padding: 0;
   font-weight: 400;
@@ -1926,7 +1985,25 @@ button.resumo-opcao:hover {
 .maplibregl-ctrl button.maplibregl-ctrl-zoom-out:hover,
 .maplibregl-ctrl button.maplibregl-ctrl-geolocate:hover,
 .maplibregl-ctrl button.maplibregl-ctrl-compass:hover {
-  background-color: var(--fundo);
+  background-color: #f5f7f4;
+}
+
+/* A ATRIBUIÇÃO E A ESCALA NOS DOIS TEMAS. O MapLibre pinta-as de branco a
+   meia transparência, com o texto herdado da página — e no tema escuro o
+   texto claro por cima do branco não se lia. Passam a ter a superfície do
+   tema, quase opaca, e o texto e as ligações dele. Com a caixa do mapa à
+   frente: a folha do MapLibre chega depois desta, e a regra dela, com o mesmo
+   peso, ganhava. */
+.mapa-caixa .maplibregl-ctrl.maplibregl-ctrl-attrib,
+.mapa-caixa .maplibregl-ctrl.maplibregl-ctrl-scale {
+  background-color: color-mix(in srgb, var(--superficie) 88%, transparent);
+  color: var(--texto);
+}
+.mapa-caixa .maplibregl-ctrl.maplibregl-ctrl-scale {
+  border-color: var(--texto);
+}
+.mapa-caixa .maplibregl-ctrl-attrib a {
+  color: var(--marca-texto);
 }
 
 /* O botão da localização, em baixo à direita e grande — onde o polegar
@@ -2030,7 +2107,7 @@ button.resumo-opcao:hover {
   padding: 0;
   border: 1px solid var(--borda-campo);
   border-radius: var(--raio);
-  background: #fff;
+  background: var(--superficie);
   max-height: 18rem;
   overflow-y: auto;
 }
@@ -2055,7 +2132,7 @@ button.resumo-opcao:hover {
 .sugestoes li.activo,
 .sugestoes li:hover {
   background: var(--fundo);
-  outline: 2px solid var(--marca);
+  outline: 2px solid var(--marca-texto);
   outline-offset: -2px;
 }
 
@@ -2076,7 +2153,7 @@ button.resumo-opcao:hover {
 button[disabled] {
   /* Um botão desligado tem de continuar legível: o cinzento habitual cai
      abaixo de 4,5:1 e deixa de se ler para quem já lê com dificuldade. */
-  background: var(--texto-secundario);
+  background: var(--desligado);
   border-color: var(--texto-secundario);
   cursor: not-allowed;
 }
@@ -2124,8 +2201,8 @@ ol.percurso .no {
   width: 0.7rem;
   height: 0.7rem;
   border-radius: 999px;
-  border: 2.5px solid var(--marca);
-  background: #fff;
+  border: 2.5px solid var(--marca-texto);
+  background: var(--superficie);
 }
 ol.percurso .no.primeiro,
 ol.percurso .no.ultimo {
@@ -2206,12 +2283,12 @@ ol.percurso li.modo-bicicleta .fio {
    Tinha a borda e o fundo dos alertas, e lia-se como uma avaria logo à
    entrada. O vermelho fica para os avisos de serviço — se se gasta aqui, deixa
    de querer dizer «atenção» quando for preciso. Medido: o texto #102c3f e as
-   ligações #0a5c7a sobre #e8f1f4 dão 12,6:1 e 6,5:1. */
+   ligações #0a5c7a sobre var(--realce) dão 12,6:1 e 6,5:1. */
 .marca-demonstracao {
   border: 1px solid var(--linhas);
   border-left: 4px solid var(--marca);
   border-radius: var(--raio);
-  background: #e8f1f4;
+  background: var(--realce);
   color: var(--texto);
   padding: 0.6rem 1rem;
   margin: 0 0 1.25rem;
@@ -2224,7 +2301,7 @@ ol.percurso li.modo-bicicleta .fio {
 }
 
 .marca-demonstracao a {
-  color: var(--marca);
+  color: var(--marca-texto);
   font-weight: 700;
 }
 
@@ -2332,15 +2409,15 @@ ul.cartoes .cartao h3 {
 /* A segunda ação, de contorno: o mesmo verbo, com menos peso que a primeira.
    O contorno é de 2 px para se ver como botão e não como caixa de texto. */
 a.botao.secundario {
-  background: #fff;
-  color: var(--marca);
-  border: 2px solid var(--marca);
+  background: var(--superficie);
+  color: var(--marca-texto);
+  border: 2px solid var(--marca-texto);
 }
 a.botao.secundario:hover,
 a.botao.secundario:focus-visible {
-  background: #e8f1f4;
-  color: var(--marca-hover);
-  border-color: var(--marca-hover);
+  background: var(--realce);
+  color: var(--marca-texto-hover);
+  border-color: var(--marca-texto-hover);
 }
 
 /* As páginas de texto do produto — contacto, privacidade, acessibilidade.
@@ -2401,7 +2478,7 @@ ul.produto-botoes {
   padding: 3rem 0;
 }
 .produto-faixa.clara {
-  background: #fff;
+  background: var(--superficie);
   border-top: 1px solid var(--linhas);
   border-bottom: 1px solid var(--linhas);
 }
@@ -2455,7 +2532,7 @@ ul.produto-botoes {
 }
 .produto-garantias li {
   font-size: 0.9rem;
-  background: #fff;
+  background: var(--superficie);
   border: 1px solid var(--linhas);
   border-radius: 999px;
   padding: 0.3rem 0.8rem;
@@ -2471,7 +2548,7 @@ ul.produto-botoes {
   border: 10px solid var(--texto);
   border-radius: 2.25rem;
   overflow: hidden;
-  background: #fff;
+  background: var(--superficie);
   aspect-ratio: 390 / 844;
 }
 .produto-telemovel img {
@@ -2567,7 +2644,7 @@ ol.produto-passos p {
   font-size: 1.6rem;
   font-weight: 700;
   line-height: 1;
-  color: var(--marca);
+  color: var(--marca-texto);
 }
 
 /* Duas colunas de texto a partir de 48rem: «Como funciona» ao lado de «Os
@@ -2594,7 +2671,7 @@ ol.produto-passos p {
 /* O fecho: com quem se fala, numa faixa na cor clara da marca — encostada
    ao rodapé, sem a margem que o separa das páginas de texto. */
 .produto-fecho {
-  background: #e8f1f4;
+  background: var(--realce);
   border-top: 1px solid var(--linhas);
 }
 main.produto:has(> .produto-fecho:last-child) + .rodape {
@@ -2636,7 +2713,7 @@ main.pagina:has(.app-mapa) {
   /* O MESMO cinzento-verde do fundo do estilo do mapa, e não o `--fundo` do
      sítio: se a tela demorar a pintar, o que se vê por baixo é a cor do
      mapa e não uma faixa mais clara a fingir que falta alguma coisa. */
-  background: #e6ebe3;
+  background: var(--fundo-do-mapa);
 }
 
 .mapa-aviso {
@@ -2651,7 +2728,7 @@ main.pagina:has(.app-mapa) {
   left: calc(var(--aviso-a-esquerda, 0px) + (100% - var(--aviso-a-esquerda, 0px)) / 2);
   bottom: calc(var(--aviso-em-baixo, 0px) + 3.5rem);
   transform: translateX(-50%);
-  background: #fff;
+  background: var(--superficie);
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
   padding: 0.75rem 1rem;
@@ -2667,7 +2744,7 @@ main.pagina:has(.app-mapa) {
 .mapa-aviso.alerta {
   border-left: 4px solid var(--alerta);
   background: var(--alerta-fundo);
-  color: #6d1912;
+  color: var(--alerta-texto-forte);
 }
 
 /* A procura flutua por cima do mapa, como no Maps. Fica ACIMA dos controlos
@@ -2679,7 +2756,7 @@ main.pagina:has(.app-mapa) {
   left: 0.75rem;
   right: 0.75rem;
   max-width: 26rem;
-  background: #fff;
+  background: var(--superficie);
   border: 1px solid var(--borda-campo);
   border-radius: var(--raio);
   padding: 0.5rem 0.75rem;
@@ -2747,7 +2824,7 @@ main.pagina:has(.app-mapa) {
   /* 44 px de alvo tátil (§4.5), mesmo sendo uma pílula baixa. */
   min-height: 44px;
   padding: 0.35rem 0.9rem;
-  background: #fff;
+  background: var(--superficie);
   color: var(--texto);
   border: 1px solid var(--linhas);
   border-radius: 999px;
@@ -2790,7 +2867,7 @@ main.pagina:has(.app-mapa) {
   color: var(--texto);
 }
 .pilula[aria-pressed='false']:hover {
-  background: #fff;
+  background: var(--superficie);
   color: var(--texto);
 }
 
@@ -2798,6 +2875,8 @@ main.pagina:has(.app-mapa) {
    placa com o pictograma do comboio e do táxi. Comboio, expresso e táxi
    eram três pontos cinzentos quase iguais; a forma separa-os sem pedir que
    se distingam cores. */
+/* As amostras são as do mapa, e os pontos do mapa não mudam com o tema: o
+   anel e a placa de um privado são brancos nos dois. */
 .pilula-anel .pilula-cor {
   background: #fff;
   border: 3px solid var(--cor-da-camada);
@@ -2814,8 +2893,8 @@ main.pagina:has(.app-mapa) {
 /* A placa de um privado é branca, com o desenho escuro e a borda da casa. */
 .pilula-placa.pilula-clara .pilula-cor {
   background: #fff;
-  color: var(--texto);
-  border: 1.5px solid var(--borda-campo);
+  color: #102c3f;
+  border: 1.5px solid #6f858f;
 }
 
 /* O cartão que sobe de baixo. Num telemóvel ocupa metade do ecrã; num ecrã
@@ -2832,7 +2911,7 @@ main.pagina:has(.app-mapa) {
      deslizar a PÁGINA — e a página, por baixo do mapa, tem rodapé. Quem
      estava a ler as opções acabava no «Dados e licenças» sem perceber como. */
   overscroll-behavior: contain;
-  background: #fff;
+  background: var(--superficie);
   border-top: 1px solid var(--linhas);
   border-radius: var(--raio) var(--raio) 0 0;
   padding: 1rem;
@@ -3146,7 +3225,7 @@ button.botao-menu:focus-visible {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #fff;
+  background: var(--superficie);
   border-radius: 1rem 1rem 0 0;
   box-shadow: 0 -2px 14px rgb(16 44 63 / 16%);
   padding: 0.9rem 0.5rem 1rem;
@@ -3236,7 +3315,7 @@ a.circulo.modo-urbano-municipal .bolha {
    (§8). Aqui, a bolha vazada com a borda da casa. */
 a.circulo.modo-expresso .bolha,
 a.circulo.modo-taxi .bolha {
-  background: #fff;
+  background: var(--superficie);
   color: var(--texto);
   border: 1px solid var(--borda-campo);
 }
@@ -3252,7 +3331,7 @@ dialog.menu-do-mapa {
   border: 0;
   border-radius: 0 1rem 1rem 0;
   padding: 0.75rem 0.5rem;
-  background: #fff;
+  background: var(--superficie);
   color: var(--texto);
 }
 dialog.menu-do-mapa::backdrop {
@@ -3299,7 +3378,7 @@ dialog.menu-do-mapa .lista a {
 dialog.menu-do-mapa .menu-icone {
   flex: none;
   margin-top: 0.15rem;
-  color: var(--marca);
+  color: var(--marca-texto);
 }
 dialog.menu-do-mapa .lista .secundario {
   text-align: left;
@@ -3394,7 +3473,7 @@ dialog.menu-do-mapa .lista .secundario {
   font-size: 0.92rem;
 }
 .painel .alerta-texto {
-  color: var(--alerta);
+  color: var(--alerta-texto);
 }
 .painel .cartao {
   margin: 1rem 0;
@@ -3497,7 +3576,7 @@ dialog.menu-do-mapa .lista .secundario {
   min-height: 0;
   margin: 0;
   padding: 0;
-  accent-color: var(--marca);
+  accent-color: var(--marca-texto);
 }
 .painel .rolavel {
   overflow-x: auto;
@@ -3524,10 +3603,10 @@ dialog.menu-do-mapa .lista .secundario {
   align-items: center;
   min-height: var(--alvo);
   padding: 0 1rem;
-  border: 1px solid var(--marca);
+  border: 1px solid var(--marca-texto);
   border-radius: var(--raio);
-  background: #fff;
-  color: var(--marca);
+  background: var(--superficie);
+  color: var(--marca-texto);
   font-weight: 700;
   text-decoration: none;
 }
@@ -3541,7 +3620,7 @@ dialog.menu-do-mapa .lista .secundario {
   align-items: center;
   min-height: var(--alvo);
   cursor: pointer;
-  color: var(--marca);
+  color: var(--marca-texto);
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
@@ -3561,9 +3640,9 @@ dialog.menu-do-mapa .lista .secundario {
   overflow-x: auto;
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
-  background: #fff;
+  background: var(--superficie);
   padding: 0.75rem;
-  color: var(--alerta);
+  color: var(--alerta-texto);
   font-size: 0.9rem;
 }
 
@@ -3640,12 +3719,12 @@ button.para-onde-vais {
   text-align: left;
 }
 button.para-onde-vais:hover {
-  background: #fff;
+  background: var(--superficie);
   color: var(--texto);
-  border-color: var(--marca);
+  border-color: var(--marca-texto);
 }
 button.para-onde-vais svg {
-  color: var(--alerta);
+  color: var(--alerta-texto);
   flex: none;
 }
 .folha-de-abertura h2.titulo-dos-modos {
@@ -3719,13 +3798,13 @@ ul.perto-lista > li > a {
   padding: 0.25rem 0;
   background: none;
   border: 0;
-  color: var(--marca);
+  color: var(--marca-texto);
   font-weight: 700;
   text-align: left;
 }
 button.perto-paragem:hover {
   background: none;
-  color: var(--marca-hover);
+  color: var(--marca-texto-hover);
   text-decoration: underline;
 }
 .perto-nome {
@@ -3898,7 +3977,7 @@ ol.percurso li.modo-expresso .fio {
 /* As ligações em texto no castanho da casa; o BOTÃO de ligar fica com as
    cores dele — castanho sobre o azul do botão não se lia. */
 .propostas-a-pedido a:not(.botao) {
-  color: #5c3700;
+  color: var(--a-pedido-texto);
 }
 
 /* --- a procura: o «nada» à vista, e os parecidos ------------------------- */
@@ -3908,7 +3987,7 @@ ol.percurso li.modo-expresso .fio {
   padding: 0.5rem 0.7rem;
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
-  background: #fff;
+  background: var(--superficie);
   font-size: 0.9rem;
   line-height: 1.35;
 }
@@ -3938,7 +4017,7 @@ ol.percurso li.modo-expresso .fio {
   display: inline-block;
   margin: 0;
   padding: 0.3rem 0.7rem;
-  background: #fff;
+  background: var(--superficie);
   border: 1px solid var(--linhas);
   border-radius: 999px;
 }
