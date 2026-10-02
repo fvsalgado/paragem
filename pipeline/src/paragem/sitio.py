@@ -336,6 +336,15 @@ class Sitio:
             "modos_de_terceiros": self.modos_de_terceiros,
             "municipios_membros": r.municipios_membros,
             "concelhos_servidos": r.concelhos_servidos,
+            # DE QUEM É O MAPA, e de quem são os dados — a partir das fontes que
+            # a região usa, e não de uma frase escrita no sítio. O rodapé dizia
+            # «Mapas e localizações de bicicletas e táxis: © contribuidores do
+            # OpenStreetMap … Limites administrativos: Direção-Geral do
+            # Território» em todas as regiões, incluindo as inventadas, que
+            # não usam nem um nem outro: atribuir a alguém o que não fez é o
+            # contrário do que a atribuição existe para garantir.
+            "mapa": _mapa(r),
+            "atribuicoes": _atribuicoes(self.raiz, r),
             # SE O CONCELHO DE CADA PONTO VEIO DA CARTA. Sem ela, um ponto sem
             # concelho não está fora da região — está por atribuir —, e a
             # página das bicicletas punha a estação do terminal «Fora da
@@ -1875,6 +1884,76 @@ def _seguro(identificador: str) -> str:
     # navegador não, e um nome de ficheiro que os dois escrevam de maneira
     # diferente é uma ligação partida.
     return "".join(c if (c.isascii() and c.isalnum()) or c in "-_" else "-" for c in identificador)
+
+
+def _mapa(regiao: Regiao) -> dict[str, Any] | None:
+    """De quem é o mapa de fundo — o que o MapLibre escreve no canto.
+
+    Três casos, e decide-os a RECEITA, não o ficheiro dos mosaicos: o
+    `pipeline sitio` corre antes do `pipeline mosaicos`, e o que se quer saber
+    é de onde o mapa VAI sair.
+
+    - a região declara a sua geografia (`mapa:`) — o mapa é desenhado a partir
+      dela, e a atribuição é a que a receita declara;
+    - a região recorta o OpenStreetMap — o mapa é dele, sob ODbL, e a
+      atribuição é obrigatória;
+    - nenhuma das duas — não há mapa, e não há atribuição a fazer.
+
+    Sai em HTML, porque é assim que o MapLibre a lê; o texto declarado numa
+    receita escapa-se, e só a ligação do OpenStreetMap vai como ligação.
+    """
+    import html
+
+    if regiao.mapa.get("fonte"):
+        texto = str(regiao.mapa.get("atribuicao") or "").strip()
+        return {"atribuicao": html.escape(texto) if texto else "", "fonte": "propria"}
+    if any(s.leitor == "osm-recorte" for s in regiao.saidas):
+        return {
+            "atribuicao": (
+                f'© contribuidores do <a href="{COPYRIGHT_OSM}">OpenStreetMap</a>, sob ODbL'
+            ),
+            "fonte": "openstreetmap",
+        }
+    return None
+
+
+#: Os nomes das licenças como se escrevem numa frase, e não como no SPDX.
+NOMES_DAS_LICENCAS = {"ODBL-1.0": "ODbL", "CC-BY-4.0": "CC BY 4.0", "CC-BY-3.0": "CC BY 3.0"}
+
+
+def _atribuicoes(raiz: Path, regiao: Regiao) -> list[dict[str, Any]]:
+    """As atribuições que as fontes desta região EXIGEM, uma por fonte.
+
+    São as que o registo marca como obrigatórias (`atribuicao_obrigatoria`),
+    que é onde se decidiu, fonte a fonte, o que cada licença pede — a ODbL do
+    OpenStreetMap, o CC BY da carta administrativa. Uma região que não use
+    nenhuma devolve a lista vazia, e o rodapé dela não atribui nada a ninguém.
+    """
+    from .fontes import ErroDeFonte, Registo
+
+    registo = Registo.carregar(raiz)
+    saida: list[dict[str, Any]] = []
+    vistas: set[str] = set()
+    for id_fonte in regiao.fontes_usadas:
+        try:
+            f = registo.obter(id_fonte)
+        except ErroDeFonte:
+            continue
+        texto = (f.atribuicao or "").strip()
+        if not f.exige_atribuicao or texto in vistas:
+            continue
+        vistas.add(texto)
+        licenca = (f.licenca or "").upper()
+        saida.append(
+            {
+                "texto": texto,
+                "licenca": NOMES_DAS_LICENCAS.get(licenca, f.licenca or ""),
+                "url": COPYRIGHT_OSM if licenca.startswith("ODBL") else None,
+            }
+        )
+    # O mapa à frente: é a atribuição que se vê em todas as páginas com mapa.
+    saida.sort(key=lambda a: (a["url"] is None, a["texto"]))
+    return saida
 
 
 def _tarifas(regiao: Regiao) -> dict[str, Any]:

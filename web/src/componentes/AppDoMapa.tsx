@@ -98,7 +98,7 @@ export default function AppDoMapa({
   centro,
   pontos,
   mosaicos,
-  temMapa,
+  atribuicaoDoMapa,
   nomeDaRegiao,
   deDaRegiao,
   emDaRegiao,
@@ -119,7 +119,13 @@ export default function AppDoMapa({
   centro: [number, number];
   pontos: Ponto[];
   mosaicos: string;
-  temMapa: boolean;
+  /**
+   * De quem é o mapa de fundo, como o MapLibre o escreve no canto. Vem dos
+   * dados da região: o de uma região real é do OpenStreetMap, e o de uma
+   * inventada é desenhado por nós — e dizer «OpenStreetMap» por baixo de um
+   * mapa que não é dele era atribuir-lhe o que não fez.
+   */
+  atribuicaoDoMapa?: string;
   modos: { id: string; nome: string; href: string }[];
   temAPedido: boolean;
   /** Os módulos que o painel desligou — o planeador não propõe as linhas deles. */
@@ -475,7 +481,7 @@ export default function AppDoMapa({
          *
          * Desligar TUDO é uma escolha legítima: quem quer ver só as ruas tem
          * direito a um mapa sem pontos. */}
-        {!aIr && temMapa && camadas.length > 1 && (
+        {!aIr && camadas.length > 1 && (
           <div
             ref={fila}
             className={`app-camadas${maisNaFila.antes ? ' ha-antes' : ''}${
@@ -517,28 +523,24 @@ export default function AppDoMapa({
           aoFechar={() => setMenu(false)}
         />
 
-        {temMapa ? (
-          <Mapa
-            centro={centro}
-            pontos={pontos as Marca[]}
-            aoEscolher={abrir}
-            mosaicos={mosaicos}
-            foco={!percurso && escolhido ? { lat: escolhido.lat, lon: escolhido.lon } : null}
-            percurso={percurso?.geo ?? null}
-            alternativas={percurso?.outras ?? null}
-            etiqueta={percurso?.meio ?? null}
-            enquadrar={percurso?.caixa ?? null}
-            margemInferior={aIr && !encolhido ? 430 : 210}
-            modosVisiveis={visiveis}
-          />
-        ) : (
-          <div className="mapa-caixa">
-            <p className="mapa-aviso">
-              Esta região ainda não tem mapa — falta o recorte do OpenStreetMap. A procura e as
-              páginas de paragem funcionam na mesma.
-            </p>
-          </div>
-        )}
+        {/* SÓ HÁ ESTE COMPONENTE ONDE HÁ MAPA. Uma região sem mosaicos abre
+            na vista sem mapa (`CatalogoDaRegiao`), e não numa caixa cinzenta
+            a dizer que falta o recorte — que era o primeiro ecrã das
+            demonstrações (P2-041). */}
+        <Mapa
+          centro={centro}
+          pontos={pontos as Marca[]}
+          aoEscolher={abrir}
+          mosaicos={mosaicos}
+          atribuicao={atribuicaoDoMapa}
+          foco={!percurso && escolhido ? { lat: escolhido.lat, lon: escolhido.lon } : null}
+          percurso={percurso?.geo ?? null}
+          alternativas={percurso?.outras ?? null}
+          etiqueta={percurso?.meio ?? null}
+          enquadrar={percurso?.caixa ?? null}
+          margemInferior={aIr && !encolhido ? 430 : 210}
+          modosVisiveis={visiveis}
+        />
 
         {/* AS DIREÇÕES: duas cartas, e o mapa entre elas — o cartão de cima com
           de onde e para onde, a folha de baixo com as opções. Não são filhas

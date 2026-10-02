@@ -176,8 +176,11 @@ test('uma estação de bicicletas abre o cartão dela, e não o de uma paragem',
   // que ele é. Uma estação de bicicletas com o rótulo «Paragem de autocarro» e
   // uma ligação para um horário que não existe era o que acontecia antes.
   test.skip(!BICICLETA, SEM.modo('bicicleta'));
+  // O cartão é o do mapa: sem mosaicos não há mapa, e a procura do início sem
+  // mapa leva à página do ponto (`sem-mapa.spec.ts`).
+  test.skip(!temMosaicos(), SEM.mosaicos);
   await page.goto(`/`);
-  await page.getByRole('combobox').fill(BICICLETA!.nome);
+  await page.getByRole('combobox', { name: 'Procurar' }).fill(BICICLETA!.nome);
   await page.getByRole('option').first().click();
 
   const cartao = page.locator('.cartao-de-baixo');
@@ -194,8 +197,9 @@ test('uma estação de bicicletas abre o cartão dela, e não o de uma paragem',
 test('uma paragem continua a abrir as horas', async ({ page }) => {
   // A regressão que isto guarda: ao dar cartão aos outros modos, é fácil
   // partir o caso que já funcionava.
+  test.skip(!temMosaicos(), SEM.mosaicos);
   await page.goto(`/`);
-  await page.getByRole('combobox').fill(BUSCA);
+  await page.getByRole('combobox', { name: 'Procurar' }).fill(BUSCA);
   await page.getByRole('option').first().click();
 
   const cartao = page.locator('.cartao-de-baixo');

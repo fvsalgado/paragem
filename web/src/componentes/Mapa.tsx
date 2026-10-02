@@ -90,6 +90,7 @@ export default function Mapa({
   pontos,
   aoEscolher,
   mosaicos,
+  atribuicao,
   foco,
   percurso,
   alternativas,
@@ -103,6 +104,8 @@ export default function Mapa({
   pontos: Marca[];
   aoEscolher?: (p: Marca) => void;
   mosaicos: string;
+  /** De quem é o mapa de fundo, em HTML — sem isto, a do OpenStreetMap. */
+  atribuicao?: string;
   /** Para onde o mapa se desloca quando alguém escolhe um sítio. */
   foco?: { lat: number; lon: number } | null;
   /** O itinerário escolhido, desenhado por cima do mapa. */
@@ -144,7 +147,7 @@ export default function Mapa({
 
         criado = new Map({
           container: caixa.current,
-          style: estiloDoMapa(mosaicos),
+          style: estiloDoMapa(mosaicos, atribuicao || undefined),
           center: [centro[1], centro[0]],
           zoom,
           attributionControl: { compact: false },

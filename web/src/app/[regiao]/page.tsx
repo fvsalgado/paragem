@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import AppDoMapa from '@/componentes/AppDoMapa';
+import CatalogoDaRegiao from '@/componentes/CatalogoDaRegiao';
 import {
   procura,
   regiao,
@@ -46,6 +47,18 @@ export async function generateMetadata({
 export default async function Inicio({ params }: { params: Promise<{ regiao: string }> }) {
   const { regiao: rid } = await params;
   const r = await exigirRegiao(rid);
+
+  // SEM MOSAICOS, O INÍCIO NÃO É UM MAPA (P1-040, P2-041, P4-001).
+  //
+  // Era: um ecrã de mapa com o mapa em falta — uma caixa cinzenta a dizer que
+  // faltava «o recorte do OpenStreetMap» —, e era o primeiro ecrã das duas
+  // demonstrações, o que se mostra a quem decide. Uma região sem mosaicos abre
+  // na vista sem mapa: a procura, o planeador e o «Perto de ti», com as listas
+  // por baixo. Vale para qualquer região, real ou inventada, e não se escolhe
+  // por nome: no dia em que os mosaicos se publicarem, o início passa a ser o
+  // mapa sem tocar em código. Quem sabe é o inventário do que se publicou.
+  if (!(await temMosaicos(rid))) return <CatalogoDaRegiao regiao={rid} inicio />;
+
   const pontos = await procura(rid);
 
   // O MAPA ABRE ONDE HÁ TRANSPORTES, e não no centro geométrico da caixa.
@@ -70,11 +83,6 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
   const centro: [number, number] = maisServido
     ? [maisServido.lat, maisServido.lon]
     : [(r.caixa.lat_min + r.caixa.lat_max) / 2, (r.caixa.lon_min + r.caixa.lon_max) / 2];
-
-  // Uma região sem recorte do OpenStreetMap não tem mosaicos, e a interface
-  // di-lo em vez de desenhar um mapa vazio. Quem sabe é o inventário que o
-  // pipeline publica com os dados — já não há disco para onde olhar.
-  const temMapa = await temMosaicos(rid);
 
   // OS MODOS QUE A REGIÃO DECLARA, já com o destino de cada um.
   //
@@ -101,7 +109,7 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
       centro={centro}
       pontos={pontos}
       mosaicos={enderecoDosDados(rid, 'regiao.pmtiles')}
-      temMapa={temMapa}
+      atribuicaoDoMapa={r.mapa?.atribuicao}
       modos={modos}
       temAPedido={temAPedido}
       modosDesligados={r.modos_desligados ?? []}

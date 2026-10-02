@@ -25,7 +25,9 @@ import {
   tarifasPorConfirmar,
   temAPedido,
   temModo,
+  temMosaicos,
   umaPartidaFutura,
+  SEM,
 } from './dados-da-regiao';
 
 /**
@@ -339,6 +341,7 @@ test('o painel das direções, aberto sobre o mapa, também passa no axe', async
   // O painel só existe depois de dois toques, e um teste que veja a página
   // fechada não vê nada dele: os campos, os rádios do «Quando» e os botões
   // aparecem todos depois. É código por verificar até aqui.
+  test.skip(!temMosaicos(), SEM.mosaicos);
   await page.goto(`/`);
   await page.getByRole('combobox', { name: 'Procurar' }).fill(BUSCA);
   await page.getByRole('listbox').getByRole('option').first().click();

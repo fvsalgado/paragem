@@ -14,6 +14,7 @@ import {
   NAO_ENCONTRADA,
   regiao,
   urlDaParagem,
+  temMosaicos,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import Distintivo from '@/componentes/Distintivo';
@@ -171,7 +172,17 @@ export default async function Paragem({
   // O «Ver no mapa» abre o mapa do próprio sítio nesta paragem, com o cartão
   // dela. É uma ligação a sério (`<a>`) e não uma navegação por dentro: o
   // mapa lê o endereço ao abrir.
-  const noMapa = url(rid, `/?ponto=${encodeURIComponent(p.id)}`);
+  //
+  // SÓ ONDE HÁ MAPA. Numa região sem mosaicos o início é a procura e o
+  // planeador, e «Ver no mapa» levava a uma página sem mapa nenhum.
+  const r = await regiao(rid);
+  const noMapa = (await temMosaicos(rid)) ? url(rid, `/?ponto=${encodeURIComponent(p.id)}`) : null;
+  // E NUMA REGIÃO INVENTADA AS COORDENADAS NÃO SÃO DE SÍTIO NENHUM: abri-las
+  // no OpenStreetMap mostrava uma terra real — ou o mar — por baixo de uma
+  // paragem que não existe.
+  const noOsm = r?.demonstracao
+    ? null
+    : `https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lon}#map=17/${p.lat}/${p.lon}`;
 
   return (
     <>
@@ -198,7 +209,7 @@ export default async function Paragem({
         <Link className="botao" href={url(rid, `/viagem/?para=${encodeURIComponent(p.nome)}`)}>
           Como chegar aqui
         </Link>
-        <a href={noMapa}>Ver no mapa</a>
+        {noMapa && <a href={noMapa}>Ver no mapa</a>}
       </p>
       <MarcaDeDados regiao={rid} />
 
@@ -224,14 +235,12 @@ export default async function Paragem({
           coordenadas ficam, em pequeno, para quem as quer. */}
       <section aria-labelledby="onde">
         <h2 id="onde">Onde fica</h2>
-        <p className="cartao-accoes">
-          <a href={noMapa}>Ver no mapa desta região</a>
-          <a
-            href={`https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lon}#map=17/${p.lat}/${p.lon}`}
-          >
-            Ver no OpenStreetMap
-          </a>
-        </p>
+        {(noMapa || noOsm) && (
+          <p className="cartao-accoes">
+            {noMapa && <a href={noMapa}>Ver no mapa desta região</a>}
+            {noOsm && <a href={noOsm}>Ver no OpenStreetMap</a>}
+          </p>
+        )}
         <p className="secundario">
           Coordenadas: {p.lat}, {p.lon}
         </p>

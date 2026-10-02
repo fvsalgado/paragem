@@ -14,6 +14,7 @@ import {
   NOME_DOS_MODOS,
   regiao,
   NAO_ENCONTRADA,
+  temMosaicos,
 } from '@/lib/dados';
 import { metadadosDaRegiao } from '@/lib/metadados';
 import AbrirPeloEndereco from '@/componentes/AbrirPeloEndereco';
@@ -201,7 +202,8 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
   // ONDE FICA CADA PONTO: a paragem da rede mais perto, e o mapa do sítio já
   // nele quando o ponto está no mapa (`/?ponto=<id>`).
   const ps = await lerParagens(rid);
-  const noMapa = new Set((await procura(rid)).map((x) => x.id));
+  // Só onde há mapa: numa região sem mosaicos o início não tem mapa onde abrir.
+  const noMapa = new Set((await temMosaicos(rid)) ? (await procura(rid)).map((x) => x.id) : []);
   const ondeFica = (p: PontoDeModo) => ({
     perto: paragemMaisPerto(p, ps),
     noMapa: p.id && noMapa.has(p.id) ? url(rid, `/?ponto=${encodeURIComponent(p.id)}`) : null,

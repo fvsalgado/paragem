@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { buscaDeUmaParagem, paragens, sitios, SEM } from './dados-da-regiao';
+import { buscaDeUmaParagem, paragens, sitios, temMosaicos, SEM } from './dados-da-regiao';
 
 /**
  * A procura de SÍTIOS — o que se escreve quando não se procura uma paragem.
@@ -128,6 +128,7 @@ test('nenhum resultado mostra uma etiqueta em inglês', async ({ page }) => {
 test('escolher um ponto leva o mapa até lá', async ({ page }) => {
   // Sem isto, escolher abria o cartão e deixava o mapa onde estava — e quem
   // procurou ficava sem saber onde fica o que encontrou.
+  test.skip(!temMosaicos(), SEM.mosaicos);
   await page.goto(`/`);
   await page.waitForTimeout(3000);
   await page.getByRole('combobox').fill(BUSCA);

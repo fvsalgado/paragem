@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { exigirRegiao, url } from '@/lib/dados';
+import { exigirRegiao, temMosaicos, url } from '@/lib/dados';
 import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
 
 /**
@@ -16,6 +16,9 @@ import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
  */
 export default async function Cabecalho({ regiao: id }: { regiao: string }) {
   const r = await exigirRegiao(id);
+  // Numa região ainda sem mapa, o início é a procura e o planeador — e uma
+  // ligação chamada «Mapa» que abre uma página sem mapa promete o que não há.
+  const temMapa = await temMosaicos(id);
   return (
     <header className="cabecalho">
       <div className="interior">
@@ -28,7 +31,7 @@ export default async function Cabecalho({ regiao: id }: { regiao: string }) {
         <nav aria-label="Principal">
           <ul>
             <li>
-              <Link href={url(id)}>Mapa</Link>
+              <Link href={url(id)}>{temMapa ? 'Mapa' : 'Início'}</Link>
             </li>
             <li>
               <Link href={url(id, 'rede/')}>A rede</Link>
