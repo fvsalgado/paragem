@@ -14,7 +14,7 @@ export async function generateMetadata({
   if (!r) return {};
   return metadadosDaRegiao(r, {
     titulo: 'Como chegar',
-    descricao: `Planear uma viagem ${r.em}: de uma paragem, uma estação ou um sítio a outro, com transbordos e as horas dos horários planeados.`,
+    descricao: `Como chegar ${r.em}: de uma paragem, uma estação ou um sítio a outro, com transbordos e as horas dos horários planeados.`,
     caminho: '/viagem/',
   });
 }

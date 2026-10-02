@@ -81,7 +81,7 @@ export default async function Acessibilidade({ params }: { params: Promise<{ reg
       <p>
         Por autoavaliação, com verificação automática em cada alteração ao sítio. Última construção:
         os dados são os que o pipeline produziu, e a data está em{' '}
-        <a href={url(rid, '/dados-abertos/')}>Dados e licenças</a>.
+        <a href={url(rid, '/dados-abertos/')}>Dados abertos</a>.
       </p>
 
       <h2>Contacto e mecanismo de reclamação</h2>

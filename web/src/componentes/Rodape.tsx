@@ -11,7 +11,10 @@ export default async function Rodape({ regiao: id }: { regiao: string }) {
         <nav aria-label="Rodapé">
           <ul>
             <li>
-              <Link href={url(id, 'dados-abertos/')}>Dados e licenças</Link>
+              {/* UM NOME POR COISA (P2-042): «Dados abertos» aqui, no menu e no
+                  título da página. Eram «Dados e licenças» num sítio e «Dados
+                  abertos» noutro, e quem procurava um não achava o outro. */}
+              <Link href={url(id, 'dados-abertos/')}>Dados abertos</Link>
             </li>
             <li>
               <Link href={url(id, 'acessibilidade/')}>Acessibilidade</Link>

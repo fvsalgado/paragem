@@ -15,7 +15,7 @@ export async function generateMetadata({
   const r = await regiao(rid);
   if (!r) return {};
   return metadadosDaRegiao(r, {
-    titulo: 'Dados e licenças',
+    titulo: 'Dados abertos',
     descricao: `Os dados dos transportes ${r.de} para descarregar, cada ficheiro com a origem, a data e os termos.`,
     caminho: '/dados-abertos/',
   });
@@ -116,7 +116,7 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
 
   return (
     <>
-      <h1>Dados e licenças</h1>
+      <h1>Dados abertos</h1>
       <p>
         Os dados {r.de} são construídos a partir de fontes públicas, com um comando só, e o que
         falta fica escrito em vez de preenchido a palpite. Aqui estão os ficheiros que saem dessa
