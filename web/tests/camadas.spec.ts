@@ -141,9 +141,9 @@ test('os botões de aproximar e afastar ficam à vista e ao alcance do dedo', as
   // O que se mede é o que o dedo apanha no meio de cada um. `toBeVisible` não
   // chegava: um botão tapado por outra coisa continua «visível» para ele.
   //
-  // Pela classe e não pelo papel: o mapa inteiro está `aria-hidden` (ver
-  // `Mapa.tsx`), e o que a árvore de acessibilidade não tem não se encontra
-  // pelo nome.
+  // Pela classe e não pelo papel: o que se mede é a caixa que o MapLibre
+  // desenha, e a classe é o que a identifica sem depender do nome que o
+  // controlo leva em cada língua.
   await page.goto(`/`);
   await mapaPronto(page);
   for (const [nome, classe] of [

@@ -349,8 +349,8 @@ test('o painel das direções, aberto sobre o mapa, também passa no axe', async
   await expect(page.getByRole('heading', { name: 'Transportes públicos' })).toBeVisible();
 
   const r = await new AxeBuilder({ page })
-    // A tela do mapa está `aria-hidden` de propósito — ver `Mapa.tsx`. O axe
-    // analisa o resto, que é o que se usa.
+    // A tela do mapa está `aria-hidden` de propósito, e fora da ordem do
+    // tabulador — ver `Mapa.tsx`. O axe analisa o resto, que é o que se usa.
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze();
   expect(

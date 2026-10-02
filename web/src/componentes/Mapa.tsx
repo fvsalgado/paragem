@@ -37,8 +37,9 @@ import type { PercursoGeo } from '@/lib/otp';
  *
  * ACESSIBILIDADE, e é o ponto que decide se isto é legal ou não. Uma tela de
  * mosaicos não é legível por um leitor de ecrã, e fingir que é com
- * `role="application"` e uma etiqueta é pior do que assumir. Aqui o mapa está
- * `aria-hidden`, e **tudo o que se faz nele faz-se também na lista ao lado** —
+ * `role="application"` e uma etiqueta é pior do que assumir. Aqui a tela do
+ * mapa está `aria-hidden` (os botões dele não: têm nome, e o foco chega-lhes),
+ * e **tudo o que se faz nele faz-se também na lista ao lado** —
  * que é HTML a sério, com ligações a sério. O mapa é uma vista dos dados, não
  * a única porta para eles.
  */
@@ -160,6 +161,19 @@ export default function Mapa({
           localIdeographFontFamily: "'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif",
         });
         mapa.current = criado;
+
+        // A TELA ESCONDE-SE, OS BOTÕES NÃO.
+        //
+        // O mapa inteiro estava `aria-hidden`, com os botões de aproximar, de
+        // afastar e da localização lá dentro — e um botão escondido que se
+        // alcança com o tabulador é uma armadilha: o foco vai para lá e o
+        // leitor de ecrã não diz nada. O axe chama-lhe grave, e só deu por
+        // isso quando houve uma região com mapa nos testes. O que não se lê é
+        // a tela dos mosaicos, e é só ela que se esconde — e sai da ordem do
+        // tabulador com ela. Os botões têm nome em português e ficam.
+        const tela = criado.getCanvas();
+        tela.setAttribute('aria-hidden', 'true');
+        tela.setAttribute('tabindex', '-1');
 
         // O ÚNICO PONTO POR ONDE ISTO SE TESTA.
         //
@@ -506,10 +520,11 @@ export default function Mapa({
 
   return (
     <div className="mapa-caixa">
-      {/* `aria-hidden`: uma tela de mosaicos não é legível, e dizer que é com
-          uma etiqueta é enganar quem depende dela. O caminho sem mapa está na
-          lista, que é HTML a sério. */}
-      <div ref={caixa} className="mapa" aria-hidden="true" />
+      {/* A TELA de mosaicos não é legível, e dizer que é com uma etiqueta é
+          enganar quem depende dela: esconde-se ela (ver acima), e não a caixa
+          inteira, que tem os botões. O caminho sem mapa está na procura e nas
+          listas, que são HTML a sério. */}
+      <div ref={caixa} className="mapa" />
       {estado === 'a-carregar' && <p className="mapa-aviso">A carregar o mapa…</p>}
       {/* O AVISO MANDA PARA ONDE HÁ RESPOSTA. Prometia «a lista de paragens
           em baixo», e não há lista nenhuma por baixo do mapa: quem a ia
