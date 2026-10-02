@@ -77,6 +77,18 @@ export function nomeDaRede(r: Pick<Regiao, 'rede'>): string {
   return /^rede\b/i.test(nome) ? nome : `Rede ${nome}`;
 }
 
+/**
+ * A rede como complemento de uma frase: «a rede Sável Bus», «a Rede Alta».
+ *
+ * O mesmo cuidado do `nomeDaRede`: um nome que já é uma frase («Rede Alta»)
+ * leva só o artigo; uma marca («Sável Bus») leva «a rede» à frente.
+ */
+export function aRede(r: Pick<Regiao, 'rede'>): string {
+  const nome = (r.rede?.nome ?? '').trim();
+  if (!nome) return 'a rede';
+  return /^rede\b/i.test(nome) ? `a ${nome}` : `a rede ${nome}`;
+}
+
 const AUTORIDADE_SEM_ARTIGO = {
   com_artigo: 'a autoridade de transportes',
   de: 'da autoridade de transportes',

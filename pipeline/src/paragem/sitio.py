@@ -54,6 +54,11 @@ from .regiao import Saida as SaidaDaReceita
 # de cobertura; aqui é a mesma pergunta, feita ao contrário.
 RAIO_CORRESPONDENCIA_KM = 0.3
 
+# Numa região sem carta administrativa, até onde é que a paragem da rede mais
+# perto empresta o concelho a uma estação de bicicletas ou a uma praça de
+# táxis. Um quilómetro é a vila; mais do que isso já é adivinhar.
+RAIO_SEM_CARTA_KM = 1.0
+
 
 def _json_seguro(o: Any) -> str:
     """Datas em ISO, e nada mais.
@@ -173,6 +178,9 @@ class Sitio:
         self.destino = Path(destino) / "sitio"
         self.saidas: list[Saida] = []
         self._feeds: dict[str, Gtfs] = {}
+        # As paragens da rede que já têm concelho, para atribuir os pontos dos
+        # outros modos numa região sem carta administrativa (`_concelho_de`).
+        self._paragens_com_concelho: list[tuple[float, float, str]] = []
 
     # --- utilitários ----------------------------------------------------
 
@@ -295,7 +303,7 @@ class Sitio:
 
     # --- a região -------------------------------------------------------
 
-    def regiao_json(self) -> dict[str, Any]:
+    def regiao_json(self, territorio=None) -> dict[str, Any]:
         r = self.regiao
         return {
             "id": r.id,
@@ -328,6 +336,11 @@ class Sitio:
             "modos_de_terceiros": self.modos_de_terceiros,
             "municipios_membros": r.municipios_membros,
             "concelhos_servidos": r.concelhos_servidos,
+            # SE O CONCELHO DE CADA PONTO VEIO DA CARTA. Sem ela, um ponto sem
+            # concelho não está fora da região — está por atribuir —, e a
+            # página das bicicletas punha a estação do terminal «Fora da
+            # região» (P2-032). Quem sabe qual das duas é, é a construção.
+            "concelhos_pela_carta": territorio is not None,
             "caixa": {
                 "lat_min": r.caixa.lat_min,
                 "lat_max": r.caixa.lat_max,
@@ -442,6 +455,9 @@ class Sitio:
             )
             detalhe[sid] = partidas.get(sid, [])
         indice.sort(key=lambda p: p["ordem"])
+        self._paragens_com_concelho = [
+            (p["lat"], p["lon"], p["concelho"]) for p in indice if p.get("concelho")
+        ]
         return indice, detalhe
 
     def _partidas_do_feed(
@@ -1083,6 +1099,11 @@ class Sitio:
                     "operador": p.get("operador") or None,
                     "rede": p.get("rede") or None,
                     "cor": p.get("cor") or None,
+                    # POR ONDE PASSA, EM CONCELHOS. A página do concelho conta
+                    # os modos que há ali, e um traçado sem concelho não
+                    # contava em lado nenhum: o urbano que corre de ponta a
+                    # ponta da vila aparecia como «sem registo neste concelho».
+                    "concelhos": self._concelhos_do_tracado(territorio, f.get("geometry") or {}),
                 }
             )
         percursos.sort(key=lambda p: _simples(str(p["nome"])))
@@ -1094,6 +1115,21 @@ class Sitio:
                 "vêm dos cartazes de quem as opera."
             ],
         }
+
+    def _concelhos_do_tracado(self, territorio, geometria: dict[str, Any]) -> list[str]:
+        """Os concelhos por onde um traçado passa, pela ordem em que os toca."""
+        tipo = geometria.get("type")
+        coordenadas = geometria.get("coordinates") or []
+        partes = [coordenadas] if tipo == "LineString" else coordenadas
+        vistos: dict[str, None] = {}
+        for parte in partes if tipo in ("LineString", "MultiLineString") else []:
+            for ponto in parte:
+                if len(ponto) < 2:
+                    continue
+                c = self._concelho_de(territorio, float(ponto[1]), float(ponto[0]))
+                if c:
+                    vistos.setdefault(c, None)
+        return list(vistos)
 
     def _modo_cartaz(self, decl, territorio) -> dict[str, Any] | None:
         """Uma linha lida do cartaz da câmara: a sequência das paragens e as horas.
@@ -1276,10 +1312,34 @@ class Sitio:
         }
 
     def _concelho_de(self, territorio, lat: float, lon: float) -> str | None:
-        if territorio is None:
-            return None
-        limite = territorio.concelho_de(lat, lon)
-        return self._concelho_por_dico(limite.codigo) if limite else None
+        """Em que concelho fica um ponto que não é uma paragem da rede.
+
+        Pela carta administrativa, quando a região a tem — e aí um ponto fora
+        de todos os concelhos não é de nenhum, que é a resposta certa.
+
+        SEM CARTA, PELA PARAGEM DA REDE MAIS PERTO, e só se estiver a menos de
+        um quilómetro. Devolvia `None` sem mais, e a demonstração contradizia-
+        se: a página do concelho dizia «nenhum aqui» para as bicicletas e os
+        táxis da vila onde eles estão, e a das bicicletas punha a estação ao
+        lado do terminal «Fora da região» (P2-032). As paragens já têm concelho
+        nessa região — pelo prefixo do identificador, que é indício e não
+        prova, e é o mesmo indício que aqui se herda. O relatório diz que a
+        atribuição não é pela carta (`territorio.sem-caop`); o que não tem
+        paragem nenhuma perto fica sem concelho, e a página diz que está por
+        atribuir.
+        """
+        if territorio is not None:
+            limite = territorio.concelho_de(lat, lon)
+            return self._concelho_por_dico(limite.codigo) if limite else None
+        perto = min(
+            (
+                (distancia_km((lat, lon), (a, b)), concelho)
+                for a, b, concelho in self._paragens_com_concelho
+                if abs(a - lat) < 0.02 and abs(b - lon) < 0.02
+            ),
+            default=None,
+        )
+        return perto[1] if perto and perto[0] <= RAIO_SEM_CARTA_KM else None
 
 
 def partidas_das_estacoes(estacoes: list[dict], g, feed: str) -> dict[str, list[dict[str, Any]]]:
@@ -1396,7 +1456,7 @@ def construir(raiz: Path, regiao: Regiao, destino: Path, territorio=None) -> Sit
             "ou o recorte territorial deixou tudo de fora."
         )
 
-    s._escrever("regiao.json", s.regiao_json())
+    s._escrever("regiao.json", s.regiao_json(territorio))
     s._escrever("concelhos.json", s.concelhos_json(indice_paragens))
     s._escrever("paragens.json", indice_paragens)
     s._escrever("linhas.json", indice_linhas)

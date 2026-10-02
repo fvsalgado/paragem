@@ -71,18 +71,28 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   });
 }
 
-/** As coisas de um modo, agrupadas pelo concelho onde estão. */
+/**
+ * As coisas de um modo, agrupadas pelo concelho onde estão.
+ *
+ * O QUE NÃO TEM CONCELHO NÃO ESTÁ FORA DA REGIÃO, a menos que a carta
+ * administrativa o diga. Sem carta, o concelho de um ponto é o da paragem da
+ * rede mais perto, e o que não tem paragem perto fica por atribuir — e a
+ * página das bicicletas da demonstração punha a estação ao lado do terminal
+ * «Fora da região» (P2-032). Dados de antes da bandeira continuam a dizer o
+ * que diziam.
+ */
 function porConcelho<T extends { concelho: string | null }>(
   itens: T[],
   nomes: Map<string, string>,
+  semConcelho: string,
 ): { id: string; nome: string; itens: T[] }[] {
   const grupos = new Map<string, T[]>();
   for (const i of itens) {
-    const k = i.concelho ?? 'fora-da-regiao';
+    const k = i.concelho ?? 'sem-concelho';
     grupos.set(k, [...(grupos.get(k) ?? []), i]);
   }
   return [...grupos.entries()]
-    .map(([id, itens]) => ({ id, nome: nomes.get(id) ?? 'Fora da região', itens }))
+    .map(([id, itens]) => ({ id, nome: nomes.get(id) ?? semConcelho, itens }))
     .sort((a, b) => a.nome.localeCompare(b.nome, 'pt'));
 }
 
@@ -184,7 +194,8 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
   const nomes = new Map(cs.map((c) => [c.id, c.nome]));
   const nome = NOME_DOS_MODOS[mid] ?? mid;
 
-  const pontos = porConcelho(m.pontos, nomes);
+  const semConcelho = r.concelhos_pela_carta === false ? 'Concelho por atribuir' : 'Fora da região';
+  const pontos = porConcelho(m.pontos, nomes, semConcelho);
   const semNada = cs.filter((c) => !m.pontos.some((p) => p.concelho === c.id));
 
   // ONDE FICA CADA PONTO: a paragem da rede mais perto, e o mapa do sítio já
@@ -256,7 +267,7 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
               {s.estado === 'por-confirmar' && (
                 <p className="marca-dados">Estado do serviço por confirmar.</p>
               )}
-              {porConcelho(s.estacoes, nomes).map((g) => (
+              {porConcelho(s.estacoes, nomes, semConcelho).map((g) => (
                 <section key={g.id} aria-labelledby={`s-${s.id}-${g.id}`}>
                   <h3 id={`s-${s.id}-${g.id}`}>
                     {g.nome} <span className="secundario">{g.itens.length}</span>

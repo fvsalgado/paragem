@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { concelhos, exigirRegiao, urlRede, regiao } from '@/lib/dados';
-import { aAutoridade, maiuscula, plural } from '@/lib/prosa';
+import { aAutoridade, aRede, maiuscula, plural } from '@/lib/prosa';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
 export async function generateMetadata({
@@ -34,9 +34,16 @@ export default async function Concelhos({ params }: { params: Promise<{ regiao: 
     <>
       <h1>Concelhos</h1>
       {/* Os dois números nunca se misturam e nenhum se esconde (§2). */}
+      {/* UM MUNICÍPIO FALA COMO UM MUNICÍPIO (P4-009): diz que rede gere, e
+          quantos concelhos ela serve — sem «municípios membros», que é a
+          frase de uma comunidade intermunicipal. */}
       <p>
         {municipio
-          ? `A rede serve ${plural(r.concelhos_servidos, 'concelho', 'concelhos')}.`
+          ? `${maiuscula(aAutoridade(r, 'com_artigo'))} gere ${aRede(r)}, que serve ${plural(
+              r.concelhos_servidos,
+              'concelho',
+              'concelhos',
+            )}.`
           : `${maiuscula(aAutoridade(r, 'com_artigo'))} tem ${plural(
               r.municipios_membros,
               'município membro',
