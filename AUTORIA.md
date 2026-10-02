@@ -24,7 +24,7 @@ inventário com origem, licença e data está em
 | PDF de horários e mapas de rede dos operadores           | `data/manual/<regiao>/`          |
 | Saídas do protótipo, guardadas só para comparação        | `data/reference/<regiao>/`       |
 | Dados do OpenStreetMap, sob ODbL 1.0                     | tudo o que sai dos leitores `osm-*` |
-| GTFS de terceiros (CP, FlixBus, o feed arquivado do Meio) | `build/<regiao>/gtfs/`, e o que dele deriva |
+| GTFS de terceiros (os nacionais e os que cada região declare) | `build/<regiao>/gtfs/`, e o que dele deriva |
 | Marcas das autoridades de transportes e dos operadores   | por região, quando existirem     |
 
 ## Três licenças, e o que cada uma cobre
@@ -34,9 +34,24 @@ inventário com origem, licença e data está em
 Todo o código — o pipeline, os leitores, o sítio — e a documentação. É o que o
 [`LICENSE`](LICENSE) declara.
 
-### Os dados que saem do pipeline **não levam licença declarada**
+### Os dados que saem do pipeline levam **os termos de cada ficheiro**
 
-E isto é diferente de não ter licença: é não a declararmos ainda, de propósito.
+Cada ficheiro que se descarrega diz os seus, e o rótulo sai do código
+(`_termos`, em `pipeline/src/paragem/sitio.py`) e não de uma frase escrita à
+parte:
+
+- **ODbL** — quando a receita da região a declara (`licenca:`), na saída ou na
+  fonte. É o que deriva do OpenStreetMap, e leva a atribuição dentro do próprio
+  ficheiro;
+- **para consulta** — o rótulo por omissão: construído por nós a partir de
+  fontes sem licença aberta declarada;
+- **de terceiros** — o ficheiro de outra entidade, filtrado à região, com os
+  termos dela;
+- **obra da casa** — as regiões de prova, sob a licença do código, e o
+  relatório da construção, sob CC BY 4.0.
+
+«Para consulta» é diferente de não ter licença: é não a declararmos ainda, de
+propósito.
 
 O Coreto, que é o projeto irmão, publica a compilação da sua agenda sob CC BY
 4.0, e pode fazê-lo porque a compilação é obra da casa e as fontes são páginas
@@ -90,4 +105,4 @@ A declaração legível por máquina está em [`REUSE.toml`](REUSE.toml), e o
 
 ---
 
-Reporta-se ao estado do repositório a 19 de setembro de 2026.
+Reporta-se ao estado do repositório a 2 de outubro de 2026.
