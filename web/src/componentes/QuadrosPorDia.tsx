@@ -24,17 +24,27 @@ export type QuadroDoDia = {
  * quem lia tinha de o saber de cor.
  *
  * Que quadro vale hoje pergunta-se à MESMA tabela dos dias do «A seguir» e do
- * cartão do mapa (`calendarioDe`), e só no navegador: a página é servida da
- * cache, e o «hoje» do servidor seria o da última vez que a página se fez.
- * Até lá — e para quem não tem JavaScript — os quadros estão todos fechados,
- * e abrem-se ao toque como sempre.
+ * cartão do mapa (`calendarioDe`). Responde primeiro o servidor, com a dele, e
+ * os de hoje já vêm abertos no HTML — também para quem não tem JavaScript.
+ * Mas a página é servida da cache, e o «hoje» do servidor é o da última vez
+ * que ela se fez: o navegador refaz a conta com o seu relógio, e só mexe se o
+ * dia for outro. Sem a tabela no servidor, os quadros vêm fechados e abrem-se
+ * quando o navegador souber.
  */
 export default function QuadrosPorDia({
   regiao,
   quadros,
+  noServidor = null,
 }: {
   regiao: string;
   quadros: QuadroDoDia[];
+  /**
+   * Os quadros que valiam hoje quando a página se fez (`quadrosDeHoje`), para
+   * virem abertos e marcados JÁ NO HTML. Abriam-se quando o navegador acabava
+   * as contas, e o horário saltava por baixo do dedo (P3-010). O navegador
+   * refaz a conta com o seu relógio, e só mexe se o dia for outro.
+   */
+  noServidor?: { hoje: string; abertos: string[] } | null;
 }) {
   const [calendario, setCalendario] = useState<Calendario | null | undefined>(undefined);
   useEffect(() => {
@@ -55,16 +65,27 @@ export default function QuadrosPorDia({
   }, []);
 
   const deHoje = calendario && hoje ? servicosNoDia(calendario, hoje) : null;
-  const valeHoje = (q: QuadroDoDia) => !!deHoje && q.servicos.some((s) => deHoje.has(s));
+  // Antes de o navegador saber, vale o que o servidor sabia.
+  const valeHoje = (q: QuadroDoDia) =>
+    deHoje
+      ? q.servicos.some((s) => deHoje.has(s))
+      : !calendario && !!noServidor?.abertos.includes(q.chave);
 
   // OS DE HOJE ABREM-SE UMA VEZ, quando se sabe que dia é. Depois disso
   // mandam as mãos de quem lê: fechar um não o volta a abrir.
-  const [abertos, setAbertos] = useState<Set<string>>(() => new Set());
+  //
+  // E JÁ VÊM ABERTOS DO SERVIDOR, quando ele tem a tabela: abriam-se aqui,
+  // quando o navegador acabava as contas, e o horário saltava por baixo do
+  // dedo (P3-010). O mesmo dia dá a mesma resposta, e nada se mexe; só uma
+  // página feita ontem — a cache dura uma hora — se refaz aqui.
+  const [abertos, setAbertos] = useState<Set<string>>(() => new Set(noServidor?.abertos ?? []));
   const [jaAbriu, setJaAbriu] = useState(false);
   const pronto = calendario !== undefined && hoje !== null;
   useEffect(() => {
     if (!pronto || jaAbriu) return;
-    setAbertos(new Set(quadros.filter(valeHoje).map((q) => q.chave)));
+    if (!noServidor || noServidor.hoje !== hoje) {
+      setAbertos(new Set(quadros.filter(valeHoje).map((q) => q.chave)));
+    }
     setJaAbriu(true);
     // `valeHoje` muda com o dia; o que interessa é a primeira vez.
     // eslint-disable-next-line react-hooks/exhaustive-deps

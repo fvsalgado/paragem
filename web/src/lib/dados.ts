@@ -46,6 +46,13 @@ import {
   type Mapa,
 } from './regiao-host';
 import { modosLigados, modulosDesligadosDoAmbiente, semModulosDesligados } from './modulos';
+import {
+  calendarioDasMascaras,
+  servicosNoDia,
+  type Calendario,
+  type CalendarioEmMascaras,
+} from './dias';
+import { diaNoFuso } from './fuso';
 
 /**
  * Onde estão os dados. Em produção é a porta pública do balde `sitio` do
@@ -398,6 +405,44 @@ export const dadosAbertos = cache(async (r: string): Promise<Descarga[]> => {
   const fora = await modulosDesligados(r);
   return todos.filter((d) => d.modo === null || !fora.includes(d.modo));
 });
+
+/**
+ * A TABELA DOS DIAS, lida no servidor — para os quadros de hoje virem abertos
+ * já no HTML, em vez de se abrirem quando o navegador acaba as contas e
+ * empurrarem a página para baixo (CLS de 0,27 na página de uma linha da região
+ * real, P3-010).
+ *
+ * Só a forma em máscaras (`calendario.json`): a de antes tem 1,9 MB na região
+ * real, e a cache de dados do Next não guarda respostas acima de 2 MB — era
+ * relida a cada página. Sem ela, os quadros abrem-se no navegador, como antes.
+ */
+export const calendarioDaRegiao = cache(async (r: string): Promise<Calendario | null> => {
+  const c = await ler<CalendarioEmMascaras | null>(r, 'calendario.json', null);
+  return c && Array.isArray(c.padroes) && Array.isArray(c.servicos)
+    ? calendarioDasMascaras(c)
+    : null;
+});
+
+/**
+ * Que quadros valem HOJE, no fuso da casa, pela tabela dos dias do servidor —
+ * ou `null` quando ele não a tem. O hoje é o da renderização: a página fica em
+ * cache uma hora, e o navegador volta a fazer a conta com o relógio de quem lê
+ * (`QuadrosPorDia`); só muda alguma coisa na hora a seguir à meia-noite.
+ */
+export async function quadrosDeHoje(
+  r: string,
+  quadros: { chave: string; servicos: string[] }[],
+): Promise<{ hoje: string; abertos: string[] } | null> {
+  const cal = await calendarioDaRegiao(r);
+  if (!cal) return null;
+  const hoje = diaNoFuso(new Date()).replace(/-/g, '');
+  const deHoje = servicosNoDia(cal, hoje);
+  if (!deHoje) return { hoje, abertos: [] };
+  return {
+    hoje,
+    abertos: quadros.filter((q) => q.servicos.some((s) => deHoje.has(s))).map((q) => q.chave),
+  };
+}
 
 /**
  * O índice leve que VAI PARA O NAVEGADOR — o planeador e o «Perto de ti».

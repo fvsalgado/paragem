@@ -33,11 +33,14 @@ export default function PartidasDaParagem({
   partidas,
   cores,
   quadros,
+  quadrosDeHoje = null,
 }: {
   regiao: string;
   partidas: PartidasCompactas;
   cores: Record<string, string | null>;
   quadros: QuadroDoDia[];
+  /** Os quadros que valiam hoje quando a página se fez — ver `QuadrosPorDia`. */
+  quadrosDeHoje?: { hoje: string; abertos: string[] } | null;
 }) {
   return (
     <>
@@ -53,7 +56,7 @@ export default function PartidasDaParagem({
 
       <section aria-labelledby="horario">
         <h2 id="horario">Horário completo</h2>
-        <QuadrosPorDia regiao={regiao} quadros={quadros} />
+        <QuadrosPorDia regiao={regiao} quadros={quadros} noServidor={quadrosDeHoje} />
       </section>
     </>
   );

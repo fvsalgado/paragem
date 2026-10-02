@@ -15,6 +15,7 @@ import {
   regiao,
   urlDaParagem,
   temMosaicos,
+  quadrosDeHoje,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import Distintivo from '@/componentes/Distintivo';
@@ -226,6 +227,7 @@ export default async function Paragem({
           partidas={compactar(partidas)}
           cores={cores}
           quadros={quadros}
+          quadrosDeHoje={await quadrosDeHoje(rid, quadros)}
         />
       )}
 
