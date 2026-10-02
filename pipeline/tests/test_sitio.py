@@ -843,3 +843,38 @@ def test_sem_carta_os_pontos_dos_modos_ficam_no_concelho_da_vila(raiz, tmp_path)
     assert all(estacoes.values()), f"estações sem concelho: {estacoes}"
     assert all(p["concelho"] for p in modos["taxi"]["pontos"])
     assert modos["urbano-municipal"]["percursos"][0]["concelhos"] == ["pedra-alta"]
+
+
+def test_os_sitios_levam_o_concelho_para_dois_homonimos_se_distinguirem(tmp_path):
+    """Dois lugares com o mesmo nome, a dezenas de quilómetros, apareciam
+    iguais na procura (P2-037). O concelho vai no índice — e vazio quando não
+    se sabe, em vez de inventado."""
+    from types import SimpleNamespace
+
+    from paragem.sitio import _sitios
+
+    pasta = tmp_path / "build" / "ensaio" / "geojson"
+    pasta.mkdir(parents=True)
+    feicoes = [
+        {
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [lon, lat]},
+            "properties": {"nome": "Azenha", "tipo": "Lugar", "classe": "place=hamlet"},
+        }
+        for lat, lon in ((40.0, -9.0), (40.3, -9.3), (45.0, -9.0))
+    ]
+    (pasta / "sitios.geojson").write_text(
+        json.dumps({"type": "FeatureCollection", "features": feicoes}), encoding="utf-8"
+    )
+
+    def concelho_de(lat, lon):
+        return {40.0: "vale-fundo", 40.3: "cume-largo"}.get(lat)
+
+    d = _sitios(tmp_path, SimpleNamespace(id="ensaio"), concelho_de)
+    assert d["campos"] == ["nome", "lat", "lon", "tipo", "classe", "concelho"]
+    i = d["campos"].index("concelho")
+    assert sorted(s[i] for s in d["sitios"]) == ["", "cume-largo", "vale-fundo"]
+
+    # Sem quem atribua, o campo existe e fica vazio: não se adivinha.
+    sem = _sitios(tmp_path, SimpleNamespace(id="ensaio"))
+    assert {s[i] for s in sem["sitios"]} == {""}
