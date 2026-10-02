@@ -12,7 +12,13 @@
  */
 import { test, expect } from '@playwright/test';
 
-import { fusoDaRegiao, paragemComMaisPartidas, umaPartidaFutura } from './dados-da-regiao';
+import {
+  fusoDaRegiao,
+  paragemComMaisPartidas,
+  temMosaicos,
+  umaPartidaFutura,
+  SEM,
+} from './dados-da-regiao';
 
 const PARAGEM = paragemComMaisPartidas();
 const PARTIDA = umaPartidaFutura();
@@ -70,6 +76,7 @@ test('os quadros fechados abrem-se ao toque', async ({ page }) => {
 test('«Ver no mapa» abre o mapa do sítio nesta paragem, com o cartão dela', async ({ page }) => {
   // Era «39.463, -8.213525 ver no OpenStreetMap»: coordenadas cruas, que não
   // dizem nada a quem viaja, num sítio que tem o seu próprio mapa.
+  test.skip(!temMosaicos(), SEM.mosaicos);
   await page.goto(`/rede/paragens/${PARAGEM.id}/`);
   const nome = await page.locator('h1').innerText();
   await page.getByRole('link', { name: 'Ver no mapa', exact: true }).click();

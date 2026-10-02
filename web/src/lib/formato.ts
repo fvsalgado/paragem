@@ -104,6 +104,18 @@ export type Regiao = {
   municipios_membros: number;
   concelhos_servidos: number;
   /**
+   * De quem é o mapa de fundo, em HTML, para o canto do mapa — o do
+   * OpenStreetMap numa região real, o nosso numa inventada. `null` numa região
+   * sem mapa; ausente em dados de antes disto, e aí vale o do OpenStreetMap.
+   */
+  mapa?: { atribuicao: string; fonte: 'openstreetmap' | 'propria' } | null;
+  /**
+   * As atribuições que as fontes desta região EXIGEM — o rodapé escreve-as.
+   * Vazia numa região que não usa fonte nenhuma que as peça; ausente em dados
+   * de antes disto.
+   */
+  atribuicoes?: { texto: string; licenca: string; url: string | null }[];
+  /**
    * Se o concelho de cada ponto saiu da carta administrativa. Sem ela, um
    * ponto sem concelho não está «fora da região» — está por atribuir, e a
    * página tem de dizer qual das duas é. Ausente em dados de antes disto.

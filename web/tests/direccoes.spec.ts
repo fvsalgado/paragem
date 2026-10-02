@@ -20,6 +20,7 @@ import {
   modosDisponiveis,
   paragemComMaisPartidas,
   paragemPerto,
+  temMosaicos,
   umaPartidaFutura,
   viagensDeProva,
   SEM,
@@ -160,6 +161,9 @@ test('a página de uma paragem leva às direções com o destino preenchido', as
 });
 
 test('no mapa, «Como chegar» abre as direções ali e não noutra página', async ({ page }) => {
+  // Sem mosaicos não há mapa onde as abrir: o início é a vista sem mapa, que
+  // tem os seus próprios testes (`sem-mapa.spec.ts`).
+  test.skip(!temMosaicos(), SEM.mosaicos);
   await page.goto('/');
   const procura = page.getByRole('combobox', { name: 'Procurar' });
   await procura.fill(PARAGEM.nome);
@@ -330,6 +334,7 @@ test.describe('as viagens de prova da região, pela interface', () => {
     // Cinco cartões e um mapa vazio é fazer a pergunta outra vez.
     const v = VIAGENS.find((x) => x.de && x.para);
     test.skip(!v, SEM.regiaoReal);
+    test.skip(!temMosaicos(), SEM.mosaicos);
     await page.goto('/');
     await page.getByRole('combobox', { name: 'Procurar' }).fill(v!.para!.nome);
     await page.getByRole('listbox').getByRole('option').first().click();
@@ -357,6 +362,7 @@ test.describe('as viagens de prova da região, pela interface', () => {
     // arrasto não funciona com teclado nem com comando de voz.
     const v = VIAGENS.find((x) => x.de && x.para);
     test.skip(!v, SEM.regiaoReal);
+    test.skip(!temMosaicos(), SEM.mosaicos);
     await page.goto('/');
     await page.getByRole('combobox', { name: 'Procurar' }).fill(v!.para!.nome);
     await page.getByRole('listbox').getByRole('option').first().click();
@@ -439,6 +445,10 @@ test.describe('com o relógio antes da primeira partida', () => {
 // --- o ecrã de abertura ---------------------------------------------------
 
 test.describe('a abertura de uma região', () => {
+  // A ABERTURA COM MAPA. Uma região sem mosaicos abre na vista sem mapa, e
+  // essa tem os testes dela em `sem-mapa.spec.ts`.
+  test.skip(!temMosaicos(), SEM.mosaicos);
+
   test('o mapa ocupa o ecrã, e a navegação está no menu', async ({ page }) => {
     /**
      * A faixa do sítio saiu da frente — eram 120 px de um telemóvel a repetir

@@ -15,6 +15,7 @@ import {
   urlDaParagem,
   NAO_ENCONTRADA,
   regiao,
+  temMosaicos,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import ProximasPartidas from '@/componentes/ProximasPartidas';
@@ -64,6 +65,7 @@ export default async function Estacao({
   if (!e) notFound();
   const concelho = (await concelhos(rid)).find((c) => c.id === e.concelho);
   const ficha = await estacaoDetalhe(rid, e.id);
+  const temMapa = await temMosaicos(rid);
   const cores = Object.fromEntries((await linhas(rid)).map((l) => [l.id, l.cor]));
 
   // O AUTOCARRO À PORTA, uma vez por nome. A estação mostrava duas vezes
@@ -106,7 +108,8 @@ export default async function Estacao({
         <Link className="botao" href={url(rid, `/viagem/?para=${encodeURIComponent(e.nome)}`)}>
           Como chegar aqui
         </Link>
-        <a href={url(rid, `/?ponto=${encodeURIComponent(e.id)}`)}>Ver no mapa</a>
+        {/* Só onde há mapa: numa região sem mosaicos o início não tem mapa. */}
+        {temMapa && <a href={url(rid, `/?ponto=${encodeURIComponent(e.id)}`)}>Ver no mapa</a>}
       </p>
       <MarcaDeDados regiao={rid} />
 

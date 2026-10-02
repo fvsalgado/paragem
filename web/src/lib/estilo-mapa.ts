@@ -67,7 +67,17 @@ const largura = (paradas: [number, number][]): unknown => ({
   stops: paradas,
 });
 
-export function estiloDoMapa(urlDosMosaicos: string): StyleSpecification {
+/**
+ * A atribuição de um mapa do OpenStreetMap — a de omissão, para os dados de
+ * antes de a região dizer de quem é o mapa dela.
+ */
+export const ATRIBUICAO_OSM =
+  '© contribuidores do <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, sob ODbL';
+
+export function estiloDoMapa(
+  urlDosMosaicos: string,
+  atribuicao: string = ATRIBUICAO_OSM,
+): StyleSpecification {
   return {
     version: 8,
     name: 'Paragem',
@@ -75,12 +85,16 @@ export function estiloDoMapa(urlDosMosaicos: string): StyleSpecification {
     // derivada, e estes mosaicos são obra derivada. Vai na fonte, que é o
     // sítio onde o MapLibre a lê para a mostrar sozinho — um rodapé
     // esquece-se numa refatoração, um campo da fonte viaja com os dados.
+    //
+    // E VEM DOS DADOS DA REGIÃO. Um mapa desenhado por nós a partir de uma
+    // geografia inventada não é do OpenStreetMap, e escrevê-lo no canto era
+    // atribuir-lhe o que não fez. O esquema das camadas é o mesmo — é o que
+    // deixa este estilo desenhar os dois sem saber qual é qual.
     sources: {
       osm: {
         type: 'vector',
         url: `pmtiles://${urlDosMosaicos}`,
-        attribution:
-          '© contribuidores do <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, sob ODbL',
+        attribution: atribuicao,
       },
     },
     // OS GLIFOS SÃO NOSSOS, e não de um servidor de terceiro.

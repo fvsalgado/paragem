@@ -26,7 +26,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { modoDoTipo, modulosDesligadosDoAmbiente } from '../src/lib/modulos.ts';
-import { BUILD, REGIAO } from './anfitrioes';
+import { BUILD, REGIAO, regioes } from './anfitrioes';
 
 const cache = new Map<string, unknown>();
 
@@ -351,6 +351,18 @@ export function duasParagens(regiao = REGIAO): [Paragem, Paragem] | null {
  */
 export const temMosaicos = (regiao = REGIAO): boolean =>
   existsSync(join(BUILD, regiao, 'mosaicos', 'regiao.pmtiles'));
+
+/**
+ * Uma região que esta corrida serve SEM MAPA — sem mosaicos publicados —, ou
+ * `null` se todas tiverem. É onde se prova que o início sem mapa não é uma
+ * caixa cinzenta: pela propriedade, e não pelo nome de uma região.
+ */
+export function regiaoSemMapa(): string | null {
+  return (
+    regioes().find((r) => existsSync(join(BUILD, r, 'sitio', 'regiao.json')) && !temMosaicos(r)) ??
+    null
+  );
+}
 
 /** Quantos títulos do tarifário estão por confirmar com quem os publica. */
 export const tarifasPorConfirmar = (regiao = REGIAO): number =>

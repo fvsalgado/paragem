@@ -159,6 +159,16 @@ class Regiao:
     # exige que ele saiba responder. Vazio = região sem motor, o que é
     # legítimo: um feed publicado já serve para alguma coisa sem planeador.
     motor: dict[str, Any] = field(default_factory=dict)
+    #: O MAPA DE FUNDO, quando não é o do OpenStreetMap.
+    #:
+    #: Por omissão o mapa sai do recorte do OpenStreetMap que a região já
+    #: declara para o motor (`pipeline mosaicos`, com o Planetiler). Uma região
+    #: INVENTADA não tem recorte que sirva — o OpenStreetMap de onde as
+    #: coordenadas dela caem mostrava terras reais por baixo de uma rede que
+    #: não existe — e declara aqui a sua geografia: `fonte` (um GeoJSON com as
+    #: camadas que o estilo desenha) e `atribuicao` (de quem é o desenho, que é
+    #: o que aparece no canto do mapa). Vazio = o mapa é o do recorte, ou não há.
+    mapa: dict[str, Any] = field(default_factory=dict)
 
     # --- prosa -----------------------------------------------------------
 
@@ -255,6 +265,8 @@ class Regiao:
         ids = {s.fonte for s in self.saidas}
         if self.limites.get("fonte"):
             ids.add(str(self.limites["fonte"]))
+        if self.mapa.get("fonte"):
+            ids.add(str(self.mapa["fonte"]))
         return sorted(ids)
 
     @property
@@ -367,6 +379,7 @@ class Regiao:
             verificacoes=list(df.get("verificacoes") or []),
             limites=dict(df.get("limites") or {}),
             motor=dict(df.get("motor") or {}),
+            mapa=dict(df.get("mapa") or {}),
             raiz=pasta,
         )
         regiao._verificar()

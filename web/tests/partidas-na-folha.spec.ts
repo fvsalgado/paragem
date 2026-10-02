@@ -15,8 +15,10 @@ import { test, expect } from '@playwright/test';
 import {
   buscaDeUmaParagem,
   fusoDaRegiao,
+  temMosaicos,
   umaPartidaFutura,
   umDiaSemPartidas,
+  SEM,
 } from './dados-da-regiao';
 
 // A paragem com mais partidas desta região: é a que tem folha para ler, e sai
@@ -37,6 +39,10 @@ const { busca: BUSCA } = buscaDeUmaParagem();
 const PARTIDA = umaPartidaFutura();
 
 test.use({ timezoneId: fusoDaRegiao() });
+
+// A FOLHA É A DO MAPA: sem mosaicos não há mapa nem folha, e o «a seguir» de
+// uma paragem lê-se na página dela (`paragem.spec.ts`).
+test.skip(!temMosaicos(), SEM.mosaicos);
 
 async function abrirParagem(page: import('@playwright/test').Page) {
   test.skip(!PARTIDA, 'esta região não tem uma única partida num dia com serviço');
