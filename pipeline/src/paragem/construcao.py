@@ -408,14 +408,17 @@ def _correspondencias(ctx: Contexto, destino: Path) -> None:
             raio_metros: 300
 
     e o que faltar diz-se como lacuna: uma verificação que não corre não
-    pode passar por uma que passou.
+    pode passar por uma que passou. Sem `comboio:` ou `autocarro:`, os feeds
+    desse lado saem da própria receita, como as páginas das estações os
+    escolhem (`_saidas_pela_receita`).
     """
     for verificacao in ctx.regiao.verificacoes:
         if verificacao.get("tipo") != "correspondencias-comboio-autocarro":
             continue
         onde = f"regioes/{ctx.regiao.id}/fontes.yaml → verificacoes"
         lados = {
-            lado: _saidas_declaradas(verificacao.get(lado)) for lado in LADOS_DA_CORRESPONDENCIA
+            lado: _saidas_declaradas(verificacao.get(lado)) or _saidas_pela_receita(ctx, lado)
+            for lado in LADOS_DA_CORRESPONDENCIA
         }
 
         sem_lado = [lado for lado, saidas in lados.items() if not saidas]
@@ -543,6 +546,30 @@ def _correspondencias(ctx: Contexto, destino: Path) -> None:
 
 #: Os dois lados de uma correspondência, como a receita os declara.
 LADOS_DA_CORRESPONDENCIA = ("comboio", "autocarro")
+
+
+#: Os papéis da rede da própria região — os mesmos que o `sitio.py` usa para
+#: escolher o «autocarro à porta» das páginas de estação.
+PAPEIS_DA_REDE_PROPRIA = ("horarios", "feed-proprio")
+
+
+def _saidas_pela_receita(ctx: Contexto, lado: str) -> list[str]:
+    """Os feeds de um lado da verificação, quando ela não os nomeia.
+
+    SEM NOMES, ESCOLHE-SE COMO AS PÁGINAS DAS ESTAÇÕES ESCOLHEM: do lado do
+    comboio, as saídas GTFS do modo `comboio`; do lado do autocarro, a rede da
+    própria região (papel `horarios` ou `feed-proprio`). As concessões
+    vizinhas ficam de fora deste lado de propósito — a verificação conta as
+    estações sem a rede da região perto, que é o que a página da estação
+    diz —, e quem as quiser contar declara-as em `autocarro:`. Assim uma
+    região que já declarava a verificação continua a correr com o código
+    novo sem mudar a receita, e uma nova não tem de repetir o que a receita
+    já diz noutro sítio.
+    """
+    zips = [s for s in ctx.regiao.saidas if s.saida and s.saida.endswith(".zip")]
+    if lado == "comboio":
+        return [s.saida for s in zips if s.modo == "comboio" and s.saida]
+    return [s.saida for s in zips if s.papel in PAPEIS_DA_REDE_PROPRIA and s.saida]
 
 
 def _saidas_declaradas(valor: Any) -> list[str]:

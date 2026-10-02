@@ -137,9 +137,13 @@ verificacoes:
     esperado_sem_ligacao: 8   # opcional: se não bater, é um aviso
 ```
 
-Sem `comboio:` ou `autocarro:`, com uma saída que a receita não tem, ou com um
-feed que não se construiu nessa corrida, a verificação não corre — **e diz-se**,
-com uma lacuna (`correspondencias.sem-feeds`, `.feed-desconhecido`,
+Sem `comboio:` ou `autocarro:`, os feeds desse lado saem da própria receita,
+como as páginas das estações os escolhem: do lado do comboio, as saídas do modo
+`comboio`; do lado do autocarro, a rede da região (papel `horarios` ou
+`feed-proprio`), sem as concessões vizinhas — para as contar, declaram-se em
+`autocarro:`. Se nem assim houver feeds, com uma saída que a receita não tem, ou
+com um feed que não se construiu nessa corrida, a verificação não corre — **e
+diz-se**, com uma lacuna (`correspondencias.sem-feeds`, `.feed-desconhecido`,
 `.feed-em-falta`). Uma verificação declarada que salta em silêncio passava por
 uma que passou. O número esperado compara-se e a diferença é um aviso, não um
 bloqueio: o feed do comboio é de terceiros e está vivo. A demonstração
