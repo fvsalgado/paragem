@@ -12,6 +12,7 @@ import type { Ponto } from '@/lib/formato';
 import type { PontosNoNavegador } from '@/lib/pontos-do-navegador';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { aUmaLetra } from '@/lib/letras';
+import { oQueOsDistingue } from '@/lib/homonimos';
 
 /**
  * Escolher de onde e para onde, a escrever.
@@ -78,6 +79,10 @@ const ROTULO_DO_TIPO: Record<string, string> = {
   'a-pedido': 'transporte a pedido',
   linha: 'linha',
 };
+
+/** O que cada resultado é, por extenso, por baixo do nome. */
+const rotuloDe = (p: Ponto): string =>
+  p.tipo === 'sitio' ? p.descricao || 'sítio' : (ROTULO_DO_TIPO[p.tipo] ?? p.tipo);
 
 /** As classes do OpenStreetMap que são terras — o que se escreve primeiro. */
 const TERRAS = new Set(['place=city', 'place=town', 'place=village', 'place=hamlet']);
@@ -403,15 +408,13 @@ export default function EscolherPonto({
   }, [texto, pontos, sitios, opcaoEspecial, linhas, daRede]);
 
   /**
-   * DOIS SÍTIOS COM O MESMO NOME DIZEM DE QUE CONCELHO SÃO (P2-037). O mesmo
-   * «<nome> · lugar», duas vezes, a 37 km uma da outra: não havia como saber
-   * qual era qual, nem antes de escolher nem depois.
+   * DOIS SÍTIOS COM O MESMO NOME DIZEM QUAL É QUAL (P2-037): o concelho e,
+   * dentro do mesmo concelho, a terra mais perto — ver `lib/homonimos.ts`.
    */
-  const repetidos = useMemo(() => {
-    const vezes = new Map<string, number>();
-    for (const p of resultados) vezes.set(simples(p.nome), (vezes.get(simples(p.nome)) ?? 0) + 1);
-    return new Set([...vezes].filter(([, n]) => n > 1).map(([nome]) => nome));
-  }, [resultados]);
+  const distingue = useMemo(
+    () => oQueOsDistingue(resultados, rotuloDe, concelhos, sitios ?? []),
+    [resultados, concelhos, sitios],
+  );
 
   function escolher(p: Ponto) {
     if (p.tipo === 'linha') {
@@ -579,11 +582,8 @@ export default function EscolherPonto({
               {p.tipo !== 'aqui' && (
                 <span className="secundario">
                   {' '}
-                  ·{' '}
-                  {p.tipo === 'sitio' ? p.descricao || 'sítio' : (ROTULO_DO_TIPO[p.tipo] ?? p.tipo)}
-                  {repetidos.has(simples(p.nome)) && concelhos[p.concelho]
-                    ? ` · ${concelhos[p.concelho]}`
-                    : ''}
+                  · {rotuloDe(p)}
+                  {(distingue.get(p) ?? []).map((x) => ` · ${x}`).join('')}
                 </span>
               )}
             </li>
