@@ -119,6 +119,12 @@ export function evento(nome: string, propriedades: Record<string, unknown> = {})
  * operadora.
  */
 export function viagemProcurada(p: {
+  /**
+   * A região, pelo identificador. Sem ela, o relatório do painel (P4-030)
+   * tinha de adivinhar a região pelo domínio de onde o evento veio — que muda
+   * quando a região muda de endereço.
+   */
+  regiao?: string;
   de: string;
   para: string;
   data: string;
@@ -129,6 +135,7 @@ export function viagemProcurada(p: {
   linhas: string[];
 }): void {
   evento('viagem_procurada', {
+    ...(p.regiao ? { regiao: p.regiao } : {}),
     de: p.de,
     para: p.para,
     ligacao: `${p.de} → ${p.para}`,
@@ -153,6 +160,7 @@ export function viagemProcurada(p: {
  * hipóteses de alguém olhar para ela.
  */
 export function viagemSemResposta(p: {
+  regiao?: string;
   de: string;
   para: string;
   data: string;

@@ -24,8 +24,8 @@ uma rede.
 | evento | o que traz | para que serve |
 | --- | --- | --- |
 | `$pageview` | `tipo` (paragem, linha, concelho…) e `id` | que paragens e linhas as pessoas consultam |
-| `viagem_procurada` | `ligacao` («Covas do Vento → Porto Ameno»), dia, hora, dia da semana, nº de opções, minutos e transbordos da melhor, linhas usadas | a procura, e o que a rede lhe responde |
-| **`viagem_sem_resposta`** | `ligacao`, dia, hora, dia da semana | **a procura que a rede não serve** |
+| `viagem_procurada` | `regiao`, `ligacao` («Covas do Vento → Porto Ameno»), dia, hora, dia da semana, nº de opções, minutos e transbordos da melhor, linhas usadas | a procura, e o que a rede lhe responde |
+| **`viagem_sem_resposta`** | `regiao`, `ligacao`, dia, hora, dia da semana | **a procura que a rede não serve** — e o relatório do painel |
 | `motor_indisponivel` | a razão | o planeador em baixo — ver `ALOJAMENTO.md` |
 
 O `tipo` e o `id` saem do endereço e vão como propriedades para que um painel
@@ -51,6 +51,28 @@ aumenta as hipóteses de alguém olhar para ela.
   dá o código — «não mede quem a vê» —, e cumpre-se no código. Uma procura
   feita a partir da caixa «Para onde vais?» abre o planeador no domínio da
   região, e aí mede-se como qualquer outra.
+
+## O relatório no painel (P4-030)
+
+O dado mais valioso — as viagens procuradas sem resposta — ficava no PostHog,
+onde a autoridade de transportes não chegava. Quem gere uma região vê-o agora
+no painel, em «Procuras sem resposta» (`/admin/regioes/<id>/procuras/`): os
+últimos 90 dias, juntos por ligação — «Covas do Vento → Porto Ameno», quantas
+vezes, a última —, e quantas das viagens procuradas ficaram sem resposta. Nada
+que identifique alguém: só os nomes das paragens, que são públicos, e
+contagens.
+
+O painel pergunta ao PostHog pela API de consultas (HogQL), do lado do
+servidor, com uma **chave pessoal só de leitura** (`POSTHOG_CHAVE_PESSOAL`,
+âmbito `query:read`) e o número do projeto (`POSTHOG_PROJETO`) —
+[`ALOJAMENTO.md`](ALOJAMENTO.md). A chave do sítio não serve: só escreve
+eventos, e é pública. **Não é um serviço novo**, é a mesma medição lida do
+outro lado; sem as duas variáveis, a página diz quais faltam.
+
+Os eventos de uma região reconhecem-se pela propriedade `regiao`, que o
+planeador manda desde o lote 8, e pelo domínio de onde vieram (`$host`) — o
+principal e os que levam a ele —, para os anteriores. Só o domínio não chegava:
+muda quando a região muda de endereço.
 
 ## O que a medição custa a quem a usa
 

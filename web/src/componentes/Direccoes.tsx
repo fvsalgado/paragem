@@ -359,6 +359,7 @@ export default function Direccoes({
         ? comTransporte.reduce((a, b) => (a.duration <= b.duration ? a : b))
         : null;
       viagemProcurada({
+        regiao,
         de: de.nome,
         para: para.nome,
         data: d,
@@ -377,7 +378,9 @@ export default function Direccoes({
         !foraDosHorarios(d) &&
         d >= dataDoCampo(new Date())
       ) {
-        if (its.length === 0) viagemSemResposta({ de: de.nome, para: para.nome, data: d, hora: h });
+        if (its.length === 0) {
+          viagemSemResposta({ regiao, de: de.nome, para: para.nome, data: d, hora: h });
+        }
         // E A PRÓXIMA PROCURA-SE: o vazio passa a ser uma resposta (P2-003).
         // Também quando só há voltas: entre duas cidades vizinhas, ir à
         // capital e voltar não é a resposta — a próxima ligação direta é.
