@@ -107,9 +107,12 @@ export default async function CatalogoDaRegiao({
             <DireccoesDaPagina
               pontos={pontos}
               regiao={rid}
+              caixa={r.caixa}
+              emDaRegiao={r.em}
               modosDesligados={r.modos_desligados ?? []}
               motorDaRegiao={motorDaRegiao(rid, r.demonstracao)}
               servicosSemDatas={servicosSemDatas(await lacunas(rid))}
+              temAPedido={r.modos.includes('a-pedido') && !!pedido}
             />
           </section>
         </>

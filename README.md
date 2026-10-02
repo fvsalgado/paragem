@@ -95,6 +95,9 @@ Três públicos, por esta ordem:
   a toda a gente ao mesmo tempo.
 - **Quem constrói outra coisa** — quem quer os dados. Saem em GTFS e GBFS, os
   formatos que o resto do mundo lê, com as licenças e as atribuições à vista.
+  E quem quer só ligar ao planeador — o «Como chegar» de um evento, de uma
+  câmara — faz uma ligação com a viagem no endereço:
+  [`docs/ENDERECOS.md`](docs/ENDERECOS.md).
 
 ## Regras que não são de estilo
 

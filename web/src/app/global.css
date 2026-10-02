@@ -1645,14 +1645,16 @@ ul.opcoes > li + li {
 }
 
 /* O resumo é um BOTÃO que ocupa a linha toda: o alvo é a linha, como num
-   mapa, e não uma ligaçãozinha num canto. */
+   mapa, e não uma ligaçãozinha num canto.
+
+   FLEXÍVEL, E NÃO UMA GRELHA FIXA (P3-020). Com a letra do sistema a 200 %,
+   a grelha de duas colunas não cabia: a duração saía cortada («2 h 25», sem
+   o «min») e os nomes partiam a meio da palavra. Agora a fila de ícones e a
+   duração partilham a linha enquanto cabem, e quando não cabem a duração
+   desce para a linha dela, encostada à direita. */
 button.resumo-opcao {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-areas:
-    'tira  duracao'
-    'horas duracao'
-    'nota  duracao';
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.15rem 0.75rem;
   width: 100%;
@@ -1672,7 +1674,7 @@ button.resumo-opcao:hover {
   background: #dfeaef;
 }
 .resumo-opcao .tira {
-  grid-area: tira;
+  flex: 1 1 11rem;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -1692,17 +1694,18 @@ button.resumo-opcao:hover {
   font-weight: 700;
 }
 .resumo-opcao .duracao {
-  grid-area: duracao;
+  flex: none;
+  margin-left: auto;
   font-size: 1.3rem;
   font-weight: 700;
   white-space: nowrap;
 }
 .resumo-opcao .horas {
-  grid-area: horas;
+  flex: 1 0 100%;
   font-size: 0.95rem;
 }
 .resumo-opcao .nota {
-  grid-area: nota;
+  flex: 1 0 100%;
   color: var(--texto-secundario);
   font-size: 0.85rem;
 }
@@ -1960,6 +1963,33 @@ ol.percurso li.troco .oque {
 }
 ol.percurso li.troco .secundario {
   font-size: 0.9rem;
+}
+
+/* COM A LETRA GRANDE, A HORA SOBE PARA CIMA DO NOME (P3-020). A coluna da
+   hora cresce com a letra, e com a letra a 200 % sobravam cem píxeis para o
+   nome da paragem — partido a meio das palavras, uma sílaba por linha. Em
+   `em`, a medida acompanha a letra que quem lê escolheu: a 390 px com a
+   letra normal isto não se aplica; com a letra a dobrar, aplica-se. */
+@media (max-width: 24em) {
+  ol.percurso li {
+    grid-template-columns: 1.1rem 1fr;
+  }
+  ol.percurso li.paragem .hora {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: left;
+  }
+  ol.percurso li.paragem .no {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+  ol.percurso li.paragem .onde {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  ol.percurso li.troco .hora {
+    display: none;
+  }
 }
 
 /* A cor do fio é a do modo — a mesma do percurso desenhado no mapa, para que
@@ -3283,3 +3313,106 @@ dialog.menu-do-mapa .lista .secundario {
   white-space: nowrap;
   border: 0;
 }
+
+/* === O PLANEADOR E O MAPA ================================================ */
+
+/* --- as direções: o lugar dos resultados, o esqueleto, os desvios ------- */
+
+/* NA PÁGINA, O LUGAR DOS RESULTADOS ESTÁ GUARDADO desde o início (P3-009):
+   o rodapé fica por baixo da dobra desde o primeiro pixel, e o que chega não
+   empurra nada que se esteja a ver. */
+.zona-de-resultados.em-pagina {
+  min-height: 60vh;
+}
+.zona-de-resultados .a-procurar {
+  margin: 0.75rem 1rem;
+}
+/* Uma classe à parte, e não `opcoes`: o esqueleto não é uma lista de opções,
+   e quem as conta — um teste, um leitor de ecrã — não o deve contar. */
+ul.opcoes-fantasma {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+ul.opcoes-fantasma > li {
+  padding: 0.7rem 1rem;
+}
+ul.opcoes-fantasma > li + li {
+  border-top: 1px solid var(--linhas);
+}
+/* Três barras da altura das linhas de uma opção: a fila de ícones, as horas,
+   a nota. Cor lisa, sem brilho a passar — um esqueleto que mexe distrai mais
+   do que ajuda. */
+.opcao-fantasma {
+  display: block;
+  height: 4.5rem;
+}
+.opcao-fantasma > span {
+  display: block;
+  height: 1.2rem;
+  margin-bottom: 0.45rem;
+  border-radius: 4px;
+  background: var(--fundo);
+}
+.opcao-fantasma > span:nth-child(1) {
+  width: 60%;
+  height: 1.4rem;
+}
+.opcao-fantasma > span:nth-child(2) {
+  width: 35%;
+}
+.opcao-fantasma > span:nth-child(3) {
+  width: 45%;
+  height: 0.9rem;
+}
+.mais-opcoes {
+  margin: 0.5rem 1rem;
+}
+.folha .partilha {
+  margin: 0 1rem 0.5rem;
+}
+
+/* O EXPRESSO É PRIVADO: o fio da linha do tempo vai a neutro (§6, P1-037), e
+   a nota do bilhete à parte fica por baixo do troço, a toda a largura. */
+ol.percurso li.modo-expresso .fio {
+  background: var(--texto-secundario);
+}
+.nota-do-troco {
+  flex-basis: 100%;
+  color: var(--texto-secundario);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+/* O transporte a pedido proposto: a faixa da casa, com a regra à vista. */
+.propostas-a-pedido {
+  margin-left: 1rem;
+  margin-right: 1rem;
+}
+.folha.em-pagina .propostas-a-pedido {
+  margin-left: 1rem;
+  margin-right: 1rem;
+}
+.propostas-a-pedido h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+}
+.propostas-a-pedido ul {
+  margin: 0 0 0.5rem;
+  padding-left: 1.1rem;
+}
+.propostas-a-pedido li + li {
+  margin-top: 0.35rem;
+}
+/* As ligações em texto no castanho da casa; o BOTÃO de ligar fica com as
+   cores dele — castanho sobre o azul do botão não se lia. */
+.propostas-a-pedido a:not(.botao) {
+  color: #5c3700;
+}
+
+/* Um endereço de correio não se parte sozinho, e com a letra grande empurrava
+   a página para o lado (P3-020). */
+a[href^='mailto:'] {
+  overflow-wrap: anywhere;
+}
+
