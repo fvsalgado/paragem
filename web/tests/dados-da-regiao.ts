@@ -160,8 +160,27 @@ export type APedido = {
     /** Quem a transcreveu à mão — nunca se mostra; diz só que houve transcrição. */
     transcrito_por?: string;
   }[];
-  reservas: { telefone?: string; telefone_apresentado?: string; online?: string };
+  reservas: {
+    telefone?: string;
+    telefone_apresentado?: string;
+    online?: string;
+    com_reserva_online?: string[];
+  };
 };
+
+/** O que a região diz de si própria — o `regiao.json` que o pipeline escreveu. */
+export type DeclaracaoDaRegiao = {
+  id: string;
+  nome: string;
+  demonstracao?: boolean;
+  mapa?: { atribuicao: string; fonte: 'openstreetmap' | 'propria' } | null;
+};
+export const declaracao = (regiao = REGIAO): DeclaracaoDaRegiao | null =>
+  ler<DeclaracaoDaRegiao>(regiao, 'regiao.json');
+
+/** A região é uma demonstração? É o que ela diz de si própria (`demonstracao`). */
+export const ehDemonstracao = (regiao = REGIAO): boolean =>
+  declaracao(regiao)?.demonstracao === true;
 
 /** O transporte a pedido desta região — nulo se ela não tiver nenhum. */
 export const aPedido = (regiao = REGIAO): APedido | null => {

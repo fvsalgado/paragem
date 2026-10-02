@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { aPedido, exigirRegiao, url, urlRede, regiao } from '@/lib/dados';
+import { aPedido, dadosAbertos, exigirRegiao, url, urlRede, regiao } from '@/lib/dados';
 import ProcurarTerra from '@/componentes/ProcurarTerra';
 import { caminhoDoHorario, idDoQuadro, indiceDasTerras } from '@/lib/a-pedido';
 import { plural } from '@/lib/prosa';
@@ -51,6 +51,13 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
   const { reservas: v } = d;
   const comCircuitos = d.zonas.filter((z) => z.circuitos.length);
   const semCircuitos = d.zonas.filter((z) => !z.circuitos.length);
+  // O QUE FALTA E O QUE HÁ, contados — e não escritos para uma região só. A
+  // página dizia sempre que faltavam horários e que havia um feed GTFS-Flex,
+  // e numa região com tudo publicado e sem esse feed eram duas frases falsas.
+  const faltaAlgo = semCircuitos.length > 0 || d.circuitos.some((c) => !c.horario);
+  const temFlex = (await dadosAbertos(rid)).some(
+    (x) => x.modo === 'a-pedido' && x.caminho.endsWith('.zip'),
+  );
 
   return (
     <>
@@ -83,6 +90,16 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
             )}
           </p>
           {v.telefone_nota && <p className="secundario">{v.telefone_nota}</p>}
+          {/* NUMA DEMONSTRAÇÃO NÃO HÁ CENTRAL DE RESERVAS — e um número
+              inventado é o número de alguém, que receberia as chamadas de
+              quem experimentasse. Diz-se o que estaria aqui, em vez de deixar
+              a caixa a meio. */}
+          {r.demonstracao && !v.telefone && !v.online && (
+            <p className="secundario">
+              Numa região a sério, aqui estão o telefone da central de reservas e a ligação para a
+              reserva online. Isto é uma demonstração: não há central, e não se reserva nada.
+            </p>
+          )}
           {/* A reserva online NÃO cobre tudo, e dizer que cobre manda alguém
               a um sítio onde não encontra o que procura. */}
           {v.com_reserva_online?.length ? (
@@ -224,8 +241,8 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
         {d.sem_zona.length > 0 && (
           <p>
             Sem zona de transporte a pedido: {d.sem_zona.map((c) => c.nome).join(', ')}. É
-            informação e não lapso — a página da autoridade de transportes não lhe
-            {d.sem_zona.length > 1 ? 's' : ''} dá separador.
+            informação e não lapso — a fonte não lhe{d.sem_zona.length > 1 ? 's' : ''} atribui zona
+            nenhuma.
           </p>
         )}
       </section>
@@ -332,21 +349,25 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
       <section aria-labelledby="donde">
         <h2 id="donde">De onde vem isto</h2>
         <p>{d.fonte}</p>
-        <p>
-          O que falta — o horário dos circuitos que nenhuma fonte publica, e saber a que zona
-          pertence cada um — entra por introdução manual assistida a partir das páginas públicas.
-          Está no <Link href={url(rid, 'dados-abertos/')}>relatório de lacunas</Link>, circuito a
-          circuito e zona a zona, com a razão de cada um.
-        </p>
+        {faltaAlgo && (
+          <p>
+            O que falta — o horário dos circuitos que nenhuma fonte publica, e saber a que zona
+            pertence cada um — entra por introdução manual assistida a partir das páginas públicas.
+            Está no <Link href={url(rid, 'dados-abertos/')}>relatório de lacunas</Link>, circuito a
+            circuito e zona a zona, com a razão de cada um.
+          </p>
+        )}
         {/* O MESMO HORÁRIO, PARA MÁQUINAS. Não é um extra de quem gosta de
             dados: é o que faz este serviço poder aparecer numa aplicação de
             transportes em vez de viver só nesta página. */}
-        <p>
-          Estes circuitos também saem em <strong>GTFS-Flex</strong>, o formato em que uma aplicação
-          de transportes sabe que a hora só se cumpre com reserva feita — a regra de reserva vai
-          dentro do próprio ficheiro. Está nos{' '}
-          <Link href={url(rid, 'dados-abertos/')}>dados abertos</Link>, com os termos à frente.
-        </p>
+        {temFlex && (
+          <p>
+            Estes circuitos também saem em <strong>GTFS-Flex</strong>, o formato em que uma
+            aplicação de transportes sabe que a hora só se cumpre com reserva feita — a regra de
+            reserva vai dentro do próprio ficheiro. Está nos{' '}
+            <Link href={url(rid, 'dados-abertos/')}>dados abertos</Link>, com os termos à frente.
+          </p>
+        )}
       </section>
     </>
   );
