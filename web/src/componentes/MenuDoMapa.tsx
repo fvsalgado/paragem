@@ -92,8 +92,10 @@ export default function MenuDoMapa({
             </li>
           ))}
           <li>
+            {/* Dizia «Outras regiões», e a página do produto deixou de as
+                listar: mostra só as demonstrações, nunca outro cliente. */}
             <Link href={ORIGEM_DO_PRODUTO} onClick={aoFechar}>
-              <span>Outras regiões</span>
+              <span>Sobre o Paragem.pt</span>
             </Link>
           </li>
         </ul>

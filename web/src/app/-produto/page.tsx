@@ -8,8 +8,16 @@ import {
   estacoes,
   origemDaRegiao,
 } from '@/lib/dados';
-import { numero, redeEQuemAGere } from '@/lib/prosa';
-import { AUTOR, CODIGO, CONTACTO, CORETO, correioPara } from '@/lib/produto';
+import { numero } from '@/lib/prosa';
+import {
+  AUTOR,
+  CODIGO,
+  CONTACTO,
+  CORETO,
+  correioPara,
+  eDaMontra,
+  ordemDaMontra,
+} from '@/lib/produto';
 import { metadadosDoProduto } from '@/lib/metadados';
 
 /**
@@ -143,12 +151,14 @@ export default async function Produto() {
   const ids = await regioesDisponiveis();
 
   // Uma região ligada na base mas ainda sem dados no armazém não se mostra:
-  // um cartão sem números a apontar para um 404 era pior do que nenhum.
+  // um cartão sem números a apontar para um 404 era pior do que nenhum. E uma
+  // região que não é demonstração também não — é de um cliente (`eDaMontra`),
+  // e nem os dados dela se leem aqui.
   const fichas = (
     await Promise.all(
       ids.map(async (id) => {
         const r = await regiao(id);
-        if (!r) return null;
+        if (!r || !eDaMontra(r)) return null;
         const [cs, ls, ps, es, origem] = await Promise.all([
           concelhos(id),
           linhas(id),
@@ -169,21 +179,13 @@ export default async function Produto() {
     )
   ).filter((x): x is NonNullable<typeof x> => x !== null);
 
-  // A demonstração vai no fim: quem chega aqui quer ver o que é real primeiro.
-  const ordenadas = [...fichas].sort((a, b) => {
-    const da = a.r.demonstracao ? 1 : 0;
-    const db = b.r.demonstracao ? 1 : 0;
-    return da - db || a.id.localeCompare(b.id, 'pt');
-  });
+  const ordenadas = ordemDaMontra(fichas);
 
   // «EXPERIMENTAR A DEMONSTRAÇÃO» LEVA À MAIS COMPLETA, e escolhe-a pelos
-  // dados: a demonstração com mais paragens, entre as que têm endereço. Não
-  // se escreve aqui o nome de nenhuma — uma demonstração nova e maior passa a
-  // ser a do botão no dia em que é ligada, sem tocar nesta página.
-  const demonstracao =
-    fichas
-      .filter((f) => f.r.demonstracao && f.origem)
-      .sort((a, b) => b.paragens - a.paragens || a.id.localeCompare(b.id, 'pt'))[0] ?? null;
+  // dados: a primeira da montra que tem endereço. Não se escreve aqui o nome
+  // de nenhuma — uma demonstração nova e maior passa a ser a do botão no dia
+  // em que é ligada, sem tocar nesta página.
+  const demonstracao = ordenadas.find((f) => f.origem) ?? null;
 
   const marcar = correioPara('Marcar uma demonstração do Paragem.pt');
   const proposta = correioPara('Pedido de proposta do Paragem.pt');
@@ -257,14 +259,15 @@ export default async function Produto() {
         <div className="produto-interior">
           <h2 id="ver">Ver a funcionar</h2>
           <p className="produto-medida">
-            Cada região responde no seu próprio endereço. As demonstrações são inventadas de fio a
-            pavio — nenhuma paragem, nenhuma estrada e nenhum horário vêm de sítio nenhum —, para se
-            mexer à vontade sem usar dados de ninguém.
+            As demonstrações são inventadas de fio a pavio — nenhuma paragem, nenhuma estrada e
+            nenhum horário vêm de sítio nenhum —, para se mexer à vontade sem usar dados de ninguém.
+            Cada uma responde no seu próprio endereço, como a região de cada autoridade de
+            transportes responde no dela.
           </p>
-          {ordenadas.length === 0 && <p>Ainda não há nenhuma região construída.</p>}
+          {ordenadas.length === 0 && <p>Ainda não há nenhuma demonstração construída.</p>}
           <ul className="produto-regioes">
             {ordenadas.map(({ id, r, ...n }) => (
-              <li key={id} className={r.demonstracao ? 'cartao cartao-demonstracao' : 'cartao'}>
+              <li key={id} className="cartao cartao-demonstracao">
                 {/* Cada região vive no seu domínio: a ligação é para lá. Uma
                     região sem domínio no mapa não tem para onde ligar, e o
                     cartão di-lo em vez de mandar para um 404. */}
@@ -272,14 +275,10 @@ export default async function Produto() {
                 <p className="secundario">
                   {n.origem ? new URL(n.origem).host : 'Ainda sem endereço próprio.'}
                 </p>
-                {r.demonstracao ? (
-                  <p>
-                    <strong>Demonstração.</strong> Uma região inventada, para ver o produto a
-                    funcionar sem usar dados de ninguém.
-                  </p>
-                ) : (
-                  <p>{redeEQuemAGere(r)}.</p>
-                )}
+                <p>
+                  <strong>Demonstração.</strong> Uma região inventada, para ver o produto a
+                  funcionar sem usar dados de ninguém.
+                </p>
                 <dl className="numeros">
                   <div>
                     <dt>Concelhos</dt>

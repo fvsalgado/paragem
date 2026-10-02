@@ -13,6 +13,8 @@ import {
   CONTACTO_PUBLICADO,
   contactoDoProduto,
   correioPara,
+  eDaMontra,
+  ordemDaMontra,
   origemDoProduto,
 } from '../src/lib/produto.ts';
 import { caminhosDaRegiao, mapaDoSitio } from '../src/lib/mapa-do-sitio.ts';
@@ -123,4 +125,29 @@ test('o XML leva moradas inteiras, codificadas e escapadas', () => {
   assert.match(xml, /<loc>https:\/\/regiao\.exemplo\.pt\/<\/loc>/);
   assert.match(xml, /<loc>https:\/\/regiao\.exemplo\.pt\/rede\/linhas\/A&amp;B\/<\/loc>/);
   assert.match(xml, /<loc>https:\/\/regiao\.exemplo\.pt\/rede\/%C3%A7\/<\/loc>/);
+});
+
+test('a montra mostra as demonstrações, e nenhum cliente', () => {
+  // A região de um cliente não declara `demonstracao` — e é isso que a deixa
+  // de fora: só entra o que diz, por extenso, que é inventado.
+  assert.equal(eDaMontra({ demonstracao: true }), true);
+  assert.equal(eDaMontra({ demonstracao: false }), false);
+  assert.equal(eDaMontra({}), false);
+});
+
+test('a montra abre pela demonstração mais completa, e a ordem não muda sozinha', () => {
+  const fichas = [
+    { id: 'b', paragens: 4 },
+    { id: 'c', paragens: 40 },
+    { id: 'a', paragens: 4 },
+  ];
+  assert.deepEqual(
+    ordemDaMontra(fichas).map((f) => f.id),
+    ['c', 'a', 'b'],
+  );
+  // Não mexe na lista que recebe.
+  assert.deepEqual(
+    fichas.map((f) => f.id),
+    ['b', 'c', 'a'],
+  );
 });
