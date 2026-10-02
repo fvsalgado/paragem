@@ -12,11 +12,15 @@ import {
   url,
   urlRede,
   NAO_ENCONTRADA,
+  regiao,
+  urlDaParagem,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import Distintivo from '@/componentes/Distintivo';
 import PartidasDaParagem from '@/componentes/PartidasDaParagem';
 import type { QuadroDoDia } from '@/componentes/QuadrosPorDia';
+import { metadadosDaRegiao } from '@/lib/metadados';
+import { linhasNumaFrase } from '@/lib/prosa';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -38,8 +42,19 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { regiao: rid, id } = await params;
   await exigirModo(rid, 'autocarro');
-  const ficha = await lerParagem(rid, id);
-  return { title: ficha ? ficha.paragem.nome : NAO_ENCONTRADA };
+  const [ficha, r, cs] = await Promise.all([lerParagem(rid, id), regiao(rid), concelhos(rid)]);
+  if (!ficha || !r) return { title: NAO_ENCONTRADA };
+  const p = ficha.paragem;
+  // «Horário planeado da paragem …, em …: linhas 1 e 2.» — o que se quer
+  // ver na pré-visualização de quem manda o horário da paragem a alguém.
+  const concelho = cs.find((c) => c.id === p.concelho);
+  const onde = concelho ? `, em ${concelho.nome}` : '';
+  const quais = p.linhas.length ? `: ${linhasNumaFrase(p.linhas)}` : '';
+  return metadadosDaRegiao(r, {
+    titulo: p.nome,
+    descricao: `Horário planeado da paragem ${p.nome}${onde}${quais}.`,
+    caminho: urlDaParagem(rid, p.id),
+  });
 }
 
 export default async function Paragem({

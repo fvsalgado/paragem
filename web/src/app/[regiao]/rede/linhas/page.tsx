@@ -1,10 +1,25 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { exigirModo, linhas, operadorCurto, urlRede } from '@/lib/dados';
-import { plural } from '@/lib/prosa';
+import { exigirModo, linhas, operadorCurto, urlRede, regiao } from '@/lib/dados';
+import { plural, maiuscula } from '@/lib/prosa';
 import Distintivo from '@/componentes/Distintivo';
+import { metadadosDaRegiao } from '@/lib/metadados';
 
-export const metadata: Metadata = { title: 'Linhas' };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ regiao: string }>;
+}): Promise<Metadata> {
+  const { regiao: rid } = await params;
+  const r = await regiao(rid);
+  if (!r) return {};
+  const n = (await linhas(rid)).length;
+  return metadadosDaRegiao(r, {
+    titulo: 'Linhas',
+    descricao: `${maiuscula(plural(n, 'linha', 'linhas'))} ${r.em}, cada uma com o horário e as paragens.`,
+    caminho: '/rede/linhas/',
+  });
+}
 
 export default async function Linhas({ params }: { params: Promise<{ regiao: string }> }) {
   const { regiao: rid } = await params;

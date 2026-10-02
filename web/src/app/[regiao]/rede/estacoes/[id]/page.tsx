@@ -14,9 +14,11 @@ import {
   urlRede,
   urlDaParagem,
   NAO_ENCONTRADA,
+  regiao,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import ProximasPartidas from '@/componentes/ProximasPartidas';
+import { metadadosDaRegiao } from '@/lib/metadados';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -38,8 +40,17 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { regiao: rid, id } = await params;
   await exigirModo(rid, 'comboio');
-  const e = (await estacoes(rid)).find((x) => seguro(x.id) === id);
-  return { title: e ? `${e.nome} (estação)` : NAO_ENCONTRADA };
+  const [es, r] = await Promise.all([estacoes(rid), regiao(rid)]);
+  const e = es.find((x) => seguro(x.id) === id);
+  if (!e || !r) return { title: NAO_ENCONTRADA };
+  // O autocarro à porta só se promete onde ele está: a estação sem paragem a
+  // menos de 300 m di-lo na página, e a pré-visualização não diz o contrário.
+  const porta = e.sem_ligacao ? '' : ', e o autocarro à porta';
+  return metadadosDaRegiao(r, {
+    titulo: `${e.nome} (estação)`,
+    descricao: `Os comboios da estação ${e.nome}, com as partidas planeadas${porta}.`,
+    caminho: urlRede(rid, `estacoes/${seguro(e.id)}/`),
+  });
 }
 
 export default async function Estacao({

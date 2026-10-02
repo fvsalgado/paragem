@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 
 import {
   aAutoridade,
+  linhasNumaFrase,
   lista,
   nomeDaRede,
   numero,
@@ -102,4 +103,13 @@ test('a autoridade numa frase: feita do pipeline, ou com o substantivo comum à 
   assert.equal(aAutoridade({ autoridade: {} }, 'por'), 'pela autoridade de transportes');
   const comArtigo = { autoridade: { nome: 'Município de Sável', de: 'do Município de Sável' } };
   assert.equal(aAutoridade(comArtigo, 'de'), 'do Município de Sável');
+});
+
+test('as linhas de uma paragem cabem numa frase, também num terminal com dezenas', () => {
+  assert.equal(linhasNumaFrase([]), '');
+  assert.equal(linhasNumaFrase(['1']), 'linha 1');
+  assert.equal(linhasNumaFrase(['1', '2']), 'linhas 1 e 2');
+  assert.equal(linhasNumaFrase(['1', '2', '3']), 'linhas 1, 2 e 3');
+  const muitas = Array.from({ length: 20 }, (_, i) => String(i + 1));
+  assert.equal(linhasNumaFrase(muitas), 'linhas 1, 2, 3, 4, 5 e mais 15');
 });

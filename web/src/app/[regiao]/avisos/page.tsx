@@ -1,10 +1,24 @@
 import type { Metadata } from 'next';
 import { CartaoDeAviso } from '@/componentes/Avisos';
 import { avisosEmVigor } from '@/lib/avisos';
-import { exigirRegiao } from '@/lib/dados';
+import { exigirRegiao, regiao } from '@/lib/dados';
 import { aAutoridade } from '@/lib/prosa';
+import { metadadosDaRegiao } from '@/lib/metadados';
 
-export const metadata: Metadata = { title: 'Avisos' };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ regiao: string }>;
+}): Promise<Metadata> {
+  const { regiao: rid } = await params;
+  const r = await regiao(rid);
+  if (!r) return {};
+  return metadadosDaRegiao(r, {
+    titulo: 'Avisos',
+    descricao: `Os avisos em vigor nos transportes ${r.de}.`,
+    caminho: '/avisos/',
+  });
+}
 
 /**
  * Um minuto, e a etiqueta dos avisos.

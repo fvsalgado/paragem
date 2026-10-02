@@ -1,12 +1,13 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { aPedido, exigirRegiao, url, urlRede, NAO_ENCONTRADA } from '@/lib/dados';
+import { aPedido, exigirRegiao, url, urlRede, NAO_ENCONTRADA, regiao } from '@/lib/dados';
 import QuadroDeHorario from '@/componentes/QuadroDeHorario';
 import Transcricao from '@/componentes/Transcricao';
 import AbrirPeloEndereco from '@/componentes/AbrirPeloEndereco';
-import { idDoQuadro } from '@/lib/a-pedido';
+import { caminhoDoHorario, idDoQuadro } from '@/lib/a-pedido';
 import { plural } from '@/lib/prosa';
+import { metadadosDaRegiao } from '@/lib/metadados';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -23,8 +24,14 @@ type Params = { regiao: string; id: string };
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { regiao: rid, id } = await params;
-  const h = (await aPedido(rid))?.horarios.find((x) => x.id === id);
-  return { title: h ? h.nome : NAO_ENCONTRADA };
+  const [d, r] = await Promise.all([aPedido(rid), regiao(rid)]);
+  const h = d?.horarios.find((x) => x.id === id);
+  if (!h || !r) return { title: NAO_ENCONTRADA };
+  return metadadosDaRegiao(r, {
+    titulo: h.nome,
+    descricao: `${h.nome}: o horário do transporte a pedido ${r.em}, e como reservar.`,
+    caminho: url(rid, caminhoDoHorario(h.id)),
+  });
 }
 
 /**

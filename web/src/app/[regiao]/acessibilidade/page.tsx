@@ -1,9 +1,23 @@
 import type { Metadata } from 'next';
-import { exigirRegiao, temMosaicos, url } from '@/lib/dados';
+import { exigirRegiao, temMosaicos, url, regiao } from '@/lib/dados';
 import { aAutoridade } from '@/lib/prosa';
 import VerificacoesDeAcessibilidade from '@/componentes/VerificacoesDeAcessibilidade';
+import { metadadosDaRegiao } from '@/lib/metadados';
 
-export const metadata: Metadata = { title: 'Acessibilidade' };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ regiao: string }>;
+}): Promise<Metadata> {
+  const { regiao: rid } = await params;
+  const r = await regiao(rid);
+  if (!r) return {};
+  return metadadosDaRegiao(r, {
+    titulo: 'Acessibilidade',
+    descricao: `A declaração de acessibilidade do sítio dos transportes ${r.de}.`,
+    caminho: '/acessibilidade/',
+  });
+}
 
 /**
  * A declaração de acessibilidade.

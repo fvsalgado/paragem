@@ -1,11 +1,12 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
 import { AUTOR, CONTACTO, correioPara } from '@/lib/produto';
+import { metadadosDoProduto } from '@/lib/metadados';
 
-export const metadata: Metadata = {
-  title: 'Privacidade',
-  description: 'O que o sítio do Paragem.pt mede e o que não mede, e quem responde por isso.',
-};
+export const metadata = metadadosDoProduto({
+  titulo: 'Privacidade',
+  descricao: 'O que o sítio do Paragem.pt mede e o que não mede, e quem responde por isso.',
+  caminho: '/privacidade/',
+});
 
 /**
  * A privacidade DO PRODUTO — a desta montra, e não a de uma região.

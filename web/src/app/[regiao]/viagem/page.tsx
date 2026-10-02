@@ -1,9 +1,23 @@
 import type { Metadata } from 'next';
 import { motorDaRegiao } from '@/lib/enderecos';
 import DireccoesDaPagina from '@/componentes/DireccoesDaPagina';
-import { exigirRegiao, lacunas, procura, servicosSemDatas } from '@/lib/dados';
+import { exigirRegiao, lacunas, procura, servicosSemDatas, regiao } from '@/lib/dados';
+import { metadadosDaRegiao } from '@/lib/metadados';
 
-export const metadata: Metadata = { title: 'Como chegar' };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ regiao: string }>;
+}): Promise<Metadata> {
+  const { regiao: rid } = await params;
+  const r = await regiao(rid);
+  if (!r) return {};
+  return metadadosDaRegiao(r, {
+    titulo: 'Como chegar',
+    descricao: `Planear uma viagem ${r.em}: de uma paragem, uma estação ou um sítio a outro, com transbordos e as horas dos horários planeados.`,
+    caminho: '/viagem/',
+  });
+}
 
 /**
  * As direções em página própria.

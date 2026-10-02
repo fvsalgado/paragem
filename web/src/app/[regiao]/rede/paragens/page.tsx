@@ -1,10 +1,25 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { exigirModo, paragens, concelhos, urlRede } from '@/lib/dados';
+import { exigirModo, paragens, concelhos, urlRede, regiao } from '@/lib/dados';
 import { letraDe, LETRAS, paraUrl } from '@/lib/letras';
-import { plural } from '@/lib/prosa';
+import { plural, maiuscula } from '@/lib/prosa';
+import { metadadosDaRegiao } from '@/lib/metadados';
 
-export const metadata: Metadata = { title: 'Paragens' };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ regiao: string }>;
+}): Promise<Metadata> {
+  const { regiao: rid } = await params;
+  const r = await regiao(rid);
+  if (!r) return {};
+  const n = (await paragens(rid)).length;
+  return metadadosDaRegiao(r, {
+    titulo: 'Paragens',
+    descricao: `${maiuscula(plural(n, 'paragem', 'paragens'))} ${r.em}, pela inicial e pelo concelho.`,
+    caminho: '/rede/paragens/',
+  });
+}
 
 /**
  * O índice de paragens, por letra e por concelho.

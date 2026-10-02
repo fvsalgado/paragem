@@ -12,19 +12,42 @@ import {
   procura,
   modos as lerModos,
   caminhoDoModo,
+  regiao,
 } from '@/lib/dados';
 import FaixaDeAvisos from '@/componentes/Avisos';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import PertoDeTi from '@/componentes/PertoDeTi';
 import { avisosEmVigor } from '@/lib/avisos';
-import { plural } from '@/lib/prosa';
+import { lista, plural } from '@/lib/prosa';
 import type { Metadata } from 'next';
+import { metadadosDaRegiao } from '@/lib/metadados';
 
 /**
  * O título próprio da rede. Tinha o mesmo do mapa — «Paragem.pt — <a região>
  * · Paragem.pt» —, e dois separadores iguais não se distinguem.
  */
-export const metadata: Metadata = { title: 'A rede' };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ regiao: string }>;
+}): Promise<Metadata> {
+  const { regiao: rid } = await params;
+  const r = await regiao(rid);
+  if (!r) return {};
+  // O que a página lista, e só isso: uma região sem autocarros não tem
+  // paragens nem linhas, e sem comboio não tem estações.
+  const partes = [
+    ...(r.modos.includes('autocarro') ? ['as paragens', 'as linhas'] : []),
+    ...(r.modos.includes('comboio') ? ['as estações'] : []),
+    'os concelhos',
+    'o tarifário',
+  ];
+  return metadadosDaRegiao(r, {
+    titulo: 'A rede',
+    descricao: `Os transportes ${r.de} em listas: ${lista(partes)} — o caminho de quem não usa o mapa.`,
+    caminho: '/rede/',
+  });
+}
 
 /**
  * O CATÁLOGO: todas as paragens, linhas, estações e concelhos, em listas.

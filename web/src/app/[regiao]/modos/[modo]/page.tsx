@@ -12,7 +12,10 @@ import {
   url,
   urlRede,
   NOME_DOS_MODOS,
+  regiao,
+  NAO_ENCONTRADA,
 } from '@/lib/dados';
+import { metadadosDaRegiao } from '@/lib/metadados';
 import AbrirPeloEndereco from '@/componentes/AbrirPeloEndereco';
 import { paragemMaisPerto } from '@/lib/onde';
 import { emPortugues, percursoEmPortugues, pontoTecnico } from '@/lib/expressos';
@@ -42,9 +45,30 @@ export function generateStaticParams() {
 
 type Params = { regiao: string; modo: string };
 
+/**
+ * O que cada página de modo tem, numa frase para a pré-visualização. Os modos
+ * que não estão aqui dizem só o nome e onde — e a frase não promete o que a
+ * página de um modo novo ainda não sabe mostrar.
+ */
+const O_QUE_O_MODO_TEM: Record<string, (em: string) => string> = {
+  bicicleta: (em) =>
+    `As bicicletas partilhadas ${em}: onde estão as estações, e quem gere cada sistema.`,
+  taxi: (em) => `As praças de táxi ${em}, concelho a concelho.`,
+  'urbano-municipal': (em) =>
+    `Os autocarros urbanos das câmaras ${em}: as linhas, os horários e quem os gere.`,
+  expresso: (em) => `Os expressos que param ${em}: onde param, para onde vão e quem os opera.`,
+};
+
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
-  const { modo } = await params;
-  return { title: NOME_DOS_MODOS[modo] ?? modo };
+  const { regiao: rid, modo } = await params;
+  const [m, r] = await Promise.all([lerModo(rid, modo), regiao(rid)]);
+  if (!m || !r) return { title: NAO_ENCONTRADA };
+  const nome = NOME_DOS_MODOS[modo] ?? modo;
+  return metadadosDaRegiao(r, {
+    titulo: nome,
+    descricao: O_QUE_O_MODO_TEM[modo]?.(r.em) ?? `${nome} ${r.em}.`,
+    caminho: url(rid, `modos/${modo}/`),
+  });
 }
 
 /** As coisas de um modo, agrupadas pelo concelho onde estão. */

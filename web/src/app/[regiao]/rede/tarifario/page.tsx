@@ -1,9 +1,23 @@
 import type { Metadata } from 'next';
-import { tarifas, exigirRegiao, type Titulo } from '@/lib/dados';
+import { tarifas, exigirRegiao, type Titulo, regiao } from '@/lib/dados';
 import { redeEQuemAGere } from '@/lib/prosa';
 import { ajudaParaEscolher, porPeriodo } from '@/lib/tarifario';
+import { metadadosDaRegiao } from '@/lib/metadados';
 
-export const metadata: Metadata = { title: 'Tarifário' };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ regiao: string }>;
+}): Promise<Metadata> {
+  const { regiao: rid } = await params;
+  const r = await regiao(rid);
+  if (!r) return {};
+  return metadadosDaRegiao(r, {
+    titulo: 'Tarifário',
+    descricao: `Os títulos e os preços dos transportes ${r.de}, e que título serve a quem.`,
+    caminho: '/rede/tarifario/',
+  });
+}
 
 export default async function Tarifario({ params }: { params: Promise<{ regiao: string }> }) {
   const { regiao: rid } = await params;

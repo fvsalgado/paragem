@@ -10,6 +10,7 @@ import {
 } from '@/lib/dados';
 import { numero, redeEQuemAGere } from '@/lib/prosa';
 import { AUTOR, CODIGO, CONTACTO, CORETO, correioPara } from '@/lib/produto';
+import { metadadosDoProduto } from '@/lib/metadados';
 
 /**
  * A porta de entrada do PRODUTO, que não é a porta de entrada de nenhuma
@@ -46,6 +47,14 @@ import { AUTOR, CODIGO, CONTACTO, CORETO, correioPara } from '@/lib/produto';
  * e, mais tarde, pelo painel — desligar uma região tira-a daqui sem esperar.
  */
 export const revalidate = 3600;
+
+export const metadata = metadadosDoProduto({
+  titulo: 'Paragem.pt — os transportes do seu território, num sítio só',
+  absoluto: true,
+  descricao:
+    'Para comunidades intermunicipais, áreas metropolitanas e câmaras: autocarros, comboios, transporte a pedido, bicicletas, expressos e táxis num só sítio, com planeador de viagens, a página de cada paragem e de cada linha, e um painel para os avisos.',
+  caminho: '/',
+});
 
 /** O que se lê, de cima a baixo, sobre o que o produto inclui. Só o que existe. */
 const INCLUI: { titulo: string; itens: string[] }[] = [

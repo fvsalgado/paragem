@@ -43,6 +43,18 @@ export function lista(nomes: string[]): string {
 }
 
 /**
+ * As linhas de uma paragem numa frase: «linha 1», «linhas 1 e 2», e, para
+ * uma paragem de terminal com dezenas, as primeiras seis «e mais 14» — é o que
+ * cabe numa pré-visualização sem a cortar a meio de um número.
+ */
+export function linhasNumaFrase(codigos: string[], maximo = 6): string {
+  if (codigos.length === 0) return '';
+  if (codigos.length === 1) return `linha ${codigos[0]}`;
+  if (codigos.length <= maximo) return `linhas ${lista(codigos)}`;
+  return `linhas ${codigos.slice(0, maximo - 1).join(', ')} e mais ${numero(codigos.length - (maximo - 1))}`;
+}
+
+/**
  * O nome da região a abrir uma frase: «A Serra da Pedra Alta».
  *
  * Vem feito do pipeline; uns dados construídos antes dele não o trazem, e aí

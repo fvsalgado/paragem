@@ -16,11 +16,13 @@ import {
   NOME_DOS_MODOS,
   NAO_ENCONTRADA,
   type LinhaDetalhe,
+  regiao,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import Distintivo from '@/componentes/Distintivo';
 import { aAutoridade, lista, plural } from '@/lib/prosa';
 import { paragemPrincipal, saidasDoConcelho } from '@/lib/concelho';
+import { metadadosDaRegiao } from '@/lib/metadados';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -41,8 +43,19 @@ export async function generateMetadata({
   params: Promise<{ regiao: string; id: string }>;
 }): Promise<Metadata> {
   const { regiao: rid, id } = await params;
-  const c = (await concelhos(rid)).find((x) => x.id === id);
-  return { title: c ? c.nome : NAO_ENCONTRADA };
+  const [cs, r] = await Promise.all([concelhos(rid), regiao(rid)]);
+  const c = cs.find((x) => x.id === id);
+  if (!c || !r) return { title: NAO_ENCONTRADA };
+  // Sem paragens não se fala de paragens: há concelhos servidos só por outros
+  // modos, e «0 paragens» numa pré-visualização lê-se como uma avaria.
+  const que = c.paragens
+    ? `: ${plural(c.paragens, 'paragem', 'paragens')}, as linhas que lá passam e como sair do concelho`
+    : '';
+  return metadadosDaRegiao(r, {
+    titulo: c.nome,
+    descricao: `Os transportes em ${c.nome}${que}.`,
+    caminho: urlRede(rid, `concelhos/${c.id}/`),
+  });
 }
 
 /** Quantas horas de um tipo de dia se mostram antes de «e mais N». */
