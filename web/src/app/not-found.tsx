@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/componentes/Ligacao';
 import { NAO_ENCONTRADA } from '@/lib/formato';
 import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
 import CabecalhoDoProduto from '@/componentes/CabecalhoDoProduto';

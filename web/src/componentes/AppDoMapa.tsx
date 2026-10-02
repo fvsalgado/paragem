@@ -12,7 +12,7 @@ import { camadasDe, ordemDeApresentacao } from '@/lib/pontos-no-mapa';
 import DisponibilidadeBicicletas, {
   ContagemDaEstacao,
 } from '@/componentes/DisponibilidadeBicicletas';
-import Link from 'next/link';
+import Link from '@/componentes/Ligacao';
 import MenuDoMapa from '@/componentes/MenuDoMapa';
 import { Chegada, DoModo, Hamburguer, Lista } from '@/componentes/Icones';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';

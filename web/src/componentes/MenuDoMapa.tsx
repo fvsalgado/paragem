@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import Link from 'next/link';
+import Link from '@/componentes/Ligacao';
 import { Fechar } from './Icones';
 import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
 

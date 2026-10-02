@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/componentes/Ligacao';
 import { exigirRegiao, url } from '@/lib/dados';
 import { redeEQuemAGere } from '@/lib/prosa';
 
