@@ -25,6 +25,11 @@ export default async function Rodape({ regiao: id }: { regiao: string }) {
             <li>
               <Link href={url(id, 'avisos/')}>Avisos</Link>
             </li>
+            <li>
+              {/* AS CAIXAS PARA OS SÍTIOS DAS CÂMARAS (P4-007), onde quem gere
+                  o sítio de uma câmara ou de uma junta as vai procurar. */}
+              <Link href={url(id, 'levar/')}>Para o seu sítio</Link>
+            </li>
           </ul>
         </nav>
         {/* A FRASE QUE NOMEIA O CLIENTE, em todas as páginas. Dizia «Rede Rede

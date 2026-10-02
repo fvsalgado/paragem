@@ -28,6 +28,7 @@
  * Funções puras: não leem o `window` nem tocam no histórico. Quem as chama é
  * que decide quando ler e quando escrever.
  */
+import { simples } from './letras.ts';
 import type { Ponto } from './formato.ts';
 
 export type Caixa = { lat_min: number; lat_max: number; lon_min: number; lon_max: number };
@@ -124,6 +125,16 @@ export function lerPonta(
   const porNome =
     pontos.find((p) => p.nome === v && comHorario(p)) ?? pontos.find((p) => p.nome === v);
   if (porNome) return { tipo: 'ponto', ponto: porNome };
+  // ESCRITO À MÃO, sem acentos nem maiúsculas — é o que chega da caixa «Para
+  // onde vais?» que as câmaras põem nos sítios delas (P4-007): «porto ameno
+  // (terminal)» é o Porto Ameno (Terminal). Só quando o nome é de UM ponto
+  // com horário, ou de um só ponto: dois com o mesmo nome não se adivinham.
+  const t = simples(v);
+  const iguais = pontos.filter((p) => simples(p.nome) === t);
+  const comHorarioIguais = iguais.filter(comHorario);
+  const unico =
+    comHorarioIguais.length === 1 ? comHorarioIguais[0] : iguais.length === 1 ? iguais[0] : null;
+  if (unico) return { tipo: 'ponto', ponto: unico };
   return { tipo: 'desconhecida', valor: limparNome(v) };
 }
 

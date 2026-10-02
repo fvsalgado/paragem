@@ -190,3 +190,11 @@ test('o que o endereço pediu e não se pôde abrir diz-se numa frase', () => {
   assert.match(aviso!, /A partida pedida, «Terra Que Não Existe», não é uma paragem/);
   assert.equal(avisoDe(null, lerPonta('va-1', null, PONTOS, CAIXA), 'aqui'), null);
 });
+
+test('o nome escrito à mão, sem acentos nem maiúsculas, encontra o ponto — se for de um só', () => {
+  // É o que chega da caixa «Para onde vais?» que as câmaras põem nos sítios delas.
+  const r = lerPonta('vila alta (terminal)', null, PONTOS, CAIXA);
+  assert.equal(r?.tipo === 'ponto' && r.ponto.id, 'va-1');
+  const s = lerPonta('  MIRADOURO ', null, PONTOS, CAIXA);
+  assert.equal(s?.tipo, 'ponto');
+});

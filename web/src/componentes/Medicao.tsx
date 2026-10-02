@@ -13,19 +13,23 @@ import { comecar, pagina } from '@/lib/medicao';
  */
 export default function Medicao() {
   const caminho = usePathname();
+  // UMA CAIXA NO SÍTIO DE UMA CÂMARA NÃO MEDE NADA (P4-007): quem a vê está
+  // a visitar o sítio da câmara, e não o nosso. A promessa da página que dá o
+  // código é essa — «não segue quem visita o seu sítio» —, e cumpre-se aqui.
+  const naCaixa = !!caminho?.startsWith('/widget/');
 
   useEffect(() => {
-    comecar();
-  }, []);
+    if (!naCaixa) comecar();
+  }, [naCaixa]);
 
   useEffect(() => {
-    if (!caminho) return;
+    if (!caminho || naCaixa) return;
     const partes = caminho.split('/').filter(Boolean);
     pagina(caminho, {
       tipo: partes[0] ?? 'inicio',
       id: partes[1] ?? null,
     });
-  }, [caminho]);
+  }, [caminho, naCaixa]);
 
   return null;
 }
