@@ -107,6 +107,7 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
       deDaRegiao={r.de}
       emDaRegiao={r.em}
       centro={centro}
+      caixa={r.caixa}
       pontos={pontos}
       mosaicos={enderecoDosDados(rid, 'regiao.pmtiles')}
       atribuicaoDoMapa={r.mapa?.atribuicao}

@@ -345,7 +345,7 @@ test('o painel das direções, aberto sobre o mapa, também passa no axe', async
   await page.goto(`/`);
   await page.getByRole('combobox', { name: 'Procurar' }).fill(BUSCA);
   await page.getByRole('listbox').getByRole('option').first().click();
-  await page.getByRole('button', { name: 'Como chegar' }).click();
+  await page.getByRole('button', { name: 'Como chegar aqui' }).click();
   await expect(page.getByRole('heading', { name: 'Transportes públicos' })).toBeVisible();
 
   const r = await new AxeBuilder({ page })

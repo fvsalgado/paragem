@@ -2445,16 +2445,13 @@ main.pagina:has(.app-mapa) {
   padding: 0;
 }
 
-/* A ALTURA É MEDIDA, e não subtraída de cabeça.
-   Era `100dvh - 3.5rem`, e o cabeçalho tem 129 px num telemóvel — passa a
-   duas linhas, que é o que se vê e não o que se calcula. O mapa ficava 73 px
-   mais comprido do que o ecrã, a página deslizava sozinha e a folha de baixo
-   acabava por baixo da dobra. O `--alto-do-mapa` é posto pelo `AppDoMapa`, que
-   mede onde o mapa começa; o `calc` fica como rede para o primeiro instante. */
+/* A ALTURA É A QUE SOBRA DO ECRÃ, pela coluna de `body:has(.app-mapa)` mais
+   abaixo — e não medida num efeito, que só corria depois da hidratação. O
+   `calc` fica como rede para um navegador sem `:has()`. */
 .app-mapa {
   position: relative;
-  height: var(--alto-do-mapa, calc(100dvh - 8rem));
-  min-height: 24rem;
+  height: calc(100dvh - 8rem);
+  min-height: 20rem;
 }
 
 .app-mapa .mapa-caixa,
@@ -2503,7 +2500,7 @@ main.pagina:has(.app-mapa) {
   right: 0.75rem;
   max-width: 26rem;
   background: #fff;
-  border: 1px solid var(--linhas);
+  border: 1px solid var(--borda-campo);
   border-radius: var(--raio);
   padding: 0.5rem 0.75rem;
   box-shadow: 0 1px 4px rgb(16 44 63 / 12%);
@@ -2601,6 +2598,44 @@ main.pagina:has(.app-mapa) {
   border-radius: 50%;
   box-sizing: border-box;
   flex: 0 0 auto;
+  background: var(--cor-da-camada);
+}
+
+/* AO PASSAR O RATO, A PÍLULA CONTINUA LEGÍVEL (P1-036). A regra global dos
+   botões pintava-a de azul-escuro com o texto escuro por cima — 1,3:1, e a
+   palavra desaparecia a cada passagem do rato pela fila. */
+.pilula:hover {
+  background: var(--fundo);
+  border-color: var(--borda-campo);
+  color: var(--texto);
+}
+.pilula[aria-pressed='false']:hover {
+  background: #fff;
+  color: var(--texto);
+}
+
+/* A FORMA DE CADA MODO, a mesma do mapa (P1-010): o anel do expresso, a
+   placa com o pictograma do comboio e do táxi. Comboio, expresso e táxi
+   eram três pontos cinzentos quase iguais; a forma separa-os sem pedir que
+   se distingam cores. */
+.pilula-anel .pilula-cor {
+  background: #fff;
+  border: 3px solid var(--cor-da-camada);
+}
+.pilula-placa .pilula-cor {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+/* A placa de um privado é branca, com o desenho escuro e a borda da casa. */
+.pilula-placa.pilula-clara .pilula-cor {
+  background: #fff;
+  color: var(--texto);
+  border: 1.5px solid var(--borda-campo);
 }
 
 /* O cartão que sobe de baixo. Num telemóvel ocupa metade do ecrã; num ecrã
@@ -2696,31 +2731,36 @@ main.pagina:has(.app-mapa) {
    Três colunas: o distintivo da linha, para onde vai, e quando. A terceira
    alinha à direita porque é a que se compara de linha para linha — os olhos
    descem por uma coluna de números, não por um parágrafo. */
-.partidas {
+.partidas,
+.fantasma-das-partidas {
   list-style: none;
   margin: 0.4rem 0 0;
   padding: 0;
 }
-.partidas li {
+.partidas li,
+.fantasma-das-partidas li {
   display: flex;
   align-items: center;
   gap: 0.6rem;
   padding: 0.55rem 0;
   border-bottom: 1px solid var(--linhas);
 }
-.partidas li:last-child {
+.partidas li:last-child,
+.fantasma-das-partidas li:last-child {
   border-bottom: none;
 }
 
 /* O NÚMERO DA LINHA COM A COR DELA, do `route_color` do feed, no desenho de
    todos os distintivos (`Distintivo.tsx`, tamanho `medio`). Sem cor conhecida
    fica neutro — e um distintivo neutro continua a dizer o número. */
-.partidas .distintivo {
+.partidas .distintivo,
+.fantasma-das-partidas .distintivo {
   flex: none;
   min-width: 2.9rem;
 }
 
-.partidas .destino {
+.partidas .destino,
+.fantasma-das-partidas .destino {
   flex: 1;
   min-width: 0;
   line-height: 1.3;
@@ -2737,19 +2777,22 @@ main.pagina:has(.app-mapa) {
    os campos de data e hora das direções, com `display: flex` e `width: 100%`.
    Ganhava a este por ser declarado com a mesma especificidade e mais acima, e
    a espera saía por cima do destino — o mesmo nome a significar duas coisas. */
-.partidas .quando-passa {
+.partidas .quando-passa,
+.fantasma-das-partidas .quando-passa {
   flex: none;
   text-align: right;
   line-height: 1.25;
 }
-.partidas .quando-passa strong {
+.partidas .quando-passa strong,
+.fantasma-das-partidas .quando-passa strong {
   display: block;
   font-size: 1.05rem;
   /* Tabular para as colunas de minutos assentarem umas nas outras. */
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.partidas .quando-passa .relogio {
+.partidas .quando-passa .relogio,
+.fantasma-das-partidas .quando-passa .relogio {
   display: block;
   font-size: 0.85rem;
   color: var(--texto-secundario);
@@ -2815,8 +2858,22 @@ a.botao:focus-visible {
 .app-procura {
   padding: 0.4rem 0.5rem;
 }
+/* UMA CÁPSULA SÓ, E NÃO UMA CAIXA DENTRO DE OUTRA (P1-028). O contorno passa
+   para a cápsula — com a borda dos campos, que dá os 3:1 do critério 1.4.11
+   —, e o campo fica sem borda. O foco desenha-se na cápsula toda. */
 .app-procura input {
   margin: 0;
+  border: 0;
+  background: transparent;
+  padding-left: 0.4rem;
+}
+.app-procura input:focus,
+.app-procura input:focus-visible {
+  outline: none;
+}
+.app-procura:focus-within {
+  outline: 3px solid var(--foco);
+  outline-offset: 2px;
 }
 
 /* --- O ECRÃ DE ABERTURA: o mapa de bordo a bordo ------------------------- */
@@ -2830,18 +2887,39 @@ a.botao:focus-visible {
  * Isto NÃO é esconder navegação: um sítio de uma autoridade pública não pode
  * ficar sem ela porque ficou mais bonito. Está toda no `MenuDoMapa`, a um
  * toque, e em texto no HTML de todas as outras páginas — que são as que os
- * motores de busca leem e as que um leitor de ecrã percorre. */
-body.ecra-de-mapa .cabecalho,
-body.ecra-de-mapa .rodape {
+ * motores de busca leem e as que um leitor de ecrã percorre.
+ *
+ * PELO `:has()`, E NÃO POR UMA CLASSE POSTA NUM EFEITO (P3-023). A classe só
+ * entrava depois da hidratação: o cabeçalho chegava no HTML, aparecia, e
+ * desaparecia segundos depois em rede lenta — e a aplicação inteira subia
+ * debaixo do dedo de quem ia tocar na procura. Assim vale desde o primeiro
+ * pixel, sem JavaScript.
+ *
+ * E A ALTURA É A QUE SOBRA, sem medir: uma coluna da altura do ecrã, a faixa
+ * da demonstração (quando a há) com a dela, e o mapa com o resto. Com `100dvh`
+ * cravado, a faixa empurrava o fundo da folha de abertura para baixo da dobra
+ * — os nomes dos modos ficavam por ver. */
+body:has(.app-mapa) .cabecalho,
+body:has(.app-mapa) .rodape {
   display: none;
 }
-body.ecra-de-mapa .pagina {
+body:has(.app-mapa) main.pagina {
   max-width: none;
   padding: 0;
   margin: 0;
-}
-body.ecra-de-mapa .app-mapa {
+  display: flex;
+  flex-direction: column;
   height: 100dvh;
+}
+body:has(.app-mapa) main.pagina > .marca-demonstracao {
+  flex: none;
+  margin: 0;
+  border-radius: 0;
+}
+body:has(.app-mapa) .app-mapa {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
 }
 
 /* A barra de procura a flutuar, com o menu à esquerda — a gramática do Maps.
@@ -3333,6 +3411,188 @@ dialog.menu-do-mapa .lista .secundario {
 
 /* === O PLANEADOR E O MAPA ================================================ */
 
+/* --- a folha de abertura: «Para onde vais?» e o que há ------------------ */
+
+/* A folha desliza por dentro quando cresce — com o «Perto de ti» aberto
+   passa da metade do ecrã, e o mapa não pode desaparecer por baixo dela. */
+.folha-de-abertura {
+  max-height: 62%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* «PARA ONDE VAIS?» TEM O ASPETO DE UM CAMPO, porque é a porta de um: toca-se
+   e escreve-se o destino. É um botão (abre as direções; não escreve aqui), e
+   por isso leva o nome à vista e o alvo inteiro. */
+button.para-onde-vais {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: calc(100% - 1.2rem);
+  margin: 0 0.6rem 0.6rem;
+  min-height: 3rem;
+  padding: 0.5rem 0.9rem;
+  background: var(--fundo);
+  color: var(--texto);
+  border: 1px solid var(--borda-campo);
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  text-align: left;
+}
+button.para-onde-vais:hover {
+  background: #fff;
+  color: var(--texto);
+  border-color: var(--marca);
+}
+button.para-onde-vais svg {
+  color: var(--alerta);
+  flex: none;
+}
+.folha-de-abertura h2.titulo-dos-modos {
+  margin: 0.4rem 0 0.75rem;
+  padding: 0 0.6rem;
+  font-size: 1.05rem;
+}
+.folha-de-abertura .abertura-nota {
+  margin: 0.5rem 0.6rem 0;
+}
+.folha-de-abertura .abertura-nota a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: var(--alvo);
+  font-weight: 700;
+}
+
+/* --- «Perto de ti» dentro da folha do mapa ------------------------------ */
+
+.perto-no-mapa {
+  margin: 0 0.6rem 0.4rem;
+}
+.perto-no-mapa h2 {
+  margin: 0.25rem 0 0.4rem;
+  font-size: 1.05rem;
+}
+button.perto-botao {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+ul.perto-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+ul.perto-lista > li {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--linhas);
+}
+ul.perto-lista > li:last-child {
+  border-bottom: 0;
+}
+/* A paragem é o alvo: o nome e a distância, a toda a largura, e abre o
+   cartão dela no mapa. */
+button.perto-paragem,
+ul.perto-lista > li > a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: var(--alvo);
+  padding: 0.25rem 0;
+  background: none;
+  border: 0;
+  color: var(--marca);
+  font-weight: 700;
+  text-align: left;
+}
+button.perto-paragem:hover {
+  background: none;
+  color: var(--marca-hover);
+  text-decoration: underline;
+}
+.perto-nome {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+ul.perto-partidas {
+  list-style: none;
+  margin: 0 0 0.25rem;
+  padding: 0;
+}
+ul.perto-partidas > li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.5rem;
+  padding: 0.15rem 0;
+  font-size: 0.95rem;
+}
+.perto-destino {
+  flex: 1 1 8rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.perto-quando {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.perto-quando em {
+  color: var(--texto-secundario);
+  font-size: 0.85rem;
+}
+.perto-dia {
+  margin: 0.1rem 0;
+}
+
+/* --- o cartão de um ponto: as ações em cima, as horas com lugar guardado - */
+
+.cartao-de-baixo .cartao-accoes {
+  margin-top: 0.75rem;
+}
+.cartao-de-baixo .cartao-accoes .botao {
+  flex: 1 1 auto;
+}
+/* AS HORAS TÊM LUGAR GUARDADO (P3-024): cinco linhas, da altura das
+   verdadeiras, enquanto chegam. Com menos de cinco partidas o lugar fica, e
+   o cartão não encolhe por baixo do dedo. */
+.cartao-de-baixo.com-horas .a-seguir-reservado {
+  min-height: 19rem;
+}
+.fantasma-das-partidas li {
+  color: transparent;
+}
+.fantasma-das-partidas .distintivo,
+.fantasma-das-partidas .destino,
+.fantasma-das-partidas strong,
+.fantasma-das-partidas .relogio {
+  background: var(--fundo);
+  border-radius: 4px;
+}
+.fantasma-das-partidas .distintivo {
+  min-width: 2.9rem;
+}
+.fantasma-das-partidas .destino {
+  min-height: 1.2rem;
+}
+.fantasma-das-partidas strong {
+  min-width: 3.5rem;
+  min-height: 1.2rem;
+}
+.fantasma-das-partidas .relogio {
+  min-width: 2.5rem;
+  margin-top: 0.2rem;
+  margin-left: auto;
+}
+/* Um título focado pelo código não é um controlo: o foco vai para ele para
+   ser LIDO, e um contorno à volta de um título lê-se como um botão. */
+.cartao-de-baixo h2:focus {
+  outline: none;
+}
+
 /* --- as direções: o lugar dos resultados, o esqueleto, os desvios ------- */
 
 /* NA PÁGINA, O LUGAR DOS RESULTADOS ESTÁ GUARDADO desde o início (P3-009):
@@ -3480,9 +3740,120 @@ ol.percurso li.modo-expresso .fio {
   z-index: 7;
 }
 
+/* --- o mapa enquanto não chega, e o foco dos botões dele ----------------- */
+
+.mapa-esboco {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+/* «A carregar o mapa…» sai do meio — onde tapava os pontos do esboço — para
+   o alto, pequeno. */
+.mapa-aviso.a-carregar {
+  top: auto;
+  bottom: 45%;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.8rem;
+}
+
+/* O FOCO DOS BOTÕES DO MAPA É O DA CASA (P3-016): era a sombra azul de 2 px
+   do MapLibre, que no canto do ecrã passava despercebida. */
+.maplibregl-ctrl button:focus-visible,
+.maplibregl-ctrl a:focus-visible {
+  box-shadow: none;
+  outline: 3px solid var(--foco);
+  outline-offset: 2px;
+}
+.maplibregl-ctrl-group button:focus:not(:focus-visible) {
+  box-shadow: none;
+}
+
 /* Um endereço de correio não se parte sozinho, e com a letra grande empurrava
    a página para o lado (P3-020). */
 a[href^='mailto:'] {
   overflow-wrap: anywhere;
 }
 
+/* A FAIXA DA DEMONSTRAÇÃO NO ECRÃ DO MAPA, mais baixa: continua em todas as
+   páginas, e aqui cada linha dela é uma linha de mapa a menos. */
+body:has(.app-mapa) .marca-demonstracao {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.75rem;
+  line-height: 1.4;
+}
+
+/* --- NA SECRETÁRIA, PAINÉIS E NÃO FOLHAS ESTICADAS (P1-013) --------------- */
+
+/* A folha de abertura e a das direções esticavam-se à largura toda: os sete
+   círculos a 200 px uns dos outros e o mapa reduzido a uma faixa entre o
+   cartão de cima e a folha. A partir de 64 rem passam a um painel à
+   esquerda, alinhado com a procura — como o cartão de um ponto já fazia. */
+@media (min-width: 64rem) {
+  .folha-de-abertura,
+  .folha:not(.em-pagina) {
+    left: 0.75rem;
+    right: auto;
+    bottom: 0.75rem;
+    width: 26rem;
+    border: 1px solid var(--linhas);
+    border-radius: var(--raio);
+  }
+  .folha-de-abertura {
+    top: auto;
+    max-height: calc(100% - 8rem);
+  }
+  .folha:not(.em-pagina) {
+    max-height: calc(100% - 10.5rem);
+  }
+  .folha.encolhida:not(.em-pagina) {
+    max-height: 12rem;
+  }
+  .cartao-de-cima:not(.em-pagina) {
+    max-width: 26rem;
+    left: 0.75rem;
+  }
+  .folha-de-abertura ul.circulos {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* --- O TELEMÓVEL DEITADO (P3-021) ---------------------------------------- */
+
+/* Deitado, a folha de abertura ocupava metade do ecrã e sobravam 80 px de
+   mapa. Passa a uma coluna à esquerda, com a altura toda, e a fila das
+   camadas sobe para a linha da procura. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .app-procura {
+    max-width: min(22rem, 46vw);
+  }
+  .app-camadas {
+    top: 0.75rem;
+    left: calc(min(22rem, 46vw) + 1.5rem);
+  }
+  .folha-de-abertura,
+  .folha:not(.em-pagina),
+  .cartao-de-baixo {
+    left: 0.5rem;
+    right: auto;
+    bottom: 0.5rem;
+    width: min(22rem, 46vw);
+    border: 1px solid var(--linhas);
+    border-radius: var(--raio);
+  }
+  .folha-de-abertura,
+  .cartao-de-baixo {
+    max-height: calc(100% - 4.5rem);
+  }
+  .folha:not(.em-pagina) {
+    max-height: calc(100% - 9rem);
+  }
+  .cartao-de-cima:not(.em-pagina) {
+    max-width: min(22rem, 46vw);
+  }
+  .folha-de-abertura ul.circulos {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .cartao-de-baixo.com-horas .a-seguir-reservado {
+    min-height: 0;
+  }
+}

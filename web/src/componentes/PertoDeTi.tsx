@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { horaLegivel, type Partida } from '@/lib/formato';
+import Distintivo from '@/componentes/Distintivo';
+import { esperaLegivel, horaLegivel, type Partida, type Ponto } from '@/lib/formato';
 import {
   calendarioDe,
   chaveDoDia,
@@ -16,7 +17,7 @@ import {
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 
 /**
- * As paragens mais perto, e o que passa nelas a seguir (§8, bloco 3).
+ * As paragens mais perto, e o que passa nelas a seguir (§6, «Perto de ti»).
  *
  * **NÃO PEDE A LOCALIZAÇÃO AO CARREGAR**, e é a decisão que estrutura o resto.
  * Uma página que pergunta antes de mostrar seja o que for é uma página que não
@@ -25,18 +26,15 @@ import { enderecoDosDados } from '@/lib/dados-do-navegador';
  *
  * **E a distância vai em metros, não num mapa.** «A 180 m» responde à pergunta
  * («é esta a paragem em frente?») sem exigir que se saiba ler um mapa, sem
- * carregar mosaicos e sem deixar de fora quem usa leitor de ecrã. O mapa é
- * outra coisa e vem à parte.
+ * carregar mosaicos e sem deixar de fora quem usa leitor de ecrã.
+ *
+ * DUAS PORTAS PARA A MESMA COISA. Em «A rede» é o caminho sem mapa, com as
+ * cinco paragens mais perto e as ligações para a página de cada uma. No mapa
+ * (`variante="mapa"`) é a folha de baixo a responder ao botão da localização,
+ * que até aqui só punha um ponto azul (P2-016): três paragens, duas partidas
+ * de cada, e tocar numa abre o cartão dela.
  */
 
-type Ponto = {
-  nome: string;
-  lat: number;
-  lon: number;
-  tipo: string;
-  id: string;
-  concelho: string;
-};
 type ComDistancia = Ponto & { metros: number };
 
 type Estado =
@@ -47,7 +45,7 @@ type Estado =
   | { tipo: 'indisponivel' }
   | { tipo: 'falhou'; razao: string };
 
-/** Haversine. A Terra não é plana e a região tem 80 km de ponta a ponta. */
+/** Haversine. A Terra não é plana e uma região tem dezenas de km de ponta a ponta. */
 function metrosEntre(a: [number, number], b: [number, number]): number {
   const R = 6_371_000;
   const rad = (x: number) => (x * Math.PI) / 180;
@@ -64,39 +62,44 @@ function distanciaLegivel(metros: number): string {
 }
 
 /**
- * As próximas partidas a partir de agora, na ordem em que acontecem.
- *
- * A escolha vive em `lib/dias.ts` e é a MESMA que a folha do mapa usa. Eram
- * duas cópias da mesma regra em dois ficheiros, e a do mapa não filtrava pelo
- * dia — a mesma paragem dizia coisas diferentes conforme se chegasse a ela
- * pelo mapa ou pela lista de «perto de ti».
- */
-function proximasAqui(
-  partidas: Partida[],
-  hoje: Date,
-  agora: string,
-  calendario: Calendario | null,
-): Proximas<Partida> {
-  return proximas(partidas, hoje, agora, calendario, 3);
-}
-
-/**
  * Antes das horas, o dia delas — em poucas palavras, que isto é uma linha.
  *
  * É a mesma informação da folha do mapa, encurtada: «Hoje não há. Na
  * segunda-feira, 5/10:» lê-se de relance numa lista de cinco paragens.
  */
 function prefixo(r: Proximas<Partida>, hoje: Date): string {
-  if (r.tipo !== 'no-dia' || r.dias === 0) return 'A seguir: ';
+  if (r.tipo !== 'no-dia' || r.dias === 0) return '';
   const h = chaveDoDia(hoje);
   const quando = quandoE(r.chave, r.dias, h);
   const antes = r.hoje === 'nao-ha' ? `Hoje, ${diaDaSemana(h)}, não há.` : 'Hoje já não há mais.';
-  return `${antes} ${quando.charAt(0).toUpperCase()}${quando.slice(1)}: `;
+  return `${antes} ${quando.charAt(0).toUpperCase()}${quando.slice(1)}:`;
 }
 
-export default function PertoDeTi({ regiao, pontos }: { regiao: string; pontos: Ponto[] }) {
+const seguro = (s: string) => s.replace(/[^a-zA-Z0-9\-_]/g, '-');
+
+export default function PertoDeTi({
+  regiao,
+  pontos,
+  variante = 'pagina',
+  posicao = null,
+  aoEscolher,
+}: {
+  regiao: string;
+  pontos: Ponto[];
+  /** `pagina` em «A rede»; `mapa` na folha de baixo da aplicação. */
+  variante?: 'pagina' | 'mapa';
+  /**
+   * Onde está quem pergunta, quando já se sabe — o botão da localização do
+   * mapa responde por aqui, e a folha não volta a perguntar.
+   */
+  posicao?: [number, number] | null;
+  /** No mapa, tocar numa paragem abre o cartão dela em vez de mudar de página. */
+  aoEscolher?: (p: Ponto) => void;
+}) {
+  const noMapa = variante === 'mapa';
   const [estado, setEstado] = useState<Estado>({ tipo: 'parado' });
   const [partidas, setPartidas] = useState<Record<string, Partida[]>>({});
+  const [cores, setCores] = useState<Record<string, string>>({});
   /**
    * Os concelhos cujo ficheiro de partidas NÃO CHEGOU. Uma paragem sem horas
    * por falta de rede não é uma paragem sem partidas, e a lista diz qual é.
@@ -111,7 +114,7 @@ export default function PertoDeTi({ regiao, pontos }: { regiao: string; pontos: 
   function carregarPartidas(concelhos: string[]) {
     setSemResposta((antes) => antes.filter((c) => !concelhos.includes(c)));
     for (const c of concelhos) {
-      fetch(enderecoDosDados(regiao, `partidas/${c.replace(/[^a-zA-Z0-9\-_]/g, '-')}.json`))
+      fetch(enderecoDosDados(regiao, `partidas/${seguro(c)}.json`))
         .then((r) => {
           if (r.ok) return r.json();
           // O ficheiro que não existe é um concelho sem partidas — uma
@@ -122,7 +125,40 @@ export default function PertoDeTi({ regiao, pontos }: { regiao: string; pontos: 
         .then((mapa: Record<string, Partida[]>) => setPartidas((antes) => ({ ...antes, ...mapa })))
         .catch(() => setSemResposta((antes) => [...new Set([...antes, c])]));
     }
+    // As cores das linhas, para o distintivo dizer a linha como o resto do
+    // sítio a diz. Sem elas sai neutro — e continua a dizer o número.
+    if (!Object.keys(cores).length) {
+      fetch(enderecoDosDados(regiao, 'cores-das-linhas.json'))
+        .then((r) => (r.ok ? r.json() : {}))
+        .then((m: Record<string, string>) => setCores(m ?? {}))
+        .catch(() => {});
+    }
   }
+
+  function mostrarPerto(aqui: [number, number]) {
+    // SÓ PARAGENS E ESTAÇÕES, e não tudo o que o mapa mostra.
+    //
+    // O índice traz também as estações de bicicletas, as praças de táxi e as
+    // paragens dos urbanos municipais. Aqui não servem: este bloco responde
+    // «a que horas passa o próximo», e nenhum desses tem partidas — apareciam
+    // como sítios mudos, a empurrar para fora as paragens que respondem. E a
+    // ficha deles não existe em `/rede/`: a ligação ficava partida.
+    const perto = pontos
+      .filter((p) => p.tipo === 'paragem' || p.tipo === 'estacao')
+      .map((p) => ({ ...p, metros: metrosEntre(aqui, [p.lat, p.lon]) }))
+      .sort((a, b) => a.metros - b.metros)
+      .slice(0, noMapa ? 3 : 5);
+    setEstado({ tipo: 'perto', pontos: perto });
+    carregarPartidas([...new Set(perto.map((p) => p.concelho))]);
+  }
+
+  // A LOCALIZAÇÃO QUE O MAPA JÁ TEM não se volta a pedir: o botão do mapa
+  // perguntou, o navegador respondeu, e a folha mostra o que há ali perto.
+  useEffect(() => {
+    if (posicao) mostrarPerto(posicao);
+    // `mostrarPerto` muda a cada renderização; o que decide é a posição.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posicao?.[0], posicao?.[1]]);
 
   function procurar() {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -131,24 +167,7 @@ export default function PertoDeTi({ regiao, pontos }: { regiao: string; pontos: 
     }
     setEstado({ tipo: 'a-perguntar' });
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const aqui: [number, number] = [pos.coords.latitude, pos.coords.longitude];
-        // SÓ PARAGENS E ESTAÇÕES, e não tudo o que o mapa mostra.
-        //
-        // O índice passou a trazer também as estações de bicicletas, as
-        // praças de táxi e as paragens dos urbanos municipais. Aqui não
-        // servem: este bloco responde «a que horas passa o próximo», e
-        // nenhum desses tem partidas — apareciam como sítios mudos, a
-        // empurrar para fora as paragens que respondem. E a ficha deles não
-        // existe em `/rede/`: a ligação ficava partida.
-        const perto = pontos
-          .filter((p) => p.tipo === 'paragem' || p.tipo === 'estacao')
-          .map((p) => ({ ...p, metros: metrosEntre(aqui, [p.lat, p.lon]) }))
-          .sort((a, b) => a.metros - b.metros)
-          .slice(0, 5);
-        setEstado({ tipo: 'perto', pontos: perto });
-        carregarPartidas([...new Set(perto.map((p) => p.concelho))]);
-      },
+      (pos) => mostrarPerto([pos.coords.latitude, pos.coords.longitude]),
       (erro) => {
         if (erro.code === erro.PERMISSION_DENIED) setEstado({ tipo: 'recusado' });
         else setEstado({ tipo: 'falhou', razao: erro.message });
@@ -171,21 +190,41 @@ export default function PertoDeTi({ regiao, pontos }: { regiao: string; pontos: 
       vivo = false;
     };
   }, [regiao]);
+  // A MESMA ESCOLHA QUE A FOLHA DO MAPA FAZ (`lib/dias.ts`): duas cópias da
+  // mesma regra em dois ficheiros divergiam, e a mesma paragem dizia coisas
+  // diferentes conforme se chegasse a ela pelo mapa ou por esta lista.
   const proximasDe = (suas: Partida[]) =>
-    calendario === undefined ? null : proximasAqui(suas, hoje, agora, calendario);
+    calendario === undefined ? null : proximas(suas, hoje, agora, calendario, noMapa ? 2 : 3);
+
+  const comLista = estado.tipo === 'perto';
+  // O identificador da página é o de sempre: é por ele que os testes e a
+  // ligação de salto encontram o bloco.
+  const idDoTitulo = noMapa ? 'perto-no-mapa' : 'perto';
 
   return (
-    <section aria-labelledby="perto">
-      <h2 id="perto">Perto de ti</h2>
+    <section
+      aria-labelledby={noMapa && !comLista ? undefined : idDoTitulo}
+      aria-label={noMapa && !comLista ? 'Perto de ti' : undefined}
+      className={noMapa ? 'perto-no-mapa' : undefined}
+    >
+      {/* No mapa o título só aparece com a lista: antes dela, o bloco é um
+          botão, e um título por cima de um botão só ocupava a folha. */}
+      {(!noMapa || comLista) && <h2 id={idDoTitulo}>Perto de ti</h2>}
 
       {estado.tipo === 'parado' && (
         <>
-          <p>
-            As paragens mais próximas e o que passa nelas a seguir. Só se souber onde estás — e isso
-            és tu que decides.
-          </p>
-          <button type="button" onClick={procurar}>
-            Ver as paragens perto de mim
+          {!noMapa && (
+            <p>
+              As paragens mais próximas e o que passa nelas a seguir. Só se souber onde estás — e
+              isso és tu que decides.
+            </p>
+          )}
+          <button
+            type="button"
+            className={noMapa ? 'botao secundario perto-botao' : undefined}
+            onClick={procurar}
+          >
+            {noMapa ? 'Paragens perto de mim' : 'Ver as paragens perto de mim'}
           </button>
         </>
       )}
@@ -214,41 +253,82 @@ export default function PertoDeTi({ regiao, pontos }: { regiao: string; pontos: 
 
         {estado.tipo === 'perto' && (
           <>
-            <p>
-              {estado.pontos.length} sítios mais próximos. As distâncias são em linha reta — a pé é
-              sempre um pouco mais.
-            </p>
-            <ul className="lista">
+            {!noMapa && (
+              <p>
+                {estado.pontos.length === 1
+                  ? 'A paragem mais perto.'
+                  : `As ${estado.pontos.length} paragens mais perto.`}{' '}
+                As distâncias são em linha reta — a pé é sempre um pouco mais.
+              </p>
+            )}
+            <ul className={noMapa ? 'perto-lista' : 'lista perto-lista'}>
               {estado.pontos.map((p) => {
                 const suas = partidas[p.id];
                 const r = suas?.length ? proximasDe(suas) : null;
+                const href = `/rede/${p.tipo === 'estacao' ? 'estacoes' : 'paragens'}/${seguro(p.id)}/`;
+                const cabeca = (
+                  <>
+                    <span className="perto-nome">{p.nome}</span>
+                    <span className="secundario">{distanciaLegivel(p.metros)}</span>
+                  </>
+                );
                 return (
                   <li key={p.id}>
-                    <a
-                      href={`/rede/${p.tipo === 'estacao' ? 'estacoes' : 'paragens'}/${p.id.replace(/[^a-zA-Z0-9\-_]/g, '-')}/`}
-                    >
-                      <span>{p.nome}</span>
-                      <span className="secundario">{distanciaLegivel(p.metros)}</span>
-                    </a>
+                    {noMapa && aoEscolher ? (
+                      <button type="button" className="perto-paragem" onClick={() => aoEscolher(p)}>
+                        {cabeca}
+                      </button>
+                    ) : (
+                      <a href={href}>{cabeca}</a>
+                    )}
                     {(r?.tipo === 'no-dia' || r?.tipo === 'sem-calendario') && (
-                      <p className="secundario">
+                      <>
                         {/* QUANDO AS HORAS NÃO SÃO DE HOJE, A LINHA COMEÇA
                           POR O DIZER: «Hoje, domingo, não há. Na
-                          segunda-feira, 5/10: 06:45 1000». */}
-                        {prefixo(r, hoje)}
-                        {r.partidas.map((d, i) => {
-                          const { texto, diaSeguinte } = horaLegivel(d.hora);
-                          return (
-                            <span key={`${d.hora}-${d.linha}-${i}`}>
-                              {i > 0 && ' · '}
-                              {texto}
-                              {diaSeguinte && ' (dia seguinte)'} {d.linha}
-                              {d.estimada && ' est.'}
-                            </span>
-                          );
-                        })}
-                        {r.tipo === 'sem-calendario' && ' — sem confirmar se é hoje'}
-                      </p>
+                          segunda-feira, 5/10:». */}
+                        {r.tipo === 'no-dia' && r.dias > 0 ? (
+                          <p className="secundario perto-dia">{prefixo(r, hoje)}</p>
+                        ) : (
+                          !noMapa && <p className="secundario perto-dia">A seguir:</p>
+                        )}
+                        {/* A MESMA LINHA DE PARTIDA DO CARTÃO DO MAPA (P2-017):
+                          o número, PARA ONDE VAI e quanto falta. Dizia só o
+                          número — e numa paragem com os dois sentidos a mesma
+                          linha passa para lados opostos. */}
+                        <ul className="perto-partidas">
+                          {r.partidas.map((d, i) => {
+                            const { texto, diaSeguinte } = horaLegivel(d.hora);
+                            const espera =
+                              r.tipo === 'no-dia' && r.dias <= 1
+                                ? esperaLegivel(d.hora, agora, r.dias === 1)
+                                : null;
+                            return (
+                              <li key={`${d.hora}-${d.linha}-${i}`}>
+                                <Distintivo codigo={d.linha} cor={cores[d.linha_id]} />
+                                <span className="perto-destino">
+                                  {d.circular ? 'circular' : `para ${d.destino}`}
+                                </span>
+                                <span className="perto-quando">
+                                  {espera ? (
+                                    <>
+                                      <strong>{espera}</strong> ({texto})
+                                    </>
+                                  ) : (
+                                    <strong>{texto}</strong>
+                                  )}
+                                  {diaSeguinte && ' dia seguinte'}
+                                  {d.estimada && <em> · hora estimada</em>}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                        {r.tipo === 'sem-calendario' && (
+                          <p className="secundario">
+                            Não foi possível confirmar os dias: estas horas podem não ser de hoje.
+                          </p>
+                        )}
+                      </>
                     )}
                     {r?.tipo === 'fora-do-periodo' && (
                       <p className="secundario">
@@ -283,10 +363,12 @@ export default function PertoDeTi({ regiao, pontos }: { regiao: string; pontos: 
                 </button>
               </p>
             )}
-            <p className="secundario">
-              Horários planeados, não em tempo real. Uma hora marcada <em>est.</em> foi calculada
-              por nós entre duas do horário publicado.
-            </p>
+            {!noMapa && (
+              <p className="secundario">
+                Horários planeados, não em tempo real. Uma hora estimada foi calculada por nós entre
+                duas do horário publicado.
+              </p>
+            )}
           </>
         )}
       </div>

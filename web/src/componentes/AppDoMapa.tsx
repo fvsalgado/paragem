@@ -7,14 +7,23 @@ import Direccoes, { type Percurso } from '@/componentes/Direccoes';
 import { NOME_DOS_MODOS, type Partida, type Ponto } from '@/lib/formato';
 import { calendarioDe, horaDoRelogio, proximas, type Calendario } from '@/lib/dias';
 import ASeguir from '@/componentes/ASeguir';
-import { camadasDe } from '@/lib/pontos-no-mapa';
+import PertoDeTi from '@/componentes/PertoDeTi';
+import { camadasDe, ordemDeApresentacao } from '@/lib/pontos-no-mapa';
 import DisponibilidadeBicicletas, {
   ContagemDaEstacao,
 } from '@/componentes/DisponibilidadeBicicletas';
 import Link from 'next/link';
 import MenuDoMapa from '@/componentes/MenuDoMapa';
-import { DoModo, Hamburguer } from '@/componentes/Icones';
+import { Chegada, DoModo, Hamburguer, Lista } from '@/componentes/Icones';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
+import {
+  avisoDe,
+  comoProcura,
+  escreverViagem,
+  lerViagem,
+  type Caixa,
+  type PontaLida,
+} from '@/lib/endereco-da-viagem';
 
 /**
  * A aplicação: o mapa ocupa o ecrã, a procura flutua em cima, e tocar num
@@ -74,6 +83,9 @@ const CANTOS = [
 function rotuloDe(p: Ponto): string {
   if (p.tipo === 'paragem') return 'Paragem de autocarro';
   if (p.tipo === 'estacao') return 'Estação de comboio';
+  // Um sítio da procura — uma terra, um hospital — diz o que é pela etiqueta
+  // que a procura já lhe dá.
+  if (p.tipo === 'sitio') return p.descricao || 'Sítio';
   return NOME_DOS_MODOS[p.tipo] ?? p.tipo;
 }
 
@@ -85,17 +97,63 @@ function rotuloDe(p: Ponto): string {
  * bicicletas está na página do modo, inteiro. Uma ligação para uma ficha que
  * não existe era pior do que não haver ligação.
  */
-function paginaDe(regiao: string, p: Ponto): { href: string; texto: string } {
+function paginaDe(regiao: string, p: Ponto): { href: string; texto: string } | null {
   if (p.tipo === 'paragem' || p.tipo === 'estacao') {
     const pasta = p.tipo === 'estacao' ? 'estacoes' : 'paragens';
     return { href: `/rede/${pasta}/${seguro(p.id)}/`, texto: 'Horário completo' };
   }
+  // UM SÍTIO NÃO É UM SERVIÇO: levava a `/modos/sitio/`, que não existe. O
+  // que se faz com um sítio é ir para lá, ou partir de lá — e os dois botões
+  // estão no alto do cartão.
+  if (p.tipo === 'sitio') return null;
   return { href: `/modos/${seguro(p.tipo)}/`, texto: 'Ver este serviço' };
+}
+
+/**
+ * AS DIREÇÕES ABERTAS: as duas pontas, o dia e a hora pedidos, e o campo que
+ * recebe o foco. A `vez` conta as aberturas — abrir outra vez é começar de
+ * novo, e não herdar a pergunta de antes.
+ */
+type Direcoes = {
+  de: Ponto | null;
+  para: Ponto | null;
+  dia: string | null;
+  hora: string | null;
+  foco: 'de' | 'para' | null;
+  vez: number;
+};
+
+/**
+ * A CAMADA QUE ESTA ENTRADA DO HISTÓRICO ABRIU, posta por nós.
+ *
+ * É o que deixa o «Fechar» e o Esc fazerem o mesmo que o «voltar» do
+ * telemóvel: se fomos nós a empilhar a entrada, fechar é voltar atrás uma
+ * vez. Se não fomos — quem chegou por uma ligação partilhada já com as
+ * direções abertas —, fechar não pode voltar atrás, porque atrás está outro
+ * sítio: substitui-se a entrada pela do mapa.
+ */
+type Camada = 'cartao' | 'direcoes';
+const camadaNoHistorico = (): Camada | null =>
+  (typeof window !== 'undefined' && (window.history.state?.camada as Camada | undefined)) || null;
+
+/**
+ * Escreve no histórico SEM navegar.
+ *
+ * `history.pushState` e não o `router.push` do Next: este pedia ao servidor a
+ * página do endereço novo — a mesma página, com os pontos todos lá dentro —
+ * para mudar uma coisa que só o navegador lê. O Next acompanha o histórico
+ * nativo e não pede nada.
+ */
+function escrever(camada: Camada | null, endereco: string, empilhar: boolean): void {
+  const estado = camada ? { camada } : {};
+  if (empilhar) window.history.pushState(estado, '', endereco);
+  else window.history.replaceState(estado, '', endereco);
 }
 
 export default function AppDoMapa({
   regiao,
   centro,
+  caixa = null,
   pontos,
   mosaicos,
   atribuicaoDoMapa,
@@ -117,6 +175,8 @@ export default function AppDoMapa({
   /** «na Serra da Pedra Alta», «no Baixo Sável» — escrito pela região, não colado aqui. */
   emDaRegiao: string;
   centro: [number, number];
+  /** A caixa da região: um ponto pedido por coordenadas tem de cair perto dela. */
+  caixa?: Caixa | null;
   pontos: Ponto[];
   mosaicos: string;
   /**
@@ -137,24 +197,26 @@ export default function AppDoMapa({
 }) {
   const [menu, setMenu] = useState(false);
 
-  // O MAPA PASSA A OCUPAR O ECRÃ TODO, e a faixa do sítio sai da frente.
-  //
-  // Eram 120 px de um telemóvel gastos a repetir «Paragem.pt · <a região> ·
-  // Mapa» a quem já está no mapa. A navegação não desapareceu: mudou-se para
-  // o menu, a um toque do canto — e continua em texto no HTML de todas as
+  // O MAPA OCUPA O ECRÃ TODO, e a faixa do sítio sai da frente — pelo CSS,
+  // com `body:has(.app-mapa)`, e já no HTML que vem do servidor. Era uma
+  // classe posta num efeito: o cabeçalho chegava, aparecia, e desaparecia na
+  // hidratação, e a aplicação inteira subia por baixo do dedo de quem ia
+  // tocar na procura (P3-023). A navegação não desapareceu: mudou-se para o
+  // menu, a um toque do canto — e continua em texto no HTML de todas as
   // outras páginas, que são as que os motores de busca leem.
-  //
-  // A classe vai no `body` porque o cabeçalho e o rodapé são irmãos deste
-  // componente, não filhos: daqui não se lhes toca de outra maneira.
-  useEffect(() => {
-    document.body.classList.add('ecra-de-mapa');
-    return () => document.body.classList.remove('ecra-de-mapa');
-  }, []);
   const [escolhido, setEscolhido] = useState<Marca | null>(null);
 
   // AS CAMADAS COMEÇAM TODAS LIGADAS, e derivam do que há nos dados: uma
   // região sem bicicletas não ganha um botão que não liga a nada.
-  const camadas = camadasDe(pontos.map((p) => p.tipo));
+  //
+  // E APRESENTAM-SE PELA ORDEM DA REGIÃO, que não é a ordem de desenho (P2-038,
+  // P1-011). A fila abria com o expresso — o serviço menos usado, e privado —
+  // porque seguia a ordem de empilhamento das camadas. A rede da autoridade
+  // vem primeiro, os privados no fim, como na folha logo por baixo.
+  const camadas = ordemDeApresentacao(
+    camadasDe(pontos.map((p) => p.tipo)),
+    modos.map((m) => m.id),
+  );
   const [visiveis, setVisiveis] = useState<Set<string>>(() => new Set(camadas.map((c) => c.tipo)));
 
   // A FILA DAS CAMADAS TEM DE DIZER QUE CONTINUA.
@@ -214,30 +276,65 @@ export default function AppDoMapa({
   // milhares de vezes por linha. O índice inteiro são 21 KB, lidos uma vez
   // e servidos da cache a partir daí.
   const [cores, setCores] = useState<Record<string, string>>({});
-  const [aIr, setAIr] = useState<Ponto | null>(null);
+  const [direcoes, setDirecoes] = useState<Direcoes | null>(null);
+  /** O que o endereço pediu e não se pôde abrir — dito em vez de calado. */
+  const [avisoDoEndereco, setAvisoDoEndereco] = useState<string | null>(null);
   const [percurso, setPercurso] = useState<Percurso | null>(null);
   // O PAINEL DESCE PARA SE VER O MAPA. No Maps arrasta-se a folha para baixo;
   // aqui é um botão, que faz o mesmo e funciona com teclado, com comando de
   // voz e com leitor de ecrã — coisas que um arrasto não faz.
   const [encolhido, setEncolhido] = useState(false);
-  const caixa = useRef<HTMLDivElement>(null);
-
-  // O MAPA OCUPA O QUE SOBRA DO ECRÃ, medido e não adivinhado. O cabeçalho
-  // deste sítio passa a duas linhas num telemóvel, e qualquer subtração
-  // cravada no CSS erra por essa segunda linha: o mapa fica mais comprido do
-  // que o ecrã e a folha de baixo acaba por baixo da dobra.
+  /**
+   * ONDE ESTÁ QUEM PERGUNTA, quando o disse — pelo botão do mapa ou pelo
+   * «Paragens perto de mim» da folha. A folha passa a responder «o que passa
+   * aqui perto», que era o que a pessoa queria saber ao carregar no botão
+   * (P2-016): o ponto azul sozinho só mexia o mapa.
+   */
+  const [aqui, setAqui] = useState<[number, number] | null>(null);
+  const caixaApp = useRef<HTMLDivElement>(null);
+  /**
+   * QUANTO TAPAM OS PAINÉIS DA ESQUERDA, na secretária e com o telemóvel
+   * deitado (P1-013, P3-021). Aí as folhas não sobem do fundo: são uma coluna
+   * à esquerda, e é desse lado que o mapa tem de se afastar para o percurso e
+   * o ponto escolhido não ficarem por baixo dela.
+   */
+  const [lateral, setLateral] = useState(0);
+  /**
+   * Quanto o cartão de cima das direções tapa do alto do mapa. O percurso
+   * enquadrava-se como se o alto estivesse livre, e a ponta de partida ficava
+   * por baixo do cartão — quem procurava via a chegada e não via de onde saía.
+   */
+  const [tapadoEmCima, setTapadoEmCima] = useState(0);
+  /**
+   * QUANTO A FOLHA DE BAIXO TAPA, MEDIDO. Era um número escrito à mão — 430
+   * com as direções, 210 no resto —, e as folhas são mais altas do que isso
+   * (até 56 % e 62 % do mapa): o fim do percurso caía por baixo da folha, e
+   * quem procurava via de onde saía e não onde chegava. Só as que vão de uma
+   * borda à outra contam: na secretária as folhas são um painel à esquerda,
+   * e contam na margem desse lado.
+   */
+  const [tapadoEmBaixo, setTapadoEmBaixo] = useState(0);
   useEffect(() => {
-    const ajustar = () => {
-      const el = caixa.current;
-      if (!el) return;
-      const topo = el.getBoundingClientRect().top + window.scrollY;
-      const alto = Math.max(320, window.innerHeight - topo);
-      el.style.setProperty('--alto-do-mapa', `${alto}px`);
+    const largo = window.matchMedia('(min-width: 64rem)');
+    const deitado = window.matchMedia('(orientation: landscape) and (max-height: 500px)');
+    const medir = () => {
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      if (largo.matches) setLateral(26 * rem + 0.75 * rem * 2);
+      else if (deitado.matches) setLateral(Math.min(22 * rem, window.innerWidth * 0.46) + rem);
+      else setLateral(0);
     };
-    ajustar();
-    window.addEventListener('resize', ajustar);
-    return () => window.removeEventListener('resize', ajustar);
+    medir();
+    largo.addEventListener('change', medir);
+    deitado.addEventListener('change', medir);
+    return () => {
+      largo.removeEventListener('change', medir);
+      deitado.removeEventListener('change', medir);
+    };
   }, []);
+  const procura = useRef<HTMLDivElement>(null);
+  const tituloDoCartao = useRef<HTMLHeadingElement>(null);
+  /** O foco vai para o cartão quando ele abre por um gesto — não ao carregar a página. */
+  const focarCartao = useRef(false);
 
   // OS CONTROLOS DO MAPA SOBEM COM A FOLHA, como no Maps.
   //
@@ -267,7 +364,7 @@ export default function AppDoMapa({
   // camadas, o cartão das direções — e só disso: numa janela larga nada lhe
   // toca, e fica onde sempre esteve.
   useEffect(() => {
-    const el = caixa.current;
+    const el = caixaApp.current;
     if (!el) return;
     let pedido = 0;
     const medir = () => {
@@ -279,6 +376,24 @@ export default function AppDoMapa({
       const emCima = [...el.querySelectorAll<HTMLElement>(NO_ALTO)]
         .map(caixaNoAlto)
         .filter((q) => q.height > 0);
+      const cartaoDeCima = el.querySelector<HTMLElement>('.cartao-de-cima');
+      const emCimaDasDirecoes = cartaoDeCima
+        ? Math.max(0, Math.round(cartaoDeCima.getBoundingClientRect().bottom - base.top))
+        : 0;
+      setTapadoEmCima((antes) =>
+        Math.abs(antes - emCimaDasDirecoes) > 4 ? emCimaDasDirecoes : antes,
+      );
+      const deBordaABorda = folhas.filter((q) => q.width >= base.width * 0.6);
+      const emBaixo = deBordaABorda.length
+        ? Math.max(0, ...deBordaABorda.map((q) => Math.round(base.bottom - q.top)))
+        : 0;
+      // LOGO, E NÃO DEPOIS DE ASSENTAR. A folha cresce quando a procura
+      // começa — o esqueleto das opções ocupa o lugar delas —, e a medida
+      // chega ao mapa antes de haver percurso para enquadrar: enquadra-se uma
+      // vez, já com a folha do tamanho final. Esperar que ela assentasse fazia
+      // o contrário: o percurso enquadrava-se com a folha pequena, e outra vez
+      // um segundo depois.
+      setTapadoEmBaixo((antes) => (Math.abs(antes - emBaixo) > 8 ? emBaixo : antes));
       const alto = el.querySelector<HTMLElement>('.maplibregl-ctrl-top-right');
       if (alto) {
         // A posição de partida é a de sempre, encostada ao alto; desce até ao
@@ -376,10 +491,14 @@ export default function AppDoMapa({
     if (calendario === null) calendarioDe(regiao).then(setCalendario);
   }
 
-  function abrir(p: Marca | Ponto) {
+  /**
+   * Abre o cartão de um ponto, sem tocar no histórico — quem decide isso é
+   * quem chama: um gesto empilha uma entrada, um «voltar» não.
+   */
+  function mostrarCartao(p: Marca | Ponto) {
     setEscolhido(p as Marca);
     setPartidas(null);
-    setAIr(null);
+    setDirecoes(null);
     setPercurso(null);
     setEncolhido(false);
     if (p.tipo !== 'paragem') return;
@@ -395,34 +514,153 @@ export default function AppDoMapa({
     }
   }
 
-  function fechar() {
-    setEscolhido(null);
-    setAIr(null);
-    setPercurso(null);
-    setEncolhido(false);
+  /** O cartão de um ponto, aberto por um gesto: fica no endereço e recebe o foco. */
+  function abrir(p: Marca | Ponto) {
+    focarCartao.current = true;
+    mostrarCartao(p);
+    // UM CARTÃO NO LUGAR DE OUTRO NÃO EMPILHA. Quem toca em cinco paragens
+    // seguidas e carrega em «voltar» quer voltar ao mapa, e não percorrer as
+    // cinco ao contrário.
+    const endereco = p.id ? `/?ponto=${encodeURIComponent(p.id)}` : '/';
+    escrever('cartao', endereco, camadaNoHistorico() !== 'cartao');
   }
 
-  // UM PONTO PELO ENDEREÇO: `/?ponto=<id>` abre o mapa já nele, com o cartão.
-  //
-  // É o «Ver no mapa» das páginas de paragem, de estação e das praças de
-  // táxi. A página da paragem dizia onde ela fica com «39.463, -8.213525» —
-  // coordenadas cruas, que não dizem nada a quem viaja —, e o sítio tem o seu
-  // próprio mapa. Lê-se uma vez, ao abrir: é o endereço de chegada, não um
-  // estado que o mapa vá escrevendo (isso é outra conversa, P2-027).
-  //
-  // Primeiro as paragens e as estações: os identificadores de modos
-  // diferentes vêm de fontes diferentes, e se algum dia coincidirem, quem
-  // chega de uma página de paragem quer a paragem.
+  /** As direções, abertas por um gesto, com o foco no campo que falta. */
+  function abrirDirecoes(de: Ponto | null, para: Ponto | null, foco: 'de' | 'para') {
+    setAvisoDoEndereco(null);
+    setDirecoes((antes) => ({ de, para, dia: null, hora: null, foco, vez: (antes?.vez ?? 0) + 1 }));
+    setPercurso(null);
+    setEncolhido(false);
+    escrever('direcoes', `/${comoProcura(escreverViagem({ de, para }))}`, true);
+  }
+
+  /**
+   * Fechar é voltar atrás uma camada — quando a camada foi aberta aqui. Ver
+   * `Camada`. O foco volta à procura, que é de onde se partiu; sem isto ia
+   * para o `<body>`, e quem usa teclado perdia o sítio (P3-014).
+   */
+  function fechar() {
+    if (camadaNoHistorico()) {
+      window.history.back();
+    } else {
+      aplicarEndereco(new URLSearchParams());
+      escrever(null, '/', false);
+    }
+  }
+  function fecharDirecoes() {
+    if (camadaNoHistorico() === 'direcoes') {
+      window.history.back();
+      return;
+    }
+    // Chegou-se com as direções já abertas (uma ligação partilhada): atrás
+    // está outro sítio, e fechar deixa o mapa.
+    setDirecoes(null);
+    setPercurso(null);
+    setEncolhido(false);
+    escrever(
+      escolhido ? 'cartao' : null,
+      escolhido ? `/?ponto=${encodeURIComponent(escolhido.id)}` : '/',
+      false,
+    );
+  }
+
+  // O FOCO, QUANDO UMA CAMADA SE FECHA, VOLTA À PROCURA. A camada que tinha o
+  // foco desapareceu; deixá-lo no `<body>` é largar quem usa teclado no meio do
+  // nada. Só quando a camada fechou com o foco lá dentro: quem estava a
+  // arrastar o mapa não quer o teclado do telemóvel a abrir.
+  const tinhaFoco = useRef(false);
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get('ponto');
-    if (!id) return;
-    const p =
-      pontos.find((x) => x.id === id && (x.tipo === 'paragem' || x.tipo === 'estacao')) ??
-      pontos.find((x) => x.id === id);
-    if (p) abrir(p);
+    if (escolhido || direcoes) return;
+    if (!tinhaFoco.current) return;
+    tinhaFoco.current = false;
+    procura.current?.querySelector<HTMLInputElement>('input')?.focus();
+  }, [escolhido, direcoes]);
+
+  // O CARTÃO QUE SOBE DIZ QUE SUBIU. Aparecia em silêncio, e com o foco
+  // deixado na caixa de procura (P3-014): quem usa leitor de ecrã não sabia
+  // que havia horas para ler, e precisava de treze tabulações para chegar ao
+  // «Como chegar». O título recebe o foco — e é lido —, e o cartão está logo
+  // a seguir à procura na ordem do documento.
+  useEffect(() => {
+    if (!escolhido || direcoes || !focarCartao.current) return;
+    focarCartao.current = false;
+    tituloDoCartao.current?.focus();
+  }, [escolhido, direcoes]);
+
+  /**
+   * O ENDEREÇO MANDA, e é lido à entrada e em cada «voltar».
+   *
+   * `?ponto=<id>` abre o cartão (é o «Ver no mapa» das páginas de paragem, de
+   * estação e das praças de táxi); `?de=` e `?para=` abrem as direções, com
+   * as pontas lidas como o `/viagem/` as lê (`lib/endereco-da-viagem.ts`).
+   * Sem nada, o mapa sozinho.
+   */
+  function aplicarEndereco(q: URLSearchParams) {
+    const v = lerViagem(q, pontos, caixa);
+    const ponto = (l: PontaLida | null) => (l?.tipo === 'ponto' ? l.ponto : null);
+    if (v.de || v.para) {
+      setEscolhido(null);
+      setPercurso(null);
+      setEncolhido(false);
+      setAvisoDoEndereco(avisoDe(v.de, v.para, emDaRegiao));
+      setDirecoes((antes) => ({
+        de: ponto(v.de),
+        para: ponto(v.para),
+        dia: v.dia,
+        hora: v.hora,
+        foco: null,
+        vez: (antes?.vez ?? 0) + 1,
+      }));
+      return;
+    }
+    setDirecoes(null);
+    setAvisoDoEndereco(null);
+    const id = q.get('ponto');
+    // Primeiro as paragens e as estações: os identificadores de modos
+    // diferentes vêm de fontes diferentes, e se algum dia coincidirem, quem
+    // chega de uma página de paragem quer a paragem.
+    const p = id
+      ? (pontos.find((x) => x.id === id && (x.tipo === 'paragem' || x.tipo === 'estacao')) ??
+        pontos.find((x) => x.id === id))
+      : null;
+    if (p) mostrarCartao(p);
+    else {
+      setEscolhido(null);
+      setPercurso(null);
+      setEncolhido(false);
+    }
+  }
+
+  useEffect(() => {
+    aplicarEndereco(new URLSearchParams(window.location.search));
+    const aoVoltar = () => {
+      // O foco estava numa camada que vai mudar: a que fica recebe-o.
+      tinhaFoco.current = true;
+      focarCartao.current = true;
+      aplicarEndereco(new URLSearchParams(window.location.search));
+    };
+    window.addEventListener('popstate', aoVoltar);
+    return () => window.removeEventListener('popstate', aoVoltar);
     // Só ao abrir: os pontos são os da região, e não mudam depois disso.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // O ESC FECHA O QUE ESTÁ POR CIMA — as direções, ou o cartão. Não fechava
+  // nada (P3-014). Uma lista de sugestões aberta fecha-se primeiro: a caixa de
+  // procura trata do seu Esc e marca a tecla como usada. O menu é um
+  // `<dialog>`, e o Esc dele é do navegador.
+  useEffect(() => {
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || menu) return;
+      if (!direcoes && !escolhido) return;
+      e.preventDefault();
+      tinhaFoco.current = true;
+      if (direcoes) fecharDirecoes();
+      else fechar();
+    };
+    document.addEventListener('keydown', tecla);
+    return () => document.removeEventListener('keydown', tecla);
+  });
 
   // O DIA E A HORA SAEM DO MESMO RELÓGIO, o de quem está a ler.
   const instante = new Date();
@@ -431,10 +669,18 @@ export default function AppDoMapa({
     Array.isArray(partidas) && partidas.length > 0 && calendario !== undefined
       ? proximas(partidas, instante, agora, calendario)
       : null;
+  const aCarregarHoras =
+    escolhido?.tipo === 'paragem' &&
+    (partidas === null || (Array.isArray(partidas) && calendario === undefined));
+
+  // O que o mapa mostra, contado, para quem não o vê (P3-018).
+  const quantas = (tipo: string) => pontos.filter((p) => p.tipo === tipo).length;
+  const nParagens = quantas('paragem');
+  const nEstacoes = quantas('estacao');
 
   return (
     <DisponibilidadeBicicletas endereco={disponibilidadeDaRegiao}>
-      <div className="app-mapa" ref={caixa}>
+      <div className="app-mapa" ref={caixaApp}>
         {/* UM h1, INVISÍVEL — e não «nenhum h1 porque o Maps não tem».
           O Maps também não tem, e o Maps não é um serviço de uma autoridade
           pública portuguesa. Uma página sem h1 deixa quem usa leitor de ecrã
@@ -444,14 +690,26 @@ export default function AppDoMapa({
           E é a primeira frase que quem usa leitor de ecrã ouve: dizia «Mapa a
           Serra da Pedra Alta». A contração vem feita da região. */}
         <h1 className="so-para-leitores">Mapa {deDaRegiao}</h1>
+        {/* A ALTERNATIVA AO MAPA, DITA LOGO À ENTRADA (P3-018). Quem ouve a
+            página não sabia que as mesmas paragens existem em lista. A ligação
+            está à vista, no fim da folha de baixo — uma ligação escondida que
+            recebe o foco é um foco que ninguém vê. */}
+        <p className="so-para-leitores">
+          O mapa mostra {nParagens === 1 ? '1 paragem' : `${nParagens} paragens`}
+          {nEstacoes
+            ? ` e ${nEstacoes === 1 ? '1 estação' : `${nEstacoes} estações`} de comboio`
+            : ''}
+          . A mesma informação está em lista, sem mapa, em «A rede» — no menu e no fim da folha de
+          baixo.
+        </p>
 
         {/* A procura por cima do mapa, como no Maps. É o mesmo combobox das
           direções — teclado, região viva, Escape e Enter incluídos. Com as
           direções abertas sai da frente: os campos «De» e «Para» estão dois
           centímetros abaixo, e três caixas de procura no mesmo ecrã é não
           saber em qual se escreve. */}
-        {!aIr && (
-          <div className="app-procura">
+        {!direcoes && (
+          <div className="app-procura" ref={procura}>
             <button
               type="button"
               className="botao-menu"
@@ -467,9 +725,189 @@ export default function AppDoMapa({
               pontos={pontos}
               valor={null}
               regiao={regiao}
+              linhas
               aoEscolher={(p) => p && abrir(p)}
             />
           </div>
+        )}
+
+        {/* O cartão que sobe de baixo quando se toca num ponto. Vem LOGO A
+            SEGUIR À PROCURA no documento — o CSS põe-no em baixo na mesma —,
+            para o tabulador ir da caixa ao cartão e não atravessar as camadas e
+            os botões do mapa primeiro (P3-014). */}
+        {escolhido && !direcoes && (
+          <section
+            className={`cartao-de-baixo${escolhido.tipo === 'paragem' ? ' com-horas' : ''}`}
+            aria-labelledby="escolhido"
+            onFocus={() => (tinhaFoco.current = true)}
+          >
+            {/* A PEGA. Não arrasta nada — diz que isto é uma folha e que há
+              mais por baixo. É o sinal que o Maps usa, e custa 4 px. */}
+            <span className="pega" aria-hidden="true" />
+
+            <div className="cartao-cabecalho">
+              {/* Sem nome no mapa, o título é o que a coisa É. Oito das nove
+                praças de táxi estão nesse caso, e um cartão com o título em
+                branco não diz nada a ninguém. */}
+              <h2 id="escolhido" tabIndex={-1} ref={tituloDoCartao}>
+                {escolhido.nome || rotuloDe(escolhido)}
+              </h2>
+              {/* UM FECHO DISCRETO, E O ALVO CONTINUA A TER 44 px.
+                Era um botão escuro do tamanho de um terço da largura, ao lado
+                do nome da paragem — a coisa mais escura do ecrã era a que
+                servia para sair. O × pesa menos aos olhos e o mesmo ao dedo:
+                o `aria-label` mantém o nome para quem não vê o símbolo. */}
+              <button
+                type="button"
+                className="fechar"
+                onClick={() => {
+                  tinhaFoco.current = true;
+                  fechar();
+                }}
+                aria-label="Fechar"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+
+            <p className="secundario">
+              {escolhido.nome ? rotuloDe(escolhido) : 'Sem nome no mapa'}
+              {/* AS CONTAGENS AO VIVO, na estação em que se tocou. Só aparecem
+                se a leitura for recente: um número de há uma hora manda
+                alguém a uma doca vazia, e isso é pior do que número nenhum. */}
+              <ContagemDaEstacao id={escolhido.tipo === 'bicicleta' ? escolhido.id : null} />
+            </p>
+
+            {/* OS DOIS GESTOS, À CABEÇA DO CARTÃO (P2-001, P3-024).
+              Havia um só, «Como chegar», que punha este sítio no DESTINO — e
+              a única instrução do ecrã inicial mandava escrever primeiro DE
+              ONDE se parte. Quem seguia a página ficava com a viagem ao
+              contrário. Com os dois, a pergunta deixa de poder sair trocada.
+
+              E ficam no ALTO, onde não se mexem: estavam por baixo das horas,
+              e desciam quando elas chegavam — no instante em que se ia tocar
+              no «Como chegar». São botões e não ligações: não mudam de página,
+              abrem as direções aqui. */}
+            <p className="cartao-accoes">
+              <button
+                type="button"
+                className="botao"
+                onClick={() => abrirDirecoes(null, escolhido, 'de')}
+              >
+                Como chegar aqui
+              </button>
+              <button
+                type="button"
+                className="botao secundario"
+                onClick={() => abrirDirecoes(escolhido, null, 'para')}
+              >
+                Partir daqui
+              </button>
+            </p>
+
+            {/* AS HORAS TÊM O LUGAR GUARDADO enquanto chegam: cinco linhas
+              fantasma, da altura das verdadeiras. Sem isto o cartão crescia
+              ao chegarem, e com ele subia tudo o que estava em cima. */}
+            {aCarregarHoras && (
+              <div className="a-seguir-reservado" aria-busy="true">
+                <p className="so-para-leitores">A carregar as horas…</p>
+                <ul className="fantasma-das-partidas" aria-hidden="true">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <li key={i}>
+                      <span className="distintivo medio">&nbsp;</span>
+                      <span className="destino">&nbsp;</span>
+                      <span className="quando-passa">
+                        <strong>&nbsp;</strong>
+                        <span className="relogio">&nbsp;</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {partidas === 'falhou' && (
+              <div className="faixa alerta" role="status">
+                <p>
+                  <strong>Não foi possível carregar as horas desta paragem.</strong> Pode ser da
+                  ligação à Internet — não quer dizer que não haja autocarros.
+                </p>
+                <p>
+                  <button
+                    type="button"
+                    className="botao"
+                    onClick={() => carregarPartidas(escolhido)}
+                  >
+                    Tentar de novo
+                  </button>
+                </p>
+              </div>
+            )}
+            {/* O «A SEGUIR» É O MESMO DA PÁGINA DA PARAGEM (`ASeguir.tsx`): o
+              mesmo cálculo e os mesmos casos — hoje, o próximo dia com
+              partidas, fora do período, sem a tabela dos dias. */}
+            {aSeguir && (
+              <div className="a-seguir-reservado">
+                <ASeguir resultado={aSeguir} instante={instante} agora={agora} cores={cores} />
+              </div>
+            )}
+            {Array.isArray(partidas) && partidas.length === 0 && <p>Sem partidas registadas.</p>}
+
+            {paginaDe(regiao, escolhido) && (
+              <p className="cartao-accoes">
+                <a href={paginaDe(regiao, escolhido)!.href}>{paginaDe(regiao, escolhido)!.texto}</a>
+              </p>
+            )}
+
+            {/* A NOTA É SOBRE HORÁRIOS, e por isso só aparece onde há horários.
+              Num cartão de uma praça de táxi não há horário nenhum a ser
+              planeado, e a nota só confundia. */}
+            {(escolhido.tipo === 'paragem' || escolhido.tipo === 'estacao') && (
+              <p className="secundario">Horários planeados, não em tempo real.</p>
+            )}
+          </section>
+        )}
+
+        {/* AS DIREÇÕES: duas cartas, e o mapa entre elas — o cartão de cima com
+          de onde e para onde, a folha de baixo com as opções. Não são filhas
+          de um cartão só de propósito: é a separação que faz isto parecer o
+          que as pessoas já sabem usar. */}
+        {direcoes && (
+          <Direccoes
+            key={direcoes.vez}
+            regiao={regiao}
+            pontos={pontos}
+            modosDesligados={modosDesligados}
+            motorDaRegiao={motorDaRegiao}
+            servicosSemDatas={servicosSemDatas}
+            temAPedido={temAPedido}
+            deInicial={direcoes.de}
+            paraInicial={direcoes.para}
+            diaInicial={direcoes.dia}
+            horaInicial={direcoes.hora}
+            focoInicial={direcoes.foco}
+            aviso={avisoDoEndereco}
+            variante="mapa"
+            encolhido={encolhido}
+            aoEncolher={encolher}
+            aoFechar={() => {
+              tinhaFoco.current = true;
+              fecharDirecoes();
+            }}
+            aoMudar={(v) => {
+              // O QUE SE MUDA DENTRO DAS DIREÇÕES NÃO EMPILHA: o dia, a hora,
+              // a outra ponta. Um «voltar» fecha as direções, e não desfaz a
+              // última hora escolhida. A camada fica a que estava — se as
+              // direções vieram de uma ligação, fechar não pode voltar atrás.
+              escrever(camadaNoHistorico(), `/${comoProcura(escreverViagem(v))}`, false);
+            }}
+            aoDesenhar={(p, origem) => {
+              setPercurso(p);
+              // Escolher uma opção é pedir para a VER: a folha desce. A
+              // primeira, que se desenha sozinha, não desce — quem acabou de
+              // procurar está a ler as opções.
+              if (p && origem === 'escolha') encolher(true);
+            }}
+          />
         )}
 
         {/* O QUE APARECE NO MAPA — uma fila de botões, como as camadas do Maps.
@@ -480,8 +918,13 @@ export default function AppDoMapa({
          * camada —, por isso é imediato e não perde a posição do mapa.
          *
          * Desligar TUDO é uma escolha legítima: quem quer ver só as ruas tem
-         * direito a um mapa sem pontos. */}
-        {!aIr && camadas.length > 1 && (
+         * direito a um mapa sem pontos.
+         *
+         * A marca é a mesma que o mapa desenha: comboio, expresso e táxi eram
+         * três cinzentos quase iguais (P1-010), e só a forma os separa sem
+         * pedir que se distingam cores — a placa com o pictograma no comboio
+         * e no táxi, o anel no expresso. */}
+        {!direcoes && camadas.length > 1 && (
           <div
             ref={fila}
             className={`app-camadas${maisNaFila.antes ? ' ha-antes' : ''}${
@@ -496,7 +939,7 @@ export default function AppDoMapa({
                 <button
                   key={c.tipo}
                   type="button"
-                  className="pilula"
+                  className={`pilula pilula-${c.forma}${c.fundo === '#ffffff' ? ' pilula-clara' : ''}`}
                   aria-pressed={ligada}
                   onClick={() =>
                     setVisiveis((antes) => {
@@ -507,7 +950,13 @@ export default function AppDoMapa({
                     })
                   }
                 >
-                  <span className="pilula-cor" style={{ background: c.cor }} aria-hidden="true" />
+                  <span
+                    className="pilula-cor"
+                    style={{ '--cor-da-camada': c.cor } as React.CSSProperties}
+                    aria-hidden="true"
+                  >
+                    {c.forma === 'placa' && <DoModo modo={c.modo} tamanho={14} />}
+                  </span>
                   {c.rotulo}
                 </button>
               );
@@ -531,6 +980,7 @@ export default function AppDoMapa({
           centro={centro}
           pontos={pontos as Marca[]}
           aoEscolher={abrir}
+          aoLocalizar={(lat, lon) => setAqui([lat, lon])}
           mosaicos={mosaicos}
           atribuicao={atribuicaoDoMapa}
           foco={!percurso && escolhido ? { lat: escolhido.lat, lon: escolhido.lon } : null}
@@ -538,36 +988,12 @@ export default function AppDoMapa({
           alternativas={percurso?.outras ?? null}
           etiqueta={percurso?.meio ?? null}
           enquadrar={percurso?.caixa ?? null}
-          margemInferior={aIr && !encolhido ? 430 : 210}
+          // Na secretária, só o respiro dos botões do canto de baixo.
+          margemInferior={lateral ? 48 : tapadoEmBaixo}
+          margemEsquerda={lateral}
+          margemSuperior={lateral ? 0 : tapadoEmCima}
           modosVisiveis={visiveis}
         />
-
-        {/* AS DIREÇÕES: duas cartas, e o mapa entre elas — o cartão de cima com
-          de onde e para onde, a folha de baixo com as opções. Não são filhas
-          de um cartão só de propósito: é a separação que faz isto parecer o
-          que as pessoas já sabem usar. */}
-        {aIr && (
-          <Direccoes
-            key={aIr.id || aIr.nome}
-            regiao={regiao}
-            pontos={pontos}
-            modosDesligados={modosDesligados}
-            motorDaRegiao={motorDaRegiao}
-            servicosSemDatas={servicosSemDatas}
-            paraInicial={aIr}
-            variante="mapa"
-            encolhido={encolhido}
-            aoEncolher={encolher}
-            aoFechar={fechar}
-            aoDesenhar={(p, origem) => {
-              setPercurso(p);
-              // Escolher uma opção é pedir para a VER: a folha desce. A
-              // primeira, que se desenha sozinha, não desce — quem acabou de
-              // procurar está a ler as opções.
-              if (p && origem === 'escolha') encolher(true);
-            }}
-          />
-        )}
 
         {/* A FOLHA DE ABERTURA: por onde se pode ir, antes de se perguntar nada.
          *
@@ -578,9 +1004,40 @@ export default function AppDoMapa({
          *
          * É o que responde a quem abre isto sem saber o que aqui há. A procura
          * serve quem já sabe o nome; isto serve quem não sabe. */}
-        {!aIr && !escolhido && modos.length > 0 && (
+        {!direcoes && !escolhido && (
           <section className="folha-de-abertura" aria-labelledby="abertura">
-            <h2 id="abertura">O que há {emDaRegiao}</h2>
+            <h2 id="abertura" className="so-para-leitores">
+              Por onde começar
+            </h2>
+            {/* «PARA ONDE VAIS?», ONDE O POLEGAR CHEGA (§6, P3-025).
+              É a primeira pergunta da página inicial, e estava escrita numa
+              nota pequena que mandava procurar «de onde partes» na caixa de
+              cima — o contrário do que o cartão fazia (P2-001). Agora é um
+              botão do tamanho de um campo, no fundo do ecrã: abre as direções
+              com o foco no destino, e a primeira sugestão da partida é «A minha
+              localização». */}
+            <button
+              type="button"
+              className="para-onde-vais"
+              onClick={() => abrirDirecoes(null, null, 'para')}
+            >
+              <Chegada />
+              <span>Para onde vais?</span>
+            </button>
+
+            {/* PERTO DE TI, NO MAPA (P2-016). Vivia escondido em «A rede», e o
+              botão da localização do mapa só punha um ponto azul. Agora as duas
+              portas dão ao mesmo: o botão de texto, para quem não reconhece o
+              ícone, e o do mapa — e a folha diz o que passa ali perto. */}
+            <PertoDeTi
+              regiao={regiao}
+              pontos={pontos}
+              variante="mapa"
+              posicao={aqui}
+              aoEscolher={abrir}
+            />
+
+            <h2 className="titulo-dos-modos">O que há {emDaRegiao}</h2>
             <ul className="circulos">
               {modos.map((m) => (
                 <li key={m.id}>
@@ -594,86 +1051,11 @@ export default function AppDoMapa({
               ))}
             </ul>
             <p className="secundario abertura-nota">
-              Ou escreve na caixa de cima de onde partes — e depois para onde vais.
+              <Link href="/rede/">
+                <Lista tamanho={18} />
+                Tudo em lista, sem mapa
+              </Link>
             </p>
-          </section>
-        )}
-
-        {/* O cartão que sobe de baixo quando se toca num ponto. */}
-        {escolhido && !aIr && (
-          <section className="cartao-de-baixo" aria-labelledby="escolhido">
-            {/* A PEGA. Não arrasta nada — diz que isto é uma folha e que há
-              mais por baixo. É o sinal que o Maps usa, e custa 4 px. */}
-            <span className="pega" aria-hidden="true" />
-
-            <div className="cartao-cabecalho">
-              {/* Sem nome no mapa, o título é o que a coisa É. Oito das nove
-                praças de táxi estão nesse caso, e um cartão com o título em
-                branco não diz nada a ninguém. */}
-              <h2 id="escolhido">{escolhido.nome || rotuloDe(escolhido)}</h2>
-              {/* UM FECHO DISCRETO, E O ALVO CONTINUA A TER 44 px.
-                Era um botão escuro do tamanho de um terço da largura, ao lado
-                do nome da paragem — a coisa mais escura do ecrã era a que
-                servia para sair. O × pesa menos aos olhos e o mesmo ao dedo:
-                o `aria-label` mantém o nome para quem não vê o símbolo. */}
-              <button type="button" className="fechar" onClick={fechar} aria-label="Fechar">
-                <span aria-hidden="true">×</span>
-              </button>
-            </div>
-
-            <p className="secundario">
-              {escolhido.nome ? rotuloDe(escolhido) : 'Sem nome no mapa'}
-              {/* AS CONTAGENS AO VIVO, na estação em que se tocou. Só aparecem
-                se a leitura for recente: um número de há uma hora manda
-                alguém a uma doca vazia, e isso é pior do que número nenhum. */}
-              <ContagemDaEstacao id={escolhido.tipo === 'bicicleta' ? escolhido.id : null} />
-            </p>
-
-            {escolhido.tipo === 'paragem' &&
-              (partidas === null || (Array.isArray(partidas) && calendario === undefined)) && (
-                <p>A carregar as horas…</p>
-              )}
-            {partidas === 'falhou' && (
-              <div className="faixa alerta" role="status">
-                <p>
-                  <strong>Não foi possível carregar as horas desta paragem.</strong> Pode ser da
-                  ligação à Internet — não quer dizer que não haja autocarros.
-                </p>
-                <p>
-                  <button
-                    type="button"
-                    className="botao"
-                    onClick={() => carregarPartidas(escolhido)}
-                  >
-                    Tentar de novo
-                  </button>
-                </p>
-              </div>
-            )}
-            {/* O «A SEGUIR» É O MESMO DA PÁGINA DA PARAGEM (`ASeguir.tsx`): o
-              mesmo cálculo e os mesmos casos — hoje, o próximo dia com
-              partidas, fora do período, sem a tabela dos dias. */}
-            {aSeguir && (
-              <ASeguir resultado={aSeguir} instante={instante} agora={agora} cores={cores} />
-            )}
-            {Array.isArray(partidas) && partidas.length === 0 && <p>Sem partidas registadas.</p>}
-
-            <p className="cartao-accoes">
-              {/* Um BOTÃO e não uma ligação: isto não muda de página, abre as
-                direções aqui. Uma ligação que não navega mente ao clique do
-                meio, ao «abrir num separador» e a quem lê a barra de estado. */}
-              <button type="button" className="botao" onClick={() => setAIr(escolhido)}>
-                Como chegar
-              </button>{' '}
-              <a href={paginaDe(regiao, escolhido).href}>{paginaDe(regiao, escolhido).texto}</a>
-            </p>
-
-            {/* A NOTA É SOBRE HORÁRIOS, e por isso só aparece onde há horários.
-              Num cartão de uma praça de táxi não há horário nenhum a ser
-              planeado, e a nota só confundia. */}
-            {(escolhido.tipo === 'paragem' || escolhido.tipo === 'estacao') && (
-              <p className="secundario">Horários planeados, não em tempo real.</p>
-            )}
           </section>
         )}
       </div>

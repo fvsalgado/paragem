@@ -103,10 +103,16 @@ test('o botão desliga MESMO a camada do mapa', async ({ page }) => {
   await expect.poll(visibilidade).toBe('visible');
 });
 
-test('cada modo tem a sua cor, e nenhuma se repete', async ({ page }) => {
+test('cada modo tem a sua marca, e nenhuma se repete', async ({ page }) => {
   // As cores são as do §8 e vêm de `pontos-no-mapa.ts`. Se duas camadas
-  // ficarem com a mesma, o mapa deixa de distinguir uma bicicleta de uma
-  // paragem — e era exatamente essa a queixa.
+  // ficarem com a mesma marca, o mapa deixa de distinguir uma bicicleta de
+  // uma paragem — e era exatamente essa a queixa.
+  //
+  // A MARCA É A COR E A FORMA (P1-010). Comboio, expresso e táxi eram três
+  // cinzentos quase iguais, e quem não distingue cores não os distinguia de
+  // todo: o comboio e o táxi passaram a placas com o desenho do modo, que são
+  // símbolos e não círculos. O que se compara é o que cada camada declara de
+  // si (`metadata`), e não a pintura de um tipo de camada só.
   await page.goto(`/`);
   await mapaPronto(page);
   // QUANTAS CAMADAS HÁ NÃO SE CRAVA, e foi a lição de uma publicação
@@ -119,17 +125,25 @@ test('cada modo tem a sua cor, e nenhuma se repete', async ({ page }) => {
   // A tela aparece ANTES de as camadas entrarem — o estilo e os mosaicos
   // ainda vêm a caminho. Sem esperar por elas, isto mede um mapa vazio.
   const tipos = CAMADAS.map((c) => c.tipo);
-  const lerCores = () =>
+  const lerMarcas = () =>
     page.evaluate((tipos) => {
       const m = (window as unknown as { __mapa?: MapaLibre }).__mapa;
       if (!m) return [];
       return tipos
-        .filter((t) => m.getLayer(`pontos-${t}`))
-        .map((t) => String(m.getPaintProperty(`pontos-${t}`, 'circle-color')));
+        .map((t) => m.getLayer(`pontos-${t}`))
+        .filter((c) => !!c)
+        .map((c) => {
+          const { cor, forma } = (c!.metadata ?? {}) as { cor?: string; forma?: string };
+          return `${cor}|${forma}`;
+        });
     }, tipos);
-  await expect.poll(async () => (await lerCores()).length, { timeout: 30_000 }).toBe(tipos.length);
-  const cores = await lerCores();
-  expect(new Set(cores).size, `cores repetidas: ${cores.join(', ')}`).toBe(cores.length);
+  await expect.poll(async () => (await lerMarcas()).length, { timeout: 30_000 }).toBe(tipos.length);
+  const marcas = await lerMarcas();
+  expect(
+    marcas.every((x) => !x.startsWith('undefined')),
+    'uma camada sem cor declarada',
+  ).toBe(true);
+  expect(new Set(marcas).size, `marcas repetidas: ${marcas.join(', ')}`).toBe(marcas.length);
 });
 
 test('os botões de aproximar e afastar ficam à vista e ao alcance do dedo', async ({ page }) => {

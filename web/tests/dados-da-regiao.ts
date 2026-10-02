@@ -173,6 +173,7 @@ export type DeclaracaoDaRegiao = {
   id: string;
   nome: string;
   demonstracao?: boolean;
+  caixa?: { lat_min: number; lat_max: number; lon_min: number; lon_max: number };
   mapa?: { atribuicao: string; fonte: 'openstreetmap' | 'propria' } | null;
 };
 export const declaracao = (regiao = REGIAO): DeclaracaoDaRegiao | null =>
@@ -586,6 +587,109 @@ export function concelhoComOutroModo(regiao = REGIAO): { concelho: string; modo:
     ];
     const c = onde.find((x): x is string => !!x && ids.has(x));
     if (c) return { concelho: c, modo: m };
+  }
+  return null;
+}
+
+/** A caixa da região — o que o planeador aceita como ponta por coordenadas. */
+export const caixaDaRegiao = (regiao = REGIAO) => declaracao(regiao)?.caixa ?? null;
+
+type GrelhaDosTestes = {
+  paragens: [string, number, number, string][];
+  viagens: [number, number, number[]][];
+  servicos: string[];
+  datas: Record<string, number[]>;
+};
+
+/**
+ * UMA LIGAÇÃO QUE NÃO HÁ NUM DIA E HÁ NOUTRO, a menos de uma semana (P2-003).
+ *
+ * É o caso que a página respondia com «sem viagem» e acabou: uma aldeia com
+ * carreira só nos dias úteis, perguntada ao sábado. Procura-se nos dados, e
+ * com uma margem que torna a resposta CERTA e não provável:
+ *
+ * - no dia pedido não parte NADA da paragem nem de nenhuma a 1 600 m dela —
+ *   o planeador anda até 1 500 m para apanhar outra, e uma partida ali ao lado
+ *   já era uma ligação;
+ * - o destino é uma paragem da mesma carreira, a mais de 3 km — a pé não se
+ *   lá chega, e a ligação é direta no dia em que há.
+ *
+ * Os identificadores da grelha levam o prefixo do feed (`<feed>:<id>`), e os
+ * das páginas não: é pelo que vem depois dele que se encontra a paragem.
+ */
+export function umaLigacaoSoNoutroDia(
+  regiao = REGIAO,
+): { de: Paragem; para: Paragem; dia: string; proximo: string } | null {
+  const g = ler<GrelhaDosTestes>(regiao, 'viagens.json');
+  if (!g) return null;
+  const doSitio = new Map(paragens(regiao).map((p) => [p.id, p]));
+  const paragemDe = (i: number) => {
+    const id = g.paragens[i][0];
+    return doSitio.get(id) ?? doSitio.get(id.slice(id.indexOf(':') + 1)) ?? null;
+  };
+  const metros = (i: number, j: number) => {
+    const [, la, lo] = g.paragens[i];
+    const [, lb, lob] = g.paragens[j];
+    return Math.hypot((la - lb) * 111_320, (lo - lob) * 111_320 * Math.cos((la * Math.PI) / 180));
+  };
+  // Os serviços com partidas em cada paragem — e as que passam da meia-noite,
+  // que no dia seguinte são do serviço da véspera.
+  const partidas = new Map<number, Set<number>>();
+  const deMadrugada = new Map<number, Set<number>>();
+  for (const [, servico, horas] of g.viagens) {
+    for (let k = 0; k + 3 < horas.length; k += 3) {
+      const mapa = horas[k + 2] >= 86_400 ? deMadrugada : partidas;
+      if (!mapa.has(horas[k])) mapa.set(horas[k], new Set());
+      mapa.get(horas[k])!.add(servico);
+    }
+  }
+  const mais = (d: string, n: number) =>
+    new Date(Date.UTC(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8) + n))
+      .toISOString()
+      .slice(0, 10)
+      .replace(/-/g, '');
+  const comHifens = (x: string) => `${x.slice(0, 4)}-${x.slice(4, 6)}-${x.slice(6)}`;
+  const anda = (i: number, dia: string) => {
+    const hoje = new Set(g.datas[dia] ?? []);
+    const vespera = new Set(g.datas[mais(dia, -1)] ?? []);
+    return (
+      [...(partidas.get(i) ?? [])].some((s) => hoje.has(s)) ||
+      [...(deMadrugada.get(i) ?? [])].some((s) => vespera.has(s))
+    );
+  };
+  const todas = Object.keys(g.datas).sort();
+  if (!todas.length) return null;
+  const amanha = mais(new Date().toISOString().slice(0, 10).replace(/-/g, ''), 1);
+  const inicio = todas[0] > amanha ? todas[0] : amanha;
+  const fim = todas[todas.length - 1];
+  const ordem = g.paragens
+    .map((_, i) => i)
+    .sort((a, b) => g.paragens[a][0].localeCompare(g.paragens[b][0]));
+
+  for (const i of ordem) {
+    const de = paragemDe(i);
+    if (!de || !partidas.has(i)) continue;
+    const vizinhas = ordem.filter((j) => metros(i, j) <= 1600);
+    for (let dia = inicio, n = 0; dia <= fim && n < 21; dia = mais(dia, 1), n++) {
+      if (vizinhas.some((j) => anda(j, dia))) continue;
+      for (let k = 1; k <= 7; k++) {
+        const proximo = mais(dia, k);
+        if (proximo > fim) break;
+        const doDia = new Set(g.datas[proximo] ?? []);
+        for (const [, servico, horas] of g.viagens) {
+          if (!doDia.has(servico)) continue;
+          const pos = horas.findIndex((x, m) => m % 3 === 0 && x === i);
+          if (pos < 0) continue;
+          for (let m = pos + 3; m < horas.length; m += 3) {
+            const para = paragemDe(horas[m]);
+            if (para && para.id !== de.id && metros(i, horas[m]) > 3000) {
+              return { de, para, dia: comHifens(dia), proximo: comHifens(proximo) };
+            }
+          }
+        }
+      }
+      break;
+    }
   }
   return null;
 }

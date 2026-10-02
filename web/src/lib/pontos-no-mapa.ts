@@ -1,4 +1,5 @@
-import { NOME_DOS_MODOS } from '@/lib/formato';
+import { NOME_DOS_MODOS } from './formato.ts';
+import { modoDoTipo } from './modulos.ts';
 
 /**
  * As camadas de pontos do mapa: uma por modo, e nada de específico a uma região.
@@ -7,22 +8,20 @@ import { NOME_DOS_MODOS } from '@/lib/formato';
  * declara — «bicicleta», «taxi», «urbano-municipal» — com duas exceções
  * herdadas: as paragens da rede própria vêm como `paragem` e as estações de
  * comboio como `estacao`, porque já se chamavam assim antes de haver modos no
- * mapa. O `MODO_DO_TIPO` traduz essas duas e mais nada.
+ * mapa. O `modoDoTipo` (`modulos.ts`) traduz essas duas e mais nada.
  *
  * **Uma região que declare um modo que nunca vimos ganha camada na mesma.**
- * Sem cor declarada fica a neutra, que é o que o §8 manda para os serviços
+ * Sem cor declarada fica a neutra, que é o que o §6 manda para os serviços
  * privados, e o botão do filtro fica com o nome do modo. É o mesmo contrato
  * dos leitores do pipeline: quem trata da forma trata de qualquer região.
  *
  * AS CORES ESTÃO DUPLICADAS AQUI, e não é por distração. O `global.css` tem-nas
- * como variáveis CSS (§8) e é lá que a interface as lê; o MapLibre pinta numa
+ * como variáveis CSS (§6) e é lá que a interface as lê; o MapLibre pinta numa
  * tela e não resolve `var(--bicicleta)`. São os mesmos valores, e se um mudar
  * tem de mudar nos dois — está escrito nos dois sítios por isso mesmo.
  */
 
-const MODO_DO_TIPO: Record<string, string> = { paragem: 'autocarro', estacao: 'comboio' };
-
-/** Serviços privados sem cor de modo (§8): cartão neutro, ponto neutro. */
+/** Serviços privados sem cor de modo (§6): cartão neutro, ponto neutro. */
 const NEUTRA = '#4a5c66';
 
 const COR_DO_MODO: Record<string, string> = {
@@ -33,15 +32,37 @@ const COR_DO_MODO: Record<string, string> = {
   'a-pedido': '#8a5300',
 };
 
+/**
+ * COMO SE DESENHA CADA MODO — e é a forma, e não só a cor, que os separa.
+ *
+ * Comboio, expresso e táxi eram três cinzentos quase iguais (1,33:1 entre
+ * si, P1-010): uma estação e uma praça de táxi distinguiam-se pelo tamanho
+ * do círculo, e quem não distingue bem as cores não as distinguia de todo.
+ * Os privados continuam neutros, como o §6 manda — o que muda é a forma:
+ *
+ * - `ponto`: um disco na cor do modo — as paragens, as bicicletas, os urbanos;
+ * - `anel`: recheio branco e contorno da cor — os cais dos expressos, que
+ *   ficam por baixo da paragem da rede no mesmo sítio;
+ * - `placa`: um quadrado arredondado com o pictograma do modo — as estações
+ *   (escuro, com o comboio a branco) e as praças de táxi (claro, com o táxi
+ *   escuro). É o desenho de uma placa, e é o que se procura num mapa.
+ */
+export type Forma = 'ponto' | 'anel' | 'placa';
+
 export type CamadaDePontos = {
   /** O valor de `tipo` nos pontos, e o identificador da camada no mapa. */
   tipo: string;
+  /** O modo, no vocabulário da região — é o que escolhe o pictograma. */
+  modo: string;
   /** O que o botão do filtro diz. */
   rotulo: string;
   cor: string;
+  forma: Forma;
+  /** Numa placa, a cor do fundo; o pictograma vai na outra. */
+  fundo: string;
   /** A partir de que zoom aparece. */
   minzoom: number;
-  /** O raio do círculo ao aparecer e a z16. */
+  /** O raio do círculo ao aparecer e a z16 — numa placa, o meio lado. */
   raio: [number, number];
   /**
    * Se, entre o `minzoom` e 13, só aparecem os pontos mais servidos.
@@ -72,44 +93,73 @@ export type CamadaDePontos = {
  * bicicletas e as 9 praças de táxi decidem-se a pé, e a pé anda-se com o mapa
  * perto: 12.
  */
-type Regra = { minzoom: number; raio: [number, number]; desbastar?: boolean; anel?: boolean };
+type Regra = {
+  minzoom: number;
+  raio: [number, number];
+  desbastar?: boolean;
+  forma?: Forma;
+};
 
 const CAMADAS_CONHECIDAS: Record<string, Regra> = {
-  estacao: { minzoom: 9, raio: [4, 10] },
+  estacao: { minzoom: 9, raio: [6, 11], forma: 'placa' },
   paragem: { minzoom: 11, raio: [2, 6], desbastar: true },
   bicicleta: { minzoom: 11, raio: [3, 8] },
   'urbano-municipal': { minzoom: 12, raio: [3, 7] },
-  taxi: { minzoom: 12, raio: [3, 7] },
+  taxi: { minzoom: 12, raio: [6, 9], forma: 'placa' },
   // OS CAIS DOS EXPRESSOS SÃO GRANDES E FICAM POR BAIXO, e as duas coisas
   // andam juntas. São uma mão-cheia de pontos numa região e caem praticamente
   // em cima da paragem da rede — medidos entre 19 e 36 metros dela. Desenhados
   // por cima, tapavam-na: a cidade com mais autocarros ficava sem um único
   // ponto azul. Desenhados por baixo e mais largos, ficam um halo à volta dela
   // — que é exatamente o que ali há, um cais servido pelas duas coisas.
-  expresso: { minzoom: 9, raio: [5, 11], anel: true },
+  expresso: { minzoom: 9, raio: [5, 11], forma: 'anel' },
 };
 
 const OMISSAO: Regra = { minzoom: 12, raio: [3, 7] };
 
-/** A ordem em que as camadas se empilham: a última fica por cima. */
+/** A ordem em que as camadas se EMPILHAM: a última fica por cima. Não é a de apresentação. */
 const ORDEM = ['expresso', 'paragem', 'urbano-municipal', 'taxi', 'bicicleta', 'estacao'];
 
+/**
+ * A ORDEM DE APRESENTAÇÃO, a do §1: a rede da autoridade primeiro, os
+ * serviços privados no fim. É a mesma da folha de abertura, que segue a
+ * declaração da região.
+ */
+export const ORDEM_DOS_MODOS = [
+  'autocarro',
+  'a-pedido',
+  'comboio',
+  'urbano-municipal',
+  'bicicleta',
+  'expresso',
+  'taxi',
+];
+
+/** As placas são claras ou escuras conforme o modo seja da rede ou privado. */
+const PRIVADOS = new Set(['taxi', 'expresso']);
+
 export function camadaDe(tipo: string): CamadaDePontos {
-  const modo = MODO_DO_TIPO[tipo] ?? tipo;
-  const { minzoom, raio, desbastar, anel } = CAMADAS_CONHECIDAS[tipo] ?? OMISSAO;
+  const modo = modoDoTipo(tipo);
+  const { minzoom, raio, desbastar, forma = 'ponto' } = CAMADAS_CONHECIDAS[tipo] ?? OMISSAO;
+  const cor = COR_DO_MODO[modo] ?? NEUTRA;
   return {
     tipo,
+    modo,
     rotulo: NOME_DOS_MODOS[modo] ?? modo,
-    cor: COR_DO_MODO[modo] ?? NEUTRA,
+    cor,
+    forma,
+    // A placa de um privado é branca com o desenho escuro (§6, neutro); a de
+    // um modo da rede é da cor dele, com o desenho a branco.
+    fundo: PRIVADOS.has(modo) ? '#ffffff' : cor,
     minzoom,
     raio,
     desbastar: !!desbastar,
-    anel: !!anel,
+    anel: forma === 'anel',
   };
 }
 
 /**
- * As camadas que estes pontos justificam, por ordem de empilhamento.
+ * As camadas que estes pontos justificam, por ordem de EMPILHAMENTO.
  *
  * Deriva-se do que EXISTE e não de uma lista fixa: uma região sem bicicletas
  * não ganha um botão «Bicicleta partilhada» que não liga a nada, e um modo
@@ -123,4 +173,25 @@ export function camadasDe(tipos: Iterable<string>): CamadaDePontos[] {
     return (ia < 0 ? ORDEM.length : ia) - (ib < 0 ? ORDEM.length : ib);
   });
   return presentes.map(camadaDe);
+}
+
+/**
+ * As mesmas camadas, pela ordem em que se MOSTRAM aos olhos: a da região,
+ * e na falta dela a do §1.
+ *
+ * Eram a mesma ordem, e a fila dos filtros abria pelo expresso — o serviço
+ * menos usado, e privado — por ser o que se desenha por baixo de tudo (P2-038,
+ * P1-011). A ordem de desenho é uma decisão de desenho; a de apresentação é
+ * uma hierarquia, e quem a lê lê-a como tal.
+ */
+export function ordemDeApresentacao(
+  camadas: CamadaDePontos[],
+  modosDaRegiao: string[] = [],
+): CamadaDePontos[] {
+  const ordem = [...modosDaRegiao, ...ORDEM_DOS_MODOS.filter((m) => !modosDaRegiao.includes(m))];
+  const posicao = (c: CamadaDePontos) => {
+    const i = ordem.indexOf(c.modo);
+    return i < 0 ? ordem.length : i;
+  };
+  return [...camadas].sort((a, b) => posicao(a) - posicao(b));
 }
