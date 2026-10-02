@@ -34,6 +34,7 @@ import re
 import shutil
 import unicodedata
 import zipfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -1625,7 +1626,7 @@ def construir(raiz: Path, regiao: Regiao, destino: Path, territorio=None) -> Sit
     #
     # Assim: as paragens vêm com a página, os sítios vêm à PRIMEIRA TECLA.
     # Quem procura paga o pedido; quem não procura não paga nada.
-    sitios = _sitios(raiz, regiao)
+    sitios = _sitios(raiz, regiao, lambda lat, lon: s._concelho_de(territorio, lat, lon))
     if sitios["sitios"]:
         s._escrever("sitios.json", sitios, len(sitios["sitios"]))
 
@@ -1903,7 +1904,11 @@ def _pontos_dos_modos(modos: dict[str, Any], campos: list[str]) -> dict[str, lis
     return saida
 
 
-def _sitios(raiz: Path, regiao: Regiao) -> dict[str, Any]:
+def _sitios(
+    raiz: Path,
+    regiao: Regiao,
+    concelho_de: Callable[[float, float], str | None] | None = None,
+) -> dict[str, Any]:
     """O índice dos sítios do OpenStreetMap, em listas e não em objetos.
 
     A mesma economia do `procura.json`: as chaves vão no cabeçalho uma vez, e
@@ -1912,6 +1917,13 @@ def _sitios(raiz: Path, regiao: Regiao) -> dict[str, Any]:
     A `classe` crua vai junto para a interface poder ordenar: quem escreve
     «Tomar» quer a cidade antes de uma pastelaria com o mesmo nome, e sem a
     classe não há como saber qual é qual.
+
+    E O CONCELHO, para dois sítios com o mesmo nome se distinguirem (P2-037):
+    eram duas linhas iguais na lista — o mesmo nome, o mesmo tipo —, a dezenas
+    de quilómetros uma da outra, e não havia como saber qual era qual nem antes
+    nem depois de escolher. Atribui-se como aos pontos dos outros modos
+    (`Sitio._concelho_de`), e vazio quando não se sabe: a procura não escreve
+    um concelho que ninguém atribuiu.
     """
     caminho = raiz / "build" / regiao.id / "geojson" / "sitios.geojson"
     if not caminho.exists():
@@ -1931,11 +1943,12 @@ def _sitios(raiz: Path, regiao: Regiao) -> dict[str, Any]:
                 round(float(lon), 6),
                 p.get("tipo") or "",
                 p.get("classe") or "",
+                (concelho_de(float(lat), float(lon)) if concelho_de else None) or "",
             ]
         )
 
     linhas.sort(key=lambda x: _simples(str(x[0])))
-    return {"campos": ["nome", "lat", "lon", "tipo", "classe"], "sitios": linhas}
+    return {"campos": ["nome", "lat", "lon", "tipo", "classe", "concelho"], "sitios": linhas}
 
 
 def _seguro(identificador: str) -> str:
