@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/componentes/Ligacao';
 import type { Metadata } from 'next';
 import { exigirModo, paragens, concelhos, urlRede, urlDaParagem, regiao } from '@/lib/dados';
 import { plural } from '@/lib/prosa';

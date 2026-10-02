@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import Link from '@/componentes/Ligacao';
 import EscolherPonto from './EscolherPonto';
 import Distintivo from './Distintivo';
 import {

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
+import Link from '@/componentes/Ligacao';
 import type { Metadata } from 'next';
 import { aPedido, dadosAbertos, exigirRegiao, url, urlRede, regiao } from '@/lib/dados';
 import ProcurarTerra from '@/componentes/ProcurarTerra';

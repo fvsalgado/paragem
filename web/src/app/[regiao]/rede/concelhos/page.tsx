@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/componentes/Ligacao';
 import type { Metadata } from 'next';
 import { concelhos, exigirRegiao, urlRede, regiao } from '@/lib/dados';
 import { aAutoridade, aRede, maiuscula, plural } from '@/lib/prosa';

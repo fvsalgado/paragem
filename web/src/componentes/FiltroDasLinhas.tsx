@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/componentes/Ligacao';
 import { useId, useState } from 'react';
 import Distintivo from './Distintivo';
 import { simples } from '@/lib/letras';
