@@ -522,6 +522,21 @@ export default async function FichaDaRegiao({ params, searchParams }: Props) {
         )}
       </section>
 
+      {/* AS PROCURAS SEM RESPOSTA (P4-030): o relatório vive numa página à
+          parte, porque é uma tabela e não um interruptor — aqui fica a porta. */}
+      <section aria-labelledby="titulo-procuras" id="procuras" className="cartao">
+        <h2 id="titulo-procuras">Procuras sem resposta</h2>
+        <p>
+          As viagens que se procuraram no planeador {frase.de} e não tiveram resposta, juntas por
+          ligação: a lista do que a rede não serve.
+        </p>
+        <p className="linha-accoes">
+          <Link className="botao" href={`${ficha}procuras/`}>
+            Ver as procuras sem resposta
+          </Link>
+        </p>
+      </section>
+
       {dono ? (
         <section aria-labelledby="titulo-pessoas" id="pessoas" className="cartao">
           <h2 id="titulo-pessoas">Quem trabalha nesta região</h2>

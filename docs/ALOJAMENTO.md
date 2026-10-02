@@ -97,6 +97,7 @@ variável não existe: quem manda é a base.
 | `ADMIN_EMAIL` | produção, recomendada | o email do dono: com ela, a palavra-passe do ambiente só entra com este email. Sem ela, entra com qualquer um — como antes de haver contas |
 | `SUPABASE_SERVICE_ROLE_KEY` | produção e pré-visualização, sensível | a chave **secreta** «painel» do projeto Supabase: é com ela que o painel lê e chama as funções da base. Nunca `NEXT_PUBLIC_`; só o servidor a vê |
 | `IP_HASH_SALT` | produção e pré-visualização, sensível | o sal dos hashes de origem do painel (limite de tentativas, auditoria); 16 caracteres ou mais |
+| `POSTHOG_CHAVE_PESSOAL`, `POSTHOG_PROJETO` | produção, a chave sensível | para o painel ler as procuras sem resposta de cada região (P4-030, [`MEDICAO.md`](MEDICAO.md)): uma chave pessoal do PostHog **só de leitura** (âmbito `query:read`) e o número do projeto. A chave do sítio não serve — só escreve, e é pública. Sem elas, o relatório diz o que falta. `POSTHOG_API` é opcional: por omissão `https://eu.posthog.com` |
 | `PARAGEM_FUSO` | opcional | o fuso em que o painel lê e escreve as horas dos avisos. Por omissão `Europe/Lisbon`. **É declarado e não adivinhado**: o servidor corre em UTC e o campo `datetime-local` não leva fuso nenhum — sem isto, um aviso das 8h ficava guardado uma hora adiantado no verão, sem erro e sem aviso |
 
 Os `NEXT_PUBLIC_*` são trocados por texto **na construção** — e a construção

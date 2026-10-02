@@ -26,6 +26,8 @@ mapa de domínios no middleware.
 |                               | acrescentar e retirar endereços que levam ao principal (redirecionam, nunca servem)                  | `add_region_alias`, `remove_region_alias`                   |
 |                               | ligar e desligar cada modo que a região tem, com confirmação e «Desfazer»                            | `set_modulo`                                                |
 |                               | registar uma licença — uma linha por contrato ou renovação                                           | `add_region_license`                                        |
+|                               | o contacto de acessibilidade, onde se reclama e quem responde pelos dados                            | `set_region_contactos`                                      |
+| `/admin/regioes/<id>/procuras/` | as viagens procuradas sem resposta, juntas por ligação, dos últimos 90 dias                        | — (lê a medição; [`MEDICAO.md`](MEDICAO.md))                |
 | `/admin/regioes/<id>/avisos/` | escrever, corrigir, publicar, retirar e apagar avisos                                                | `upsert_aviso`, `set_aviso_publicado`, `delete_aviso`       |
 | `/admin/pessoas/`             | convidar uma pessoa, os papéis dela por região, uma ligação nova, desativar                          | `create_pessoa`, `set_papel`, `create_convite`, `set_pessoa_ativa` |
 | `/admin/ativar/?t=…`          | quem foi convidado escolhe a palavra-passe e entra                                                   | `ativar_com_convite`                                        |
