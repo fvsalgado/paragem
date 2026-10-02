@@ -1,3 +1,5 @@
+import { doCampoLocal } from '../fuso.ts';
+
 /**
  * O antes e o depois de uma ação, campo a campo.
  *
@@ -61,8 +63,42 @@ export const NOME_DAS_ACOES: Record<string, string> = {
   'aviso.publish': 'publicou um aviso',
   'aviso.unpublish': 'retirou um aviso',
   'aviso.delete': 'apagou um aviso',
+  // As pessoas do painel (0009). A ativação e a palavra-passe nova ficam em
+  // nome da própria pessoa: foi ela que abriu a ligação.
+  'pessoa.create': 'convidou uma pessoa',
+  'pessoa.papel': 'mudou o papel de uma pessoa',
+  'pessoa.disable': 'desativou uma pessoa',
+  'pessoa.enable': 'voltou a ativar uma pessoa',
+  'pessoa.convite': 'gerou uma ligação de ativação',
+  'pessoa.activate': 'ativou a conta',
+  'pessoa.password': 'escolheu uma palavra-passe nova',
+  'pessoa.acesso': 'entrou no painel',
 };
 
 export function nomeDaAcao(action: string): string {
   return NOME_DAS_ACOES[action] ?? action;
+}
+
+const MES = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** O primeiro dia do mês seguinte, para o intervalo ser meio-aberto. */
+function mesSeguinte(mes: string): string {
+  const [ano, numero] = mes.split('-').map(Number);
+  return numero === 12
+    ? `${(ano ?? 0) + 1}-01-01`
+    : `${ano}-${String((numero ?? 0) + 1).padStart(2, '0')}-01`;
+}
+
+/**
+ * O mês NA HORA DE PORTUGAL, e não em UTC (P4-020). «Outubro» começa à
+ * meia-noite de Lisboa do dia 1 — que no verão é às 23h de 30 de setembro em
+ * UTC. Contado em UTC, o que se fez na primeira hora de cada mês ia parar ao
+ * mês anterior, e o recorte que se manda a alguém dizia uma coisa e mostrava
+ * outra.
+ */
+export function limitesDoMes(mes: string): { desde: string; ate: string } | null {
+  if (!MES.test(mes)) return null;
+  const desde = doCampoLocal(`${mes}-01T00:00`);
+  const ate = doCampoLocal(`${mesSeguinte(mes)}T00:00`);
+  return desde && ate ? { desde, ate } : null;
 }

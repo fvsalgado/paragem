@@ -2,8 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import {
   CABECALHO_DO_CAMINHO,
   caminhoDaEntrada,
-  ehAEntrada,
   ehDoPainel,
+  ehPublicaDoPainel,
 } from '@/lib/painel/guarda';
 import { COOKIE_DA_SESSAO, lerSessao } from '@/lib/painel/sessao';
 import { NAO_E_ENDERECO, decidir, mapaDeDominios } from '@/lib/regiao-host';
@@ -41,6 +41,9 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     // O painel não é para indexar, nem para ficar em cache de ninguém.
     resposta.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
     resposta.headers.set('Cache-Control', 'no-store, must-revalidate');
+    // A ligação de ativação leva o token na barra de endereços: nada do
+    // painel diz a outro sítio de onde se veio.
+    resposta.headers.set('Referrer-Policy', 'no-referrer');
     return resposta;
   }
 
@@ -85,7 +88,7 @@ function deixarPassar(request: NextRequest): NextResponse {
 
 /**
  * A porta do painel, e a única regra que ela tem: sem sessão válida não se
- * entra.
+ * entra — exceto na entrada e na ativação, que são as portas.
  *
  * Sem `ADMIN_SESSION_SECRET` não há como verificar um token, e manda-se para
  * a entrada como a qualquer pedido sem sessão — é lá que a falta de
@@ -94,7 +97,7 @@ function deixarPassar(request: NextRequest): NextResponse {
  */
 async function guardarPainel(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
-  if (ehAEntrada(pathname)) return deixarPassar(request);
+  if (ehPublicaDoPainel(pathname)) return deixarPassar(request);
 
   const segredo = process.env.ADMIN_SESSION_SECRET;
   const token = request.cookies.get(COOKIE_DA_SESSAO)?.value;

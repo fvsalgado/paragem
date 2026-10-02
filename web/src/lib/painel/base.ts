@@ -16,6 +16,10 @@ import 'server-only';
  * um interruptor em que ninguém confia.
  */
 
+import { ErroDaBase, cabecalhosDaChave } from './base-pura.ts';
+
+export { ErroDaBase, cabecalhosDaChave, ehEsquemaPorAplicar, traduzirErro } from './base-pura.ts';
+
 const PRAZO_MS = 8000;
 
 function endereco(): string {
@@ -31,22 +35,9 @@ export function temChaveDeServico(): boolean {
   return Boolean(endereco()) && Boolean(chave());
 }
 
-/** O que o PostgREST diz quando recusa: a frase da função, em português. */
-export class ErroDaBase extends Error {
-  constructor(
-    mensagem: string,
-    readonly estado: number,
-    readonly codigo?: string,
-  ) {
-    super(mensagem);
-    this.name = 'ErroDaBase';
-  }
-}
-
 function cabecalhos(): Record<string, string> {
   return {
-    apikey: chave(),
-    authorization: `Bearer ${chave()}`,
+    ...cabecalhosDaChave(chave()),
     accept: 'application/json',
     'content-type': 'application/json',
   };

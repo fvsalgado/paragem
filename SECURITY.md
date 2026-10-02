@@ -14,10 +14,10 @@ Respondo em dias, não em semanas. Se não tiver resposta em uma semana, insiste
 
 ## O que este projeto tem, e não tem
 
-Hoje, na Fase 0/1, o Paragem.pt é um pipeline de dados que lê ficheiros
-públicos e escreve outros ficheiros. **Não há contas de utilizador, não há base
-de dados e não se recolhe nada sobre ninguém.** O que há para proteger são três
-coisas:
+O Paragem.pt são três coisas: um pipeline de dados que lê ficheiros públicos e
+escreve outros, um sítio que os mostra, e um painel (`/admin`) onde se ligam e
+desligam regiões e módulos e onde cada autoridade de transportes escreve os
+seus avisos. O que há para proteger:
 
 - **a integridade dos dados** — um horário errado põe alguém à chuva, e uma
   paragem inventada põe-na no sítio errado. É por isso que o validador com zero
@@ -26,8 +26,19 @@ coisas:
   Cada fonte está registada em `data/sources.yaml` com a soma de verificação do
   que se descarregou, e uma soma diferente é um aviso no relatório, não um
   silêncio;
-- **os segredos que ainda não existem** — nenhum. Quando existirem (Fase 4, com
-  o Supabase), vão para variáveis de ambiente e nunca para o repositório.
+- **o painel e as contas dele.** Cada pessoa entra com o seu email e a sua
+  palavra-passe, e vê só as regiões onde tem papel; a palavra-passe guarda-se
+  como hash scrypt, os tokens das ligações de ativação como sha256, e nem um
+  nem outro entram no registo de auditoria. A separação entre regiões é a
+  propriedade que mais importa defender: uma pessoa de uma autoridade de
+  transportes que consiga ver ou mexer na região de outra é uma falha para
+  comunicar já ([`docs/PAINEL.md`](docs/PAINEL.md));
+- **os segredos** — a chave de serviço da base, o segredo das sessões, o hash da
+  palavra-passe do dono — vivem em variáveis de ambiente do alojamento, e nunca
+  no repositório nem no navegador ([`docs/ALOJAMENTO.md`](docs/ALOJAMENTO.md)).
+
+O sítio público não recolhe dado pessoal nenhum: mede o que se procura, sem
+cookies, sem identificador e sem endereço IP ([`docs/MEDICAO.md`](docs/MEDICAO.md)).
 
 ## Não raspar, e porquê aqui é também segurança
 

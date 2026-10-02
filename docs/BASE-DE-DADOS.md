@@ -15,6 +15,9 @@ sentido em tempo de execução e que o painel muda sem um commit:
 | `admin_actions`         | cada gesto do painel, com o antes e o depois             | só o painel                                          |
 | `rate_limits`           | as tentativas de entrada no painel, por origem e janela  | só a função `rate_limit_hit`                         |
 | `avisos`                | o que a autoridade tem a dizer hoje: supressões, desvios, greves | o sítio e o feed GTFS-RT, com a chave anónima — só os publicados |
+| `admin_pessoas`         | quem entra no painel além do dono: email, nome, o hash da palavra-passe, o estado | só o painel                          |
+| `admin_papeis`          | o papel de cada pessoa em cada região: gestor ou editor  | só o painel                                          |
+| `admin_convites`        | as ligações de ativação — só o sha256 do token, com prazo e de uso único | só o painel                          |
 
 É o desenho do [Coreto](https://github.com/fvsalgado/coreto) — a mesma casa, o
 mesmo autor, o mesmo problema resolvido primeiro lá —, levantado e reduzido.
@@ -38,8 +41,12 @@ sem linhas tem tudo ligado.
 
 **Nenhuma escrita toca nas tabelas.** O painel chama funções SQL —
 `set_region_enabled`, `set_modulo`, `add_region_license`, `create_region`,
-`set_region_domain`, `add_region_alias`, `remove_region_alias` — e são elas
-que escrevem e que deixam a linha em `admin_actions`. Uma escrita direta era uma
+`set_region_domain`, `add_region_alias`, `remove_region_alias`, as dos avisos
+e, desde a 0009, as das pessoas (`create_pessoa`, `set_papel`,
+`set_pessoa_ativa`, `create_convite`, `ativar_com_convite`, `registar_acesso`)
+— e são elas que escrevem e que deixam a linha em `admin_actions`, com o nome
+e o email de quem o fez. As palavras-passe e os tokens das ligações nunca
+entram no rasto. Uma escrita direta era uma
 ação sem rasto, e o rasto é metade do que torna um interruptor confiável.
 Quem quer saber «quem desligou o comboio nesta região, e quando» lê a tabela.
 
@@ -59,6 +66,17 @@ não na leitura, onde há uma aplicação de outra gente. E o que se escreve é 
 sobre o que a autoridade da região **gere**: os modos que vêm de feeds de
 terceiros ficam de fora, pela mesma razão que os ficheiros deles ficam fora das
 descargas ([`PAINEL.md`](PAINEL.md)).
+
+**As contas são do painel, e o dono não depende delas.** A palavra-passe do
+dono vive no ambiente (`ADMIN_PASSWORD_HASH`), como sempre; as pessoas, os
+papéis e as ligações vivem aqui (0009), com RLS ligada e nenhuma policy —
+nem a linha de uma pessoa nem o hash da palavra-passe dela se leem com a chave
+pública, e as asserções provam-no perguntando com esse papel. O limite de
+tentativas passa a contar só as falhadas (`rate_limit_check`,
+`rate_limit_clear`, ao lado da `rate_limit_hit` de sempre). Quem gere uma
+região lê o rasto dela pela `acoes_das_regioes`, que sabe de que região é cada
+aviso mesmo nas linhas que não o dizem, e que deixa de fora as licenças e as
+pessoas.
 
 **O público degrada, a segurança fecha.** Se o sítio não conseguir ler
 `modulos`, mostra tudo — assumir tudo desligado por causa de uma falha de rede
@@ -135,6 +153,13 @@ O que já está feito:
   publicado é). O que falta é repetir a leitura contra o projeto: `avisos` com
   RLS ligada, uma policy, e as três funções. **Confirmar antes de contar com
   isto.**
+- **A 0009 (as pessoas) NÃO está aplicada** — escrita a 02/10/2026, provada
+  no CI e na base local, à espera do dono. O sítio novo funciona antes dela:
+  sem as tabelas, o painel abre ao dono como hoje, e «Pessoas» diz que a
+  instalação ainda não tem contas ([`PAINEL.md`](PAINEL.md), «A transição»).
+  Aplicada, o PostgREST do projeto relê o esquema sozinho; numa base local com
+  um PostgREST à parte, é preciso `notify pgrst, 'reload schema'`. E, como na
+  0007, o ficheiro passa a ter o carimbo da hora a que correu.
 - **A palavra-passe da base não ficou guardada em lado nenhum.** Foi gerada ao
   acaso na criação e deitada fora: o sítio vai falar com a base pelas chaves
   de API, não por `psql`. Para uma ligação direta, redefine-se no painel do

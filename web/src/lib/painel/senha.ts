@@ -1,12 +1,13 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 
 /**
- * A palavra-passe do painel: como se guarda, e como se confere.
+ * As palavras-passe do painel: como se guardam, e como se conferem.
  *
- * O painel não tem contas nem registo: tem UMA palavra-passe, e dela o
- * servidor só conhece um hash com sal — `scrypt$N$r$p$sal$hash`, produzido
- * por `scripts/senha.mjs` e posto em `ADMIN_PASSWORD_HASH`. Este ficheiro é
- * o único sítio onde o formato se escreve e se lê.
+ * De cada uma o servidor só conhece um hash com sal — `scrypt$N$r$p$sal$hash`.
+ * A do dono é produzida por `scripts/senha.mjs` e vive em
+ * `ADMIN_PASSWORD_HASH`; a de cada pessoa é produzida aqui, quando ela a
+ * escolhe com a ligação de ativação, e vive na base (`admin_pessoas`, 0009).
+ * Este ficheiro é o único sítio onde o formato se escreve e se lê.
  *
  * Separado do token de sessão de propósito: isto usa o scrypt do Node e só
  * corre no servidor, enquanto a verificação do token tem de correr também no
@@ -28,7 +29,7 @@ export const PARALELISMO = 1;
 const COMPRIMENTO_DA_CHAVE = 64;
 const COMPRIMENTO_DO_SAL = 16;
 
-/** O mínimo. Isto guarda o interruptor de todas as regiões. */
+/** O mínimo, para o dono e para cada pessoa: isto guarda o interruptor de regiões inteiras. */
 export const COMPRIMENTO_MINIMO = 12;
 
 function memoriaMaxima(custo: number, bloco: number): number {

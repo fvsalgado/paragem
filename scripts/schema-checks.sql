@@ -197,7 +197,8 @@ declare
 begin
   select count(*) into n from pg_policies
    where schemaname = 'public'
-     and tablename in ('admin_actions', 'region_licenses', 'rate_limits');
+     and tablename in ('admin_actions', 'region_licenses', 'rate_limits',
+                       'admin_pessoas', 'admin_papeis', 'admin_convites');
   assert n = 0, format('%s policies em tabelas que deviam ser só da chave de serviço', n);
 
   -- E a dos avisos tem UMA, de leitura, e só do que está publicado. Uma
@@ -216,9 +217,20 @@ begin
   select count(*) into n from pg_tables t
    where t.schemaname = 'public'
      and t.tablename in ('regions', 'region_domain_aliases', 'modulos', 'admin_actions',
-                         'region_licenses', 'rate_limits', 'avisos')
+                         'region_licenses', 'rate_limits', 'avisos',
+                         'admin_pessoas', 'admin_papeis', 'admin_convites')
      and not t.rowsecurity;
   assert n = 0, format('%s tabelas sem RLS', n);
+
+  -- E as das pessoas não se leem com a chave pública — nem a linha, nem o
+  -- hash da palavra-passe que lá vive. Prova-se perguntando com o papel com
+  -- que o sítio pergunta, e não lendo os `grant`.
+  assert not has_table_privilege('anon', 'public.admin_pessoas', 'select'),
+    'a chave pública não pode ler as pessoas do painel';
+  assert not has_table_privilege('anon', 'public.admin_convites', 'select'),
+    'a chave pública não pode ler as ligações de ativação';
+  assert not has_function_privilege('anon', 'public.ativar_com_convite(text, text, text)', 'execute'),
+    'a chave pública não pode ativar contas: é o servidor que o faz';
 end $$;
 
 -- ---------------------------------------------------------------------------
@@ -298,4 +310,231 @@ begin
 
   delete from public.regions where id in ('checks-avisos', 'checks-avisos-2');
   delete from public.admin_actions where actor = 'schema-checks';
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- AS PESSOAS DO PAINEL (0009). O que se afirma é o que tranca alguém fora ou
+-- deixa alguém entrar onde não devia: uma ligação serve uma vez, expira,
+-- morre com a pessoa desativada, e a auditoria escreve QUEM — nunca o token
+-- nem a palavra-passe.
+do $$
+declare
+  v_id    uuid;
+  v_outra uuid;
+  v_ate   timestamptz;
+  n       integer;
+  b       boolean;
+  r       record;
+  -- Dois «tokens» de brincar, já reduzidos ao sha256 — é só isso que a base vê.
+  t1 text := repeat('a', 64);
+  t2 text := repeat('b', 64);
+  t3 text := repeat('c', 64);
+  h  text := 'scrypt$16384$8$1$c2FsLWRlLXRlc3Rl$aGFzaC1kZS10ZXN0ZQ==';
+begin
+  perform public.create_region('checks-pessoas', 'Checks', 'a', 'checks-pessoas', 96, 'schema-checks');
+  perform public.create_region('checks-pessoas-2', 'Checks 2', 'a', 'checks-pessoas-2', 95, 'schema-checks');
+
+  -- NASCE EM MINÚSCULAS, SEM PALAVRA-PASSE E SEM PAPÉIS, com rasto.
+  select public.create_pessoa(' Ana.Teste@Exemplo.PT ', 'Ana Teste', 'schema-checks') into v_id;
+  select count(*) into n from public.admin_pessoas
+   where id = v_id and email = 'ana.teste@exemplo.pt' and senha_hash is null and ativada_em is null;
+  assert n = 1, 'a pessoa devia nascer com o email em minúsculas e sem palavra-passe';
+  select count(*) into n from public.admin_actions
+   where action = 'pessoa.create' and entity_id = v_id::text;
+  assert n = 1, 'criar uma pessoa devia deixar uma linha de auditoria';
+
+  -- O MESMO EMAIL NÃO ENTRA DUAS VEZES, com outra caixa: é a mesma caixa de correio.
+  begin
+    perform public.create_pessoa('ANA.TESTE@exemplo.pt', 'Outra Ana', 'schema-checks');
+    assert false, 'o mesmo email devia ser recusado';
+  exception when others then
+    assert sqlerrm like 'já há uma pessoa com o email%', format('a recusa devia dizer qual: %s', sqlerrm);
+  end;
+  begin
+    perform public.create_pessoa('isto-nao-e-um-email', 'X', 'schema-checks');
+    assert false, 'um email ilegível devia ser recusado';
+  exception when others then
+    assert sqlerrm like 'o email%', format('a recusa devia falar do email: %s', sqlerrm);
+  end;
+
+  -- OS PAPÉIS: dá-se, muda-se, tira-se — e o mesmo gesto duas vezes é um só.
+  assert public.set_papel(v_id, 'checks-pessoas', 'editor', 'schema-checks'),
+    'dar um papel devia devolver true';
+  assert not public.set_papel(v_id, 'checks-pessoas', 'editor', 'schema-checks'),
+    'dar o mesmo papel outra vez devia devolver false';
+  assert public.set_papel(v_id, 'checks-pessoas', 'gestor', 'schema-checks'),
+    'mudar de papel devia devolver true';
+  assert public.set_papel(v_id, 'checks-pessoas', null, 'schema-checks'),
+    'tirar o papel devia devolver true';
+  select count(*) into n from public.admin_papeis where pessoa_id = v_id;
+  assert n = 0, 'tirar o papel devia apagar a linha';
+  select count(*) into n from public.admin_actions
+   where action = 'pessoa.papel' and entity_id = v_id::text;
+  assert n = 3, format('esperava três linhas de auditoria de papéis, há %s', n);
+  begin
+    perform public.set_papel(v_id, 'checks-pessoas', 'dono', 'schema-checks');
+    assert false, 'um papel que não existe devia ser recusado';
+  exception when others then
+    assert sqlerrm like 'o papel tem de ser%', format('a recusa devia dizer quais: %s', sqlerrm);
+  end;
+  perform public.set_papel(v_id, 'checks-pessoas', 'editor', 'schema-checks');
+
+  -- A LIGAÇÃO: só o hash entra, e o rasto não o leva.
+  begin
+    perform public.create_convite(v_id, 'token-em-claro', 'schema-checks');
+    assert false, 'um token em claro devia ser recusado';
+  exception when others then
+    assert sqlerrm like '%sha256%', format('a recusa devia falar do sha256: %s', sqlerrm);
+  end;
+  select public.create_convite(v_id, t1, 'schema-checks') into v_ate;
+  assert v_ate > now() + interval '6 days' and v_ate <= now() + interval '7 days',
+    'a ligação devia valer sete dias';
+  select count(*) into n from public.admin_actions
+   where action = 'pessoa.convite' and entity_id = v_id::text
+     and (coalesce(before::text, '') || coalesce(after::text, '')) not like '%' || t1 || '%';
+  assert n = 1, 'gerar uma ligação devia deixar rasto, e o rasto não pode levar o token';
+
+  -- UMA LIGAÇÃO NOVA ANULA A QUE ESTAVA POR USAR: a que se perdeu deixa de servir.
+  perform public.create_convite(v_id, t2, 'schema-checks');
+  begin
+    perform public.ativar_com_convite(t1, h);
+    assert false, 'uma ligação substituída devia ser recusada';
+  exception when others then
+    assert sqlerrm like 'esta ligação não é válida%', format('a recusa devia dizê-lo: %s', sqlerrm);
+  end;
+
+  -- ATIVAR: a palavra-passe fica, a ligação gasta-se, e o rasto é da própria pessoa.
+  select * into r from public.ativar_com_convite(t2, h);
+  assert r.id = v_id and r.email = 'ana.teste@exemplo.pt', 'ativar devia devolver a pessoa';
+  select count(*) into n from public.admin_pessoas
+   where id = v_id and senha_hash = h and ativada_em is not null;
+  assert n = 1, 'ativar devia guardar o hash e a data de ativação';
+  select count(*) into n from public.admin_actions
+   where action = 'pessoa.activate' and entity_id = v_id::text
+     and actor = 'Ana Teste · ana.teste@exemplo.pt'
+     and (coalesce(before::text, '') || coalesce(after::text, '')) not like '%scrypt%';
+  assert n = 1, 'a ativação devia ficar em nome da pessoa, sem o hash no rasto';
+  begin
+    perform public.ativar_com_convite(t2, h);
+    assert false, 'uma ligação usada devia ser recusada';
+  exception when others then
+    assert sqlerrm like 'esta ligação já foi usada%', format('a recusa devia dizê-lo: %s', sqlerrm);
+  end;
+
+  -- UMA LIGAÇÃO FORA DE PRAZO NÃO SERVE. O prazo não se consegue envelhecer
+  -- pela função; envelhece-se à mão, aqui e só aqui.
+  perform public.create_convite(v_id, t3, 'schema-checks');
+  update public.admin_convites set expira_em = now() - interval '1 minute' where token_hash = t3;
+  begin
+    perform public.ativar_com_convite(t3, h);
+    assert false, 'uma ligação expirada devia ser recusada';
+  exception when others then
+    assert sqlerrm like 'esta ligação expirou%', format('a recusa devia dizê-lo: %s', sqlerrm);
+  end;
+  -- Uma segunda vez a mesma: é a palavra-passe nova, e o rasto diz que é.
+  update public.admin_convites set expira_em = now() + interval '1 day' where token_hash = t3;
+  perform public.ativar_com_convite(t3, h);
+  select count(*) into n from public.admin_actions
+   where action = 'pessoa.password' and entity_id = v_id::text;
+  assert n = 1, 'uma ligação para quem já estava ativada devia registar-se como palavra-passe nova';
+
+  -- O ACESSO fica registado — da pessoa e do dono.
+  perform public.registar_acesso(v_id, 'Ana Teste · ana.teste@exemplo.pt');
+  -- O do dono vai em nome destas verificações, para sair com elas no fim.
+  perform public.registar_acesso(null, 'schema-checks');
+  select count(*) into n from public.admin_pessoas where id = v_id and ultimo_acesso is not null;
+  assert n = 1, 'o acesso devia guardar a hora';
+  select count(*) into n from public.admin_actions
+   where action = 'pessoa.acesso' and entity_id in (v_id::text, 'dono');
+  assert n = 2, format('esperava dois acessos registados, há %s', n);
+
+  -- DESATIVAR: não apaga, anula as ligações por usar, e tranca as novas.
+  perform public.create_convite(v_id, repeat('d', 64), 'schema-checks');
+  assert public.set_pessoa_ativa(v_id, false, 'schema-checks'), 'desativar devia devolver true';
+  assert not public.set_pessoa_ativa(v_id, false, 'schema-checks'),
+    'desativar quem já está desativada devia devolver false';
+  select count(*) into n from public.admin_convites where pessoa_id = v_id and usado_em is null;
+  assert n = 0, 'desativar devia anular as ligações por usar';
+  begin
+    perform public.create_convite(v_id, repeat('e', 64), 'schema-checks');
+    assert false, 'uma pessoa desativada não devia receber ligação';
+  exception when others then
+    assert sqlerrm like 'esta pessoa está desativada%', format('a recusa devia dizê-lo: %s', sqlerrm);
+  end;
+  begin
+    perform public.registar_acesso(v_id, 'Ana Teste · ana.teste@exemplo.pt');
+    assert false, 'uma pessoa desativada não devia entrar';
+  exception when others then
+    assert sqlerrm like 'não há pessoa ativa%', format('a recusa devia dizê-lo: %s', sqlerrm);
+  end;
+  assert public.set_pessoa_ativa(v_id, true, 'schema-checks'), 'reativar devia devolver true';
+
+  -- UMA REGIÃO QUE SAI LEVA OS PAPÉIS DELA, e a pessoa fica.
+  select public.create_pessoa('bruno.teste@exemplo.pt', 'Bruno Teste', 'schema-checks') into v_outra;
+  perform public.set_papel(v_outra, 'checks-pessoas-2', 'gestor', 'schema-checks');
+  delete from public.regions where id = 'checks-pessoas-2';
+  select count(*) into n from public.admin_papeis where pessoa_id = v_outra;
+  assert n = 0, 'apagar a região devia levar os papéis dela';
+  select count(*) into n from public.admin_pessoas where id = v_outra;
+  assert n = 1, 'apagar a região não devia apagar a pessoa';
+
+  -- O LIMITE CONTA SÓ AS FALHADAS: perguntar não conta, e uma certa limpa o balde.
+  perform public.rate_limit_hit('schema-checks:pessoas', 900, 2);
+  perform public.rate_limit_hit('schema-checks:pessoas', 900, 2);
+  select allowed, hits into b, n from public.rate_limit_check('schema-checks:pessoas', 900, 2);
+  assert not b and n = 2, 'duas falhadas num limite de duas deviam fechar a porta';
+  select allowed, hits into b, n from public.rate_limit_check('schema-checks:pessoas', 900, 2);
+  assert n = 2, 'perguntar não devia contar';
+  perform public.rate_limit_clear('schema-checks:pessoas');
+  select allowed, hits into b, n from public.rate_limit_check('schema-checks:pessoas', 900, 2);
+  assert b and n = 0, 'uma entrada certa devia limpar o balde';
+
+  -- O RASTO DE UMA REGIÃO, para quem a gere: os avisos dela inteiros — também
+  -- publicar e retirar, que não guardam a região, e um aviso já apagado —, sem
+  -- as licenças, e nada de outra região.
+  declare
+    v_aviso uuid;
+    v_alheio uuid;
+  begin
+    perform public.create_region('checks-rasto-b', 'Checks B', 'a', 'checks-rasto-b', 94, 'schema-checks');
+    select public.upsert_aviso(null, 'checks-pessoas', 'T', 'X', 'INFO', 'CONSTRUCTION', 'DETOUR',
+                               null, null, '{}', '{}', '{}', null, 'schema-checks') into v_aviso;
+    perform public.set_aviso_publicado(v_aviso, true, 'schema-checks');
+    perform public.set_aviso_publicado(v_aviso, false, 'schema-checks');
+    perform public.delete_aviso(v_aviso, 'schema-checks');
+    perform public.add_region_license('checks-pessoas', current_date, null, 'contrato', null, 'schema-checks');
+    perform public.set_modulo('checks-pessoas', 'taxi', false, 'schema-checks');
+    select public.upsert_aviso(null, 'checks-rasto-b', 'Alheio', 'X', 'INFO', 'CONSTRUCTION', 'DETOUR',
+                               null, null, '{}', '{}', '{}', null, 'schema-checks') into v_alheio;
+
+    select count(*) into n from public.acoes_das_regioes(array['checks-pessoas'])
+     where entity_type = 'aviso' and entity_id = v_aviso::text;
+    assert n = 4, format('o rasto do aviso devia ter criar, publicar, retirar e apagar, e tem %s', n);
+    select count(*) into n from public.acoes_das_regioes(array['checks-pessoas'])
+     where action = 'region.license_add';
+    assert n = 0, 'o rasto de quem gere não leva as licenças';
+    select count(*) into n from public.acoes_das_regioes(array['checks-pessoas'], 50, 0,
+                                                         null, null, null, null, null, true)
+     where action = 'region.license_add';
+    assert n = 1, 'o do dono, pedido com elas, leva';
+    select count(*) into n from public.acoes_das_regioes(array['checks-pessoas'])
+     where action = 'module.disable';
+    assert n = 1, 'o rasto da região leva os módulos dela';
+    select count(*) into n from public.acoes_das_regioes(array['checks-pessoas'])
+     where entity_id in (v_alheio::text, 'checks-rasto-b');
+    assert n = 0, 'o rasto de uma região não pode trazer nada de outra';
+    select count(*) into n from public.acoes_das_regioes(array['checks-pessoas'])
+     where entity_type = 'pessoa';
+    assert n = 0, 'as pessoas são do dono, e não aparecem no rasto de uma região';
+
+    delete from public.modulos where region_id = 'checks-pessoas';
+    delete from public.regions where id = 'checks-rasto-b';
+  end;
+
+  -- O que estas verificações escreveram sai daqui, rasto incluído.
+  delete from public.admin_actions
+   where actor = 'schema-checks' or entity_id in (v_id::text, v_outra::text);
+  delete from public.admin_pessoas where id in (v_id, v_outra);  -- leva papéis e ligações
+  delete from public.regions where id = 'checks-pessoas';
+  delete from public.rate_limits where bucket like 'schema-checks:%';
 end $$;

@@ -12,14 +12,23 @@ import {
   regiao as regiaoNoArmazem,
 } from '../dados';
 import { doCampoLocal } from '../fuso';
-import { abrirSessao, exigirSessao, fecharSessao, painelConfigurado } from './autenticacao';
-import { chamar } from './base';
+import {
+  SemPermissao,
+  abrirSessao,
+  exigirDono,
+  exigirPapel,
+  fecharSessao,
+  painelConfigurado,
+  type Dentro,
+} from './autenticacao';
+import { avisoPorId } from './avisos';
+import { chamar, ehEsquemaPorAplicar, traduzirErro } from './base';
+import { conferirCredenciais } from './entrada';
 import { CAMINHO_DA_ENTRADA, destinoSeguro } from './guarda';
-import { hashDoIp } from './ip';
-import { verificarLimite } from './limite';
+import { hashDoEmail, hashDoIp } from './ip';
+import { contarFalhada, limparDepoisDeEntrar, verificarEntrada } from './limite';
 import { listarRegioes } from './consultas';
 import { ehModulo } from './modulos';
-import { verificarSenha } from './senha';
 import { JANELA_DAS_TENTATIVAS_S, LIMITE_DE_TENTATIVAS } from './sessao';
 
 /**
@@ -28,16 +37,18 @@ import { JANELA_DAS_TENTATIVAS_S, LIMITE_DE_TENTATIVAS } from './sessao';
  * Nenhuma escreve numa tabela: todas chamam a função SQL que é o único
  * caminho de escrita e a que deixa a linha em `admin_actions`
  * (`docs/BASE-DE-DADOS.md`). Cada uma volta a exigir a sessão do seu lado —
- * a terceira barreira, depois do middleware e do layout —, e cada uma acaba
+ * a terceira barreira, depois do middleware e do layout —, E O PAPEL: o dono
+ * para o que é dele (regiões, domínios, licenças), o gestor da região para a
+ * ficha dela, o editor para os avisos. A página só mostra o botão a quem pode;
+ * a ação pergunta outra vez, porque recebe o que lhe mandarem. Cada uma acaba
  * num `redirect` com o aviso na barra de endereços: o que a base disse, em
- * português, para quem carregou no botão.
+ * português, para quem carregou no botão — e o nome de quem o carregou vai
+ * para a auditoria.
  *
  * O `redirect` do Next é uma exceção, e por isso nunca está dentro de um
  * `try`: o destino calcula-se primeiro, com a falha apanhada, e só depois se
  * salta para lá.
  */
-
-const ACTOR = 'gestor';
 
 function ficha(regiao: string): string {
   return `/admin/regioes/${encodeURIComponent(regiao)}/`;
@@ -50,7 +61,7 @@ function comAviso(caminho: string, aviso: string, ancora?: string): string {
 }
 
 function mensagemDe(erro: unknown): string {
-  return erro instanceof Error ? erro.message : String(erro);
+  return traduzirErro(erro);
 }
 
 function texto(formData: FormData, campo: string): string {
@@ -58,7 +69,14 @@ function texto(formData: FormData, campo: string): string {
   return typeof valor === 'string' ? valor.trim() : '';
 }
 
-/** Calcula o destino — apanhando o que a base recusar — e salta para lá. */
+/**
+ * Calcula o destino — apanhando o que a base recusar — e salta para lá.
+ *
+ * UMA RECUSA POR FALTA DE PAPEL volta ao início de quem tentou, e não à página
+ * que a ação pedia: essa é de uma região onde a pessoa não tem papel, e para
+ * ela não existe. Mandá-la para lá era mostrar-lhe um 404 em vez da frase que
+ * diz o que aconteceu.
+ */
 async function seguir(
   calcular: () => Promise<string>,
   emErro: (mensagem: string) => string,
@@ -67,14 +85,17 @@ async function seguir(
   try {
     destino = await calcular();
   } catch (erro) {
-    destino = emErro(mensagemDe(erro));
+    destino =
+      erro instanceof SemPermissao
+        ? comAviso('/admin/', `Não foi possível: ${erro.message}`)
+        : emErro(mensagemDe(erro));
   }
   redirect(destino);
 }
 
-async function rasto(): Promise<{ p_actor: string; p_ip_hash: string }> {
-  const actor = await exigirSessao();
-  return { p_actor: actor, p_ip_hash: hashDoIp(await headers()) };
+/** Quem fez, e de onde — o que cada função da base leva para a auditoria. */
+async function rasto(dentro: Dentro): Promise<{ p_actor: string; p_ip_hash: string }> {
+  return { p_actor: dentro.actor, p_ip_hash: hashDoIp(await headers()) };
 }
 
 function exigirRegiaoValida(id: string): string {
@@ -86,24 +107,48 @@ function exigirRegiaoValida(id: string): string {
 
 export async function entrar(formData: FormData): Promise<void> {
   const destino = destinoSeguro(texto(formData, 'destino'));
+  const email = texto(formData, 'email').toLowerCase();
   const senha = String(formData.get('senha') ?? '');
+  // O destino viaja com o erro, para não se perder o gesto a meio de uma gralha.
+  const deVolta = (erro: string) =>
+    `${CAMINHO_DA_ENTRADA}?${new URLSearchParams({
+      erro,
+      ...(email ? { email } : {}),
+      ...(destino !== '/admin/' ? { destino } : {}),
+    })}`;
 
   if (!painelConfigurado()) redirect(`${CAMINHO_DA_ENTRADA}?erro=configuracao`);
 
-  // O limite é por origem e a janela é curta: chega para travar quem tenta
-  // às cegas sem trancar quem se enganou a escrever.
-  const limite = await verificarLimite(
-    `admin-entrar:${hashDoIp(await headers())}`,
-    JANELA_DAS_TENTATIVAS_S,
-    LIMITE_DE_TENTATIVAS,
-  );
-  if (!limite.permitido) redirect(`${CAMINHO_DA_ENTRADA}?erro=demasiadas`);
+  // O LIMITE CONTA SÓ AS FALHADAS, por origem e por email (`limite.ts`): uma
+  // equipa inteira a entrar à mesma hora não se tranca a si própria, e quem
+  // tenta às cegas — de onde for, contra o email que for — tranca-se.
+  const ipHash = hashDoIp(await headers());
+  const baldes = [
+    `admin-entrar:${ipHash}`,
+    ...(email ? [`admin-entrar-email:${hashDoEmail(email)}`] : []),
+  ];
+  const limite = await verificarEntrada(baldes, JANELA_DAS_TENTATIVAS_S, LIMITE_DE_TENTATIVAS);
+  if (!limite.permitido) redirect(deVolta('demasiadas'));
 
-  if (!verificarSenha(senha, process.env.ADMIN_PASSWORD_HASH ?? '')) {
-    redirect(`${CAMINHO_DA_ENTRADA}?erro=credenciais`);
+  const quem = await conferirCredenciais(email, senha);
+  if (!quem) {
+    await contarFalhada(baldes, limite.modo, JANELA_DAS_TENTATIVAS_S, LIMITE_DE_TENTATIVAS);
+    redirect(deVolta('credenciais'));
   }
 
-  await abrirSessao(ACTOR);
+  await limparDepoisDeEntrar(baldes, limite.modo);
+  await abrirSessao(quem);
+  // QUEM ENTROU fica na auditoria — o dono também. Antes da 0009 a função não
+  // existe, e entrar não pode depender dela.
+  try {
+    await chamar('registar_acesso', {
+      p_pessoa: quem.pessoaId,
+      p_actor: quem.actor,
+      p_ip_hash: ipHash,
+    });
+  } catch (erro) {
+    if (!ehEsquemaPorAplicar(erro)) console.error('registar_acesso', erro);
+  }
   redirect(destino);
 }
 
@@ -119,11 +164,12 @@ export async function ligarOuDesligarRegiao(formData: FormData): Promise<void> {
   const ligar = texto(formData, 'ligar') === '1';
   await seguir(
     async () => {
+      const dentro = await exigirDono();
       exigirRegiaoValida(regiao);
       const mudou = await chamar<boolean>('set_region_enabled', {
         p_region: regiao,
         p_enabled: ligar,
-        ...(await rasto()),
+        ...(await rasto(dentro)),
       });
       // A lista das regiões ligadas e o mapa de domínios levam esta etiqueta:
       // a montra e as páginas sabem-no à próxima visita; o middleware, com a
@@ -154,13 +200,14 @@ export async function criarRegiao(formData: FormData): Promise<void> {
   const deVolta = new URLSearchParams(campos).toString();
   await seguir(
     async () => {
+      const dentro = await exigirDono();
       const id = await chamar<string>('create_region', {
         p_id: campos.id,
         p_name: campos.nome,
         p_article: campos.artigo,
         p_domain: campos.dominio,
         p_sort_order: Number(campos.ordem || '0') || 0,
-        ...(await rasto()),
+        ...(await rasto(dentro)),
       });
       revalidateTag(ETIQUETA_DAS_REGIOES);
       return comAviso(
@@ -178,12 +225,13 @@ export async function mudarDominio(formData: FormData): Promise<void> {
   const manterAlias = texto(formData, 'manter_alias') === '1';
   await seguir(
     async () => {
+      const dentro = await exigirDono();
       exigirRegiaoValida(regiao);
       const mudou = await chamar<boolean>('set_region_domain', {
         p_region: regiao,
         p_domain: dominio,
         p_keep_alias: manterAlias,
-        ...(await rasto()),
+        ...(await rasto(dentro)),
       });
       revalidateTag(ETIQUETA_DAS_REGIOES);
       return comAviso(
@@ -203,11 +251,12 @@ export async function acrescentarAlias(formData: FormData): Promise<void> {
   const dominio = texto(formData, 'dominio');
   await seguir(
     async () => {
+      const dentro = await exigirDono();
       exigirRegiaoValida(regiao);
       const mudou = await chamar<boolean>('add_region_alias', {
         p_domain: dominio,
         p_region: regiao,
-        ...(await rasto()),
+        ...(await rasto(dentro)),
       });
       revalidateTag(ETIQUETA_DAS_REGIOES);
       return comAviso(
@@ -227,10 +276,11 @@ export async function retirarAlias(formData: FormData): Promise<void> {
   const dominio = texto(formData, 'dominio');
   await seguir(
     async () => {
+      const dentro = await exigirDono();
       exigirRegiaoValida(regiao);
       const mudou = await chamar<boolean>('remove_region_alias', {
         p_domain: dominio,
-        ...(await rasto()),
+        ...(await rasto(dentro)),
       });
       revalidateTag(ETIQUETA_DAS_REGIOES);
       return comAviso(
@@ -254,12 +304,13 @@ export async function alternarModulo(formData: FormData): Promise<void> {
   await seguir(
     async () => {
       exigirRegiaoValida(regiao);
+      const dentro = await exigirPapel(regiao, 'gestor');
       if (!ehModulo(modulo)) throw new Error(`não há módulo com o identificador ${modulo}`);
       const mudou = await chamar<boolean>('set_modulo', {
         p_region: regiao,
         p_id: modulo,
         p_enabled: ligar,
-        ...(await rasto()),
+        ...(await rasto(dentro)),
       });
       // As páginas da região leem os módulos com a etiqueta dela.
       revalidateTag(etiquetaDaRegiao(regiao));
@@ -281,6 +332,7 @@ export async function registarLicenca(formData: FormData): Promise<void> {
   const regiao = texto(formData, 'regiao');
   await seguir(
     async () => {
+      const dentro = await exigirDono();
       exigirRegiaoValida(regiao);
       const inicio = texto(formData, 'inicio');
       const fim = texto(formData, 'fim');
@@ -293,7 +345,7 @@ export async function registarLicenca(formData: FormData): Promise<void> {
         p_ends_on: fim || null,
         p_kind: texto(formData, 'tipo'),
         p_notes: texto(formData, 'notas') || null,
-        ...(await rasto()),
+        ...(await rasto(dentro)),
       });
       return comAviso(ficha(regiao), 'Licença registada.', 'licencas');
     },
@@ -394,6 +446,23 @@ async function exigirLinhasProprias(id: string, linhas: string[]): Promise<void>
   }
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/**
+ * O AVISO TEM DE SER DESTA REGIÃO. Publicar, retirar e apagar recebem o
+ * identificador do aviso e o da região, e a permissão é sobre a região: sem
+ * esta conferência, quem edita os avisos de uma região publicava ou apagava
+ * os de outra só por trocar o identificador no formulário. Corrigir já estava
+ * guardado pela base (`upsert_aviso` recusa mudar um aviso de região); estes
+ * dois gestos não.
+ */
+async function exigirAvisoDaRegiao(id: string, regiao: string): Promise<void> {
+  const aviso = UUID.test(id) ? await avisoPorId(id) : null;
+  if (!aviso || aviso.region_id !== regiao) {
+    throw new Error('não há aviso com esse identificador nesta região');
+  }
+}
+
 /**
  * Gravar um aviso — novo ou editado. NÃO O PUBLICA: é outro gesto, e é
  * deliberado. Quem redige a meio de uma ocorrência não devia ter de escolher
@@ -405,6 +474,8 @@ export async function guardarAviso(formData: FormData): Promise<void> {
   await seguir(
     async () => {
       exigirRegiaoValida(regiao);
+      const dentro = await exigirPapel(regiao, 'editor');
+      if (id) await exigirAvisoDaRegiao(id, regiao);
       const modos = marcados(formData, 'modos');
       const linhas = lista(formData, 'linhas');
       await exigirModosProprios(regiao, modos);
@@ -423,7 +494,7 @@ export async function guardarAviso(formData: FormData): Promise<void> {
         p_paragens: lista(formData, 'paragens'),
         p_modos: modos,
         p_url: texto(formData, 'url') || null,
-        ...(await rasto()),
+        ...(await rasto(dentro)),
       });
       // Um aviso EDITADO que já esteja publicado muda no sítio agora; um
       // rascunho não muda nada, e invalidar a etiqueta à mesma não custa.
@@ -448,10 +519,12 @@ export async function publicarAviso(formData: FormData): Promise<void> {
   await seguir(
     async () => {
       exigirRegiaoValida(regiao);
+      const dentro = await exigirPapel(regiao, 'editor');
+      await exigirAvisoDaRegiao(id, regiao);
       await chamar<null>('set_aviso_publicado', {
         p_id: id,
         p_publicado: publicar,
-        ...(await rasto()),
+        ...(await rasto(dentro)),
       });
       revalidateTag(etiquetaDosAvisos(regiao));
       return comAviso(
@@ -477,7 +550,9 @@ export async function apagarAviso(formData: FormData): Promise<void> {
   await seguir(
     async () => {
       exigirRegiaoValida(regiao);
-      await chamar<null>('delete_aviso', { p_id: id, ...(await rasto()) });
+      const dentro = await exigirPapel(regiao, 'editor');
+      await exigirAvisoDaRegiao(id, regiao);
+      await chamar<null>('delete_aviso', { p_id: id, ...(await rasto(dentro)) });
       revalidateTag(etiquetaDosAvisos(regiao));
       return comAviso(osAvisos(regiao), 'Aviso apagado. Fica na auditoria, inteiro.');
     },
@@ -495,7 +570,7 @@ export async function apagarAviso(formData: FormData): Promise<void> {
 export async function revalidarSitio(): Promise<void> {
   await seguir(
     async () => {
-      await exigirSessao();
+      await exigirDono();
       const regioes = await listarRegioes();
       revalidateTag(ETIQUETA_DAS_REGIOES);
       for (const r of regioes) revalidateTag(etiquetaDaRegiao(r.id));

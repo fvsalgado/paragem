@@ -1,44 +1,26 @@
 import 'server-only';
 import { chamar, temChaveDeServico } from './base';
+import * as puro from './limite-puro.ts';
 
 /**
- * O limite de tentativas de entrada, com estado em Postgres
- * (`rate_limit_hit`, migração 0005).
- *
- * Sem chave de serviço deixa passar: em desenvolvimento e no CI é o que se
- * quer, e em produção a chave existe sempre. Um limitador em baixo também
- * deixa passar — regista-se e segue —, porque a alternativa é uma falha de
- * infraestrutura virar uma negação de serviço feita por nós.
+ * O limite de tentativas de entrada, ligado à base a sério. A regra — só as
+ * falhadas, por origem e por email, e o modo de antes enquanto a 0009 não
+ * chega — está em `limite-puro.ts`, onde se testa sem servidor.
  */
 
-export interface Limite {
-  permitido: boolean;
-  tentativas: number;
-  reposicaoEm: string | null;
-}
+export type { Limite, ModoDoLimite } from './limite-puro.ts';
 
-type Linha = { allowed: boolean; hits: number; reset_at: string | null };
+const comBase = (): puro.Chamar | null => (temChaveDeServico() ? chamar : null);
 
-export async function verificarLimite(
-  balde: string,
+export const verificarEntrada = (baldes: string[], janelaSegundos: number, limite: number) =>
+  puro.verificarEntrada(comBase(), baldes, janelaSegundos, limite);
+
+export const contarFalhada = (
+  baldes: string[],
+  modo: puro.ModoDoLimite,
   janelaSegundos: number,
   limite: number,
-): Promise<Limite> {
-  if (!temChaveDeServico()) return { permitido: true, tentativas: 0, reposicaoEm: null };
-  try {
-    const resposta = await chamar<Linha[] | Linha>('rate_limit_hit', {
-      p_bucket: balde,
-      p_window_seconds: janelaSegundos,
-      p_limit: limite,
-    });
-    const linha = Array.isArray(resposta) ? resposta[0] : resposta;
-    return {
-      permitido: linha?.allowed ?? true,
-      tentativas: linha?.hits ?? 0,
-      reposicaoEm: linha?.reset_at ?? null,
-    };
-  } catch (erro) {
-    console.error('rate_limit_hit', erro);
-    return { permitido: true, tentativas: 0, reposicaoEm: null };
-  }
-}
+) => puro.contarFalhada(comBase(), baldes, modo, janelaSegundos, limite);
+
+export const limparDepoisDeEntrar = (baldes: string[], modo: puro.ModoDoLimite) =>
+  puro.limparDepoisDeEntrar(comBase(), baldes, modo);
