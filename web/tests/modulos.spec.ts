@@ -8,8 +8,10 @@
  * ficheiro sai dos dados abertos, o concelho deixa de o contar — na Serra da
  * Pedra Alta, que declara táxis. O que não se desligou fica como estava.
  */
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { test, expect } from '@playwright/test';
-import { PROVA } from './anfitrioes';
+import { BUILD, PROVA } from './anfitrioes';
 
 const DESLIGADO = process.env.PARAGEM_MODULOS_DESLIGADOS ?? '';
 const TAXI_DESLIGADO = /\bprova=([a-z-]+\+)*taxi(\+|,|$)/.test(DESLIGADO);
@@ -32,13 +34,32 @@ test('o cartão sai da grelha «Por modo», e os outros ficam', async ({ page })
   await expect(grelha.filter({ hasText: 'Bicicleta partilhada' })).toHaveCount(1);
 });
 
-test('os pontos do modo saem do mapa, e a pílula com eles', async ({ page }) => {
+/** Um ponto da prova de um tipo, como o `procura.json` o publica: `[nome, lat, lon, tipo, …]`. */
+const umPontoDo = (tipo: string): string | undefined => {
+  const f = join(BUILD, 'prova', 'sitio', 'procura.json');
+  if (!existsSync(f)) return undefined;
+  const pontos: unknown[][] = JSON.parse(readFileSync(f, 'utf8')).pontos ?? [];
+  return pontos.find((p) => p[3] === tipo)?.[0] as string | undefined;
+};
+
+test('os pontos do modo saem da procura e do mapa, e a pílula com eles', async ({ page }) => {
+  // OS PONTOS JÁ NÃO VÊM COM A PÁGINA (P3-006): pedem-se ao `procura.json`, e é
+  // o navegador que tira os do módulo desligado, pela mesma regra do servidor.
+  // Lia-se no HTML; prova-se agora pelo que a procura encontra — a estação de
+  // bicicletas aparece, a praça de táxis não.
+  const bicicleta = umPontoDo('bicicleta');
+  const taxi = umPontoDo('taxi');
+  test.skip(!bicicleta || !taxi, 'a prova não publicou bicicletas e táxis na procura');
   await page.goto(`${PROVA}/`);
-  // Os pontos vão com a página, dentro do JSON que o React escreve com as
-  // aspas escapadas; um ponto de táxi era um ponto a mais.
-  const html = await page.content();
-  expect(html).toMatch(/\\"tipo\\":\\"bicicleta\\"/);
-  expect(html).not.toMatch(/\\"tipo\\":\\"taxi\\"/);
+  const caixa = page.getByRole('combobox', { name: 'Procurar' });
+  const opcoes = page.getByRole('listbox').getByRole('option');
+  await caixa.fill(bicicleta!);
+  // A estação aparecer é a prova de que os pontos chegaram: o «não» a seguir
+  // não pode ser só «ainda não».
+  await expect(opcoes.filter({ hasText: 'bicicletas partilhadas' }).first()).toBeVisible();
+  await caixa.fill(taxi!);
+  await expect(page.getByText(/\d+ resultados?|Nada com/).first()).toBeAttached();
+  await expect(opcoes.filter({ hasText: 'praça de táxi' })).toHaveCount(0);
   // E as pílulas das camadas, que derivam dos pontos, não oferecem o que não há.
   const pilulas = page.locator('button.pilula');
   if ((await pilulas.count()) > 0) {
