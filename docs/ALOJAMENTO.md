@@ -245,11 +245,13 @@ Sem ela não se mede nada, e o sítio funciona igual.
 
 ## O que ainda não tem alojamento
 
-- **A gestão de avisos** (Supabase, Fase 4). O projeto Supabase `paragem` já
-  existe — é a base do painel, descrita em `docs/BASE-DE-DADOS.md` —, mas o
-  esquema dos avisos não está feito, e é deliberado: não há avisos para
-  guardar, não há editores para autenticar, e o esquema desenhava-se antes de
-  saber o que a autoridade de transportes precisa de publicar.
+- **As migrações 0009 (as pessoas) e 0010 (os contactos)** estão no
+  repositório e provadas no CI, e não estão aplicadas no projeto
+  (`docs/BASE-DE-DADOS.md`). O sítio funciona antes delas: sem a 0009 só o
+  dono entra no painel, como até aqui; sem a 0010 a declaração de
+  acessibilidade e a privacidade dizem «Por preencher». Os avisos — que esta
+  lista dizia «não feitos» — estão feitos desde a 0007: escrevem-se no painel,
+  aparecem no sítio e saem em GTFS-RT ([`PAINEL.md`](PAINEL.md)).
 - **O domínio próprio da autoridade de transportes.** Cada região responde
   hoje num subdomínio do produto; o domínio final é da autoridade (§4.7),
   entra como canónico quando ela o apontar, e o subdomínio passa a alias.
