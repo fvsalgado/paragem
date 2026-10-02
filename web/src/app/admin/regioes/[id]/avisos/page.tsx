@@ -274,8 +274,10 @@ export default async function AvisosDaRegiao({ params, searchParams }: Props) {
           desse feed (<code>effect</code>, <code>cause</code>, <code>severity_level</code>); «Outra
           coisa» e «Não dizer» são <code>OTHER_EFFECT</code> e <code>UNKNOWN_CAUSE</code>, que o
           sítio não mostra. As linhas e as paragens guardam-se pelos identificadores do GTFS da
-          região. As horas são de <code>{FUSO}</code> (variável <code>PARAGEM_FUSO</code>). Os modos
-          de outras entidades vêm de <code>modos_de_terceiros</code>, na receita da região.
+          região. Um aviso que só nomeie modos, sem linhas nem paragens, fica só no sítio: o feed
+          não tem como o dizer sem o aplicar à rede toda. As horas são de <code>{FUSO}</code>{' '}
+          (variável <code>PARAGEM_FUSO</code>). Os modos de outras entidades vêm de{' '}
+          <code>modos_de_terceiros</code>, na receita da região.
         </p>
       </details>
 

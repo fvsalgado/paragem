@@ -48,6 +48,7 @@ export async function GET(
       fim: a.fim,
       linhas: a.linhas,
       paragens: a.paragens,
+      modos: a.modos,
       url: a.url,
     })),
   );

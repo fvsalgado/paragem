@@ -80,12 +80,41 @@ test('as linhas e as paragens chegam como entidades informadas', () => {
   assert.deepEqual(a.informedEntity?.map((x) => x.stopId).filter(Boolean), ['tmr-0001']);
 });
 
-test('um aviso sem linhas nem paragens vale para a rede toda', () => {
-  // A especificação diz que um alerta sem `informed_entity` se aplica a tudo.
-  // Isto não é um descuido nosso: é a forma de dizer «a rede toda», e o painel
-  // avisa quem deixar um aviso assim.
-  const a = ler(feedDeAvisos([{ ...UM, linhas: [], paragens: [] }])).entity![0].alert!;
+test('um aviso da rede toda ainda sai sem entidades — e a especificação pede pelo menos uma', () => {
+  // ISTO É UMA DÍVIDA, e o teste prende-a para ninguém a pagar sem dar por
+  // isso. Esteve aqui escrito que a especificação mandava assim; não manda:
+  // «At least one informed_entity must be provided». A forma certa são as
+  // operadoras da região, por `agency_id`, e o sítio ainda não as publica.
+  // Quando publicar, este teste muda — e deve mudar.
+  const a = ler(feedDeAvisos([{ ...UM, linhas: [], paragens: [], modos: [] }])).entity![0].alert!;
   assert.equal(a.informedEntity?.length ?? 0, 0);
+});
+
+test('um aviso só de modos não sai no feed — fica no sítio', () => {
+  // Sem entidades, quem o lesse aplicava o aviso das bicicletas à rede toda.
+  const feed = ler(feedDeAvisos([{ ...UM, linhas: [], paragens: [], modos: ['bicicleta'] }]));
+  assert.equal(feed.entity?.length ?? 0, 0);
+});
+
+test('ao lado de um aviso só de modos, os outros saem todos', () => {
+  const soModos: AvisoRT = {
+    ...UM,
+    id: 'bicicletas',
+    linhas: [],
+    paragens: [],
+    modos: ['bicicleta'],
+  };
+  const feed = ler(feedDeAvisos([soModos, UM]));
+  assert.deepEqual(
+    feed.entity?.map((e) => e.id),
+    ['obra-ponte'],
+  );
+});
+
+test('um aviso com linhas e modos sai, pelas linhas', () => {
+  // O modo não se diz no feed; as linhas sim, e são elas que lá chegam.
+  const a = ler(feedDeAvisos([{ ...UM, paragens: [], modos: ['autocarro'] }])).entity![0].alert!;
+  assert.deepEqual(a.informedEntity?.map((x) => x.routeId).filter(Boolean), ['10', '622']);
 });
 
 test('um aviso sem fim declarado não inventa um', () => {
