@@ -109,6 +109,61 @@ def test_a_linha_tem_horario_por_sentido_e_diz_de_onde_parte_e_para_onde_vai(rai
     assert com_quadro, "nenhuma linha da demonstração ficou com horário"
 
 
+def test_o_calendario_em_mascaras_diz_o_mesmo_que_a_tabela_dos_dias():
+    """As duas formas da tabela dos dias são a mesma tabela (P3-006).
+
+    O sítio passou a pedir o `calendario.json` — máscaras de bits por serviço,
+    vinte vezes mais pequeno — em vez do `servicos.json`. Se divergissem, a
+    folha de uma paragem dizia uma coisa com uns dados e outra com os outros.
+    Os limites contam: um dia sem serviço nenhum no princípio ou no fim da
+    tabela continua a ser dela, e é o que separa «hoje não há» de «não se sabe».
+    """
+    from paragem.sitio import calendario_em_mascaras, dias_das_mascaras
+
+    servicos = ["rede:A-U", "rede:A-S", "rede:E-U", "comboio:S1", "rede:sem-dias", "exp:U"]
+    datas = {
+        "20261228": [],
+        "20261229": [0, 2, 3, 5],
+        "20261230": [0, 3, 5],
+        "20261231": [1],
+        "20270101": [],
+        "20270102": [1, 3],
+        "20270115": [0, 2, 5],
+        "20270116": [],
+    }
+    c = calendario_em_mascaras(servicos, datas)
+    assert c["inicio"] == "20261228" and c["dias"] == 20
+    assert len(c["padroes"]) < len(servicos), "quem anda nos mesmos dias partilha a máscara"
+    volta = dias_das_mascaras(c)
+    assert min(volta) == "20261228" and max(volta) == "20270116"
+    assert {k: v for k, v in volta.items() if v} == {k: v for k, v in datas.items() if v}
+    assert c["padrao"][0] == c["padrao"][5], "os mesmos dias, a mesma máscara"
+    assert not any(4 in v for v in volta.values()), "um serviço sem dias não anda em nenhum"
+
+    vazio = calendario_em_mascaras(servicos, {})
+    assert vazio["inicio"] is None and vazio["dias"] == 0
+    assert dias_das_mascaras(vazio) == {}
+
+
+def test_o_sitio_publica_as_duas_formas_da_tabela_e_elas_concordam(raiz, tmp_path):
+    """O `calendario.json` sai ao lado do `servicos.json`, e os dois concordam."""
+    from paragem.sitio import construir, dias_das_mascaras
+
+    gtfs = raiz / "build" / "prova" / "gtfs"
+    if not (gtfs / "rede-alta.zip").exists():
+        pytest.skip("sem build/prova — corre `uv run pipeline build --regiao prova`")
+    shutil.copytree(gtfs, tmp_path / "gtfs")
+    construir(raiz, regiao_ou_salta("prova"), tmp_path)
+    sitio = tmp_path / "sitio"
+    antiga = json.loads((sitio / "servicos.json").read_text(encoding="utf-8"))
+    nova = json.loads((sitio / "calendario.json").read_text(encoding="utf-8"))
+    assert nova["servicos"] == antiga["servicos"]
+    volta = dias_das_mascaras(nova)
+    assert min(volta) == min(antiga["datas"]) and max(volta) == max(antiga["datas"])
+    assert {k: v for k, v in volta.items() if v} == {k: v for k, v in antiga["datas"].items() if v}
+    assert (sitio / "calendario.json").stat().st_size < (sitio / "servicos.json").stat().st_size
+
+
 def test_um_horario_transcrito_a_mao_chega_ao_sitio(raiz, tmp_path):
     """As folhas que se transcrevem à mão são horários como os outros.
 

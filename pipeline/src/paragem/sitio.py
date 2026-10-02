@@ -24,6 +24,7 @@ inventar: é sobre o que falta ficar visível.
 
 from __future__ import annotations
 
+import base64
 import collections
 import contextlib
 import csv
@@ -36,7 +37,7 @@ import unicodedata
 import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -1697,14 +1698,84 @@ def construir(raiz: Path, regiao: Regiao, destino: Path, territorio=None) -> Sit
     # da verdade. Se divergirem, a paragem e o planeador discordam sobre o
     # mesmo autocarro, e quem lê não tem como saber qual está certo.
     if g is not None:
-        s._escrever(
-            "servicos.json",
-            {"servicos": g.servicos, "datas": {d: sorted(v) for d, v in sorted(g.datas.items())}},
-            len(g.servicos),
-        )
+        datas = {d: sorted(v) for d, v in sorted(g.datas.items())}
+        s._escrever("servicos.json", {"servicos": g.servicos, "datas": datas}, len(g.servicos))
+        # A MESMA TABELA, EM MÁSCARAS — é esta que o sítio pede (P3-006).
+        #
+        # O `servicos.json` diz, dia a dia, a lista dos serviços desse dia: na
+        # região real são 658 dias × 528 serviços em média, 1,9 MB de JSON que
+        # o telemóvel tinha de analisar para responder «o que passa a seguir»
+        # numa paragem. Dita ao contrário — para cada serviço, os dias em que
+        # anda, como uma fila de bits —, e com os serviços que andam nos
+        # mesmos dias a partilhar a fila, são 96 kB. A resposta é a mesma, e
+        # há um teste de cada lado a dizê-lo.
+        #
+        # O `servicos.json` fica enquanto houver sítios publicados que só o
+        # conhecem: o código e os dados publicam-se separados, e o sítio novo
+        # recua para ele quando não encontra este.
+        s._escrever("calendario.json", calendario_em_mascaras(g.servicos, datas), len(g.servicos))
     for rid, dados in linhas.items():
         s._escrever(f"linhas/{_seguro(rid)}.json", dados)
     return s
+
+
+def calendario_em_mascaras(servicos: list[str], datas: dict[str, list[int]]) -> dict[str, Any]:
+    """A tabela dos dias de cada serviço como máscaras de bits, uma por padrão.
+
+    `inicio` é o primeiro dia da tabela e `dias` quantos ela cobre, até ao
+    último — os mesmos dois limites que o `servicos.json` dava pelas chaves, e
+    que separam «este dia não tem serviço» de «este dia não é dos horários
+    carregados». O bit `j` de cada máscara (byte `j // 8`, do bit menos
+    significativo para o mais) diz se o serviço anda no dia `inicio + j`.
+    Os serviços com os mesmos dias apontam para a mesma máscara (`padrao`).
+    """
+    if not datas:
+        return {
+            "formato": "mascaras/1",
+            "inicio": None,
+            "dias": 0,
+            "servicos": servicos,
+            "padroes": [],
+            "padrao": [0] * len(servicos),
+        }
+    chaves = sorted(datas)
+    inicio = datetime.strptime(chaves[0], "%Y%m%d").date()
+    fim = datetime.strptime(chaves[-1], "%Y%m%d").date()
+    n = (fim - inicio).days + 1
+    mascaras = [bytearray((n + 7) // 8) for _ in servicos]
+    for chave, indices in datas.items():
+        j = (datetime.strptime(chave, "%Y%m%d").date() - inicio).days
+        for i in indices:
+            mascaras[i][j >> 3] |= 1 << (j & 7)
+    padroes: dict[bytes, int] = {}
+    padrao = [padroes.setdefault(bytes(m), len(padroes)) for m in mascaras]
+    return {
+        "formato": "mascaras/1",
+        "inicio": chaves[0],
+        "dias": n,
+        "servicos": servicos,
+        "padroes": [base64.b64encode(m).decode("ascii") for m in padroes],
+        "padrao": padrao,
+    }
+
+
+def dias_das_mascaras(c: dict[str, Any]) -> dict[str, list[int]]:
+    """O caminho de volta: as máscaras outra vez em listas por dia.
+
+    Só para os testes: é o que prova que as duas formas dizem o mesmo. Um dia
+    da tabela sem serviço nenhum volta como lista vazia — não se distinguia de
+    um dia que não estava lá, e não precisa de se distinguir: os limites são
+    os mesmos.
+    """
+    if not c.get("inicio"):
+        return {}
+    inicio = datetime.strptime(c["inicio"], "%Y%m%d").date()
+    mascaras = [base64.b64decode(m) for m in c["padroes"]]
+    saida: dict[str, list[int]] = {}
+    for j in range(c["dias"]):
+        dia = (inicio + timedelta(days=j)).strftime("%Y%m%d")
+        saida[dia] = [i for i, p in enumerate(c["padrao"]) if mascaras[p][j >> 3] & (1 << (j & 7))]
+    return saida
 
 
 def _percursos(s: Sitio, regiao: Regiao, g) -> tuple[int, int]:
