@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { CartaoDeAviso } from '@/componentes/Avisos';
 import { avisosEmVigor } from '@/lib/avisos';
+import { catalogoDosAvisos } from '@/lib/avisos-do-sitio';
 import { exigirRegiao, regiao } from '@/lib/dados';
 import { aAutoridade } from '@/lib/prosa';
 import { metadadosDaRegiao } from '@/lib/metadados';
@@ -33,7 +34,11 @@ export const revalidate = 60;
 
 export default async function Avisos({ params }: { params: Promise<{ regiao: string }> }) {
   const { regiao: rid } = await params;
-  const [r, as] = await Promise.all([exigirRegiao(rid), avisosEmVigor(rid)]);
+  const [r, as, catalogo] = await Promise.all([
+    exigirRegiao(rid),
+    avisosEmVigor(rid),
+    catalogoDosAvisos(rid),
+  ]);
 
   return (
     <>
@@ -68,7 +73,7 @@ export default async function Avisos({ params }: { params: Promise<{ regiao: str
           </p>
         </>
       ) : (
-        as.map((a) => <CartaoDeAviso key={a.id} aviso={a} />)
+        as.map((a) => <CartaoDeAviso key={a.id} aviso={a} catalogo={catalogo} />)
       )}
 
       {/* DE QUE É QUE ESTES AVISOS SÃO, e é preciso dizê-lo: o sítio mostra

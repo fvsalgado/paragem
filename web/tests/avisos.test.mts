@@ -10,9 +10,16 @@ import {
   CAUSAS,
   EFEITOS,
   GRAVIDADES,
+  aplicaALinha,
+  aplicaAParagem,
+  causaDeclarada,
+  efeitoDeclarado,
   emVigor,
+  ondeAparece,
   ordenar,
   prazoDoAviso,
+  quandoVale,
+  redeToda,
   type Aviso,
 } from '../src/lib/avisos.ts';
 import { CAUSA, EFEITO, GRAVIDADE } from '../src/lib/gtfs-rt.ts';
@@ -167,4 +174,94 @@ test('a página pública dá a hora do aviso no fuso da região, e não no do se
 test('sem início nem fim não se escreve prazo nenhum, e sem fim não se inventa um', () => {
   assert.equal(prazoDoAviso({ inicio: null, fim: null }), '');
   assert.doesNotMatch(prazoDoAviso({ inicio: null, fim: '2026-12-01T18:00:00Z' }), /sem fim/);
+});
+
+// --- onde um aviso aparece (P4-019, P2-025) ---------------------------------
+
+const LINHA_1 = { id: 'RA1', modo: 'autocarro', paragens: ['pa_mercado', 'rc_ponte'] };
+
+test('o aviso de uma linha aparece na página dela, e não na de outra', () => {
+  const a = { linhas: ['RA1'], paragens: [], modos: [] };
+  assert.equal(aplicaALinha(a, LINHA_1), true);
+  assert.equal(aplicaALinha(a, { id: 'RA2', modo: 'autocarro', paragens: ['pa_mercado'] }), false);
+});
+
+test('o aviso de uma paragem aparece nas linhas que lá passam', () => {
+  const a = { linhas: [], paragens: ['rc_ponte'], modos: [] };
+  assert.equal(aplicaALinha(a, LINHA_1), true);
+  assert.equal(aplicaALinha(a, { id: 'RA2', modo: 'autocarro', paragens: ['pa_mercado'] }), false);
+});
+
+test('o aviso de uma linha aparece nas paragens dela, e o de uma paragem só nela', () => {
+  const daLinha = { linhas: ['RA1'], paragens: [], modos: [] };
+  assert.equal(
+    aplicaAParagem(daLinha, { id: 'x', linhas: ['RA1', 'RA2'], modos: ['autocarro'] }),
+    true,
+  );
+  assert.equal(aplicaAParagem(daLinha, { id: 'x', linhas: ['RA2'], modos: ['autocarro'] }), false);
+  const daParagem = { linhas: [], paragens: ['rc_ponte'], modos: [] };
+  assert.equal(aplicaAParagem(daParagem, { id: 'rc_ponte', linhas: [], modos: [] }), true);
+  assert.equal(aplicaAParagem(daParagem, { id: 'pa_mercado', linhas: ['RA1'], modos: [] }), false);
+});
+
+test('um modo inteiro vale para o que é desse modo — e só quando não se nomeou mais nada', () => {
+  const bicicletas = { linhas: [], paragens: [], modos: ['bicicleta'] };
+  assert.equal(aplicaAParagem(bicicletas, { id: 'doca', linhas: [], modos: ['bicicleta'] }), true);
+  assert.equal(
+    aplicaAParagem(bicicletas, { id: 'p', linhas: ['RA1'], modos: ['autocarro'] }),
+    false,
+  );
+  assert.equal(aplicaALinha(bicicletas, LINHA_1), false);
+  // Com uma linha nomeada, o modo não alarga o aviso a todas as outras.
+  const linhaEModo = { linhas: ['RA2'], paragens: [], modos: ['autocarro'] };
+  assert.equal(aplicaALinha(linhaEModo, LINHA_1), false);
+});
+
+test('sem nada nomeado é a rede toda, e aparece em todo o lado', () => {
+  const a = { linhas: [], paragens: [], modos: [] };
+  assert.equal(redeToda(a), true);
+  assert.equal(aplicaALinha(a, LINHA_1), true);
+  assert.equal(aplicaAParagem(a, { id: 'p', linhas: [], modos: [] }), true);
+});
+
+test('o efeito e a causa só se dizem quando foram declarados (P4-018)', () => {
+  assert.equal(efeitoDeclarado('DETOUR'), true);
+  assert.equal(efeitoDeclarado('OTHER_EFFECT'), false);
+  assert.equal(efeitoDeclarado('UNKNOWN_EFFECT'), false);
+  assert.equal(efeitoDeclarado('INVENTADO'), false);
+  assert.equal(causaDeclarada('STRIKE'), true);
+  assert.equal(causaDeclarada('UNKNOWN_CAUSE'), false);
+  assert.equal(causaDeclarada('OTHER_CAUSE'), false);
+});
+
+test('o prazo numa frase que se lê sozinha, no fuso da região', () => {
+  const verao = { inicio: '2026-07-01T06:00:00Z', fim: null };
+  assert.match(
+    quandoVale(verao, 'Europe/Lisbon'),
+    /^Desde 1 de julho de 2026.*07:00, sem fim previsto$/,
+  );
+  assert.match(
+    quandoVale({ inicio: null, fim: '2026-12-01T18:00:00Z' }, 'Europe/Lisbon'),
+    /^Até 1 de dezembro de 2026.*18:00$/,
+  );
+  assert.equal(quandoVale({ inicio: null, fim: null }), '');
+});
+
+test('quem escreve sabe onde o aviso vai aparecer, pelos números das linhas', () => {
+  const catalogo = {
+    linhas: new Map([['RA1', { id: 'RA1', codigo: '1', nome: 'Pedra Alta – Ribeira', cor: null }]]),
+    paragens: new Map([['rc_ponte', 'Ribeira do Corvo (Ponte)']]),
+  };
+  const onde = ondeAparece({ linhas: ['RA1'], paragens: ['rc_ponte'], modos: [] }, catalogo);
+  assert.ok(onde.includes('na página da linha 1'), onde.join(' | '));
+  assert.ok(
+    onde.some((s) => s.includes('Ribeira do Corvo (Ponte)')),
+    onde.join(' | '),
+  );
+  assert.ok(!onde.join(' ').includes('RA1'), 'o identificador do GTFS não aparece a quem escreve');
+  const rede = ondeAparece({ linhas: [], paragens: [], modos: [] }, catalogo);
+  assert.ok(
+    rede.some((s) => s.includes('todas as linhas')),
+    rede.join(' | '),
+  );
 });

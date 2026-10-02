@@ -21,6 +21,7 @@ import PertoDeTi from '@/componentes/PertoDeTi';
 import ProcurarNaRegiao from '@/componentes/ProcurarNaRegiao';
 import DireccoesDaPagina from '@/componentes/DireccoesDaPagina';
 import { avisosEmVigor } from '@/lib/avisos';
+import { catalogoDosAvisos } from '@/lib/avisos-do-sitio';
 import { motorDaRegiao } from '@/lib/enderecos';
 import { lista, plural } from '@/lib/prosa';
 
@@ -56,7 +57,7 @@ export default async function CatalogoDaRegiao({
   const ls = await linhas(rid);
   const ps = await paragens(rid);
   const es = await estacoes(rid);
-  const as = await avisosEmVigor(rid);
+  const [as, catalogo] = await Promise.all([avisosEmVigor(rid), catalogoDosAvisos(rid)]);
   const pedido = await aPedido(rid);
   // OS PONTOS NÃO VÃO NA PÁGINA (P3-006): a procura pede-os à primeira tecla,
   // o «Perto de ti» quando sabe onde se está, e o planeador ao abrir.
@@ -152,7 +153,7 @@ export default async function CatalogoDaRegiao({
         </>
       )}
 
-      <FaixaDeAvisos avisos={as} />
+      <FaixaDeAvisos avisos={as} catalogo={catalogo} />
 
       <PertoDeTi regiao={rid} modosDesligados={desligados} />
 

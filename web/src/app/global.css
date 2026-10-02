@@ -668,6 +668,143 @@ details.lista-fechada[open] > summary::after {
   color: var(--a-pedido-texto);
 }
 
+/* UM AVISO (`Avisos.tsx`): o mesmo cartão na página de avisos, na da linha,
+   na da paragem e na pré-visualização do painel. A gravidade decide a cor da
+   borda e mais nada — o vermelho fica para o grave, que é o que manda
+   mudar de planos; o âmbar para o que pede atenção. */
+.aviso {
+  border: 1px solid var(--linhas);
+  border-left: 6px solid var(--marca);
+  border-radius: var(--raio);
+  padding: 0.85rem 1rem;
+  margin: 1rem 0;
+  background: var(--superficie);
+}
+.aviso.atencao {
+  border-left-color: var(--a-pedido);
+}
+.aviso.grave {
+  border-left-color: var(--alerta);
+  background: var(--alerta-fundo);
+}
+.aviso > :first-child {
+  margin-top: 0;
+}
+.aviso > :last-child {
+  margin-bottom: 0;
+}
+.aviso .titulo-do-aviso {
+  font-size: 1.15rem;
+  margin: 0.25rem 0 0.4rem;
+}
+.etiqueta-do-aviso {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--marca-texto);
+  background: var(--realce);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  margin: 0 0 0.25rem;
+}
+.aviso.atencao .etiqueta-do-aviso {
+  color: var(--a-pedido-texto);
+  background: var(--a-pedido-fundo);
+}
+.aviso.grave .etiqueta-do-aviso {
+  color: var(--alerta-texto-forte);
+  background: var(--superficie);
+}
+.linhas-do-aviso {
+  list-style: none;
+  padding: 0;
+  margin: 0.25rem 0 0.5rem;
+}
+.linhas-do-aviso a,
+.linhas-do-aviso li > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--alvo);
+}
+.avisos-da-pagina > h2 {
+  margin-bottom: 0;
+}
+/* Sozinhas na linha, são alvos — e levam os 44 px de qualquer alvo. */
+.aviso a.mais-informacao,
+.avisos-na-abertura p a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+}
+
+/* OS AVISOS NO ECRÃ DO MAPA (P4-019): na folha de abertura, logo a seguir a
+   «Para onde vais?», que é onde o §6 põe a faixa; e no cartão da paragem
+   afetada, antes das horas. Títulos que levam à página de avisos. */
+.avisos-na-abertura {
+  margin: 0 0.6rem 0.6rem;
+  border: 1px solid var(--linhas);
+  border-left: 6px solid var(--a-pedido);
+  border-radius: var(--raio);
+  padding: 0.35rem 0.75rem;
+  background: var(--superficie);
+}
+.avisos-na-abertura:has(li.grave) {
+  border-left-color: var(--alerta);
+}
+.folha-de-abertura .avisos-na-abertura h2 {
+  margin: 0.25rem 0 0;
+  padding: 0;
+  font-size: 0.95rem;
+}
+.avisos-na-abertura ul,
+.avisos-no-cartao {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.avisos-na-abertura li a {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--alvo);
+  color: var(--texto);
+}
+.avisos-na-abertura p {
+  margin: 0 0 0.25rem;
+}
+.distintivos-do-aviso {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: none;
+}
+.avisos-no-cartao {
+  margin: 0.25rem 0 0.5rem;
+}
+.avisos-no-cartao li a {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--alvo);
+  padding: 0.25rem 0.6rem;
+  border-left: 4px solid var(--a-pedido);
+  background: var(--a-pedido-fundo);
+  color: var(--texto);
+  border-radius: 6px;
+}
+.avisos-no-cartao li.grave a {
+  border-left-color: var(--alerta);
+  background: var(--alerta-fundo);
+}
+.avisos-no-cartao li + li {
+  margin-top: 0.25rem;
+}
+.rotulo-do-aviso {
+  font-weight: 700;
+  flex: none;
+}
+
 .marca-dados {
   display: inline-block;
   font-size: 0.8rem;
@@ -4409,4 +4546,284 @@ body:has(.app-mapa) .marca-demonstracao {
   .cartao-de-baixo.com-horas .a-seguir-reservado {
     min-height: 0;
   }
+}
+
+/* --- o editor de avisos (P4-017, P4-018) -------------------------------- */
+
+/* A página dos avisos alarga num ecrã largo, como as de horários: o editor e
+   a pré-visualização lado a lado não cabem nos 52 rem do resto do painel. */
+.pagina.painel:has(.editor-de-aviso) {
+  max-width: var(--medida-dados);
+}
+
+/* O FORMULÁRIO E O QUE O PÚBLICO VAI VER, LADO A LADO num ecrã largo: a
+   pré-visualização fica presa ao alto enquanto se escreve. Num telemóvel,
+   por baixo dos campos e antes dos botões — vê-se antes de publicar. */
+.painel form.editor-de-aviso {
+  max-width: none;
+}
+@media (min-width: 60rem) {
+  .painel form.editor-de-aviso {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    grid-template-areas:
+      'erro erro'
+      'campos previa'
+      'botoes previa'
+      'nota previa';
+    gap: 0 1.5rem;
+    align-items: start;
+  }
+  .editor-de-aviso > .faixa {
+    grid-area: erro;
+  }
+  .editor-de-aviso > .campos-do-aviso {
+    grid-area: campos;
+  }
+  .editor-de-aviso > .pre-visualizacao {
+    grid-area: previa;
+    position: sticky;
+    top: 1rem;
+  }
+  .editor-de-aviso > .botoes-do-aviso {
+    grid-area: botoes;
+  }
+  .editor-de-aviso > .botoes-do-aviso + p {
+    grid-area: nota;
+  }
+}
+.pre-visualizacao {
+  border: 1px dashed var(--borda-campo);
+  border-radius: var(--raio);
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  background: var(--fundo);
+}
+.painel .pre-visualizacao h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  color: var(--texto-secundario);
+}
+.pre-visualizacao .aviso {
+  margin: 0.5rem 0;
+}
+.painel .botoes-do-aviso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.painel form.formulario .botoes-do-aviso button {
+  margin-top: 0;
+}
+.painel .botoes-do-aviso a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+}
+
+/* AS ESCOLHAS EM PÍLULAS: o que se passa, e quão grave. São rádios a sério,
+   dentro da etiqueta — o alvo é a pílula inteira, e as setas percorrem-nas. */
+.pilulas-de-escolha {
+  border: 0;
+  padding: 0;
+  margin: 0.75rem 0 0;
+  min-width: 0;
+}
+.pilulas-de-escolha legend {
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0;
+  margin-bottom: 0.35rem;
+}
+.pilulas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.painel .pilulas label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: var(--alvo);
+  margin: 0;
+  padding: 0 0.8rem;
+  border: 1px solid var(--borda-campo);
+  border-radius: 999px;
+  background: var(--superficie);
+  font-weight: 400;
+  cursor: pointer;
+}
+.painel .pilulas label.escolhida {
+  border: 2px solid var(--marca-texto);
+  background: var(--realce);
+  font-weight: 700;
+}
+.painel .pilulas input[type='radio'] {
+  width: 1.1rem;
+  height: 1.1rem;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  flex: none;
+  accent-color: var(--marca-texto);
+}
+.painel .opcional {
+  font-weight: 400;
+  color: var(--texto-secundario);
+}
+.painel fieldset#aviso-modos {
+  border: 0;
+  padding: 0;
+  margin: 0.75rem 0 0;
+}
+.painel fieldset#aviso-modos legend {
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0;
+}
+
+/* O QUE FALTA, AO PÉ DO CAMPO: no vermelho de alerta e em letra cheia — é a
+   frase que diz o que mudar, e o foco chega ao campo com ela. */
+.painel .erro-do-campo {
+  margin: 0.25rem 0 0;
+  color: var(--alerta-texto);
+  font-weight: 700;
+}
+.painel [aria-invalid='true'],
+.painel .campo-de-escolhas.invalido {
+  border-color: var(--alerta);
+  border-width: 2px;
+}
+
+/* ESCOLHER VÁRIOS (`EscolherVarios.tsx`): as escolhidas em fichas dentro do
+   próprio campo, como quem escreve destinatários num email; a lista abre por
+   baixo. */
+.escolher-varios {
+  position: relative;
+}
+.campo-de-escolhas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem;
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio);
+  background: var(--superficie);
+}
+.campo-de-escolhas:focus-within {
+  outline: 3px solid var(--foco);
+  outline-offset: 2px;
+}
+.campo-de-escolhas > input {
+  flex: 1 1 10rem;
+  width: auto;
+  min-width: 8rem;
+  border: 0;
+  background: transparent;
+}
+.campo-de-escolhas > input:focus,
+.campo-de-escolhas > input:focus-visible {
+  outline: none;
+}
+/* Uma lista a sério (e não `display: contents`, que em alguns navegadores
+   tira a lista à árvore de acessibilidade e o leitor de ecrã deixa de dizer
+   quantas há). */
+.campo-de-escolhas .escolhas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-width: 100%;
+}
+.campo-de-escolhas .escolhas > li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: var(--alvo);
+  padding: 0 0 0 0.5rem;
+  border-radius: 6px;
+  background: var(--realce);
+  max-width: 100%;
+}
+.rotulo-da-escolha {
+  overflow-wrap: anywhere;
+}
+.painel form.formulario .campo-de-escolhas .escolhas button,
+.campo-de-escolhas .escolhas button {
+  min-width: var(--alvo);
+  min-height: var(--alvo);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--texto);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.campo-de-escolhas .escolhas button:hover {
+  background: var(--realce-forte);
+}
+.opcoes-de-escolha {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  margin: 0.25rem 0 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio);
+  background: var(--superficie);
+  max-height: 22rem;
+  overflow-y: auto;
+}
+.opcoes-de-escolha[hidden] {
+  display: none;
+}
+.opcoes-de-escolha > li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  min-height: var(--alvo);
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+}
+.opcoes-de-escolha > li[aria-selected='true'],
+.opcoes-de-escolha > li:hover {
+  background: var(--realce);
+}
+.opcoes-de-escolha > li[aria-selected='true'] {
+  outline: 2px solid var(--marca-texto);
+  outline-offset: -2px;
+}
+
+/* A LISTA DOS AVISOS DO PAINEL: o estado por cima, o cartão público, os
+   gestos por baixo. */
+.painel .lista-de-avisos > li {
+  padding: 0.75rem 0 1rem;
+  border-bottom: 1px solid var(--linhas);
+}
+.painel .estado-do-aviso {
+  margin: 0;
+}
+.painel .accoes-do-aviso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+.painel .accoes-do-aviso form {
+  margin: 0;
+}
+.painel details.apagar-aviso {
+  margin: 0;
+}
+.painel details.apagar-aviso[open] {
+  flex-basis: 100%;
 }

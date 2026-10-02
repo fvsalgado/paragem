@@ -5,6 +5,8 @@ import Mapa, { type Marca } from '@/componentes/Mapa';
 import EscolherPonto from '@/componentes/EscolherPonto';
 import Direccoes, { type Percurso } from '@/componentes/Direccoes';
 import { NOME_DOS_MODOS, type Partida, type Ponto } from '@/lib/formato';
+import { aplicaAParagem, redeToda, type AvisoNoMapa } from '@/lib/avisos';
+import Distintivo from '@/componentes/Distintivo';
 import { calendarioDe, horaDoRelogio, proximas, type Calendario } from '@/lib/dias';
 import ASeguir from '@/componentes/ASeguir';
 import PertoDeTi from '@/componentes/PertoDeTi';
@@ -71,6 +73,25 @@ function caixaNoAlto(e: HTMLElement): DOMRect {
   if (!e.classList.contains('app-camadas') || !e.children.length) return q;
   const fim = Math.max(...[...e.children].map((f) => f.getBoundingClientRect().right));
   return new DOMRect(q.left, q.top, Math.min(q.right, fim) - q.left, q.height);
+}
+
+/**
+ * Os avisos em vigor que dizem respeito a um ponto do mapa (P4-019).
+ *
+ * Uma paragem: os que a nomeiam, os das linhas que lá passam (quando as
+ * partidas já chegaram) e os da rede toda. Um ponto de outro modo — uma
+ * estação de bicicletas, uma praça de táxi — só os que o nomeiam a ele ou ao
+ * modo dele: «a rede toda» é a da autoridade, e um aviso sobre os autocarros
+ * não é sobre a doca das bicicletas. Um sítio não é um serviço: nenhum.
+ */
+function avisosDoPonto(avisos: AvisoNoMapa[], p: Ponto, linhas: string[]): AvisoNoMapa[] {
+  if (p.tipo === 'sitio' || avisos.length === 0) return [];
+  const modo = p.tipo === 'paragem' ? 'autocarro' : p.tipo === 'estacao' ? 'comboio' : p.tipo;
+  return avisos.filter(
+    (a) =>
+      (p.tipo === 'paragem' || !redeToda(a)) &&
+      aplicaAParagem(a, { id: p.id, linhas, modos: [modo] }),
+  );
 }
 
 /** Os dois cantos de baixo do MapLibre, e a variável que diz a cada um quanto subir. */
@@ -174,6 +195,7 @@ export default function AppDoMapa({
   motorDaRegiao = '',
   disponibilidadeDaRegiao = '',
   servicosSemDatas = 0,
+  avisos = [],
 }: {
   regiao: string;
   /**
@@ -213,6 +235,12 @@ export default function AppDoMapa({
   disponibilidadeDaRegiao?: string;
   /** Quantos serviços ainda não têm os dias em que circulam — ver `Direccoes`. */
   servicosSemDatas?: number;
+  /**
+   * Os avisos em vigor (P4-019). Publicados no painel, apareciam na página de
+   * avisos e em mais lado nenhum que se visse: não no mapa, que é o ecrã
+   * principal, nem no cartão da paragem afetada.
+   */
+  avisos?: AvisoNoMapa[];
 }) {
   const [menu, setMenu] = useState(false);
 
@@ -713,6 +741,13 @@ export default function AppDoMapa({
     Array.isArray(partidas) && partidas.length > 0 && calendario !== undefined
       ? proximas(partidas, instante, agora, calendario)
       : null;
+  const avisosAqui = escolhido
+    ? avisosDoPonto(
+        avisos,
+        escolhido,
+        Array.isArray(partidas) ? [...new Set(partidas.map((d) => d.linha_id))] : [],
+      )
+    : [];
   const aCarregarHoras =
     escolhido?.tipo === 'paragem' &&
     (partidas === null || (Array.isArray(partidas) && calendario === undefined));
@@ -849,6 +884,22 @@ export default function AppDoMapa({
                 Partir daqui
               </button>
             </p>
+
+            {/* OS AVISOS DESTE PONTO, antes das horas (P4-019): quem toca na
+              paragem para ver quando passa o autocarro tem de saber, antes da
+              hora, que a linha dele está desviada. O texto inteiro está na
+              página de avisos; aqui vai o título, a levar lá. */}
+            {avisosAqui.length > 0 && (
+              <ul className="avisos-no-cartao">
+                {avisosAqui.map((a) => (
+                  <li key={a.id} className={a.gravidade === 'SEVERE' ? 'grave' : undefined}>
+                    <a href={`/avisos/#aviso-${encodeURIComponent(a.id)}`}>
+                      <span className="rotulo-do-aviso">Aviso</span> {a.titulo}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
 
             {/* AS HORAS TÊM O LUGAR GUARDADO enquanto chegam: cinco linhas
               fantasma, da altura das verdadeiras. Sem isto o cartão crescia
@@ -1093,6 +1144,45 @@ export default function AppDoMapa({
               botão da localização do mapa só punha um ponto azul. Agora as duas
               portas dão ao mesmo: o botão de texto, para quem não reconhece o
               ícone, e o do mapa — e a folha diz o que passa ali perto. */}
+            {/* A FAIXA DE AVISOS, onde o §6 a põe: logo a seguir a «Para onde
+              vais?». O aviso publicado no painel não aparecia no ecrã
+              principal (P4-019) — e é aqui que toda a gente começa. Dois à
+              vista, os graves primeiro; o resto a uma ligação. */}
+            {avisos.length > 0 && (
+              <section className="avisos-na-abertura" aria-labelledby="avisos-agora">
+                <h2 id="avisos-agora">
+                  {avisos.length === 1 ? 'Um aviso em vigor' : `${avisos.length} avisos em vigor`}
+                </h2>
+                <ul>
+                  {avisos.slice(0, 2).map((a) => (
+                    <li key={a.id} className={a.gravidade === 'SEVERE' ? 'grave' : undefined}>
+                      <a href={`/avisos/#aviso-${encodeURIComponent(a.id)}`}>
+                        {a.distintivos.length > 0 && (
+                          <span className="distintivos-do-aviso">
+                            <span className="so-para-leitores">
+                              {a.distintivos.length === 1 ? 'Linha ' : 'Linhas '}
+                            </span>
+                            {a.distintivos.slice(0, 3).map((l) => (
+                              <Distintivo key={l.id} codigo={l.codigo} cor={l.cor} modo={l.modo} />
+                            ))}
+                            {a.distintivos.length > 3 && (
+                              <span className="secundario">+{a.distintivos.length - 3}</span>
+                            )}
+                          </span>
+                        )}
+                        <span className="titulo-do-aviso">{a.titulo}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+                {avisos.length > 2 && (
+                  <p className="secundario">
+                    <a href="/avisos/">Ver os {avisos.length} avisos</a>
+                  </p>
+                )}
+              </section>
+            )}
+
             <PertoDeTi
               regiao={regiao}
               pontos={pontos}
