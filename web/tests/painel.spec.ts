@@ -102,7 +102,7 @@ test('com a palavra-passe certa entra-se, vê-se o painel sem base, e sai-se', a
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Pessoas');
   await semViolacoes(page, /Pessoas · Painel · Paragem\.pt/);
   // Quem entrou diz-se no cabeçalho.
-  await expect(page.locator('.painel-cabecalho .quem')).toHaveText('Entraste como dono do produto');
+  await expect(page.locator('.painel-cabecalho .quem')).toHaveText('Entraste como dono');
 
   // Já com sessão, a entrada manda para o painel.
   await page.goto(`${PRODUTO}/admin/entrar/`);

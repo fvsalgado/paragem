@@ -1,19 +1,21 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import Mudanca from '@/componentes/painel/Mudanca';
 import SemChaveDeServico from '@/componentes/painel/SemChaveDeServico';
-import { notFound } from 'next/navigation';
-import { paraCampoLocal } from '@/lib/fuso';
+import { porExtenso } from '@/lib/fuso';
 import { dentroDaPagina } from '@/lib/painel/autenticacao';
-import { nomeDaAcao } from '@/lib/painel/auditoria';
-import { pode } from '@/lib/painel/papeis';
+import { NOME_DOS_TIPOS, nomeDaAcao, quemFez, sobreQue, type Nomes } from '@/lib/painel/auditoria';
 import { temChaveDeServico } from '@/lib/painel/base';
 import {
   listarAcoes,
+  listarRegioes,
   opcoesDaAuditoria,
   type OpcoesDaAuditoria,
   type RecorteDaAuditoria,
 } from '@/lib/painel/consultas';
+import { pode } from '@/lib/painel/papeis';
+import { listarPessoas } from '@/lib/painel/pessoas';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +49,7 @@ function comRecorte(recorte: RecorteDaAuditoria, pagina: number): string {
  * Os recortes, num formulário que funciona sem JavaScript: `method="get"`
  * põe-nos na barra de endereços, que é o que os torna partilháveis —
  * «manda-me a ligação do que se mexeu em agosto» é como uma auditoria se usa.
+ * Tudo em palavras: o «Sobre» oferecia `module`, `region` e `aviso`.
  */
 function Recortes({ opcoes, recorte }: { opcoes: OpcoesDaAuditoria; recorte: RecorteDaAuditoria }) {
   const temRecorte = recorte.actor || recorte.action || recorte.entityType || recorte.mes;
@@ -55,10 +58,10 @@ function Recortes({ opcoes, recorte }: { opcoes: OpcoesDaAuditoria; recorte: Rec
       <div>
         <label htmlFor="quem">Quem</label>
         <select id="quem" name="quem" defaultValue={recorte.actor ?? ''}>
-          <option value="">Todos</option>
+          <option value="">Toda a gente</option>
           {opcoes.actors.map((actor) => (
             <option key={actor} value={actor}>
-              {actor}
+              {quemFez(actor)}
             </option>
           ))}
         </select>
@@ -80,14 +83,23 @@ function Recortes({ opcoes, recorte }: { opcoes: OpcoesDaAuditoria; recorte: Rec
           <option value="">Tudo</option>
           {opcoes.entityTypes.map((tipo) => (
             <option key={tipo} value={tipo}>
-              {tipo}
+              {NOME_DOS_TIPOS[tipo] ?? tipo}
             </option>
           ))}
         </select>
       </div>
       <div>
         <label htmlFor="mes">Mês</label>
-        <input id="mes" name="mes" type="month" defaultValue={recorte.mes ?? ''} />
+        <input
+          id="mes"
+          name="mes"
+          type="month"
+          defaultValue={recorte.mes ?? ''}
+          aria-describedby="mes-ajuda"
+        />
+        <p id="mes-ajuda" className="secundario-texto">
+          Na hora de Portugal continental.
+        </p>
       </div>
       <div className="botoes">
         <button type="submit" className="secundario">
@@ -99,15 +111,25 @@ function Recortes({ opcoes, recorte }: { opcoes: OpcoesDaAuditoria; recorte: Rec
   );
 }
 
+/**
+ * Quem fez o quê, quando, e o que mudou — em palavras e na hora de Portugal
+ * (P4-020).
+ *
+ * O DONO LÊ TUDO; quem gere regiões lê o rasto delas, e mais nada. Quem só
+ * edita avisos não tem auditoria: o que precisa de saber de um aviso está na
+ * página dos avisos.
+ *
+ * É uma LISTA e não uma tabela de cinco colunas: cada ação lê-se como uma
+ * frase — «Ana Silva publicou o aviso “Obras na ponte” (Serra da Pedra Alta),
+ * 2 de outubro, 08:04» —, e a 390 px uma tabela de cinco colunas era uma barra
+ * de deslocação.
+ */
 export default async function Auditoria({ searchParams }: Props) {
-  // O DONO LÊ TUDO; quem gere regiões lê o rasto delas, e mais nada. Quem só
-  // edita avisos não tem auditoria: o que precisa de saber de um aviso está
-  // na página dos avisos.
   const dentro = await dentroDaPagina();
-  const regioes = dentro.dono
+  const regioesDaPessoa = dentro.dono
     ? null
     : Object.keys(dentro.papeis).filter((r) => pode(dentro, r, 'gestor'));
-  if (regioes !== null && regioes.length === 0) notFound();
+  if (regioesDaPessoa !== null && regioesDaPessoa.length === 0) notFound();
   if (!temChaveDeServico()) return <SemChaveDeServico titulo="Auditoria" />;
 
   const params = await searchParams;
@@ -118,67 +140,27 @@ export default async function Auditoria({ searchParams }: Props) {
     entityType: params.tipo || undefined,
     mes: params.mes || undefined,
   };
-  const [acoes, opcoes] = await Promise.all([
-    listarAcoes(pagina, POR_PAGINA, recorte, regioes),
-    opcoesDaAuditoria(regioes),
+  const [acoes, opcoes, regioes, pessoas] = await Promise.all([
+    listarAcoes(pagina, POR_PAGINA, recorte, regioesDaPessoa),
+    opcoesDaAuditoria(regioesDaPessoa),
+    listarRegioes(),
+    dentro.dono ? listarPessoas() : Promise.resolve(null),
   ]);
+  const nomes: Nomes = {
+    regioes: new Map(regioes.map((r) => [r.id, r.name])),
+    pessoas: new Map((pessoas ?? []).map((p) => [p.id, `${p.nome} (${p.email})`])),
+  };
 
   return (
     <>
       <h1>Auditoria</h1>
       <p className="entrada">
-        Todas as escritas do painel passam pelas funções da base, e todas deixam rasto aqui: quem,
-        quando, sobre o quê, e o antes e o depois.
+        {dentro.dono
+          ? 'Tudo o que se grava no painel fica aqui: quem, quando, sobre o quê, e o que mudou.'
+          : 'O que se gravou no painel sobre as regiões que geres: quem, quando, sobre o quê, e o que mudou.'}
       </p>
 
       <Recortes opcoes={opcoes} recorte={recorte} />
-
-      <div
-        className="rolavel"
-        tabIndex={0}
-        role="region"
-        aria-label="Tabela, deslocável na horizontal"
-      >
-        <table className="registo">
-          <caption className="so-para-leitores">Registo de ações do painel</caption>
-          <thead>
-            <tr>
-              <th scope="col">Quando</th>
-              <th scope="col">Quem</th>
-              <th scope="col">O quê</th>
-              <th scope="col">Sobre</th>
-              <th scope="col">O que mudou</th>
-            </tr>
-          </thead>
-          <tbody>
-            {acoes.map((acao) => {
-              const regiao = acao.entity_id.split('/')[0] ?? acao.entity_id;
-              return (
-                <tr key={acao.id}>
-                  {/* A hora de Lisboa, como o resto do painel: o texto ISO
-                      cortado era a hora UTC, uma hora atrás no verão. */}
-                  <td>{paraCampoLocal(acao.created_at).replace('T', ' ')}</td>
-                  <td>{acao.actor}</td>
-                  <td>{nomeDaAcao(acao.action)}</td>
-                  <td>
-                    <span className="secundario-texto">{acao.entity_type}</span>{' '}
-                    {acao.entity_type === 'region' || acao.entity_type === 'module' ? (
-                      <Link href={`/admin/regioes/${encodeURIComponent(regiao)}/`}>
-                        <code>{acao.entity_id}</code>
-                      </Link>
-                    ) : (
-                      <code>{acao.entity_id}</code>
-                    )}
-                  </td>
-                  <td>
-                    <Mudanca before={acao.before} after={acao.after} />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
 
       {acoes.length === 0 ? (
         <p className="secundario-texto">
@@ -186,7 +168,42 @@ export default async function Auditoria({ searchParams }: Props) {
             ? 'Nenhuma ação com estes recortes. Não quer dizer que não tenha acontecido nada — quer dizer que não aconteceu isto.'
             : 'Sem registos nesta página.'}
         </p>
-      ) : null}
+      ) : (
+        <ol
+          className="lista-simples rasto"
+          aria-label="O registo, do mais recente para o mais antigo"
+        >
+          {acoes.map((acao) => {
+            const sobre = sobreQue(acao, nomes);
+            const ligacao =
+              sobre.regiao && pode(dentro, sobre.regiao, 'gestor')
+                ? `/admin/regioes/${encodeURIComponent(sobre.regiao)}/`
+                : null;
+            return (
+              <li key={acao.id}>
+                <p>
+                  <strong>{quemFez(acao.actor)}</strong> {nomeDaAcao(acao.action)}
+                  {acao.entity_type === 'region' && ligacao ? (
+                    <>
+                      {' — '}
+                      <Link href={ligacao}>{sobre.texto}</Link>
+                    </>
+                  ) : (
+                    <>
+                      {' — '}
+                      {sobre.texto}
+                    </>
+                  )}
+                </p>
+                <p className="secundario-texto">
+                  <time dateTime={acao.created_at}>{porExtenso(acao.created_at)}</time>
+                </p>
+                <Mudanca before={acao.before} after={acao.after} />
+              </li>
+            );
+          })}
+        </ol>
+      )}
 
       <nav aria-label="Paginação" className="linha-accoes">
         {pagina > 1 ? (

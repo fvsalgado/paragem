@@ -112,7 +112,7 @@ export default async function LayoutDoPainel({ children }: { children: React.Rea
                 {/* Num telemóvel, o nome — e o prefixo só para quem ouve: com
                     ele à vista, era o nome que ficava cortado. */}
                 <span className="prefixo">Entraste como </span>
-                <strong>{portao.pessoa ? portao.pessoa.nome : 'dono do produto'}</strong>
+                <strong>{portao.pessoa ? portao.pessoa.nome : 'dono'}</strong>
               </p>
               <form action={sair} className="sair">
                 <button type="submit" className="secundario">

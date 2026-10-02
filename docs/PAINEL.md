@@ -19,12 +19,12 @@ mapa de domínios no middleware.
 
 | onde                          | o quê                                                                                                | função da base                                              |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `/admin/`                     | as regiões, quantas e em que estado; «Nova região»; «Revalidar o sítio»                              | —                                                           |
+| `/admin/`                     | as regiões, quantas e em que estado; «Nova região»; «Atualizar as páginas do sítio»                  | —                                                           |
 | `/admin/regioes/nova/`        | a linha de uma região nova, **desligada** à nascença                                                 | `create_region`                                             |
-| `/admin/regioes/<id>/`        | ligar e desligar a região                                                                            | `set_region_enabled`                                        |
-|                               | mudar o domínio canónico, com o antigo a ficar como alias                                            | `set_region_domain`                                         |
-|                               | acrescentar e retirar alias (redirecionam, nunca servem)                                             | `add_region_alias`, `remove_region_alias`                   |
-|                               | ligar e desligar cada um dos sete módulos                                                            | `set_modulo`                                                |
+| `/admin/regioes/<id>/`        | ligar (com dados publicados) e desligar a região (com o nome escrito, na zona de perigo)             | `set_region_enabled`                                        |
+|                               | mudar o endereço principal — depois de o novo responder, com o antigo a levar a ele                  | `set_region_domain`                                         |
+|                               | acrescentar e retirar endereços que levam ao principal (redirecionam, nunca servem)                  | `add_region_alias`, `remove_region_alias`                   |
+|                               | ligar e desligar cada modo que a região tem, com confirmação e «Desfazer»                            | `set_modulo`                                                |
 |                               | registar uma licença — uma linha por contrato ou renovação                                           | `add_region_license`                                        |
 | `/admin/regioes/<id>/avisos/` | escrever, corrigir, publicar, retirar e apagar avisos                                                | `upsert_aviso`, `set_aviso_publicado`, `delete_aviso`       |
 | `/admin/pessoas/`             | convidar uma pessoa, os papéis dela por região, uma ligação nova, desativar                          | `create_pessoa`, `set_papel`, `create_convite`, `set_pessoa_ativa` |
@@ -119,14 +119,38 @@ frases acima.
    **do `regiao.yaml`, letra a letra**. Nasce desligada.
 3. O domínio no projeto da plataforma (Settings → Domains), e no DNS se for
    da autoridade ([`ALOJAMENTO.md`](ALOJAMENTO.md), «Um domínio por região»).
-4. «Ligar a região» na ficha. Cinco minutos depois o domínio responde.
+4. «Ligar» na ficha. O botão só aparece com dados da região publicados —
+   ligar sem eles punha o domínio a responder «página não encontrada» no dia
+   da estreia. Cinco minutos depois, o domínio responde.
+
+### A ficha, pela ordem em que se usa
+
+Os avisos primeiro, com «Escrever um aviso»; o endereço; os modos; quem tem
+papel na região; as licenças; o que se mexeu; e, no fim, a **zona de perigo**.
+A mensagem de cada gesto aparece na secção onde ele se fez, e o ecrã vai lá.
+Os gestos que tiram o sítio do ar pedem confirmação: desligar a região e mudar
+o endereço principal pedem o **nome da região escrito** (sem olhar a acentos
+nem a maiúsculas: é a intenção que se confirma, não a ortografia); desligar um
+modo abre uma confirmação com o que ele tira do sítio, e a mensagem traz
+«Desfazer»; retirar um endereço diz quem fica sem resposta. As ações conferem
+tudo isto do seu lado.
 
 ### O dia em que a autoridade traz o domínio dela
 
-Na ficha, «Mudar o domínio canónico» com «o domínio antigo fica a
-redirecionar» ligado: as ligações que andam por aí continuam a chegar (308).
-Depois, o `dominio:` do `regiao.yaml` — o CI reprova enquanto os dois
-disserem coisas diferentes — e o domínio novo no projeto da plataforma.
+Pela ordem, porque ao contrário o sítio fica em baixo:
+
+1. na ficha, em «Endereço», **acrescenta o domínio novo** como um endereço que
+   leva ao principal (pode colar-se o endereço inteiro, com `https://`: fica
+   só o domínio);
+2. o domínio novo no projeto da plataforma e no DNS da autoridade;
+3. na zona de perigo, **«Mudar o endereço principal»**: o painel pergunta ao
+   domínio novo se já responde a levar a esta região — o redirecionamento
+   permanente que o middleware só dá depois de o DNS, a plataforma e o mapa de
+   domínios estarem feitos — e só então troca, com o antigo a levar ao novo.
+   Quem precisar de trocar antes marca que sabe que o sítio fica em baixo até
+   o domínio responder;
+4. depois, o `dominio:` do `regiao.yaml` — o CI reprova enquanto os dois
+   disserem coisas diferentes.
 
 ## Quem entra, e o que cada um pode
 
@@ -252,7 +276,7 @@ adulterado — precisa da base, e corre com ela localmente
 
 ## O que o painel NÃO faz, de propósito
 
-- **Não constrói dados.** «Revalidar o sítio» manda deitar fora as páginas em
+- **Não constrói dados.** «Atualizar as páginas do sítio» manda deitar fora as páginas em
   cache — o mesmo sinal que o pipeline manda no fim de publicar — para o dia
   em que o aviso se perdeu. Reconstruir é o fluxo `Dados`, à segunda-feira ou
   à mão.

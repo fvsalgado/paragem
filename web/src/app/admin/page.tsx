@@ -6,6 +6,7 @@ import SemChaveDeServico from '@/componentes/painel/SemChaveDeServico';
 import { revalidarSitio } from '@/lib/painel/acoes';
 import { dentroDaPagina, type Dentro } from '@/lib/painel/autenticacao';
 import { temChaveDeServico } from '@/lib/painel/base';
+import { naFrase } from '@/lib/painel/ficha';
 import { inicioDe, nomeDoPapel, pode } from '@/lib/painel/papeis';
 import {
   listarAliases,
@@ -131,9 +132,9 @@ export default async function Regioes({ searchParams }: Props) {
     <>
       <h1>Regiões</h1>
       <p className="entrada">
-        Cada cartão é uma autoridade de transportes servida por esta instalação, no seu domínio. O
-        que aqui se liga e desliga faz efeito sem publicação nenhuma; tudo o que se grava passa por
-        uma função da base e fica na auditoria.
+        Cada cartão é uma autoridade de transportes servida por esta instalação, no seu endereço. O
+        que aqui se liga e desliga faz efeito sem publicação nenhuma, e fica na auditoria com o nome
+        de quem o fez.
       </p>
 
       <Aviso texto={aviso} />
@@ -144,7 +145,7 @@ export default async function Regioes({ searchParams }: Props) {
           <dd>{regioes.length}</dd>
         </div>
         <div>
-          <dt>Ligadas</dt>
+          <dt>No ar</dt>
           <dd>{ligadas}</dd>
         </div>
         <div>
@@ -161,11 +162,6 @@ export default async function Regioes({ searchParams }: Props) {
         <Link href="/admin/regioes/nova/" className="botao">
           Nova região
         </Link>
-        <form action={revalidarSitio}>
-          <button type="submit" className="secundario">
-            Revalidar o sítio
-          </button>
-        </form>
       </div>
 
       <ul className="lista cartoes">
@@ -182,38 +178,57 @@ export default async function Regioes({ searchParams }: Props) {
           return (
             <li key={regiao.id} className="cartao">
               <h2>
-                <Link href={ficha}>{regiao.name}</Link>{' '}
-                <span className="secundario-texto">{regiao.id}</span>
+                <Link href={ficha}>{regiao.name}</Link>
               </h2>
               <p className={regiao.is_enabled ? undefined : 'alerta-texto'}>
-                <strong>{regiao.is_enabled ? 'Ligada.' : 'Desligada.'}</strong>{' '}
-                {regiao.is_enabled
-                  ? `A responder em ${regiao.domain}.`
-                  : `Fora do mapa: ${regiao.domain} mostra a montra.`}
+                {regiao.is_enabled ? (
+                  <>
+                    <strong>No ar</strong> em {regiao.domain}.
+                  </>
+                ) : (
+                  <>
+                    <strong>{naFrase(regiao).adj('Desligad')}:</strong> {regiao.domain} mostra a
+                    página do Paragem.pt.
+                  </>
+                )}
               </p>
               <dl className="pares">
-                <dt>Alias</dt>
+                <dt>Outros endereços</dt>
                 <dd>{osAlias.length ? osAlias.join(', ') : 'nenhum'}</dd>
-                <dt>Módulos</dt>
+                <dt>Modos</dt>
                 <dd>{resumoDosModulos(desligados)}</dd>
                 <dt>Licença</dt>
                 <dd className={licenca.alerta ? 'alerta-texto' : undefined}>{licenca.texto}</dd>
-                <dt>Ordem</dt>
-                <dd>{regiao.sort_order}</dd>
               </dl>
               <p className="linha-accoes">
-                <Link href={ficha}>Ficha</Link>
-                <Link href={`${ficha}#modulos`}>Módulos</Link>
-                <Link href={`${ficha}#dominio`}>Domínio</Link>
-                <Link href={`${ficha}#licencas`}>Licenças</Link>
+                <Link href={ficha}>Abrir a ficha</Link>
+                <Link href={`${ficha}avisos/`}>Avisos</Link>
               </p>
             </li>
           );
         })}
       </ul>
       {regioes.length === 0 ? (
-        <p>Ainda não há regiões na base. A primeira nasce em «Nova região».</p>
+        <p>Ainda não há regiões. A primeira nasce em «Nova região».</p>
       ) : null}
+
+      <details className="para-quem-gere">
+        <summary>Para quem gere a instalação</summary>
+        <p>
+          O pipeline avisa o sítio sempre que publica dados, e as páginas de cada região refazem-se
+          à visita seguinte. Se esse aviso se perder — as páginas a mostrarem dados de ontem depois
+          de uma publicação —, este botão faz o mesmo à mão, para todas as regiões.
+        </p>
+        <form action={revalidarSitio}>
+          <button type="submit" className="secundario">
+            Atualizar as páginas do sítio
+          </button>
+        </form>
+        <p className="secundario-texto">
+          A ordem dos cartões é a da página do Paragem.pt (a posição de cada região na lista), e o
+          identificador de cada uma está na ficha dela.
+        </p>
+      </details>
     </>
   );
 }
