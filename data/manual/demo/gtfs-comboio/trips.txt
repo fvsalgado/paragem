@@ -1,0 +1,51 @@
+route_id,service_id,trip_id,trip_headsign,direction_id,shape_id
+FP-AMENO,A-U,FP-A-U-S-0550,Montelírio,0,FP-0
+FP-AMENO,A-U,FP-A-U-S-0650,Montelírio,0,FP-0
+FP-AMENO,A-U,FP-A-U-S-0750,Montelírio,0,FP-0
+FP-AMENO,A-U,FP-A-U-S-0850,Montelírio,0,FP-0
+FP-AMENO,A-U,FP-A-U-S-0950,Montelírio,0,FP-0
+FP-AMENO,A-U,FP-A-U-S-1050,Montelírio,0,FP-0
+FP-AMENO,A-U,FP-A-U-S-1150,Montelírio,0,FP-0
+FP-AMENO,A-U,FP-A-U-S-1250,Montelírio,0,FP-0
+FP-AMENO,A-U,FP-A-U-S-1350,Montelírio,0,FP-0
+FP-AMENO,A-U,FP-A-U-S-1450,Montelírio,0,FP-0
+FP-AMENO,A-U,FP-A-U-S-1550,Montelírio,0,FP-0
+FP-AMENO,A-U,FP-A-U-S-1650,Montelírio,0,FP-0
+FP-AMENO,A-U,FP-A-U-S-1750,Montelírio,0,FP-0
+FP-AMENO,A-U,FP-A-U-S-1850,Montelírio,0,FP-0
+FP-AMENO,A-U,FP-A-U-S-1950,Montelírio,0,FP-0
+FP-AMENO,A-U,FP-A-U-S-2050,Montelírio,0,FP-0
+FP-AMENO,A-U,FP-A-U-S-2150,Montelírio,0,FP-0
+FP-AMENO,A-U,FP-A-U-N-0610,Lagoa Serena,1,FP-1
+FP-AMENO,A-U,FP-A-U-N-0710,Lagoa Serena,1,FP-1
+FP-AMENO,A-U,FP-A-U-N-0810,Lagoa Serena,1,FP-1
+FP-AMENO,A-U,FP-A-U-N-0910,Lagoa Serena,1,FP-1
+FP-AMENO,A-U,FP-A-U-N-1010,Lagoa Serena,1,FP-1
+FP-AMENO,A-U,FP-A-U-N-1110,Lagoa Serena,1,FP-1
+FP-AMENO,A-U,FP-A-U-N-1210,Lagoa Serena,1,FP-1
+FP-AMENO,A-U,FP-A-U-N-1310,Lagoa Serena,1,FP-1
+FP-AMENO,A-U,FP-A-U-N-1410,Lagoa Serena,1,FP-1
+FP-AMENO,A-U,FP-A-U-N-1510,Lagoa Serena,1,FP-1
+FP-AMENO,A-U,FP-A-U-N-1610,Lagoa Serena,1,FP-1
+FP-AMENO,A-U,FP-A-U-N-1710,Lagoa Serena,1,FP-1
+FP-AMENO,A-U,FP-A-U-N-1810,Lagoa Serena,1,FP-1
+FP-AMENO,A-U,FP-A-U-N-1910,Lagoa Serena,1,FP-1
+FP-AMENO,A-U,FP-A-U-N-2010,Lagoa Serena,1,FP-1
+FP-AMENO,A-U,FP-A-U-N-2110,Lagoa Serena,1,FP-1
+FP-AMENO,A-U,FP-A-U-N-2210,Lagoa Serena,1,FP-1
+FP-AMENO,A-FS,FP-A-FS-S-0750,Montelírio,0,FP-0
+FP-AMENO,A-FS,FP-A-FS-S-0950,Montelírio,0,FP-0
+FP-AMENO,A-FS,FP-A-FS-S-1150,Montelírio,0,FP-0
+FP-AMENO,A-FS,FP-A-FS-S-1350,Montelírio,0,FP-0
+FP-AMENO,A-FS,FP-A-FS-S-1550,Montelírio,0,FP-0
+FP-AMENO,A-FS,FP-A-FS-S-1750,Montelírio,0,FP-0
+FP-AMENO,A-FS,FP-A-FS-S-1950,Montelírio,0,FP-0
+FP-AMENO,A-FS,FP-A-FS-S-2150,Montelírio,0,FP-0
+FP-AMENO,A-FS,FP-A-FS-N-0810,Lagoa Serena,1,FP-1
+FP-AMENO,A-FS,FP-A-FS-N-1010,Lagoa Serena,1,FP-1
+FP-AMENO,A-FS,FP-A-FS-N-1210,Lagoa Serena,1,FP-1
+FP-AMENO,A-FS,FP-A-FS-N-1410,Lagoa Serena,1,FP-1
+FP-AMENO,A-FS,FP-A-FS-N-1610,Lagoa Serena,1,FP-1
+FP-AMENO,A-FS,FP-A-FS-N-1810,Lagoa Serena,1,FP-1
+FP-AMENO,A-FS,FP-A-FS-N-2010,Lagoa Serena,1,FP-1
+FP-AMENO,A-FS,FP-A-FS-N-2210,Lagoa Serena,1,FP-1

@@ -37,6 +37,13 @@ e as duas estão no [`CLAUDE.md`](../../CLAUDE.md) §4:
 Inventado de fio a pavio, para a região de prova. Não vem de lado nenhum e é
 essa a questão — ver [`regioes/prova/regiao.yaml`](../../regioes/prova/regiao.yaml).
 
+### `demo/`
+
+Inventado de fio a pavio, para a região de demonstração — as Terras do Ameno.
+Ao contrário dos outros ficheiros desta pasta, estes não se põem cá à mão:
+saem de [`demo/inventar.py`](demo/inventar.py), que é a origem. Ver
+[`demo/LEIA.md`](demo/LEIA.md).
+
 ### Fora de qualquer região
 
 | ficheiro | origem | obtido |

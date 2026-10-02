@@ -1,0 +1,333 @@
+route_id,service_id,trip_id,trip_headsign,direction_id,shape_id
+RA1,A-U,RA1-A-U-0-0630,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-0700,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-0730,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-0800,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-0830,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-0900,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-0930,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1000,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1030,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1100,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1130,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1200,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1230,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1300,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1330,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1400,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1430,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1500,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1530,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1600,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1630,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1700,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1730,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1800,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1830,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1900,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-1930,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-2000,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-2030,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-0-2100,Almeão (Estação),0,RA1-0
+RA1,A-S,RA1-A-S-0-0730,Almeão (Estação),0,RA1-0
+RA1,A-S,RA1-A-S-0-0830,Almeão (Estação),0,RA1-0
+RA1,A-S,RA1-A-S-0-0930,Almeão (Estação),0,RA1-0
+RA1,A-S,RA1-A-S-0-1030,Almeão (Estação),0,RA1-0
+RA1,A-S,RA1-A-S-0-1130,Almeão (Estação),0,RA1-0
+RA1,A-S,RA1-A-S-0-1230,Almeão (Estação),0,RA1-0
+RA1,A-S,RA1-A-S-0-1330,Almeão (Estação),0,RA1-0
+RA1,A-S,RA1-A-S-0-1430,Almeão (Estação),0,RA1-0
+RA1,A-S,RA1-A-S-0-1530,Almeão (Estação),0,RA1-0
+RA1,A-S,RA1-A-S-0-1630,Almeão (Estação),0,RA1-0
+RA1,A-S,RA1-A-S-0-1730,Almeão (Estação),0,RA1-0
+RA1,A-S,RA1-A-S-0-1830,Almeão (Estação),0,RA1-0
+RA1,A-S,RA1-A-S-0-1930,Almeão (Estação),0,RA1-0
+RA1,A-DF,RA1-A-DF-0-0830,Almeão (Estação),0,RA1-0
+RA1,A-DF,RA1-A-DF-0-1030,Almeão (Estação),0,RA1-0
+RA1,A-DF,RA1-A-DF-0-1230,Almeão (Estação),0,RA1-0
+RA1,A-DF,RA1-A-DF-0-1430,Almeão (Estação),0,RA1-0
+RA1,A-DF,RA1-A-DF-0-1630,Almeão (Estação),0,RA1-0
+RA1,A-DF,RA1-A-DF-0-1830,Almeão (Estação),0,RA1-0
+RA1,A-U,RA1-A-U-1-0645,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-0715,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-0745,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-0815,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-0845,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-0915,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-0945,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1015,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1045,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1115,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1145,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1215,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1245,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1315,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1345,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1415,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1445,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1515,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1545,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1615,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1645,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1715,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1745,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1815,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1845,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1915,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-1945,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-2015,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-2045,Porto Ameno (Terminal),1,RA1-1
+RA1,A-U,RA1-A-U-1-2115,Porto Ameno (Terminal),1,RA1-1
+RA1,A-S,RA1-A-S-1-0800,Porto Ameno (Terminal),1,RA1-1
+RA1,A-S,RA1-A-S-1-0900,Porto Ameno (Terminal),1,RA1-1
+RA1,A-S,RA1-A-S-1-1000,Porto Ameno (Terminal),1,RA1-1
+RA1,A-S,RA1-A-S-1-1100,Porto Ameno (Terminal),1,RA1-1
+RA1,A-S,RA1-A-S-1-1200,Porto Ameno (Terminal),1,RA1-1
+RA1,A-S,RA1-A-S-1-1300,Porto Ameno (Terminal),1,RA1-1
+RA1,A-S,RA1-A-S-1-1400,Porto Ameno (Terminal),1,RA1-1
+RA1,A-S,RA1-A-S-1-1500,Porto Ameno (Terminal),1,RA1-1
+RA1,A-S,RA1-A-S-1-1600,Porto Ameno (Terminal),1,RA1-1
+RA1,A-S,RA1-A-S-1-1700,Porto Ameno (Terminal),1,RA1-1
+RA1,A-S,RA1-A-S-1-1800,Porto Ameno (Terminal),1,RA1-1
+RA1,A-S,RA1-A-S-1-1900,Porto Ameno (Terminal),1,RA1-1
+RA1,A-S,RA1-A-S-1-2000,Porto Ameno (Terminal),1,RA1-1
+RA1,A-DF,RA1-A-DF-1-0930,Porto Ameno (Terminal),1,RA1-1
+RA1,A-DF,RA1-A-DF-1-1130,Porto Ameno (Terminal),1,RA1-1
+RA1,A-DF,RA1-A-DF-1-1330,Porto Ameno (Terminal),1,RA1-1
+RA1,A-DF,RA1-A-DF-1-1530,Porto Ameno (Terminal),1,RA1-1
+RA1,A-DF,RA1-A-DF-1-1730,Porto Ameno (Terminal),1,RA1-1
+RA1,A-DF,RA1-A-DF-1-1930,Porto Ameno (Terminal),1,RA1-1
+RA2,A-U,RA2-A-U-0-0618,Saramela (Escola),0,RA2-0
+RA2,A-U,RA2-A-U-0-0718,Saramela (Escola),0,RA2-0
+RA2,A-U,RA2-A-U-0-0818,Saramela (Escola),0,RA2-0
+RA2,A-U,RA2-A-U-0-0918,Saramela (Escola),0,RA2-0
+RA2,A-U,RA2-A-U-0-1018,Saramela (Escola),0,RA2-0
+RA2,A-U,RA2-A-U-0-1118,Saramela (Escola),0,RA2-0
+RA2,A-U,RA2-A-U-0-1218,Saramela (Escola),0,RA2-0
+RA2,A-U,RA2-A-U-0-1318,Saramela (Escola),0,RA2-0
+RA2,A-U,RA2-A-U-0-1418,Saramela (Escola),0,RA2-0
+RA2,A-U,RA2-A-U-0-1518,Saramela (Escola),0,RA2-0
+RA2,A-U,RA2-A-U-0-1618,Saramela (Escola),0,RA2-0
+RA2,A-U,RA2-A-U-0-1718,Saramela (Escola),0,RA2-0
+RA2,A-U,RA2-A-U-0-1818,Saramela (Escola),0,RA2-0
+RA2,A-U,RA2-A-U-0-1918,Saramela (Escola),0,RA2-0
+RA2,A-U,RA2-A-U-0-2018,Saramela (Escola),0,RA2-0
+RA2,A-S,RA2-A-S-0-0820,Saramela (Escola),0,RA2-0
+RA2,A-S,RA2-A-S-0-1020,Saramela (Escola),0,RA2-0
+RA2,A-S,RA2-A-S-0-1220,Saramela (Escola),0,RA2-0
+RA2,A-S,RA2-A-S-0-1420,Saramela (Escola),0,RA2-0
+RA2,A-S,RA2-A-S-0-1620,Saramela (Escola),0,RA2-0
+RA2,A-S,RA2-A-S-0-1820,Saramela (Escola),0,RA2-0
+RA2,A-DF,RA2-A-DF-0-0920,Saramela (Escola),0,RA2-0
+RA2,A-DF,RA2-A-DF-0-1320,Saramela (Escola),0,RA2-0
+RA2,A-DF,RA2-A-DF-0-1720,Saramela (Escola),0,RA2-0
+RA2,A-U,RA2-A-U-1-0657,Porto Ameno (Estação),1,RA2-1
+RA2,A-U,RA2-A-U-1-0757,Porto Ameno (Estação),1,RA2-1
+RA2,A-U,RA2-A-U-1-0857,Porto Ameno (Estação),1,RA2-1
+RA2,A-U,RA2-A-U-1-0957,Porto Ameno (Estação),1,RA2-1
+RA2,A-U,RA2-A-U-1-1057,Porto Ameno (Estação),1,RA2-1
+RA2,A-U,RA2-A-U-1-1157,Porto Ameno (Estação),1,RA2-1
+RA2,A-U,RA2-A-U-1-1257,Porto Ameno (Estação),1,RA2-1
+RA2,A-U,RA2-A-U-1-1357,Porto Ameno (Estação),1,RA2-1
+RA2,A-U,RA2-A-U-1-1457,Porto Ameno (Estação),1,RA2-1
+RA2,A-U,RA2-A-U-1-1557,Porto Ameno (Estação),1,RA2-1
+RA2,A-U,RA2-A-U-1-1657,Porto Ameno (Estação),1,RA2-1
+RA2,A-U,RA2-A-U-1-1757,Porto Ameno (Estação),1,RA2-1
+RA2,A-U,RA2-A-U-1-1857,Porto Ameno (Estação),1,RA2-1
+RA2,A-U,RA2-A-U-1-1957,Porto Ameno (Estação),1,RA2-1
+RA2,A-S,RA2-A-S-1-0930,Porto Ameno (Estação),1,RA2-1
+RA2,A-S,RA2-A-S-1-1130,Porto Ameno (Estação),1,RA2-1
+RA2,A-S,RA2-A-S-1-1330,Porto Ameno (Estação),1,RA2-1
+RA2,A-S,RA2-A-S-1-1530,Porto Ameno (Estação),1,RA2-1
+RA2,A-S,RA2-A-S-1-1730,Porto Ameno (Estação),1,RA2-1
+RA2,A-S,RA2-A-S-1-1930,Porto Ameno (Estação),1,RA2-1
+RA2,A-DF,RA2-A-DF-1-1030,Porto Ameno (Estação),1,RA2-1
+RA2,A-DF,RA2-A-DF-1-1430,Porto Ameno (Estação),1,RA2-1
+RA2,A-DF,RA2-A-DF-1-1830,Porto Ameno (Estação),1,RA2-1
+RA3,A-U,RA3-A-U-0-0700,Montelírio (Estação),0,RA3-0
+RA3,A-U,RA3-A-U-0-0930,Montelírio (Estação),0,RA3-0
+RA3,A-U,RA3-A-U-0-1300,Montelírio (Estação),0,RA3-0
+RA3,A-U,RA3-A-U-0-1745,Montelírio (Estação),0,RA3-0
+RA3,A-S,RA3-A-S-0-0830,Montelírio (Estação),0,RA3-0
+RA3,A-S,RA3-A-S-0-1330,Montelírio (Estação),0,RA3-0
+RA3,A-U,RA3-A-U-1-0810,Saramela (Centro),1,RA3-1
+RA3,A-U,RA3-A-U-1-1115,Saramela (Centro),1,RA3-1
+RA3,A-U,RA3-A-U-1-1440,Saramela (Centro),1,RA3-1
+RA3,A-U,RA3-A-U-1-1900,Saramela (Centro),1,RA3-1
+RA3,A-S,RA3-A-S-1-0940,Saramela (Centro),1,RA3-1
+RA3,A-S,RA3-A-S-1-1640,Saramela (Centro),1,RA3-1
+RA4,A-U,RA4-A-U-0-0640,Serrabela,0,RA4-0
+RA4,A-U,RA4-A-U-0-0740,Serrabela,0,RA4-0
+RA4,A-U,RA4-A-U-0-0840,Serrabela,0,RA4-0
+RA4,A-U,RA4-A-U-0-0940,Serrabela,0,RA4-0
+RA4,A-U,RA4-A-U-0-1040,Serrabela,0,RA4-0
+RA4,A-U,RA4-A-U-0-1140,Serrabela,0,RA4-0
+RA4,A-U,RA4-A-U-0-1240,Serrabela,0,RA4-0
+RA4,A-U,RA4-A-U-0-1340,Serrabela,0,RA4-0
+RA4,A-U,RA4-A-U-0-1440,Serrabela,0,RA4-0
+RA4,A-U,RA4-A-U-0-1540,Serrabela,0,RA4-0
+RA4,A-U,RA4-A-U-0-1640,Serrabela,0,RA4-0
+RA4,A-U,RA4-A-U-0-1740,Serrabela,0,RA4-0
+RA4,A-U,RA4-A-U-0-1840,Serrabela,0,RA4-0
+RA4,A-U,RA4-A-U-0-1940,Serrabela,0,RA4-0
+RA4,A-S,RA4-A-S-0-0840,Serrabela,0,RA4-0
+RA4,A-S,RA4-A-S-0-1040,Serrabela,0,RA4-0
+RA4,A-S,RA4-A-S-0-1240,Serrabela,0,RA4-0
+RA4,A-S,RA4-A-S-0-1440,Serrabela,0,RA4-0
+RA4,A-S,RA4-A-S-0-1640,Serrabela,0,RA4-0
+RA4,A-S,RA4-A-S-0-1840,Serrabela,0,RA4-0
+RA4,A-DF,RA4-A-DF-0-0940,Serrabela,0,RA4-0
+RA4,A-DF,RA4-A-DF-0-1740,Serrabela,0,RA4-0
+RA4,A-U,RA4-A-U-1-0715,Porto Ameno (Terminal),1,RA4-1
+RA4,A-U,RA4-A-U-1-0815,Porto Ameno (Terminal),1,RA4-1
+RA4,A-U,RA4-A-U-1-0915,Porto Ameno (Terminal),1,RA4-1
+RA4,A-U,RA4-A-U-1-1015,Porto Ameno (Terminal),1,RA4-1
+RA4,A-U,RA4-A-U-1-1115,Porto Ameno (Terminal),1,RA4-1
+RA4,A-U,RA4-A-U-1-1215,Porto Ameno (Terminal),1,RA4-1
+RA4,A-U,RA4-A-U-1-1315,Porto Ameno (Terminal),1,RA4-1
+RA4,A-U,RA4-A-U-1-1415,Porto Ameno (Terminal),1,RA4-1
+RA4,A-U,RA4-A-U-1-1515,Porto Ameno (Terminal),1,RA4-1
+RA4,A-U,RA4-A-U-1-1615,Porto Ameno (Terminal),1,RA4-1
+RA4,A-U,RA4-A-U-1-1715,Porto Ameno (Terminal),1,RA4-1
+RA4,A-U,RA4-A-U-1-1815,Porto Ameno (Terminal),1,RA4-1
+RA4,A-U,RA4-A-U-1-1915,Porto Ameno (Terminal),1,RA4-1
+RA4,A-U,RA4-A-U-1-2015,Porto Ameno (Terminal),1,RA4-1
+RA4,A-S,RA4-A-S-1-0915,Porto Ameno (Terminal),1,RA4-1
+RA4,A-S,RA4-A-S-1-1115,Porto Ameno (Terminal),1,RA4-1
+RA4,A-S,RA4-A-S-1-1315,Porto Ameno (Terminal),1,RA4-1
+RA4,A-S,RA4-A-S-1-1515,Porto Ameno (Terminal),1,RA4-1
+RA4,A-S,RA4-A-S-1-1715,Porto Ameno (Terminal),1,RA4-1
+RA4,A-S,RA4-A-S-1-1915,Porto Ameno (Terminal),1,RA4-1
+RA4,A-DF,RA4-A-DF-1-1015,Porto Ameno (Terminal),1,RA4-1
+RA4,A-DF,RA4-A-DF-1-1815,Porto Ameno (Terminal),1,RA4-1
+RA5,A-U,RA5-A-U-0-0650,Montelírio (Centro),0,RA5-0
+RA5,A-U,RA5-A-U-0-0850,Montelírio (Centro),0,RA5-0
+RA5,A-U,RA5-A-U-0-1050,Montelírio (Centro),0,RA5-0
+RA5,A-U,RA5-A-U-0-1250,Montelírio (Centro),0,RA5-0
+RA5,A-U,RA5-A-U-0-1450,Montelírio (Centro),0,RA5-0
+RA5,A-U,RA5-A-U-0-1650,Montelírio (Centro),0,RA5-0
+RA5,A-U,RA5-A-U-0-1850,Montelírio (Centro),0,RA5-0
+RA5,A-U,RA5-A-U-0-2050,Montelírio (Centro),0,RA5-0
+RA5,A-S,RA5-A-S-0-0850,Montelírio (Centro),0,RA5-0
+RA5,A-S,RA5-A-S-0-1250,Montelírio (Centro),0,RA5-0
+RA5,A-S,RA5-A-S-0-1650,Montelírio (Centro),0,RA5-0
+RA5,A-U,RA5-A-U-1-0750,Almeão (Estação),1,RA5-1
+RA5,A-U,RA5-A-U-1-0950,Almeão (Estação),1,RA5-1
+RA5,A-U,RA5-A-U-1-1150,Almeão (Estação),1,RA5-1
+RA5,A-U,RA5-A-U-1-1350,Almeão (Estação),1,RA5-1
+RA5,A-U,RA5-A-U-1-1550,Almeão (Estação),1,RA5-1
+RA5,A-U,RA5-A-U-1-1750,Almeão (Estação),1,RA5-1
+RA5,A-U,RA5-A-U-1-1950,Almeão (Estação),1,RA5-1
+RA5,A-S,RA5-A-S-1-0950,Almeão (Estação),1,RA5-1
+RA5,A-S,RA5-A-S-1-1350,Almeão (Estação),1,RA5-1
+RA5,A-S,RA5-A-S-1-1750,Almeão (Estação),1,RA5-1
+RA6,A-U,RA6-A-U-0-0735,Pinhal do Ameno,0,RA6-0
+RA6,A-U,RA6-A-U-0-0935,Pinhal do Ameno,0,RA6-0
+RA6,A-U,RA6-A-U-0-1235,Pinhal do Ameno,0,RA6-0
+RA6,A-U,RA6-A-U-0-1535,Pinhal do Ameno,0,RA6-0
+RA6,A-U,RA6-A-U-0-1835,Pinhal do Ameno,0,RA6-0
+RA6,A-S,RA6-A-S-0-0935,Pinhal do Ameno,0,RA6-0
+RA6,A-S,RA6-A-S-0-1235,Pinhal do Ameno,0,RA6-0
+RA6,A-U,RA6-A-U-1-0805,Almeão (Estação),1,RA6-1
+RA6,A-U,RA6-A-U-1-1005,Almeão (Estação),1,RA6-1
+RA6,A-U,RA6-A-U-1-1305,Almeão (Estação),1,RA6-1
+RA6,A-U,RA6-A-U-1-1605,Almeão (Estação),1,RA6-1
+RA6,A-U,RA6-A-U-1-1905,Almeão (Estação),1,RA6-1
+RA6,A-S,RA6-A-S-1-1005,Almeão (Estação),1,RA6-1
+RA6,A-S,RA6-A-S-1-1305,Almeão (Estação),1,RA6-1
+RA7,A-U,RA7-A-U-0-0705,Corvalinho (Estação),0,RA7-0
+RA7,A-U,RA7-A-U-0-1235,Corvalinho (Estação),0,RA7-0
+RA7,A-U,RA7-A-U-0-1735,Corvalinho (Estação),0,RA7-0
+RA7,E-U,RA7-E-U-0-1550,Corvalinho (Estação),0,RA7-0
+RA7,A-U,RA7-A-U-1-0840,Saramela (Centro),1,RA7-1
+RA7,A-U,RA7-A-U-1-1410,Saramela (Centro),1,RA7-1
+RA7,A-U,RA7-A-U-1-1910,Saramela (Centro),1,RA7-1
+RA7,E-U,RA7-E-U-1-0710,Saramela (Centro),1,RA7-1
+RA8,A-U,RA8-A-U-0-0720,Brisalva (Praia Fluvial),0,RA8-0
+RA8,A-U,RA8-A-U-0-1020,Brisalva (Praia Fluvial),0,RA8-0
+RA8,A-U,RA8-A-U-0-1320,Brisalva (Praia Fluvial),0,RA8-0
+RA8,A-U,RA8-A-U-0-1720,Brisalva (Praia Fluvial),0,RA8-0
+RA8,A-DF,RA8-A-DF-0-1000,Brisalva (Praia Fluvial),0,RA8-0
+RA8,A-DF,RA8-A-DF-0-1500,Brisalva (Praia Fluvial),0,RA8-0
+RA8,A-U,RA8-A-U-1-0750,Porto Ameno (Terminal),1,RA8-1
+RA8,A-U,RA8-A-U-1-1050,Porto Ameno (Terminal),1,RA8-1
+RA8,A-U,RA8-A-U-1-1350,Porto Ameno (Terminal),1,RA8-1
+RA8,A-U,RA8-A-U-1-1750,Porto Ameno (Terminal),1,RA8-1
+RA8,A-DF,RA8-A-DF-1-1230,Porto Ameno (Terminal),1,RA8-1
+RA8,A-DF,RA8-A-DF-1-1830,Porto Ameno (Terminal),1,RA8-1
+RA11,E-U,RA11-E-U-0-0700,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-0720,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-0740,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-0800,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-0820,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-0840,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-0900,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-0920,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-0940,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1000,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1020,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1040,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1100,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1120,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1140,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1200,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1220,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1240,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1300,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1320,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1340,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1400,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1420,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1440,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1500,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1520,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1540,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1600,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1620,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1640,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1700,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1720,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1740,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1800,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1820,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1840,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1900,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1920,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-1940,Porto Ameno (Terminal),0,RA11-0
+RA11,E-U,RA11-E-U-0-2000,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-0730,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-0800,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-0830,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-0900,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-0930,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1000,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1030,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1100,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1130,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1200,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1230,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1300,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1330,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1400,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1430,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1500,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1530,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1600,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1630,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1700,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1730,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1800,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1830,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1900,Porto Ameno (Terminal),0,RA11-0
+RA11,FE-U,RA11-FE-U-0-1930,Porto Ameno (Terminal),0,RA11-0
+RA11,A-S,RA11-A-S-0-0800,Porto Ameno (Terminal),0,RA11-0
+RA11,A-S,RA11-A-S-0-0840,Porto Ameno (Terminal),0,RA11-0
+RA11,A-S,RA11-A-S-0-0920,Porto Ameno (Terminal),0,RA11-0
+RA11,A-S,RA11-A-S-0-1000,Porto Ameno (Terminal),0,RA11-0
+RA11,A-S,RA11-A-S-0-1040,Porto Ameno (Terminal),0,RA11-0
+RA11,A-S,RA11-A-S-0-1120,Porto Ameno (Terminal),0,RA11-0
+RA11,A-S,RA11-A-S-0-1200,Porto Ameno (Terminal),0,RA11-0
+RA11,A-S,RA11-A-S-0-1240,Porto Ameno (Terminal),0,RA11-0
+RA11,A-S,RA11-A-S-0-1320,Porto Ameno (Terminal),0,RA11-0
+RA21,E-U,RA21-E-U-0-0715,Porto Ameno (Escola Secundária),0,RA21-0
+RA21,E-U,RA21-E-U-1-1710,Covas do Vento,1,RA21-1

@@ -1,0 +1,2 @@
+feed_publisher_name,feed_publisher_url,feed_lang,feed_version,feed_contact_url
+Gaivota Expressos (inventada para a demonstração),https://gaivota-expressos.example.org,pt,demo-1,https://gaivota-expressos.example.org/contacto

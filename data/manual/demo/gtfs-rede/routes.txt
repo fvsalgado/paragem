@@ -1,0 +1,11 @@
+route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route_text_color
+RA1,RA,1,Porto Ameno – Almeão,3,0A5C7A,FFFFFF
+RA2,RA,2,Porto Ameno (Estação) – Saramela,3,8C3B2A,FFFFFF
+RA3,RA,3,Saramela – Montelírio,3,5B4E1E,FFFFFF
+RA4,RA,4,Porto Ameno – Corvalinho – Serrabela,3,1F5F4A,FFFFFF
+RA5,RA,5,Almeão – Montelírio,3,6A3D7A,FFFFFF
+RA6,RA,6,Almeão – Pinhal do Ameno,3,3D5A1E,FFFFFF
+RA7,RA,7,"Saramela – Corvalinho, pelas Lontras",3,7A4B12,FFFFFF
+RA8,RA,8,Porto Ameno – Brisalva (Praia Fluvial),3,1C5C6E,FFFFFF
+RA11,RA,11,Circular de Porto Ameno,3,2D6A3E,FFFFFF
+RA21,RA,21,Escolar: Covas do Vento – Porto Ameno,3,4A5C66,FFFFFF

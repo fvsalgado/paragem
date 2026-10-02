@@ -1,0 +1,5 @@
+route_id,service_id,trip_id,trip_headsign,direction_id,shape_id
+GE1,A-TD,GE1-0-0730,Cabo Lírio (Terminal),0,GE1-0
+GE1,A-TD,GE1-0-1630,Cabo Lírio (Terminal),0,GE1-0
+GE1,A-TD,GE1-1-0915,Lagoa Serena (Terminal),1,GE1-1
+GE1,A-TD,GE1-1-1815,Lagoa Serena (Terminal),1,GE1-1

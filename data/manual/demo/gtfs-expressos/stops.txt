@@ -1,0 +1,7 @@
+stop_id,stop_name,stop_lat,stop_lon
+ge_lagoa_serena,Lagoa Serena (Terminal),39.649213,-10.653140
+ge_corvalinho,Corvalinho (Nó da Via Rápida),39.562865,-10.632858
+ge_porto_ameno,Porto Ameno (Terminal Rodoviário),39.470390,-10.538183
+ge_almeao,Almeão (Nó da Via Rápida),39.468270,-10.440878
+ge_montelirio,Montelírio (Nó da Via Rápida),39.364667,-10.347797
+ge_cabo_lirio,Cabo Lírio (Terminal),39.266347,-10.326965

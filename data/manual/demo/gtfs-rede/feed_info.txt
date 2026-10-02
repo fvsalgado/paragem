@@ -1,0 +1,2 @@
+feed_publisher_name,feed_publisher_url,feed_lang,feed_version,feed_contact_url
+Paragem.pt (região de demonstração),https://rede-ameno.example.org,pt,demo-1,https://rede-ameno.example.org/contacto

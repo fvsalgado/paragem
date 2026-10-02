@@ -1,0 +1,2 @@
+feed_publisher_name,feed_publisher_url,feed_lang,feed_version,feed_contact_url
+Ferrovia do Poente (inventada para a demonstração),https://ferrovia-do-poente.example.org,pt,demo-1,https://ferrovia-do-poente.example.org/contacto

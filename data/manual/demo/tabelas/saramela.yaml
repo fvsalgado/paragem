@@ -1,0 +1,20 @@
+# O transporte a pedido do concelho de Saramela — INVENTADO.
+#
+# O circuito das Lontras sobe a ribeira até Lontral e às casas espalhadas à
+# volta, onde a carreira regular só passa três vezes por dia. Duas épocas: no
+# período escolar há uma volta à hora de saída da escola.
+
+fonte: inventado para a região de demonstração
+circuitos:
+  - nome: "Circuito das Lontras"
+    regras:
+      - "Segundas, quartas e sextas, exceto feriados"
+      - "Reserva até às 15h00 do dia útil anterior"
+    colunas: ["Período escolar - Ida", "Período escolar - Volta", "Férias escolares - Ida", "Férias escolares - Volta"]
+    paragens:
+      - ["Lontral (Largo)", ["8:05", "17:05", "9:05", "12:35"]]
+      - ["Lontral (Fonte)", ["8:08", "17:02", "9:08", "12:32"]]
+      - ["Casal das Lontras", ["8:14", "16:56", "9:14", "12:26"]]
+      - ["Saramela (Igreja)", ["8:27", "16:43", "9:27", "12:13"]]
+      - ["Saramela (Centro de Saúde)", ["8:31", "16:39", "9:31", "12:09"]]
+      - ["Saramela (Escola)", ["8:34", "16:35", "", ""]]

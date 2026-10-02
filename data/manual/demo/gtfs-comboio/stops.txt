@@ -1,0 +1,8 @@
+stop_id,stop_name,stop_lat,stop_lon
+fp_ls,Lagoa Serena,39.645586,-10.655313
+fp_co,Corvalinho,39.556847,-10.625062
+fp_pa,Porto Ameno,39.481171,-10.530818
+fp_vs,Vale Sereno,39.467658,-10.478460
+fp_al,Almeão,39.451892,-10.428428
+fp_az,Azenhas do Ameno,39.402342,-10.391196
+fp_mt,Montelírio,39.360901,-10.367926

@@ -1,0 +1,31 @@
+# O transporte a pedido do concelho de Corvalinho — INVENTADO.
+#
+# Dois circuitos: o da Serra, que desce de Cerro da Gralha e de Serrabela à
+# vila, e a ligação de Covas do Vento a Porto Ameno, que atravessa a fronteira
+# do concelho. Só circulam com reserva.
+
+fonte: inventado para a região de demonstração
+circuitos:
+  - nome: "Circuito da Serra"
+    regras:
+      - "Terças e quintas, exceto feriados"
+      - "Reserva até às 15h00 do dia útil anterior"
+    colunas: ["Ida", "Volta"]
+    paragens:
+      - ["Cerro da Gralha (Largo)", ["8:40", "13:25"]]
+      - ["Cerro da Gralha (Miradouro)", ["8:44", "13:21"]]
+      - ["Serrabela (Igreja)", ["8:56", "13:09"]]
+      - ["Serrabela (Fonte)", ["8:59", "13:06"]]
+      - ["Corvalinho (Centro de Saúde)", ["9:12", "12:53"]]
+      - ["Corvalinho (Mercado)", ["9:15", "12:50"]]
+  - nome: "Ligação Covas do Vento – Porto Ameno"
+    regras:
+      - "Segundas, quartas e sextas, exceto feriados"
+      - "Reserva até às 15h00 do dia útil anterior"
+    colunas: ["Ida", "Volta"]
+    paragens:
+      - ["Covas do Vento (Igreja)", ["8:10", "17:40"]]
+      - ["Covas do Vento (Escola Velha)", ["8:13", "17:37"]]
+      - ["Corvalinho (Centro)", ["8:31", "17:19"]]
+      - ["Porto Ameno (Terminal)", ["8:52", "16:58"]]
+      - ["Porto Ameno (Hospital)", ["8:58", "16:50"]]

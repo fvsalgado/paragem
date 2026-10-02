@@ -1,0 +1,16 @@
+# O transporte a pedido do concelho de Montelírio — INVENTADO.
+#
+# Um circuito ao sábado, que é dia de mercado na vila.
+
+fonte: inventado para a região de demonstração
+circuitos:
+  - nome: "Circuito do Lírio"
+    regras:
+      - "Sábados, exceto feriados"
+      - "Reserva até às 15h00 do dia útil anterior"
+    colunas: ["Ida", "Volta"]
+    paragens:
+      - ["Casais do Lírio (Capela)", ["8:30", "12:40"]]
+      - ["Casais do Lírio (Escola)", ["8:33", "12:37"]]
+      - ["Montelírio (Mercado)", ["8:52", "12:18"]]
+      - ["Montelírio (Centro de Saúde)", ["8:56", "12:15"]]

@@ -1,0 +1,49 @@
+# O transporte a pedido das Terras do Ameno — inventado.
+#
+# Quatro zonas — três de um concelho e uma ligação que atravessa a fronteira
+# entre dois —, cada uma com o seu circuito e o horário dele. Os horários
+# estão em `data/manual/demo/tabelas/`, um ficheiro por concelho, e a ligação
+# entre cada circuito e o quadro do horário é a `horario_em` do catálogo.
+#
+# Almeão e Porto Ameno não têm zona própria: a rede regular e os urbanos
+# chegam a todo o lado — e uma região que diz onde NÃO há a pedido também
+# está a responder a quem pergunta.
+
+fonte: inventado (região de demonstração)
+concelhos_sem_zona: [almeao, porto-ameno]
+
+zonas:
+  - id: corvalinho-serra
+    nome: Corvalinho — Serra
+    concelho: corvalinho
+    circuitos:
+      - nome: Circuito da Serra
+
+  - id: saramela-lontras
+    nome: Saramela — Lontras
+    concelho: saramela
+    circuitos:
+      - nome: Circuito das Lontras
+
+  - id: montelirio
+    nome: Montelírio
+    concelho: montelirio
+    circuitos:
+      - nome: Circuito do Lírio
+
+  - id: ligacao-covas-porto-ameno
+    nome: Ligação Covas do Vento – Porto Ameno
+    concelho: null
+    entre: [corvalinho, porto-ameno]
+    circuitos:
+      - nome: Ligação Covas do Vento – Porto Ameno
+
+circuitos:
+  - nome: Circuito da Serra
+    horario_em: { saida: tap/corvalinho.json, quadro: "Circuito da Serra" }
+  - nome: Ligação Covas do Vento – Porto Ameno
+    horario_em: { saida: tap/corvalinho.json, quadro: "Ligação Covas do Vento – Porto Ameno" }
+  - nome: Circuito das Lontras
+    horario_em: { saida: tap/saramela.json, quadro: "Circuito das Lontras" }
+  - nome: Circuito do Lírio
+    horario_em: { saida: tap/montelirio.json, quadro: "Circuito do Lírio" }

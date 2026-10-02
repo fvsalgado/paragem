@@ -45,6 +45,12 @@ O que é nosso e está nesta lista por completude: `prova-gtfs-rede-alta`,
 de fio a pavio, AGPL-3.0-only como o resto. São duas porque uma só não prova
 multi-região: não há com que a comparar.
 
+E as seis da região de demonstração — `demo-geografia`, `demo-gtfs-rede`,
+`demo-gtfs-comboio`, `demo-gtfs-expressos`, `demo-osm` e `demo-tabelas` —,
+inventadas da mesma maneira por `data/manual/demo/inventar.py`. O mapa dessa
+região é desenhado a partir da `demo-geografia`, e não do OpenStreetMap: não
+deve nada a ninguém, e a atribuição no canto do mapa di-lo.
+
 ## As duas obrigações que não são negociáveis
 
 ### A atribuição do OpenStreetMap

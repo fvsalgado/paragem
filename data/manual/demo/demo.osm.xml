@@ -1,0 +1,327 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Extrato INVENTADO, com a forma de um extrato do OpenStreetMap, para a
+  região de demonstração (as Terras do Ameno). Não tem um único objeto do
+  OpenStreetMap verdadeiro: os identificadores estão na gama 95xxxxxxxx e
+  seguintes para ninguém os confundir com objetos reais.
+
+  Gerado por data/manual/demo/inventar.py — não se edita à mão.
+-->
+<osm version="0.6" generator="paragem-demonstracao">
+  <node id="9500000001" lat="39.4703090" lon="-10.5383580" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="bicycle_rental"/>
+    <tag k="brand" v="Bici Ameno"/>
+    <tag k="network" v="Bici Ameno"/>
+    <tag k="operator" v="Comunidade Intermunicipal das Terras do Ameno"/>
+    <tag k="name" v="Bici Ameno — Terminal"/>
+    <tag k="capacity" v="16"/>
+  </node>
+  <node id="9500000002" lat="39.4806490" lon="-10.5305430" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="bicycle_rental"/>
+    <tag k="brand" v="Bici Ameno"/>
+    <tag k="network" v="Bici Ameno"/>
+    <tag k="operator" v="Comunidade Intermunicipal das Terras do Ameno"/>
+    <tag k="name" v="Bici Ameno — Estação de Porto Ameno"/>
+    <tag k="capacity" v="14"/>
+  </node>
+  <node id="9500000003" lat="39.4770860" lon="-10.5272690" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="bicycle_rental"/>
+    <tag k="brand" v="Bici Ameno"/>
+    <tag k="network" v="Bici Ameno"/>
+    <tag k="operator" v="Comunidade Intermunicipal das Terras do Ameno"/>
+    <tag k="name" v="Bici Ameno — Hospital"/>
+    <tag k="capacity" v="10"/>
+  </node>
+  <node id="9500000004" lat="39.4625740" lon="-10.5361310" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="bicycle_rental"/>
+    <tag k="brand" v="Bici Ameno"/>
+    <tag k="network" v="Bici Ameno"/>
+    <tag k="operator" v="Comunidade Intermunicipal das Terras do Ameno"/>
+    <tag k="name" v="Bici Ameno — Jardim do Rio"/>
+    <tag k="capacity" v="12"/>
+  </node>
+  <node id="9500000005" lat="39.4639730" lon="-10.5268210" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="bicycle_rental"/>
+    <tag k="brand" v="Bici Ameno"/>
+    <tag k="network" v="Bici Ameno"/>
+    <tag k="operator" v="Comunidade Intermunicipal das Terras do Ameno"/>
+    <tag k="name" v="Bici Ameno — Escola Secundária"/>
+    <tag k="capacity" v="10"/>
+  </node>
+  <node id="9500000006" lat="39.4514920" lon="-10.4277130" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="bicycle_rental"/>
+    <tag k="brand" v="Bici Ameno"/>
+    <tag k="network" v="Bici Ameno"/>
+    <tag k="operator" v="Comunidade Intermunicipal das Terras do Ameno"/>
+    <tag k="name" v="Bici Ameno — Estação de Almeão"/>
+    <tag k="capacity" v="12"/>
+  </node>
+  <node id="9500000007" lat="39.4424310" lon="-10.4216240" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="bicycle_rental"/>
+    <tag k="brand" v="Bici Ameno"/>
+    <tag k="network" v="Bici Ameno"/>
+    <tag k="operator" v="Comunidade Intermunicipal das Terras do Ameno"/>
+    <tag k="name" v="Bici Ameno — Centro de Almeão"/>
+    <tag k="capacity" v="10"/>
+  </node>
+  <node id="9500000008" lat="39.4461280" lon="-10.4144600" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="bicycle_rental"/>
+    <tag k="brand" v="Bici Ameno"/>
+    <tag k="network" v="Bici Ameno"/>
+    <tag k="operator" v="Comunidade Intermunicipal das Terras do Ameno"/>
+    <tag k="name" v="Bici Ameno — Castelo de Almeão"/>
+    <tag k="capacity" v="8"/>
+  </node>
+  <node id="9500000009" lat="39.4703360" lon="-10.5388000" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="taxi"/>
+    <tag k="name" v="Praça de táxis do Terminal"/>
+  </node>
+  <node id="9500000010" lat="39.4806770" lon="-10.5309850" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="taxi"/>
+    <tag k="name" v="Praça de táxis da Estação de Porto Ameno"/>
+  </node>
+  <node id="9500000011" lat="39.4424580" lon="-10.4220670" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="taxi"/>
+    <tag k="name" v="Praça de táxis de Almeão"/>
+  </node>
+  <node id="9500000012" lat="39.3791860" lon="-10.5953730" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="taxi"/>
+    <tag k="name" v="Praça de táxis de Saramela"/>
+  </node>
+  <node id="9500000013" lat="39.5490020" lon="-10.6184900" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="taxi"/>
+    <tag k="name" v="Praça de táxis de Corvalinho"/>
+  </node>
+  <node id="9500000014" lat="39.3513730" lon="-10.3657580" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="taxi"/>
+    <tag k="name" v="Praça de táxis de Montelírio"/>
+  </node>
+  <node id="9500000015" lat="39.4767530" lon="-10.5271530" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="hospital"/>
+    <tag k="name" v="Hospital de Porto Ameno"/>
+  </node>
+  <node id="9500000016" lat="39.4728240" lon="-10.5355120" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="townhall"/>
+    <tag k="name" v="Câmara Municipal de Porto Ameno"/>
+  </node>
+  <node id="9500000017" lat="39.4636390" lon="-10.5267040" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="school"/>
+    <tag k="name" v="Escola Secundária de Porto Ameno"/>
+  </node>
+  <node id="9500000018" lat="39.4711320" lon="-10.5282500" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="marketplace"/>
+    <tag k="name" v="Mercado Municipal de Porto Ameno"/>
+  </node>
+  <node id="9500000019" lat="39.4723080" lon="-10.5389900" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="library"/>
+    <tag k="name" v="Biblioteca Municipal de Porto Ameno"/>
+  </node>
+  <node id="9500000020" lat="39.4734540" lon="-10.5461890" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="leisure" v="sports_centre"/>
+    <tag k="name" v="Piscinas Municipais de Porto Ameno"/>
+  </node>
+  <node id="9500000021" lat="39.4682960" lon="-10.5308520" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="healthcare" v="centre"/>
+    <tag k="name" v="Centro de Saúde de Porto Ameno"/>
+  </node>
+  <node id="9500000022" lat="39.4699760" lon="-10.5382410" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="bus_station"/>
+    <tag k="name" v="Terminal Rodoviário de Porto Ameno"/>
+  </node>
+  <node id="9500000023" lat="39.4630950" lon="-10.5333300" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="tourism" v="museum"/>
+    <tag k="name" v="Museu do Rio Ameno"/>
+  </node>
+  <node id="9500000024" lat="39.4415360" lon="-10.4186770" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="townhall"/>
+    <tag k="name" v="Câmara Municipal de Almeão"/>
+  </node>
+  <node id="9500000025" lat="39.4411340" lon="-10.4121410" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="healthcare" v="centre"/>
+    <tag k="name" v="Centro de Saúde de Almeão"/>
+  </node>
+  <node id="9500000026" lat="39.4372340" lon="-10.4223390" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="school"/>
+    <tag k="name" v="Escola Básica de Almeão"/>
+  </node>
+  <node id="9500000027" lat="39.4439790" lon="-10.4180700" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="marketplace"/>
+    <tag k="name" v="Mercado de Almeão"/>
+  </node>
+  <node id="9500000028" lat="39.4457940" lon="-10.4143440" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="historic" v="castle"/>
+    <tag k="name" v="Castelo de Almeão"/>
+  </node>
+  <node id="9500000029" lat="39.3797020" lon="-10.5913930" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="townhall"/>
+    <tag k="name" v="Câmara Municipal de Saramela"/>
+  </node>
+  <node id="9500000030" lat="39.3802380" lon="-10.5982680" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="healthcare" v="centre"/>
+    <tag k="name" v="Centro de Saúde de Saramela"/>
+  </node>
+  <node id="9500000031" lat="39.3816370" lon="-10.5927180" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="school"/>
+    <tag k="name" v="Escola Básica de Saramela"/>
+  </node>
+  <node id="9500000032" lat="39.3758840" lon="-10.5964640" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="place_of_worship"/>
+    <tag k="name" v="Igreja Matriz de Saramela"/>
+  </node>
+  <node id="9500000033" lat="39.5488500" lon="-10.6144230" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="townhall"/>
+    <tag k="name" v="Câmara Municipal de Corvalinho"/>
+  </node>
+  <node id="9500000034" lat="39.5465210" lon="-10.6201180" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="healthcare" v="centre"/>
+    <tag k="name" v="Centro de Saúde de Corvalinho"/>
+  </node>
+  <node id="9500000035" lat="39.5904050" lon="-10.6468200" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="tourism" v="viewpoint"/>
+    <tag k="name" v="Miradouro do Cerro da Gralha"/>
+  </node>
+  <node id="9500000036" lat="39.3529700" lon="-10.3611560" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="townhall"/>
+    <tag k="name" v="Câmara Municipal de Montelírio"/>
+  </node>
+  <node id="9500000037" lat="39.3490870" lon="-10.3657830" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="healthcare" v="centre"/>
+    <tag k="name" v="Centro de Saúde de Montelírio"/>
+  </node>
+  <node id="9500000038" lat="39.3484670" lon="-10.3627930" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="amenity" v="school"/>
+    <tag k="name" v="Escola Secundária de Montelírio"/>
+  </node>
+  <node id="9500000039" lat="39.5372520" lon="-10.4711290" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="tourism" v="attraction"/>
+    <tag k="name" v="Praia Fluvial de Brisalva"/>
+  </node>
+  <node id="9500000040" lat="39.4690090" lon="-10.5366350" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="place" v="city"/>
+    <tag k="name" v="Porto Ameno"/>
+  </node>
+  <node id="9500000041" lat="39.4419820" lon="-10.4202840" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="place" v="town"/>
+    <tag k="name" v="Almeão"/>
+  </node>
+  <node id="9500000042" lat="39.3789190" lon="-10.5948110" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="place" v="town"/>
+    <tag k="name" v="Saramela"/>
+  </node>
+  <node id="9500000043" lat="39.5500900" lon="-10.6180810" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="place" v="town"/>
+    <tag k="name" v="Corvalinho"/>
+  </node>
+  <node id="9500000044" lat="39.3518920" lon="-10.3621080" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="place" v="town"/>
+    <tag k="name" v="Montelírio"/>
+  </node>
+  <node id="9500000045" lat="39.6491890" lon="-10.6529860" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="place" v="town"/>
+    <tag k="name" v="Lagoa Serena"/>
+  </node>
+  <node id="9500000046" lat="39.2663060" lon="-10.3272030" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="place" v="town"/>
+    <tag k="name" v="Cabo Lírio"/>
+  </node>
+  <node id="9500000047" lat="39.4627030" lon="-10.4784600" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="place" v="village"/>
+    <tag k="name" v="Vale Sereno"/>
+  </node>
+  <node id="9500000048" lat="39.3987390" lon="-10.3970140" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="place" v="village"/>
+    <tag k="name" v="Azenhas do Ameno"/>
+  </node>
+  <node id="9500000049" lat="39.4960360" lon="-10.6878920" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="place" v="village"/>
+    <tag k="name" v="Covas do Vento"/>
+  </node>
+  <node id="9500000050" lat="39.4284680" lon="-10.6646210" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="place" v="village"/>
+    <tag k="name" v="Lontral"/>
+  </node>
+  <node id="9500000051" lat="39.4257660" lon="-10.5645590" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="place" v="village"/>
+    <tag k="name" v="Vau do Ameno"/>
+  </node>
+  <node id="9500000052" lat="39.5861260" lon="-10.5715400" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="place" v="village"/>
+    <tag k="name" v="Serrabela"/>
+  </node>
+  <node id="9500000053" lat="39.5374770" lon="-10.4714780" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="place" v="village"/>
+    <tag k="name" v="Brisalva"/>
+  </node>
+  <node id="9500000054" lat="39.4780180" lon="-10.3388380" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="place" v="village"/>
+    <tag k="name" v="Pinhal do Ameno"/>
+  </node>
+  <node id="9500000055" lat="39.5906310" lon="-10.6471690" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="place" v="village"/>
+    <tag k="name" v="Cerro da Gralha"/>
+  </node>
+  <node id="9500000056" lat="39.3915320" lon="-10.3400020" version="1" timestamp="2026-10-02T00:00:00Z">
+    <tag k="place" v="village"/>
+    <tag k="name" v="Casais do Lírio"/>
+  </node>
+  <node id="9500000057" lat="39.4513840" lon="-10.4279450" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000058" lat="39.4470610" lon="-10.4238320" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000059" lat="39.4469360" lon="-10.4209770" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000060" lat="39.4464660" lon="-10.4178510" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000061" lat="39.4460200" lon="-10.4146930" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000062" lat="39.4438390" lon="-10.4156490" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000063" lat="39.4442040" lon="-10.4184190" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000064" lat="39.4438390" lon="-10.4156490" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000065" lat="39.4414250" lon="-10.4154700" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000066" lat="39.4413590" lon="-10.4124900" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000067" lat="39.4414250" lon="-10.4154700" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000068" lat="39.4417610" lon="-10.4190260" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000069" lat="39.4423230" lon="-10.4218570" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000070" lat="39.4398870" lon="-10.4225030" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000071" lat="39.4374590" lon="-10.4226880" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000072" lat="39.4380430" lon="-10.4256840" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000073" lat="39.4379830" lon="-10.4283790" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000074" lat="39.4380430" lon="-10.4256840" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000075" lat="39.4402820" lon="-10.4253240" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000076" lat="39.4423630" lon="-10.4247100" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000077" lat="39.4446350" lon="-10.4246470" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000078" lat="39.4470610" lon="-10.4238320" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <node id="9500000079" lat="39.4513840" lon="-10.4279450" version="1" timestamp="2026-10-02T00:00:00Z"/>
+  <way id="9600000001" version="1" timestamp="2026-10-02T00:00:00Z">
+    <nd ref="9500000057"/>
+    <nd ref="9500000058"/>
+    <nd ref="9500000059"/>
+    <nd ref="9500000060"/>
+    <nd ref="9500000061"/>
+    <nd ref="9500000062"/>
+    <nd ref="9500000063"/>
+    <nd ref="9500000064"/>
+    <nd ref="9500000065"/>
+    <nd ref="9500000066"/>
+    <nd ref="9500000067"/>
+    <nd ref="9500000068"/>
+    <nd ref="9500000069"/>
+    <nd ref="9500000070"/>
+    <nd ref="9500000071"/>
+    <nd ref="9500000072"/>
+    <nd ref="9500000073"/>
+    <nd ref="9500000074"/>
+    <nd ref="9500000075"/>
+    <nd ref="9500000076"/>
+    <nd ref="9500000077"/>
+    <nd ref="9500000078"/>
+    <nd ref="9500000079"/>
+    <tag k="highway" v="residential"/>
+    <tag k="name" v="Volta da Circular de Almeão"/>
+  </way>
+  <relation id="9700000001" version="1" timestamp="2026-10-02T00:00:00Z">
+    <member type="way" ref="9600000001" role=""/>
+    <tag k="type" v="route"/>
+    <tag k="route" v="bus"/>
+    <tag k="ref" v="AC"/>
+    <tag k="name" v="Almeão Circular"/>
+    <tag k="network" v="Almeão Circular"/>
+    <tag k="operator" v="C.M. Almeão"/>
+    <tag k="colour" v="#5B3A8E"/>
+  </relation>
+</osm>
