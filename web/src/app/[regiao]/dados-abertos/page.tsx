@@ -3,6 +3,7 @@ import { dadosAbertos, exigirRegiao, lacunas, regiao } from '@/lib/dados';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { tamanho, type Descarga } from '@/lib/formato';
 import { aAutoridade } from '@/lib/prosa';
+import { dataCompleta } from '@/lib/dias';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
 export async function generateMetadata({
@@ -79,7 +80,13 @@ function Ficheiro({ d, regiao }: { d: Descarga; regiao: string }) {
       </a>{' '}
       <span className="secundario">
         {tamanho(d.bytes)}
-        {d.gerado_em ? ` · ${d.gerado_em}` : ''}
+        {/* «28/09/2026», como o resto do sítio escreve as datas — e não o
+            «2026-09-28» do ficheiro (P1-046). */}
+        {d.gerado_em && /^\d{4}-\d{2}-\d{2}$/.test(d.gerado_em)
+          ? ` · ${dataCompleta(d.gerado_em.replace(/-/g, ''))}`
+          : d.gerado_em
+            ? ` · ${d.gerado_em}`
+            : ''}
       </span>
       {d.descricao && <div className="secundario">{d.descricao}</div>}
       {/* A ATRIBUIÇÃO QUE O FICHEIRO LEVA DENTRO, dita aqui também — e não só

@@ -22,11 +22,16 @@ import type { PartidasCompactas } from '@/lib/formato';
  *    valem HOJE abertos e marcados «hoje» (`QuadrosPorDia`, o mesmo da página
  *    da linha).
  *
- * **Porque é que isto corre no navegador.** É a única coisa na página que
- * depende da hora de quem lê, e a página é servida da cache: no servidor, a
- * «hora atual» seria a da última vez que a página se fez. Até o navegador
- * fazer as contas, a página tem o horário inteiro, com os quadros fechados —
- * que é o que fica a quem não tem JavaScript.
+ * **Porque é que o «A seguir» corre no navegador.** É a única coisa na
+ * página que depende da hora de quem lê, e a página é servida da cache: no
+ * servidor, a «hora atual» seria a da última vez que a página se fez. Até o
+ * navegador fazer as contas, o lugar das partidas está guardado, e o horário
+ * inteiro já lá está, com os quadros de hoje abertos pelo servidor — que é o
+ * que fica a quem não tem JavaScript.
+ *
+ * **Num ecrã largo, lado a lado** (P1-014): o horário à esquerda, e o «A
+ * seguir» à direita, preso ao alto enquanto se desce pelos quadros. No
+ * telemóvel, um a seguir ao outro, pela ordem das perguntas.
  */
 export default function PartidasDaParagem({
   regiao,
@@ -43,8 +48,8 @@ export default function PartidasDaParagem({
   quadrosDeHoje?: { hoje: string; abertos: string[] } | null;
 }) {
   return (
-    <>
-      <section aria-labelledby="a-seguir" className="a-seguir">
+    <div className="em-colunas partidas-e-horario">
+      <section aria-labelledby="a-seguir" className="a-seguir coluna-lateral">
         <ProximasPartidas
           regiao={regiao}
           partidas={partidas}
@@ -54,10 +59,10 @@ export default function PartidasDaParagem({
         />
       </section>
 
-      <section aria-labelledby="horario">
+      <section aria-labelledby="horario" className="coluna-principal">
         <h2 id="horario">Horário completo</h2>
         <QuadrosPorDia regiao={regiao} quadros={quadros} noServidor={quadrosDeHoje} />
       </section>
-    </>
+    </div>
   );
 }

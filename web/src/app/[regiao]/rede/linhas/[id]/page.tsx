@@ -266,39 +266,51 @@ export default async function Linha({
             </dl>
             <p className="secundario">{plural(s.viagens, 'viagem', 'viagens')} neste sentido.</p>
 
-            <h3 className="parte-do-sentido">Horário</h3>
-            {quadros.length > 0 ? (
-              <QuadrosPorDia regiao={rid} quadros={quadros} noServidor={hoje} />
-            ) : (
-              // DADOS DE ANTES DO HORÁRIO DA LINHA: diz-se onde estão as
-              // horas, em vez de deixar a secção vazia a parecer que não há.
-              <p>
-                As horas desta linha estão nas páginas de cada paragem do percurso, aqui em baixo.
-              </p>
-            )}
+            {/* NUM ECRÃ LARGO, O HORÁRIO E O PERCURSO LADO A LADO (P1-014). Era
+                uma coluna de 608 px num ecrã de 1440, com 400 px vazios de
+                cada lado e o percurso a começar depois do último quadro. */}
+            <div className="em-colunas horario-e-percurso">
+              <div className="coluna-principal">
+                <h3 className="parte-do-sentido">Horário</h3>
+                {quadros.length > 0 ? (
+                  <QuadrosPorDia regiao={rid} quadros={quadros} noServidor={hoje} />
+                ) : (
+                  // DADOS DE ANTES DO HORÁRIO DA LINHA: diz-se onde estão as
+                  // horas, em vez de deixar a secção vazia a parecer que não há.
+                  <p>
+                    As horas desta linha estão nas páginas de cada paragem do percurso, aqui em
+                    baixo.
+                  </p>
+                )}
+              </div>
 
-            <h3 className="parte-do-sentido">Percurso</h3>
-            {s.variantes > 1 && (
-              <p className="secundario">
-                {s.variantes} percursos diferentes neste sentido. Mostra-se o mais servido (
-                {plural(s.viagens_deste_percurso, 'viagem', 'viagens')}) — há viagens que não param
-                em todas estas paragens.
-              </p>
-            )}
-            {/* O PERCURSO DESENHADO NA COR DA LINHA, como nos mapas de rede:
+              <div className="coluna-lateral">
+                <h3 className="parte-do-sentido">Percurso</h3>
+                {s.variantes > 1 && (
+                  <p className="secundario">
+                    {s.variantes} percursos diferentes neste sentido. Mostra-se o mais servido (
+                    {plural(s.viagens_deste_percurso, 'viagem', 'viagens')}) — há viagens que não
+                    param em todas estas paragens.
+                  </p>
+                )}
+                {/* O PERCURSO DESENHADO NA COR DA LINHA, como nos mapas de rede:
                 um fio com um nó por paragem, cheio nas pontas. Era uma lista
                 numerada, com o número de ordem à direita a fazer de ruído, e
                 a cor da linha não aparecia em lado nenhum além do distintivo. */}
-            <ol className="percurso-da-linha" style={cor}>
-              {s.paragens.map((p, i) => (
-                <li
-                  key={`${p.id}-${i}`}
-                  className={i === 0 ? 'ponta primeira' : i === ultima ? 'ponta ultima' : undefined}
-                >
-                  <Link href={urlDaParagem(rid, p.id)}>{p.nome}</Link>
-                </li>
-              ))}
-            </ol>
+                <ol className="percurso-da-linha" style={cor}>
+                  {s.paragens.map((p, i) => (
+                    <li
+                      key={`${p.id}-${i}`}
+                      className={
+                        i === 0 ? 'ponta primeira' : i === ultima ? 'ponta ultima' : undefined
+                      }
+                    >
+                      <Link href={urlDaParagem(rid, p.id)}>{p.nome}</Link>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
           </section>
         );
       })}
