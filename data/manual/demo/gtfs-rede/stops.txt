@@ -1,0 +1,37 @@
+stop_id,stop_name,stop_lat,stop_lon
+alm_centro,Almeão (Centro),39.442323,-10.421857
+alm_escola,Almeão (Escola),39.437459,-10.422688
+alm_estacao,Almeão (Estação),39.451384,-10.427945
+alm_fonte,Almeão (Bairro da Fonte),39.437983,-10.428379
+alm_pinhal,Pinhal do Ameno,39.478018,-10.338838
+alm_saude,Almeão (Centro de Saúde),39.441359,-10.412490
+cor_centro,Corvalinho (Centro),39.548867,-10.618280
+cor_covas,Covas do Vento,39.496036,-10.687892
+cor_escola,Corvalinho (Escola),39.551554,-10.615563
+cor_estacao,Corvalinho (Estação),39.556330,-10.624595
+cor_serrabela,Serrabela,39.586126,-10.571540
+mon_azenhas,Azenhas do Ameno,39.398739,-10.397014
+mon_azenhas_estacao,Azenhas do Ameno (Estação),39.401948,-10.391832
+mon_centro,Montelírio (Centro),39.351238,-10.365549
+mon_escola,Montelírio (Escola Secundária),39.348692,-10.363142
+mon_estacao,Montelírio (Estação),39.360283,-10.367760
+mon_mercado,Montelírio (Mercado),39.350969,-10.362768
+pam_alto_da_brisa,Alto da Brisa,39.511351,-10.506384
+pam_brisalva,Brisalva (Praia Fluvial),39.537477,-10.471478
+pam_camara,Porto Ameno (Câmara Municipal),39.473049,-10.535861
+pam_escola,Porto Ameno (Escola Secundária),39.463865,-10.527053
+pam_estacao,Porto Ameno (Estação),39.480541,-10.530776
+pam_fonte,Porto Ameno (Largo da Fonte),39.466778,-10.544018
+pam_hospital,Porto Ameno (Hospital),39.476978,-10.527502
+pam_mercado,Porto Ameno (Mercado),39.471357,-10.528599
+pam_moinho,Porto Ameno (Bairro do Moinho),39.460807,-10.546069
+pam_piscinas,Porto Ameno (Piscinas),39.473679,-10.546538
+pam_terminal,Porto Ameno (Terminal),39.470201,-10.538590
+pam_vale_sereno,Vale Sereno,39.462703,-10.478460
+pam_vale_sereno_estacao,Vale Sereno (Estação),39.467027,-10.478460
+pam_vau,Vau do Ameno,39.425766,-10.564559
+sar_centro,Saramela (Centro),39.379051,-10.595164
+sar_escola,Saramela (Escola),39.381862,-10.593067
+sar_igreja,Saramela (Igreja),39.376109,-10.596813
+sar_lontral,Lontral,39.428468,-10.664621
+sar_mercado,Saramela (Mercado),39.377268,-10.600527

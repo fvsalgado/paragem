@@ -1,0 +1,51 @@
+# O urbano da Câmara Municipal de Almeão — INVENTADO.
+#
+# Uma volta à vila a partir da estação, de hora a hora nos dias úteis e ao
+# sábado de manhã. É da câmara e não da rede: tem a sua cor, o seu nome e o seu
+# horário, e o produto mostra-o ao lado do resto sem pedir a ninguém que saiba
+# quem gere o quê.
+
+fonte: inventado para a região de demonstração
+circuitos:
+  - nome: "Dias úteis"
+    regras:
+      - "Segunda a sexta, exceto feriados"
+      - "Gratuito"
+    colunas: ["7:30", "8:30", "9:30", "10:30", "11:30", "12:30", "13:30", "14:30", "15:30", "16:30", "17:30", "18:30", "19:30"]
+    coordenadas:
+      "Almeão (Estação)": [39.451384, -10.427945]
+      "Almeão (Castelo)": [39.44602, -10.414693]
+      "Almeão (Mercado)": [39.444204, -10.418419]
+      "Almeão (Centro de Saúde)": [39.441359, -10.41249]
+      "Almeão (Centro)": [39.442323, -10.421857]
+      "Almeão (Escola)": [39.437459, -10.422688]
+      "Almeão (Bairro da Fonte)": [39.437983, -10.428379]
+    paragens:
+      - ["Almeão (Estação)", ["7:30", "8:30", "9:30", "10:30", "11:30", "12:30", "13:30", "14:30", "15:30", "16:30", "17:30", "18:30", "19:30"]]
+      - ["Almeão (Castelo)", ["7:34", "8:34", "9:34", "10:34", "11:34", "12:34", "13:34", "14:34", "15:34", "16:34", "17:34", "18:34", "19:34"]]
+      - ["Almeão (Mercado)", ["7:36", "8:36", "9:36", "10:36", "11:36", "12:36", "13:36", "14:36", "15:36", "16:36", "17:36", "18:36", "19:36"]]
+      - ["Almeão (Centro de Saúde)", ["7:39", "8:39", "9:39", "10:39", "11:39", "12:39", "13:39", "14:39", "15:39", "16:39", "17:39", "18:39", "19:39"]]
+      - ["Almeão (Centro)", ["7:41", "8:41", "9:41", "10:41", "11:41", "12:41", "13:41", "14:41", "15:41", "16:41", "17:41", "18:41", "19:41"]]
+      - ["Almeão (Escola)", ["7:43", "8:43", "9:43", "10:43", "11:43", "12:43", "13:43", "14:43", "15:43", "16:43", "17:43", "18:43", "19:43"]]
+      - ["Almeão (Bairro da Fonte)", ["7:45", "8:45", "9:45", "10:45", "11:45", "12:45", "13:45", "14:45", "15:45", "16:45", "17:45", "18:45", "19:45"]]
+  - nome: "Sábados"
+    regras:
+      - "Sábados, exceto feriados"
+      - "Gratuito"
+    colunas: ["8:30", "9:30", "10:30", "11:30", "12:30"]
+    coordenadas:
+      "Almeão (Estação)": [39.451384, -10.427945]
+      "Almeão (Castelo)": [39.44602, -10.414693]
+      "Almeão (Mercado)": [39.444204, -10.418419]
+      "Almeão (Centro de Saúde)": [39.441359, -10.41249]
+      "Almeão (Centro)": [39.442323, -10.421857]
+      "Almeão (Escola)": [39.437459, -10.422688]
+      "Almeão (Bairro da Fonte)": [39.437983, -10.428379]
+    paragens:
+      - ["Almeão (Estação)", ["8:30", "9:30", "10:30", "11:30", "12:30"]]
+      - ["Almeão (Castelo)", ["8:34", "9:34", "10:34", "11:34", "12:34"]]
+      - ["Almeão (Mercado)", ["8:36", "9:36", "10:36", "11:36", "12:36"]]
+      - ["Almeão (Centro de Saúde)", ["8:39", "9:39", "10:39", "11:39", "12:39"]]
+      - ["Almeão (Centro)", ["8:41", "9:41", "10:41", "11:41", "12:41"]]
+      - ["Almeão (Escola)", ["8:43", "9:43", "10:43", "11:43", "12:43"]]
+      - ["Almeão (Bairro da Fonte)", ["8:45", "9:45", "10:45", "11:45", "12:45"]]

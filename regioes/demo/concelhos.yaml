@@ -1,0 +1,46 @@
+# Os cinco concelhos das Terras do Ameno — inventados.
+#
+# Quatro são membros da autoridade de transportes; Montelírio é SERVIDO pela
+# rede sem ser membro, que é o caso que obriga a declarar dois números em vez
+# de um. Os limites de cada um estão desenhados em
+# `data/manual/demo/geografia.geojson`, e é por eles — e não pelo prefixo do
+# `stop_id` — que cada paragem fica num concelho.
+#
+# Os códigos (`dico`) estão numa gama que nenhum concelho português usa.
+
+concelhos:
+  - id: porto-ameno
+    nome: Porto Ameno
+    distrito: Ameno
+    dico: "9911"
+    membro: true
+    prefixo_stop_id: pam
+
+  - id: almeao
+    nome: Almeão
+    distrito: Ameno
+    dico: "9912"
+    membro: true
+    prefixo_stop_id: alm
+
+  - id: saramela
+    nome: Saramela
+    distrito: Ameno
+    dico: "9913"
+    membro: true
+    prefixo_stop_id: sar
+
+  - id: corvalinho
+    nome: Corvalinho
+    distrito: Ameno
+    dico: "9914"
+    membro: true
+    prefixo_stop_id: cor
+
+  - id: montelirio
+    nome: Montelírio
+    distrito: Ameno
+    dico: "9915"
+    membro: false
+    servido_por: Rede Ameno e transporte a pedido
+    prefixo_stop_id: mon

@@ -404,3 +404,113 @@ fontes:
 
       Sem `calendar.txt`, como o da Serra: os dias saem das regras do
       calendário da região, a contar do dia da construção.
+
+  # --- Região de demonstração ----------------------------------------------
+  #
+  # As Terras do Ameno: inventadas de fio a pavio, como as duas de prova, mas
+  # RICAS — a região «no dia 100», com os sete modos e um mapa desenhado por
+  # nós, para mostrar a quem decide tudo o que o produto faz. As provas são o
+  # dia zero, de propósito mínimas; esta é o contrário, e por isso existe à
+  # parte delas em vez de as encher.
+  #
+  # TUDO SAI DE `data/manual/demo/inventar.py`, que é a origem: mudar a
+  # demonstração é mudar lá e voltar a correr. O pipeline não corre esse
+  # ficheiro — lê o que ele escreveu, pelos leitores genéricos, como leria os
+  # de qualquer região.
+
+  - id: demo-geografia
+    nome: Geografia das Terras do Ameno (região de demonstração)
+    url: null
+    formato: geojson
+    acesso: local
+    ficheiro: data/manual/demo/geografia.geojson
+    sha256: "d6a76baf01ab63c16c45f21d892f0de7dae6f042ae3a841a2805a656fda25ea6"
+    licenca: AGPL-3.0-only
+    atribuicao: null
+    verificado_em: 2026-10-02
+    obtido_em: null
+    notas: >-
+      Inventada. Os concelhos, a água, o verde, as estradas, a linha de
+      comboio, os edifícios e os nomes das terras, num GeoJSON em graus. É ao
+      mesmo tempo o MAPA de fundo da região (os mosaicos desenham-se daqui,
+      sem o OpenStreetMap — `mapa:` na receita) e a sua CARTA ADMINISTRATIVA
+      (`limites:`), e por isso os dois não podem discordar. Fica no mar alto,
+      onde não há terra nenhuma que alguém possa confundir com a verdadeira.
+
+  - id: demo-gtfs-rede
+    nome: GTFS da Rede Ameno (região de demonstração)
+    url: null
+    formato: gtfs
+    acesso: local
+    ficheiro: data/manual/demo/gtfs-rede/
+    licenca: AGPL-3.0-only
+    atribuicao: null
+    verificado_em: 2026-10-02
+    obtido_em: null
+    notas: >-
+      Inventado. Dez linhas — interurbanas, uma circular urbana e uma escolar
+      — com traçados que seguem as estradas da geografia inventada. Sem
+      `calendar.txt`: os dias saem das regras do `regioes/demo/calendario.yaml`,
+      a contar do dia da construção.
+
+  - id: demo-gtfs-comboio
+    nome: GTFS da Ferrovia do Poente (região de demonstração)
+    url: null
+    formato: gtfs
+    acesso: local
+    ficheiro: data/manual/demo/gtfs-comboio/
+    licenca: AGPL-3.0-only
+    atribuicao: null
+    verificado_em: 2026-10-02
+    obtido_em: null
+    notas: >-
+      Inventado, e o operador também. Faz o papel do operador ferroviário
+      nacional: um feed de outra entidade, com uma linha que continua para lá
+      da fronteira da região.
+
+  - id: demo-gtfs-expressos
+    nome: GTFS da Gaivota Expressos (região de demonstração)
+    url: null
+    formato: gtfs
+    acesso: local
+    ficheiro: data/manual/demo/gtfs-expressos/
+    licenca: AGPL-3.0-only
+    atribuicao: null
+    verificado_em: 2026-10-02
+    obtido_em: null
+    notas: >-
+      Inventado, e o operador também. Faz o papel de um operador privado de
+      expressos que atravessa a região.
+
+  - id: demo-osm
+    nome: Extrato à maneira do OpenStreetMap da região de demonstração
+    url: null
+    formato: osm-xml
+    acesso: local
+    ficheiro: data/manual/demo/demo.osm.xml
+    sha256: "be4c6084ffd981262ce270fa111cdc4f83e3bf8c8d0575c755a69abe992d6137"
+    licenca: AGPL-3.0-only
+    atribuicao: null
+    verificado_em: 2026-10-02
+    obtido_em: null
+    notas: >-
+      Inventado. Tem a forma de um extrato do OpenStreetMap — bicicletas
+      partilhadas, praças de táxi, sítios com nome e a relação de rota de um
+      urbano municipal — para os leitores `osm-*` correrem contra ele, mas não
+      tem um único objeto do OpenStreetMap verdadeiro.
+
+  - id: demo-tabelas
+    nome: Horários em tabela da região de demonstração
+    url: null
+    formato: yaml
+    acesso: local
+    ficheiro: data/manual/demo/tabelas/
+    licenca: AGPL-3.0-only
+    atribuicao: null
+    verificado_em: 2026-10-02
+    obtido_em: null
+    notas: >-
+      Inventados. Os circuitos do transporte a pedido, um ficheiro por
+      concelho, e o urbano da câmara de Almeão com as coordenadas das
+      paragens — na forma em que uma autoridade ou uma câmara os entregaria
+      em tabela (leitor `horarios-tabela`).

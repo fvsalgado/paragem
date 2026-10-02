@@ -1,0 +1,79 @@
+# A região de demonstração: as Terras do Ameno.
+#
+# NÃO EXISTE. Fica no meio do Atlântico, onde não há terra nenhuma — nem uma
+# paragem, nem uma estrada, nem um rio, nem um horário vêm de sítio nenhum.
+# Tudo foi inventado por `data/manual/demo/inventar.py`, e os nomes foram
+# procurados no OpenStreetMap antes de ficarem: os que coincidiam com um lugar
+# português saíram.
+#
+# É A REGIÃO «NO DIA 100», e é o contrário das duas de prova. Aquelas são o
+# dia zero, de propósito mínimas — provam que uma região nasce sem código e
+# que um modo ausente não desenha secção nenhuma. Esta é a que se mostra a
+# quem decide: tem os sete modos, e cada um com o que o produto sabe fazer com
+# ele —
+#
+#   - a rede regular, com urbanos e interurbanos, horários escolares e de
+#     férias, dias úteis e fins de semana;
+#   - o comboio, com estações e transbordos para o autocarro à porta;
+#   - o transporte a pedido, com zonas e a regra de reserva;
+#   - o urbano de uma câmara, à margem da concessão;
+#   - as bicicletas partilhadas, os expressos e os táxis;
+#   - e um mapa desenhado por nós, com a nossa atribuição.
+#
+# Constrói-se sem rede, como as provas, e nasce sem uma linha de código: só
+# usa leitores genéricos. O artigo é «as» — as outras são «a» e «o» —, e a
+# caixa é disjunta das outras duas e longe de qualquer território de cliente.
+
+id: demo
+nome: Terras do Ameno
+artigo: as
+
+# Legível por máquina: o sítio marca-a em todas as páginas como demonstração,
+# e a montra do produto mostra-a — a maior das demonstrações é a do botão
+# «Experimentar».
+demonstracao: true
+
+autoridade_de_transportes:
+  nome: Comunidade Intermunicipal das Terras do Ameno
+  artigo: a
+  sigla: CITA
+  tipo: cim
+  url: https://terras-do-ameno.example.org
+
+rede:
+  nome: Rede Ameno
+  url: https://rede-ameno.example.org
+  operador: Transportes do Ameno
+  operador_artigo: os
+
+# O domínio em que esta região responde. É uma demonstração: o identificador
+# tal e qual, como as de prova.
+dominio: demo.paragem.pt
+
+territorio:
+  # Quatro municípios membros, e um quinto concelho servido sem o ser — como
+  # acontece de verdade, e é por isso que os dois números existem.
+  municipios_membros: 4
+  concelhos_servidos: 5
+  caixa:
+    lat_min: 39.30
+    lat_max: 39.62
+    lon_min: -10.75
+    lon_max: -10.30
+  margem_recorte_graus: 0.10
+
+modos:
+  - autocarro
+  - a-pedido
+  - comboio
+  - urbano-municipal
+  - bicicleta
+  - expresso
+  - taxi
+
+inclui:
+  concelhos: concelhos.yaml
+  tarifas: tarifas.yaml
+  calendario: calendario.yaml
+  fontes: fontes.yaml
+  a_pedido: a-pedido.yaml

@@ -1,0 +1,183 @@
+# A receita da região de demonstração.
+#
+# SÓ LEITORES GENÉRICOS, como nas provas — é o contrato: uma região nova entra
+# sem uma linha de código, e esta, que tem os sete modos, é a prova mais
+# exigente dele. Os ficheiros que estes leitores leem saem todos de
+# `data/manual/demo/inventar.py`, e estão declarados em `data/sources.yaml`
+# como inventados.
+
+saidas:
+  # A REDE REGULAR: dez linhas — interurbanas, a circular urbana de Porto
+  # Ameno, uma escolar —, com horários de período escolar e de férias, de dias
+  # úteis, sábados, domingos e feriados.
+  - fonte: demo-gtfs-rede
+    leitor: gtfs-arquivo
+    papel: feed-proprio
+    saida: gtfs/rede-ameno.zip
+    modo: autocarro
+    params:
+      recortar: false
+      # Os dias saem das regras do `calendario.yaml`, a contar do dia da
+      # construção: construída quando for, tem um ano de serviço pela frente.
+      calendario: regras
+
+  # O COMBOIO, de outra entidade — como seria o operador ferroviário
+  # nacional. Continua para lá da fronteira até Lagoa Serena, e a viagem
+  # entra inteira: cortá-la na fronteira era esconder a quem embarca cá para
+  # onde vai.
+  - fonte: demo-gtfs-comboio
+    leitor: gtfs-arquivo
+    papel: feed-de-terceiro
+    saida: gtfs/comboio.zip
+    modo: comboio
+    params:
+      calendario: regras
+
+  # UM EXPRESSO DE UM OPERADOR PRIVADO, que atravessa a região de ponta a
+  # ponta e só pára nos nós da via rápida e nos terminais.
+  - fonte: demo-gtfs-expressos
+    leitor: gtfs-arquivo
+    papel: feed-de-terceiro
+    saida: gtfs/expressos.zip
+    modo: expresso
+    params:
+      calendario: regras
+
+  - fonte: demo-osm
+    leitor: osm-bicicletas
+    saida: gbfs/bici-ameno/
+    modo: bicicleta
+    params:
+      filtro: { amenity: bicycle_rental, brand: Bici Ameno }
+      sistema:
+        id: bici-ameno
+        nome: Bici Ameno
+        operador: Comunidade Intermunicipal das Terras do Ameno
+      esperado: 8
+      station_status: false
+
+  - fonte: demo-osm
+    leitor: osm-taxis
+    saida: geojson/taxis.geojson
+    modo: taxi
+    params:
+      filtro: { amenity: taxi }
+      esperado: 6
+
+  # Os sítios que se procuram — o hospital, a câmara, o castelo —, para a
+  # caixa de procura responder ao que alguém escreve primeiro.
+  - fonte: demo-osm
+    leitor: osm-sitios
+    saida: geojson/sitios.geojson
+    params: {}
+
+  # O URBANO DA CÂMARA DE ALMEÃO: o traçado, e o horário em tabela. É da
+  # câmara e não da rede — por isso é `urbano-municipal`, com o operador que a
+  # câmara declara, e o filtro é pelo operador e nunca pela rede.
+  - fonte: demo-osm
+    leitor: osm-rotas
+    saida: geojson/urbanos.geojson
+    modo: urbano-municipal
+    params:
+      filtro: { type: route, route: bus, operator: "C.M. Almeão" }
+      nunca_filtrar_por: network
+      esperado_linhas: 1
+
+  - fonte: demo-tabelas
+    leitor: horarios-tabela
+    saida: urbanos/almeao-circular.json
+    modo: urbano-municipal
+    params:
+      tabela: almeao-circular.yaml
+      id: almeao-circular
+      concelho: almeao
+      linha: Almeão Circular
+      operador: Câmara Municipal de Almeão
+      rede: Almeão Circular
+      cor: "5B3A8E"
+      esperado_viagens: 18
+      esperado_paragens: 7
+
+  # O TRANSPORTE A PEDIDO: um ficheiro por concelho, como as brochuras de uma
+  # região real. `papel: catalogo-proprio` porque o modo já tem página — a
+  # `/a-pedido/`, com a regra de reserva à frente de tudo.
+  - fonte: demo-tabelas
+    leitor: horarios-tabela
+    saida: tap/corvalinho.json
+    modo: a-pedido
+    papel: catalogo-proprio
+    params:
+      tabela: corvalinho.yaml
+      id: corvalinho
+      linha: Transporte a pedido de Corvalinho — os circuitos
+      operador: Comunidade Intermunicipal das Terras do Ameno
+      concelho: corvalinho
+      esperado_viagens: 4
+
+  - fonte: demo-tabelas
+    leitor: horarios-tabela
+    saida: tap/saramela.json
+    modo: a-pedido
+    papel: catalogo-proprio
+    params:
+      tabela: saramela.yaml
+      id: saramela
+      linha: Transporte a pedido de Saramela — os circuitos
+      operador: Comunidade Intermunicipal das Terras do Ameno
+      concelho: saramela
+      esperado_viagens: 4
+
+  - fonte: demo-tabelas
+    leitor: horarios-tabela
+    saida: tap/montelirio.json
+    modo: a-pedido
+    papel: catalogo-proprio
+    params:
+      tabela: montelirio.yaml
+      id: montelirio
+      linha: Transporte a pedido de Montelírio — os circuitos
+      operador: Comunidade Intermunicipal das Terras do Ameno
+      concelho: montelirio
+      esperado_viagens: 2
+
+# OS LIMITES DOS CONCELHOS vêm da mesma geografia que desenha o mapa — e por
+# isso o mapa e a atribuição a concelhos não podem discordar. Uma região a
+# sério aponta aqui a carta administrativa oficial.
+limites:
+  fonte: demo-geografia
+  camada: concelho
+  campo_codigo: dico
+  campo_nome: nome
+
+# O MAPA DE FUNDO É NOSSO, e não do OpenStreetMap: não há OpenStreetMap de um
+# sítio que não existe. A atribuição é a que aparece no canto do mapa.
+mapa:
+  fonte: demo-geografia
+  atribuicao: Mapa inventado pelo Paragem.pt, para a demonstração
+
+# SEM MOTOR DE VIAGENS, como as provas: o planeador corre no navegador, a
+# partir da grelha horária, e os transbordos a pé saem em linha reta.
+#
+# As viagens de prova são as que a demonstração mostra a quem decide: o
+# comboio com o autocarro à porta da estação, nos dois sentidos da linha.
+motor:
+  fuso: Europe/Lisbon
+  gtfs:
+    - gtfs/rede-ameno.zip
+    - gtfs/comboio.zip
+    - gtfs/expressos.zip
+  viagens_de_prova:
+    - nome: Corvalinho (Estação) → Saramela (Centro)
+      de: { nome: Corvalinho (Estação), lat: 39.55633, lon: -10.624595 }
+      para: { nome: Saramela (Centro), lat: 39.379051, lon: -10.595164 }
+    - nome: Azenhas do Ameno (Estação) → Porto Ameno (Hospital)
+      de: { nome: Azenhas do Ameno (Estação), lat: 39.401948, lon: -10.391832 }
+      para: { nome: Porto Ameno (Hospital), lat: 39.476978, lon: -10.527502 }
+    - nome: Porto Ameno (Terminal) → Montelírio (Centro)
+      de: { nome: Porto Ameno (Terminal), lat: 39.470201, lon: -10.53859 }
+      para: { nome: Montelírio (Centro), lat: 39.351238, lon: -10.365549 }
+    - nome: Covas do Vento → Almeão (Centro)
+      de: { nome: Covas do Vento, lat: 39.496036, lon: -10.687892 }
+      para: { nome: Almeão (Centro), lat: 39.442323, lon: -10.421857 }
+
+verificacoes: []

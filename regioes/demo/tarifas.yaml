@@ -1,0 +1,91 @@
+# O tarifário das Terras do Ameno — inventado.
+#
+# Entra `confirmado: true` pela mesma razão das provas: a fonte destes valores
+# é este ficheiro, e a ficção não tem nada por confirmar. É o que deixa a
+# demonstração mostrar a página do tarifário como ela fica numa região com
+# tudo conferido — e o relatório de uma região real ter as suas lacunas, sem
+# que uma coisa disfarce a outra.
+
+moeda: EUR
+
+titulos:
+  - id: ameno-bilhete-simples
+    rede: Rede Ameno
+    nome: Bilhete simples
+    valor: 1.40
+    confirmado: true
+    fonte: inventado (região de demonstração)
+
+  - id: ameno-bilhete-urbano
+    rede: Rede Ameno
+    nome: Bilhete urbano de Porto Ameno
+    valor: 0.90
+    confirmado: true
+    fonte: inventado (região de demonstração)
+
+  - id: ameno-passe-de-linha
+    rede: Rede Ameno
+    nome: Passe de linha
+    valor: 12.00
+    periodo: mes
+    confirmado: true
+    fonte: inventado (região de demonstração)
+
+  - id: ameno-passe-de-rede
+    rede: Rede Ameno
+    nome: Passe de rede
+    valor: 30.00
+    periodo: mes
+    confirmado: true
+    fonte: inventado (região de demonstração)
+
+  - id: ameno-passe-jovem
+    rede: Rede Ameno
+    nome: Passe jovem (até aos 23 anos)
+    valor: 0.00
+    periodo: mes
+    confirmado: true
+    fonte: inventado (região de demonstração)
+
+  - id: ameno-a-pedido
+    rede: Transporte a pedido
+    nome: Viagem a pedido
+    valor: 1.00
+    confirmado: true
+    fonte: inventado (região de demonstração)
+
+  - id: poente-passe-ferroviario
+    rede: Ferrovia do Poente
+    nome: Passe ferroviário regional
+    valor: 20.00
+    periodo: mes
+    confirmado: true
+    fonte: inventado (região de demonstração)
+
+  - id: bici-ameno-primeira-hora
+    rede: Bici Ameno
+    nome: Primeira hora
+    valor: 0.00
+    confirmado: true
+    fonte: inventado (região de demonstração)
+
+  - id: bici-ameno-anual
+    rede: Bici Ameno
+    nome: Passe anual
+    valor: 15.00
+    periodo: ano
+    confirmado: true
+    fonte: inventado (região de demonstração)
+
+# A REGRA DE RESERVA DO TRANSPORTE A PEDIDO, que é o que mais importa nele:
+# não circula se ninguém o chamar.
+#
+# SEM TELEFONE, DE PROPÓSITO. Um número inventado é um número de alguém — e
+# quem experimentasse a demonstração ligava-lhe. Também não há página de
+# reservas: numa demonstração, a página diz o que estaria aqui numa região a
+# sério, em vez de mandar alguém a um formulário que não chama ninguém.
+reservas:
+  transporte_a_pedido:
+    prazo: Reserva até às 15h00 do dia útil anterior
+    confirmado: true
+    fonte: inventado (região de demonstração)

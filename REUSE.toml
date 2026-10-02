@@ -31,14 +31,17 @@ precedence = "override"
 SPDX-FileCopyrightText = "os respetivos operadores e autoridades de transportes — ver data/sources.yaml"
 SPDX-License-Identifier = "LicenseRef-documento-de-terceiro"
 
-# A região de prova é inventada de fio a pavio, de propósito: é o que lhe
-# permite ser a demonstração pública sem pedir uma linha a ninguém.
+# As regiões de prova e a de demonstração são inventadas de fio a pavio, de
+# propósito: é o que lhes permite ser a montra pública sem pedir uma linha a
+# ninguém.
 [[annotations]]
 path = [
   "regioes/prova/**",
   "data/manual/prova/**",
   "regioes/prova-municipio/**",
   "data/manual/prova-municipio/**",
+  "regioes/demo/**",
+  "data/manual/demo/**",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Fábio Salgado <fvsalgado@gmail.com>"
