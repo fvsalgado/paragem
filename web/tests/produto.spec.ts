@@ -109,6 +109,12 @@ test('a montra vende: o produto a funcionar, para quem é, e com quem se fala', 
     true,
   );
 
+  // Os cartões de «Ver a funcionar» são demonstrações, e só demonstrações:
+  // a página do produto não nomeia clientes.
+  const cartoes = page.locator('#demonstracao .produto-regioes > li');
+  expect(await cartoes.count()).toBeGreaterThan(0);
+  await expect(cartoes.filter({ hasNotText: 'Demonstração.' })).toHaveCount(0);
+
   // As âncoras do cabeçalho levam a secções que existem.
   for (const ancora of ['demonstracao', 'para-quem', 'entrada']) {
     await expect(page.locator(`#${ancora}`), ancora).toHaveCount(1);

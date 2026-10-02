@@ -64,9 +64,38 @@ export function contactoDoProduto(valor = process.env.NEXT_PUBLIC_PARAGEM_CONTAC
 export const CONTACTO = contactoDoProduto();
 
 /**
+ * A MONTRA SÓ MOSTRA DEMONSTRAÇÕES — nenhum cliente. Decidido pelo dono a
+ * 2/10/2026.
+ *
+ * Listava todas as regiões construídas, e com cada uma a rede, a autoridade de
+ * transportes e os números dela. É a mesma razão do cabeçalho deste ficheiro,
+ * vista do outro lado: a página do produto responde a qualquer anfitrião
+ * desconhecido, e um cliente cujo domínio aponte para cá antes de a região
+ * dele existir via os cartões dos outros. Mostrar um cliente na página de
+ * quem o vende é decisão dele, e não um efeito de a região estar construída.
+ *
+ * As demonstrações são do produto e inventadas de fio a pavio: são elas que
+ * se mostram, e é para uma delas que leva o «Experimentar a demonstração».
+ */
+export function eDaMontra(r: { demonstracao?: boolean }): boolean {
+  return r.demonstracao === true;
+}
+
+/**
+ * A ordem dos cartões da montra: a demonstração mais completa primeiro — a
+ * mesma que o «Experimentar a demonstração» escolhe, pelos dados e não pelo
+ * nome, para que uma demonstração nova e maior passe à frente no dia em que
+ * é ligada. Em caso de empate, pelo identificador, para a ordem não mudar de
+ * uma construção para a seguinte.
+ */
+export function ordemDaMontra<T extends { id: string; paragens: number }>(fichas: T[]): T[] {
+  return [...fichas].sort((a, b) => b.paragens - a.paragens || a.id.localeCompare(b.id, 'pt'));
+}
+
+/**
  * A morada da montra, quando está declarada e é absoluta: a mesma
- * `NEXT_PUBLIC_PARAGEM_PRODUTO` para onde já levam a marca e o «Outras
- * regiões» de cada região (`docs/ALOJAMENTO.md`). É ela que diz qual é O
+ * `NEXT_PUBLIC_PARAGEM_PRODUTO` para onde já levam a marca e o «Sobre o
+ * Paragem.pt» de cada região (`docs/ALOJAMENTO.md`). É ela que diz qual é O
  * endereço do produto — o que se indexa, o que vai no mapa do sítio e nas
  * imagens de partilha —, e não o anfitrião de quem pergunta: a página do
  * produto responde a qualquer anfitrião desconhecido, e só um deles é o dela.

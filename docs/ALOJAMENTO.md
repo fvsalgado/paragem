@@ -81,7 +81,7 @@ variável não existe: quem manda é a base.
 | `NEXT_PUBLIC_PARAGEM_DADOS` | todos | a porta pública do balde: `https://<ref>.supabase.co/storage/v1/object/public/sitio` |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | todos | a base do painel — a lista das regiões ligadas, lida com a chave pública |
 | `REVALIDATE_SECRET` | produção e pré-visualização, sensível | o que o pipeline apresenta ao avisar; 16 caracteres ou mais |
-| `NEXT_PUBLIC_PARAGEM_PRODUTO` | todos | a montra, `https://www.paragem.pt`: para onde levam a marca e o «Outras regiões» a partir de qualquer região. É também O endereço do produto — o único anfitrião onde o `robots.txt` do produto deixa indexar, e a morada do mapa do sítio dele |
+| `NEXT_PUBLIC_PARAGEM_PRODUTO` | todos | a montra, `https://www.paragem.pt`: para onde levam a marca e o «Sobre o Paragem.pt» a partir de qualquer região. Mostra só as regiões de demonstração, nunca a de um cliente. É também O endereço do produto — o único anfitrião onde o `robots.txt` do produto deixa indexar, e a morada do mapa do sítio dele |
 | `NEXT_PUBLIC_PARAGEM_CONTACTO` | opcional | o correio para onde a página do produto manda escrever («Falar connosco», «Marcar uma demonstração», «Pedir proposta»). Sem ela, ou com um valor que não seja um endereço, vale o que o repositório já publica no `AUTORIA.md` e no `SECURITY.md` |
 | `PARAGEM_DOMINIOS` | só pré-visualização | `id=host,…` somado ao mapa da base; nos testes é o mapa inteiro |
 | `PARAGEM_MODULOS_DESLIGADOS` | só nos testes | `id=modo+modo,…` somado ao que a base diz; é como o CI prova que um módulo desligado sai do sítio ([`PAINEL.md`](PAINEL.md)) |
