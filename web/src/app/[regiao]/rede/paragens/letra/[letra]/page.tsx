@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { exigirModo, paragens, concelhos, urlRede, urlDaParagem } from '@/lib/dados';
+import { exigirModo, paragens, concelhos, urlRede, urlDaParagem, regiao } from '@/lib/dados';
 import { plural } from '@/lib/prosa';
 import { letraDe, LETRAS, paraUrl, daUrl } from '@/lib/letras';
+import { metadadosDaRegiao } from '@/lib/metadados';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -25,7 +26,14 @@ export async function generateMetadata({
   const { regiao: rid, letra } = await params;
   await exigirModo(rid, 'autocarro');
   const l = daUrl(letra);
-  return { title: `Paragens em ${l === '#' ? 'número' : l}` };
+  const titulo = `Paragens em ${l === '#' ? 'número' : l}`;
+  const r = await regiao(rid);
+  if (!r) return { title: titulo };
+  return metadadosDaRegiao(r, {
+    titulo,
+    descricao: `As paragens ${r.de} cujo nome começa por ${l === '#' ? 'um número' : l}.`,
+    caminho: urlRede(rid, `paragens/letra/${paraUrl(l)}/`),
+  });
 }
 
 export default async function PorLetra({

@@ -1,12 +1,26 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { aPedido, exigirRegiao, url, urlRede } from '@/lib/dados';
+import { aPedido, exigirRegiao, url, urlRede, regiao } from '@/lib/dados';
 import ProcurarTerra from '@/componentes/ProcurarTerra';
 import { caminhoDoHorario, idDoQuadro, indiceDasTerras } from '@/lib/a-pedido';
 import { plural } from '@/lib/prosa';
+import { metadadosDaRegiao } from '@/lib/metadados';
 
-export const metadata: Metadata = { title: 'Transporte a pedido' };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ regiao: string }>;
+}): Promise<Metadata> {
+  const { regiao: rid } = await params;
+  const r = await regiao(rid);
+  if (!r) return {};
+  return metadadosDaRegiao(r, {
+    titulo: 'Transporte a pedido',
+    descricao: `O transporte a pedido ${r.em}: as zonas, os circuitos e como reservar.`,
+    caminho: '/a-pedido/',
+  });
+}
 
 /**
  * O transporte a pedido, por inteiro.

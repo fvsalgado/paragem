@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
-import { exigirRegiao, regiao } from '@/lib/dados';
+import { exigirRegiao, origemDaRegiao, regiao } from '@/lib/dados';
+import { metadadosDaRegiao } from '@/lib/metadados';
+import { origemDoProduto } from '@/lib/produto';
 import Cabecalho from '@/componentes/Cabecalho';
 import Rodape from '@/componentes/Rodape';
 import MarcaDeDemonstracao from '@/componentes/MarcaDeDemonstracao';
@@ -43,7 +45,7 @@ export async function generateMetadata({
   // rebentar. Se rebentasse, a página de «não encontrada» do produto — que é
   // para onde o invólucro manda uma região que não existe — ficava sem título
   // nenhum no separador.
-  const r = await regiao(id);
+  const [r, origem] = await Promise.all([regiao(id), origemDaRegiao(id)]);
   if (!r) return {};
   // O TÍTULO DIZ A REGIÃO PRIMEIRO, E A MARCA UMA VEZ. O `default` levava
   // «Paragem.pt —» e o modelo da raiz acrescentava «· Paragem.pt» outra vez:
@@ -51,12 +53,22 @@ export async function generateMetadata({
   // minúscula a abrir. Agora o início é «Transportes da Serra da Pedra Alta ·
   // Paragem.pt» (o `default` passa pelo modelo da raiz), e cada página diz o
   // que é e de onde: «Tarifário · Serra da Pedra Alta · Paragem.pt».
+  //
+  // A MORADA DESTA REGIÃO completa as das páginas dela — a canónica, a da
+  // pré-visualização, a da imagem de partilha. É a do mapa de domínios, a
+  // mesma por onde a página do produto liga para ela; sem ela (uma região
+  // que ainda não tem domínio), a do produto, que é a que há.
+  const base = origem ? new URL(origem) : origemDoProduto();
   return {
+    ...(base ? { metadataBase: base } : {}),
+    // O cartão por omissão, para as páginas que não pedem o seu — a de «não
+    // encontrada». As outras pedem o delas, com o título e a descrição
+    // delas (`lib/metadados.ts`).
+    ...metadadosDaRegiao(r, { descricao: `Todos os transportes ${r.de}, num sítio só.` }),
     title: {
       default: `Transportes ${r.de}`,
       template: `%s · ${r.nome} · Paragem.pt`,
     },
-    description: `Todos os transportes ${r.de}, num sítio só.`,
   };
 }
 

@@ -1,10 +1,24 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { exigirRegiao, temMosaicos, url } from '@/lib/dados';
+import { exigirRegiao, temMosaicos, url, regiao } from '@/lib/dados';
 import { aAutoridade } from '@/lib/prosa';
 import { motorDaRegiao } from '@/lib/enderecos';
+import { metadadosDaRegiao } from '@/lib/metadados';
 
-export const metadata: Metadata = { title: 'Privacidade' };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ regiao: string }>;
+}): Promise<Metadata> {
+  const { regiao: rid } = await params;
+  const r = await regiao(rid);
+  if (!r) return {};
+  return metadadosDaRegiao(r, {
+    titulo: 'Privacidade',
+    descricao: `O que o sítio dos transportes ${r.de} mede, e o que não mede.`,
+    caminho: '/privacidade/',
+  });
+}
 
 /**
  * O que se mede e o que não se mede, dito a quem visita.

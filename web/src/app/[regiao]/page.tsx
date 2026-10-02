@@ -1,6 +1,8 @@
+import type { Metadata } from 'next';
 import AppDoMapa from '@/componentes/AppDoMapa';
 import {
   procura,
+  regiao,
   exigirRegiao,
   temMosaicos,
   modos as lerModos,
@@ -14,6 +16,21 @@ import {
 import type { Ponto } from '@/lib/formato';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { disponibilidadeDaRegiao, motorDaRegiao } from '@/lib/enderecos';
+import { metadadosDaRegiao } from '@/lib/metadados';
+
+/** O início fica com o título do invólucro («Transportes da …»); a frase é dele. */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ regiao: string }>;
+}): Promise<Metadata> {
+  const r = await regiao((await params).regiao);
+  if (!r) return {};
+  return metadadosDaRegiao(r, {
+    descricao: `Todos os transportes ${r.de}, num sítio só: o mapa, o que passa a seguir em cada paragem e como ir de um sítio a outro.`,
+    caminho: '/',
+  });
+}
 
 /**
  * A porta de entrada de uma região: O MAPA.

@@ -1,10 +1,24 @@
 import type { Metadata } from 'next';
-import { dadosAbertos, exigirRegiao, lacunas } from '@/lib/dados';
+import { dadosAbertos, exigirRegiao, lacunas, regiao } from '@/lib/dados';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { tamanho, type Descarga } from '@/lib/formato';
 import { aAutoridade } from '@/lib/prosa';
+import { metadadosDaRegiao } from '@/lib/metadados';
 
-export const metadata: Metadata = { title: 'Dados e licenças' };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ regiao: string }>;
+}): Promise<Metadata> {
+  const { regiao: rid } = await params;
+  const r = await regiao(rid);
+  if (!r) return {};
+  return metadadosDaRegiao(r, {
+    titulo: 'Dados e licenças',
+    descricao: `Os dados dos transportes ${r.de} para descarregar, cada ficheiro com a origem, a data e os termos.`,
+    caminho: '/dados-abertos/',
+  });
+}
 
 /**
  * Os grupos por que a página se organiza, e a ordem.

@@ -1,9 +1,24 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { estacoes, exigirModo, urlRede } from '@/lib/dados';
-import { plural } from '@/lib/prosa';
+import { estacoes, exigirModo, urlRede, regiao } from '@/lib/dados';
+import { plural, maiuscula } from '@/lib/prosa';
+import { metadadosDaRegiao } from '@/lib/metadados';
 
-export const metadata: Metadata = { title: 'Estações de comboio' };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ regiao: string }>;
+}): Promise<Metadata> {
+  const { regiao: rid } = await params;
+  const r = await regiao(rid);
+  if (!r) return {};
+  const n = (await estacoes(rid)).length;
+  return metadadosDaRegiao(r, {
+    titulo: 'Estações de comboio',
+    descricao: `${maiuscula(plural(n, 'estação de comboio', 'estações de comboio'))} ${r.em}, com os comboios de cada uma e o autocarro à porta.`,
+    caminho: '/rede/estacoes/',
+  });
+}
 
 export default async function Estacoes({ params }: { params: Promise<{ regiao: string }> }) {
   const { regiao: rid } = await params;

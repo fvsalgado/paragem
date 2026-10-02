@@ -1,9 +1,24 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { concelhos, exigirRegiao, urlRede } from '@/lib/dados';
+import { concelhos, exigirRegiao, urlRede, regiao } from '@/lib/dados';
 import { aAutoridade, maiuscula, plural } from '@/lib/prosa';
+import { metadadosDaRegiao } from '@/lib/metadados';
 
-export const metadata: Metadata = { title: 'Concelhos' };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ regiao: string }>;
+}): Promise<Metadata> {
+  const { regiao: rid } = await params;
+  const r = await regiao(rid);
+  if (!r) return {};
+  const n = (await concelhos(rid)).length;
+  return metadadosDaRegiao(r, {
+    titulo: 'Concelhos',
+    descricao: `${maiuscula(plural(n, 'concelho', 'concelhos'))} ${r.em}: as linhas, as paragens e os outros transportes de cada um.`,
+    caminho: '/rede/concelhos/',
+  });
+}
 
 export default async function Concelhos({ params }: { params: Promise<{ regiao: string }> }) {
   const { regiao: rid } = await params;

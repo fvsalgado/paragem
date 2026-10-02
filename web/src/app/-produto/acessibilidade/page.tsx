@@ -1,12 +1,13 @@
-import type { Metadata } from 'next';
 import VerificacoesDeAcessibilidade from '@/componentes/VerificacoesDeAcessibilidade';
 import { CONTACTO, correioPara } from '@/lib/produto';
+import { metadadosDoProduto } from '@/lib/metadados';
 
-export const metadata: Metadata = {
-  title: 'Acessibilidade',
-  description:
+export const metadata = metadadosDoProduto({
+  titulo: 'Acessibilidade',
+  descricao:
     'A declaração de acessibilidade do sítio do Paragem.pt: o que se verifica, o que falta e para onde se escreve.',
-};
+  caminho: '/acessibilidade/',
+});
 
 /**
  * Quando a declaração foi revista. Muda quando alguém a volta a rever —

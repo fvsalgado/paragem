@@ -11,11 +11,14 @@ import {
   type PontaDoSentido,
   type Sentido,
   type ViagemDoQuadro,
+  regiao,
+  urlRede,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import { lista, plural } from '@/lib/prosa';
 import Distintivo, { corDoTraco } from '@/componentes/Distintivo';
 import QuadrosPorDia, { type QuadroDoDia } from '@/componentes/QuadrosPorDia';
+import { metadadosDaRegiao } from '@/lib/metadados';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -37,8 +40,13 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { regiao: rid, id } = await params;
   await exigirModo(rid, 'autocarro');
-  const l = await linhaDetalhe(rid, id);
-  return { title: l ? `${l.codigo} — ${l.nome}` : NAO_ENCONTRADA };
+  const [l, r] = await Promise.all([linhaDetalhe(rid, id), regiao(rid)]);
+  if (!l || !r) return { title: NAO_ENCONTRADA };
+  return metadadosDaRegiao(r, {
+    titulo: `${l.codigo} — ${l.nome}`,
+    descricao: `Linha ${l.codigo}, ${l.nome}: ${plural(l.viagens, 'viagem', 'viagens')} no horário, o percurso e as paragens.`,
+    caminho: urlRede(rid, `linhas/${id}/`),
+  });
 }
 
 /** As pontas de um sentido: as das viagens, se os dados as trazem; senão, as do percurso. */

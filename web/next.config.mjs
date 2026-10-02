@@ -18,6 +18,24 @@ const config = {
   poweredByHeader: false,
   trailingSlash: true,
   images: { unoptimized: true },
+  /*
+   * OS METADADOS VÃO NO <head>, SEMPRE — e não a meio da página.
+   *
+   * O Next 15 «transmite» os metadados: se o `generateMetadata` acaba depois
+   * de o cabeçalho do HTML ter saído, o título, a descrição e o `og:*` vão
+   * parar ao corpo, e o navegador arruma-os depois. Só os manda no `<head>`
+   * aos robôs que ele conhece. Mas aqui as páginas ficam em cache: a primeira
+   * visita rende-a, e a cópia serve toda a gente durante uma hora — também o
+   * WhatsApp que pede a pré-visualização da paragem, e que só lê o `<head>`.
+   * Medido antes de escrever isto: na mesma construção, a página de uma
+   * paragem saía com os metadados no `<head>` e a de uma linha no corpo,
+   * conforme a leitura dos dados acabava antes ou depois.
+   *
+   * Tratar todos os pedidos como robôs põe os metadados no `<head>` em todas
+   * as renderizações. O custo é o cabeçalho esperar pelos metadados — que
+   * leem os mesmos dados que a página já está à espera de ler.
+   */
+  htmlLimitedBots: /.*/,
   async headers() {
     return [
       // O processador do mapa leva a versão no caminho

@@ -1,11 +1,12 @@
-import type { Metadata } from 'next';
 import { AUTOR, CONTACTO, SEGURANCA, correioPara } from '@/lib/produto';
+import { metadadosDoProduto } from '@/lib/metadados';
 
-export const metadata: Metadata = {
-  title: 'Contacto',
-  description:
+export const metadata = metadadosDoProduto({
+  titulo: 'Contacto',
+  descricao:
     'Marcar uma demonstração, pedir uma proposta ou perguntar o que for sobre o Paragem.pt.',
-};
+  caminho: '/contacto/',
+});
 
 /**
  * Com quem se fala — a página que faltava a quem já está convencido.
