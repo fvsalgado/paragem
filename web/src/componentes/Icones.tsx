@@ -59,14 +59,59 @@ export function Autocarro(p: Props) {
   );
 }
 
+/**
+ * O comboio DE PERFIL, sobre o carril.
+ *
+ * Era uma frente de veículo quase igual à do autocarro (P1-012), e nas
+ * pernas de um itinerário as duas ficavam lado a lado: só o rótulo as
+ * separava. De perfil, com o nariz e o carril por baixo, lê-se comboio antes
+ * de se ler o nome.
+ */
 export function Comboio(p: Props) {
   return (
     <Svg {...p}>
-      <rect x="5" y="3" width="14" height="13" rx="3.5" />
-      <path d="M5 10h14" />
-      <path d="M9 16 6.5 20M15 16l2.5 4" />
-      <circle cx="9" cy="13" r="0.9" fill="currentColor" stroke="none" />
-      <circle cx="15" cy="13" r="0.9" fill="currentColor" stroke="none" />
+      <path d="M3 16V8.5A2.5 2.5 0 0 1 5.5 6H15c1.4 0 2.6.7 3.4 1.8L21 11.5V16z" />
+      <path d="M3 11h18" />
+      <path d="M8 6v5M13 6v5" />
+      <circle cx="7" cy="17.6" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="16.5" cy="17.6" r="1.3" fill="currentColor" stroke="none" />
+      <path d="M2 20.5h20" />
+    </Svg>
+  );
+}
+
+/**
+ * O urbano de uma câmara: um autocarro curto ao lado do edifício da câmara.
+ *
+ * Tinha o mesmo desenho do autocarro da rede e do expresso (P1-012), e numa
+ * grelha de modos só a cor os separava — que é precisamente o que a WCAG
+ * 1.4.1 não deixa ser a única diferença.
+ */
+export function UrbanoMunicipal(p: Props) {
+  return (
+    <Svg {...p}>
+      <rect x="2" y="9" width="11" height="9" rx="2" />
+      <path d="M2 13h11" />
+      <path d="M4.5 20.5V18M10.5 20.5V18" />
+      <path d="M15 20.5v-9.5l3.5-3.5 3.5 3.5v9.5" />
+      <path d="M17.5 20.5v-3h2v3" />
+    </Svg>
+  );
+}
+
+/**
+ * O expresso: um autocarro de perfil, com as riscas de quem vai depressa e
+ * pára pouco. Privado — e por isso desenhado a traço, sem cor de modo (§6).
+ */
+export function Expresso(p: Props) {
+  return (
+    <Svg {...p}>
+      <path d="M7 6h11.5A2.5 2.5 0 0 1 21 8.5V17H7z" />
+      <path d="M7 11h14" />
+      <path d="M17 6v5" />
+      <circle cx="10.5" cy="17.6" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="17.5" cy="17.6" r="1.4" fill="currentColor" stroke="none" />
+      <path d="M1.5 9h3M1 12.5h3.5M2 16h2.5" />
     </Svg>
   );
 }
@@ -163,6 +208,8 @@ export function DoModo({ modo, tamanho }: { modo: string; tamanho?: number }) {
   if (m === 'bicycle' || m === 'bicicleta') return <Bicicleta tamanho={tamanho} />;
   if (m === 'a-pedido') return <APedido tamanho={tamanho} />;
   if (m === 'taxi') return <Taxi tamanho={tamanho} />;
+  if (m === 'urbano-municipal') return <UrbanoMunicipal tamanho={tamanho} />;
+  if (m === 'expresso') return <Expresso tamanho={tamanho} />;
   return <Autocarro tamanho={tamanho} />;
 }
 
@@ -188,6 +235,28 @@ export function Taxi(p: Props) {
       <circle cx="7.5" cy="18.5" r="1.4" />
       <circle cx="16.5" cy="18.5" r="1.4" />
       <path d="M9 6h6v3H9z" />
+    </Svg>
+  );
+}
+
+/** Uma lista: três linhas com o seu ponto — a rede sem mapa. */
+export function Lista(p: Props) {
+  return (
+    <Svg {...p}>
+      <path d="M9 6h11M9 12h11M9 18h11" />
+      <circle cx="4.5" cy="6" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="12" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="18" r="1.2" fill="currentColor" stroke="none" />
+    </Svg>
+  );
+}
+
+/** Partilhar: uma caixa com a seta a sair dela, como nos telemóveis. */
+export function Partilhar(p: Props) {
+  return (
+    <Svg {...p}>
+      <path d="M12 3v12M7.5 7.5 12 3l4.5 4.5" />
+      <path d="M5 11v8.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V11" />
     </Svg>
   );
 }
