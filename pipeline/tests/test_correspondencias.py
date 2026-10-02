@@ -72,6 +72,42 @@ def test_varios_feeds_de_um_lado_contam_todos(tmp_path):
     assert "correspondencias.estacoes-sem-paragem" not in _ids(ctx)
 
 
+def test_sem_nomes_os_feeds_saem_da_receita_como_nas_paginas_das_estacoes(tmp_path):
+    # Uma região que já declarava a verificação sem nomear os feeds continua
+    # a correr: o comboio é o modo `comboio`, o autocarro é a rede da própria
+    # região. A concessão vizinha, com uma paragem perto do ermo, fica de fora.
+    _feed(tmp_path, "gtfs/ferro.zip", ESTACOES)
+    _feed(tmp_path, "gtfs/rede.zip", PARAGENS)
+    _feed(tmp_path, "gtfs/outra.zip", [("Ermo (Cruzamento)", 40.1015, -9.1)])
+    ctx = _ctx({"raio_metros": 300})
+    ctx.regiao.saidas = [
+        Saida(
+            fonte="f",
+            leitor="gtfs-arquivo",
+            saida="gtfs/ferro.zip",
+            modo="comboio",
+            papel="feed-de-terceiro",
+        ),
+        Saida(
+            fonte="f",
+            leitor="gtfs-arquivo",
+            saida="gtfs/rede.zip",
+            modo="autocarro",
+            papel="horarios",
+        ),
+        Saida(
+            fonte="f",
+            leitor="gtfs-arquivo",
+            saida="gtfs/outra.zip",
+            modo="autocarro",
+            papel="feed-de-terceiro",
+        ),
+    ]
+    _correspondencias(ctx, tmp_path)
+    assert "correspondencias.sem-feeds" not in _ids(ctx)
+    assert ctx.relatorio.contagens["correspondencias.estacoes_sem_paragem"] == 1
+
+
 def test_declarada_sem_feeds_diz_se_e_nao_salta_em_silencio(tmp_path):
     ctx = _ctx({"raio_metros": 300})
     _correspondencias(ctx, tmp_path)
