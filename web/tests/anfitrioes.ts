@@ -18,7 +18,7 @@
  * precisam de uma rede a sério saltam com a razão escrita (ver
  * `dados-da-regiao.ts`).
  */
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 export const PORTA = 4321;
@@ -28,12 +28,11 @@ export const PRODUTO = `http://127.0.0.1:${PORTA}`;
 export const anfitriao = (id: string) => `http://${id}.localhost:${PORTA}`;
 
 /**
- * As regiões de demonstração são do produto, não de um cliente: inventadas de
+ * As duas regiões de prova são do produto, não de um cliente: inventadas de
  * fio a pavio, constroem-se sem rede e estão sempre cá (§11.5). São as únicas
- * que esta suite pode nomear.
+ * que esta suite nomeia — para o que só elas provam (um modo ausente, um
+ * módulo desligado, a vista sem mapa).
  */
-export const DEMONSTRACOES = ['prova', 'prova-municipio'];
-
 export const PROVA = anfitriao('prova');
 export const PROVA_MUNICIPIO = anfitriao('prova-municipio');
 
@@ -68,6 +67,37 @@ export function regioes(): string[] {
     : [];
 }
 
+/** O que a região diz de si própria, do que o pipeline construiu. */
+function declaracao(id: string): { demonstracao?: boolean } | null {
+  const f = join(BUILD, id, 'sitio', 'regiao.json');
+  try {
+    return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Quantas paragens a região tem — é por aqui que se escolhe a demonstração mais rica. */
+function quantasParagens(id: string): number {
+  const f = join(BUILD, id, 'sitio', 'paragens.json');
+  try {
+    return existsSync(f) ? (JSON.parse(readFileSync(f, 'utf8')) as unknown[]).length : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * As regiões de demonstração — PELO QUE OS DADOS DIZEM (`demonstracao: true`
+ * no `regiao.yaml`), e não por uma lista escrita aqui.
+ *
+ * Era uma lista com as duas provas, e a terceira demonstração entrou e passou
+ * a ser tratada como a «região real» da suite: os testes julgavam uma região
+ * inventada como se fosse a de um cliente. Uma demonstração nova entra sem
+ * tocar neste ficheiro.
+ */
+export const DEMONSTRACOES: string[] = regioes().filter((id) => declaracao(id)?.demonstracao);
+
 /** O que `PARAGEM_DOMINIOS` tem de dizer para isto tudo bater certo. */
 export const DOMINIOS = regioes()
   .map((id) => `${id}=${id}.localhost:${PORTA}`)
@@ -81,14 +111,25 @@ export const DOMINIOS = regioes()
  * `dados-da-regiao.ts` transforma num salto com a razão escrita.
  */
 export const REGIAO_REAL: string | null =
-  regioes().find((id) => !DEMONSTRACOES.includes(id)) ?? null;
+  regioes().find((id) => declaracao(id) && !DEMONSTRACOES.includes(id)) ?? null;
+
+/**
+ * A demonstração mais rica: a que tem mais paragens. É a que tem os modos
+ * todos — o comboio, o transporte a pedido, o mapa —, e uma suite que corresse
+ * sobre a mais pequena saltava metade dos casos por falta de dados.
+ */
+export const DEMONSTRACAO: string | null =
+  [...DEMONSTRACOES].sort(
+    (a, b) => quantasParagens(b) - quantasParagens(a) || a.localeCompare(b),
+  )[0] ?? null;
 
 /**
  * A região sobre a qual esta suite corre.
  *
  * A de dados reais quando existe — é onde há uma rede grande, nomes do
  * OpenStreetMap e horários de verdade, e é a que se publica. Senão, a
- * demonstração: o produto tem de se provar sem pedir uma linha a ninguém.
+ * demonstração mais rica: o produto tem de se provar sem pedir uma linha a
+ * ninguém.
  */
-export const REGIAO = process.env.PARAGEM_REGIAO_DE_TESTE ?? REGIAO_REAL ?? 'prova';
+export const REGIAO = process.env.PARAGEM_REGIAO_DE_TESTE ?? REGIAO_REAL ?? DEMONSTRACAO ?? 'prova';
 export const BASE = anfitriao(REGIAO);

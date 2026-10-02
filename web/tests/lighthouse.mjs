@@ -31,7 +31,6 @@ const MINIMO = Number(process.env.PARAGEM_LIGHTHOUSE_MINIMO ?? 95);
  */
 const PORTA = process.env.PARAGEM_PORTA ?? '4321';
 const PRODUTO = `http://127.0.0.1:${PORTA}`;
-const DEMONSTRACOES = ['prova', 'prova-municipio'];
 const BUILD = resolve(
   process.env.PARAGEM_BUILD ?? (existsSync(join('..', 'build')) ? join('..', 'build') : 'build'),
 );
@@ -42,9 +41,22 @@ const construidas = existsSync(BUILD)
       .map((e) => e.name)
       .sort()
   : [];
+const daRegiao = (r, nome) => {
+  const f = join(BUILD, r, 'sitio', nome);
+  return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : null;
+};
+// AS DEMONSTRAÇÕES DIZEM-SE NOS DADOS (`demonstracao` no regiao.json), e não
+// numa lista: a terceira entrou e passava a ser medida como a região real.
+const DEMONSTRACOES = construidas.filter((r) => daRegiao(r, 'regiao.json')?.demonstracao);
+const maisRica = [...DEMONSTRACOES].sort(
+  (a, b) =>
+    (daRegiao(b, 'paragens.json') ?? []).length - (daRegiao(a, 'paragens.json') ?? []).length ||
+    a.localeCompare(b),
+)[0];
 const REGIAO =
   process.env.PARAGEM_REGIAO_DE_TESTE ??
   construidas.find((r) => !DEMONSTRACOES.includes(r)) ??
+  maisRica ??
   'prova';
 const R = `http://${REGIAO}.localhost:${PORTA}`;
 const PROVA = `http://prova.localhost:${PORTA}`;
@@ -88,7 +100,9 @@ const PAGINAS = [
   ['acessibilidade do produto', `${PRODUTO}/acessibilidade/`],
   ['mapa da região', `${R}/`],
   ['a rede', `${R}/rede/`],
-  ['demonstração', `${PROVA}/`],
+  // A VISTA SEM MAPA, que é a de uma região ainda sem mosaicos — e a faixa
+  // da demonstração por cima. É outro molde, e mede-se à parte.
+  ['região sem mapa', `${PROVA}/`],
   ['como chegar', `${R}/viagem/`],
   ...(temAPedido ? [['a pedido', `${R}/a-pedido/`]] : []),
   ...doModo('bicicleta', 'bicicletas'),

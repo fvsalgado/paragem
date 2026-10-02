@@ -58,7 +58,6 @@ const RAIZ = path.resolve(import.meta.dirname, '..', '..');
  * demonstração (§11.6) — as demonstrações não têm motor a que perguntar,
  * porque se constroem sem rede.
  */
-const DEMONSTRACOES = ['prova', 'prova-municipio'];
 function aRegiaoDaRaiz(): string {
   const build = path.join(RAIZ, 'build');
   const construidas = fs.existsSync(build)
@@ -68,7 +67,16 @@ function aRegiaoDaRaiz(): string {
         .map((e) => e.name)
         .sort()
     : [];
-  return construidas.find((r) => !DEMONSTRACOES.includes(r)) ?? construidas[0] ?? '';
+  // As demonstrações dizem-se nos dados, e não numa lista que envelhece.
+  const demonstracao = (r: string): boolean => {
+    const f = path.join(build, r, 'sitio', 'regiao.json');
+    try {
+      return fs.existsSync(f) && JSON.parse(fs.readFileSync(f, 'utf8')).demonstracao === true;
+    } catch {
+      return false;
+    }
+  };
+  return construidas.find((r) => !demonstracao(r)) ?? construidas[0] ?? '';
 }
 
 const REGIAO = arg('regiao') || aRegiaoDaRaiz();
