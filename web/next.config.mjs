@@ -13,8 +13,19 @@
  * `trailingSlash` fica: todas as ligações internas terminam em `/`, e mudar
  * isso era mudar todos os endereços de uma vez.
  */
+import { createRequire } from 'node:module';
+
+/**
+ * A versão do MapLibre instalada, para o mapa saber em que pasta de
+ * `public/maplibre/` está o que o `scripts/copiar-maplibre.mjs` lá pôs. Vai
+ * cravada no código do navegador na construção, como as outras
+ * `NEXT_PUBLIC_*`: a pasta e o código saem da mesma instalação.
+ */
+const { version: MAPLIBRE } = createRequire(import.meta.url)('maplibre-gl/package.json');
+
 const config = {
   reactStrictMode: true,
+  env: { NEXT_PUBLIC_MAPLIBRE: MAPLIBRE },
   poweredByHeader: false,
   trailingSlash: true,
   images: { unoptimized: true },

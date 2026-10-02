@@ -2,17 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { Map as MapaLibre, GeoJSONSource } from 'maplibre-gl';
-// A FOLHA DE ESTILO DA BIBLIOTECA, que faltava — e que se notava em tudo
-// menos no mapa. Sem ela os controlos ficam sem tamanho nem ícone e apanham
-// o `button` global deste sítio: apareciam três bolas azuis no canto. A tela
-// desenha-se à mesma porque o MapLibre a posiciona por estilos em linha, e
-// foi por isso que isto passou despercebido tanto tempo.
-//
-// É um `import` de CSS, não de código: o Next extrai-o na construção e não
-// traz um byte de JavaScript atrás — o MapLibre continua a entrar só dentro
-// do `useEffect`.
-import 'maplibre-gl/dist/maplibre-gl.css';
-import { estiloDoMapa } from '@/lib/estilo-mapa';
+import { ATRIBUICAO_OSM, estiloDoMapa } from '@/lib/estilo-mapa';
 import { camadasDe, type CamadaDePontos } from '@/lib/pontos-no-mapa';
 import { DENSIDADE, imagemDaPlaca } from '@/lib/icones-do-mapa';
 import type { Ponto } from '@/lib/formato';
@@ -21,10 +11,11 @@ import type { PercursoGeo } from '@/lib/otp';
 /**
  * O mapa. Não é um componente numa página — é a página.
  *
- * **O MapLibre entra por importação dinâmica, dentro do `useEffect`.** O sítio
- * é exportação estática: mesmo um componente `'use client'` é renderizado em
- * Node na construção, e a biblioteca toca no `window` ao ser importada. Um
- * `import` no topo deste ficheiro parte a construção inteira.
+ * **O MapLibre entra por importação dinâmica, dentro do `useEffect`.** Mesmo
+ * um componente `'use client'` é renderizado em Node no servidor, e a
+ * biblioteca toca no `window` ao ser importada. Um `import` no topo deste
+ * ficheiro parte a construção inteira. E vem da pasta onde o processador está
+ * (`carregarMapLibre`), não do empacotador.
  *
  * **E o processador é servido por nós.** Desde a versão 6, o trabalho pesado
  * do mapa corre num Web Worker que é um módulo à parte, e a biblioteca não o
@@ -62,22 +53,81 @@ const NOMES_DOS_CONTROLOS = {
 };
 
 /**
+ * Onde está o MapLibre: a pasta que o `scripts/copiar-maplibre.mjs` enche com
+ * a versão instalada, e que o `next.config.mjs` diz qual é.
+ */
+const PASTA_DO_MAPLIBRE = `/maplibre/${process.env.NEXT_PUBLIC_MAPLIBRE}`;
+
+type Biblioteca = typeof import('maplibre-gl');
+
+/**
+ * A FOLHA DE ESTILO DA BIBLIOTECA, pedida quando o mapa se vai desenhar.
+ *
+ * Sem ela os controlos ficam sem tamanho nem ícone e apanham o `button` global
+ * deste sítio: apareciam três bolas azuis no canto. Era um `import` de CSS
+ * neste ficheiro, e o Next punha-a no `<head>` como folha que BLOQUEIA A
+ * PINTURA (P3-028): 83 kB à frente de qualquer pixel, também nas páginas a que
+ * os pré-carregamentos a levavam, que não têm mapa nenhum. Agora entra só onde
+ * há mapa, e só quando ele se vai desenhar — e o mapa espera por ela, para os
+ * botões não aparecerem um instante sem estilo e depois saltarem.
+ *
+ * No fim do `<head>`, como estava: as regras deste sítio que a corrigem são
+ * mais precisas do que as dela, e as que empatam ganham por virem depois.
+ */
+function folhaDoMapa(): Promise<void> {
+  const href = `${PASTA_DO_MAPLIBRE}/maplibre-gl.css`;
+  return new Promise((resolver) => {
+    const ja = document.querySelector<HTMLLinkElement>('link[data-folha-do-mapa]');
+    if (ja?.sheet) return resolver();
+    const l = ja ?? document.createElement('link');
+    l.addEventListener('load', () => resolver(), { once: true });
+    // Sem a folha o mapa desenha-se na mesma, e os botões ficam feios — o que
+    // é melhor do que não haver mapa.
+    l.addEventListener('error', () => resolver(), { once: true });
+    if (!ja) {
+      l.rel = 'stylesheet';
+      l.href = href;
+      l.dataset.folhaDoMapa = '';
+      document.head.appendChild(l);
+    }
+  });
+}
+
+/**
  * A biblioteca, carregada uma vez e guardada.
  *
  * O `setWorkerUrl` tem de acontecer antes do primeiro `new Map` e nunca mais.
  * Amarrá-lo ao carregamento garante isso sem uma bandeira à parte, e deixa
  * dito num sítio só que isto se carrega uma vez.
  *
+ * VEM DA PASTA DO PROCESSADOR, E NÃO DO EMPACOTADOR (P3-007). O `import()` do
+ * pacote fazia o Next pôr o MapLibre num pedaço seu, com uma cópia do código
+ * partilhado lá dentro — e o processador ia buscar outra cópia do mesmo
+ * código a `/maplibre/`. Eram 137 kB comprimidos descarregados duas vezes, e
+ * analisados duas vezes, na página mais pesada do sítio. Daqui, o principal e
+ * o processador importam o MESMO `maplibre-gl-shared.mjs`, e a cache serve-o
+ * uma vez. O `webpackIgnore` deixa o `import()` para o navegador; os tipos
+ * continuam a vir do pacote.
+ *
  * A versão vai no caminho, como a pasta onde o `copiar-maplibre.mjs` a põe:
  * um processador antigo em cache nunca fala com um módulo principal novo.
  */
-let biblioteca: Promise<typeof import('maplibre-gl')> | null = null;
+let biblioteca: Promise<Biblioteca> | null = null;
 
-function carregarMapLibre(): Promise<typeof import('maplibre-gl')> {
-  biblioteca ??= import('maplibre-gl').then((modulo) => {
-    modulo.setWorkerUrl(`/maplibre/${modulo.getVersion()}/maplibre-gl-worker.mjs`);
-    return modulo;
-  });
+function carregarMapLibre(): Promise<Biblioteca> {
+  biblioteca ??= Promise.all([
+    import(/* webpackIgnore: true */ `${PASTA_DO_MAPLIBRE}/maplibre-gl.mjs`) as Promise<Biblioteca>,
+    folhaDoMapa(),
+  ])
+    .then(([modulo]) => {
+      modulo.setWorkerUrl(`${PASTA_DO_MAPLIBRE}/maplibre-gl-worker.mjs`);
+      return modulo;
+    })
+    .catch((e) => {
+      // Uma falha não fica guardada: a próxima tentativa volta a pedir.
+      biblioteca = null;
+      throw e;
+    });
   return biblioteca;
 }
 
@@ -699,7 +749,7 @@ export default function Mapa({
     const m = mapa.current;
     if (!m || estado !== 'pronto') return;
     let vivo = true;
-    let marca: import('maplibre-gl').Marker | null = null;
+    let marca: InstanceType<Biblioteca['Marker']> | null = null;
     if (etiqueta) {
       carregarMapLibre().then(({ Marker }) => {
         if (!vivo) return;

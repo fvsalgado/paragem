@@ -24,7 +24,16 @@ const { version } = JSON.parse(readFileSync(pacote, 'utf8')) as { version: strin
 const dist = join(dirname(pacote), 'dist');
 const publico = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'maplibre', version);
 
-for (const nome of ['maplibre-gl-worker.mjs', 'maplibre-gl-shared.mjs']) {
+// O MÓDULO PRINCIPAL E A FOLHA DE ESTILO TAMBÉM (P3-007, P3-028): o `Mapa.tsx`
+// importa-os daqui, e não do pacote — um módulo principal empacotado trazia a
+// sua própria cópia do código partilhado, e a folha empacotada bloqueava a
+// pintura de todas as páginas.
+for (const nome of [
+  'maplibre-gl.mjs',
+  'maplibre-gl-worker.mjs',
+  'maplibre-gl-shared.mjs',
+  'maplibre-gl.css',
+]) {
   test(`${nome} está na pasta da versão instalada e é igual ao do pacote`, () => {
     const copia = join(publico, nome);
     assert.ok(existsSync(copia), `${copia} não existe — corre node scripts/copiar-maplibre.mjs`);
@@ -32,9 +41,27 @@ for (const nome of ['maplibre-gl-worker.mjs', 'maplibre-gl-shared.mjs']) {
   });
 }
 
-test('o processador importa o módulo partilhado ao lado, por caminho relativo', () => {
-  // É isto que obriga a servir os dois da mesma pasta, e que o empacotador
-  // partia ao tratá-los como recursos soltos com nomes com hash.
-  const processador = readFileSync(join(publico, 'maplibre-gl-worker.mjs'), 'utf8');
-  assert.match(processador, /from\s*["']\.\/maplibre-gl-shared\.mjs["']/);
+test('o principal e o processador importam o MESMO módulo partilhado, ao lado', () => {
+  // É isto que obriga a servir os três da mesma pasta, e que o empacotador
+  // partia ao tratá-los como recursos soltos com nomes com hash. E é o que faz
+  // a cache servir o código partilhado uma vez só, aos dois.
+  for (const nome of ['maplibre-gl.mjs', 'maplibre-gl-worker.mjs']) {
+    const modulo = readFileSync(join(publico, nome), 'utf8');
+    assert.match(modulo, /from\s*["']\.\/maplibre-gl-shared\.mjs["']/, nome);
+  }
+});
+
+test('o mapa não traz o MapLibre pelo empacotador', () => {
+  // Um `import('maplibre-gl')` ou um `import 'maplibre-gl/…css'` de valor
+  // voltava a pôr no pacote do Next a segunda cópia do código partilhado, ou
+  // a folha de estilo a bloquear a pintura de todas as páginas. Os tipos
+  // continuam a vir do pacote: `import type` não traz um byte.
+  const raiz = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
+  const mapa = readFileSync(join(raiz, 'componentes', 'Mapa.tsx'), 'utf8');
+  const semComentarios = mapa.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  // `typeof import('maplibre-gl')` é um tipo, e não traz nada.
+  assert.doesNotMatch(semComentarios, /(?<!typeof\s+)import\s*\(\s*['"]maplibre-gl/);
+  assert.doesNotMatch(semComentarios, /import\s+['"]maplibre-gl/);
+  // E o `import()` que o substitui passa ao lado do empacotador.
+  assert.match(mapa, /import\(\s*\/\*\s*webpackIgnore:\s*true\s*\*\//);
 });
