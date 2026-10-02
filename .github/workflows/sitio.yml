@@ -463,7 +463,14 @@ jobs:
         run: npm run test:a11y
 
       # E a nota que o §9 exige: ≥ 95 em telemóvel.
-      - name: Acessibilidade (Lighthouse ≥ 95)
+      #
+      # E O QUE SE PUBLICA, MEDIDO COMO O TELEMÓVEL O VÊ: o desempenho, com um
+      # piso folgado por molde, o salto da página e o peso de cada molde contra
+      # um orçamento, na demonstração mais rica. Aqui só se media a
+      # acessibilidade, e o início da região real chegou a produção com 1,1 MB
+      # e 3,6 s de bloqueio sem o CI dar por nada (P3-006). Os pisos e o
+      # orçamento estão em `web/tests/lighthouse.mjs`, com a medição que os deu.
+      - name: Lighthouse — acessibilidade, desempenho e peso
         working-directory: web
         run: npm run test:lighthouse
 
