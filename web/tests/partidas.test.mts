@@ -9,12 +9,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { compactar, esperaLegivel, expandir, textoSobre } from '../src/lib/formato.ts';
 import {
+  calendarioDasDatas,
+  calendarioDasMascaras,
+  chaveDoDia,
   dataDoCampo,
   fraseDoDia,
   horaDoRelogio,
+  periodoDe,
   proximas,
   servicosNoDia,
-  type Calendario,
 } from '../src/lib/dias.ts';
 
 test('a espera responde à pergunta de quem está na paragem', () => {
@@ -46,7 +49,7 @@ test('o contraste do distintivo calcula-se, não se acredita', () => {
 // ao sábado. O domingo 4/10 NÃO TEM LINHA — é assim que a tabela verdadeira
 // escreve um dia sem serviço nenhum. As datas: 1/10 é quinta, 2/10 sexta,
 // 3/10 sábado, 4/10 domingo, 5/10 segunda.
-const CAL: Calendario = {
+const CAL = calendarioDasDatas({
   servicos: ['rede:U', 'rede:S'],
   datas: {
     '20261001': [0],
@@ -55,7 +58,21 @@ const CAL: Calendario = {
     '20261005': [0],
     '20261006': [0],
   },
-};
+});
+
+// A MESMA SEMANA EM MÁSCARAS, tal como o pipeline a escreve no
+// `calendario.json` (`calendario_em_mascaras`, em `sitio.py`) — copiada da
+// saída dele, e não feita aqui: é o que prova que as duas pontas falam a
+// mesma língua. «Mw==» é 0b00110011, os dias 0, 1, 4 e 5 a contar de 1/10;
+// «BA==» é o bit 2, o sábado.
+const CAL_EM_MASCARAS = calendarioDasMascaras({
+  formato: 'mascaras/1',
+  inicio: '20261001',
+  dias: 6,
+  servicos: ['rede:U', 'rede:S'],
+  padroes: ['Mw==', 'BA=='],
+  padrao: [0, 1],
+});
 
 const U = (hora: string, linha = '1') => ({ hora, linha, servico_id: 'rede:U' });
 const S = (hora: string, linha = '1') => ({ hora, linha, servico_id: 'rede:S' });
@@ -146,10 +163,10 @@ test('A SEGUIR É PELA HORA: a circular escolar das 7:51 vem antes da anual das 
   // primeiro, o escolar depois. Cortadas assim, as cinco «a seguir» eram as
   // cinco seguintes da anual, e a circular que passava dali a um minuto não
   // aparecia na folha.
-  const CAL_ESCOLAR: Calendario = {
+  const CAL_ESCOLAR = calendarioDasDatas({
     servicos: ['rede:A-U', 'rede:E-U'],
     datas: { '20261006': [0, 1] },
-  };
+  });
   const anual = (hora: string) => ({ hora, linha: '2', servico_id: 'rede:A-U' });
   const escolar = (hora: string) => ({ hora, linha: '11', servico_id: 'rede:E-U' });
   const ESTACAO = [
@@ -194,6 +211,46 @@ test('fora do período não se adivinha, e sem mais partidas diz-se até quando 
   assert.deepEqual(fora, { tipo: 'fora-do-periodo', inicio: '20261001', fim: '20261006' });
   const fim = proximas([U('06:45')], dia(6, 22), '22:00', CAL);
   assert.deepEqual(fim, { tipo: 'nenhuma', fim: '20261006' });
+});
+
+test('a tabela em máscaras responde o mesmo que a tabela dos dias, a qualquer hora (P3-006)', () => {
+  // O sítio passou a pedir o `calendario.json` — vinte vezes mais pequeno do
+  // que o `servicos.json` na região real. O `proximas` não pode notar a
+  // diferença: o mesmo dia, a mesma hora, a mesma resposta, dentro e fora do
+  // período, e com a frase que vai antes das horas.
+  assert.deepEqual(periodoDe(CAL_EM_MASCARAS), periodoDe(CAL));
+  // De 26/9 a 10/10: antes do princípio, o período inteiro, e depois do fim.
+  for (let n = 0; n < 15; n++) {
+    const chave = chaveDoDia(new Date(2026, 8, 26 + n));
+    assert.deepEqual(
+      [...(servicosNoDia(CAL_EM_MASCARAS, chave) ?? ['fora'])],
+      [...(servicosNoDia(CAL, chave) ?? ['fora'])],
+      chave,
+    );
+  }
+  for (let d = 1; d <= 8; d++) {
+    for (const h of [0, 6, 7, 10, 13, 20, 21, 23]) {
+      const quando = new Date(2026, 9, d, h, 30);
+      const agora = horaDoRelogio(quando);
+      const a = proximas(TERMINAL, quando, agora, CAL, 5);
+      const b = proximas(TERMINAL, quando, agora, CAL_EM_MASCARAS, 5);
+      assert.deepEqual(b, a, `${d}/10 ${agora}`);
+      assert.equal(fraseDoDia(b, quando), fraseDoDia(a, quando));
+    }
+  }
+  const vazia = calendarioDasMascaras({
+    inicio: null,
+    dias: 0,
+    servicos: [],
+    padroes: [],
+    padrao: [],
+  });
+  assert.equal(periodoDe(vazia), null);
+  assert.deepEqual(proximas(TERMINAL, dia(4), '10:30', vazia), {
+    tipo: 'fora-do-periodo',
+    inicio: '',
+    fim: '',
+  });
 });
 
 test('à meia-noite e meia, o dia do campo é o de hoje e não o de ontem em UTC', () => {

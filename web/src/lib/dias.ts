@@ -19,12 +19,125 @@
 import { enderecoDosDados } from './dados-do-navegador.ts';
 
 /** `servicos.json`: os serviços, e os dias (`AAAAMMDD`) em que cada um anda. */
-export type Calendario = { servicos: string[]; datas: Record<string, number[]> };
+export type DatasDosServicos = { servicos: string[]; datas: Record<string, number[]> };
+
+/**
+ * `calendario.json`: a mesma tabela, em máscaras de bits (P3-006).
+ *
+ * Para cada serviço, a fila dos dias em que anda — o bit `j` (byte `j / 8`,
+ * do bit menos significativo para o mais) diz se anda no dia `inicio + j` —, e
+ * os serviços com os mesmos dias apontam para a mesma fila (`padrao`). Na
+ * região real são 96 kB em vez de 1,9 MB, e a resposta é a mesma: é o
+ * `pipeline/src/paragem/sitio.py` (`calendario_em_mascaras`) que a escreve, e
+ * há um teste de cada lado.
+ */
+export type CalendarioEmMascaras = {
+  formato?: string;
+  /** O primeiro dia da tabela, `AAAAMMDD` — `null` numa tabela sem dias. */
+  inicio: string | null;
+  /** Quantos dias ela cobre, do primeiro ao último. */
+  dias: number;
+  servicos: string[];
+  /** As máscaras, em base64. */
+  padroes: string[];
+  /** A máscara de cada serviço, pela ordem de `servicos`. */
+  padrao: number[];
+};
+
+/**
+ * A TABELA DOS DIAS, como o sítio a usa — venha de que ficheiro vier.
+ *
+ * Não é o ficheiro: é o que se lhe pergunta. «Que serviços andam neste dia?»
+ * e «este serviço anda neste dia?», e entre que dias a tabela fala. As duas
+ * formas publicadas respondem às mesmas perguntas da mesma maneira, e é por
+ * isso que o `proximas` não sabe de qual veio.
+ */
+export type Calendario = {
+  servicos: string[];
+  /** O primeiro e o último dia da tabela; `null` numa tabela sem dias. */
+  periodo: { inicio: string; fim: string } | null;
+  /** Os índices dos serviços que andam num dia (`AAAAMMDD`); vazio fora do período. */
+  doDia: (chave: string) => readonly number[];
+  /** Se o serviço `i` anda no dia — sem montar a lista do dia inteira. */
+  anda: (i: number, chave: string) => boolean;
+};
+
+/** A tabela a partir do `servicos.json` — a forma de antes, que o pipeline continua a publicar. */
+export function calendarioDasDatas(c: DatasDosServicos): Calendario {
+  let inicio = '';
+  let fim = '';
+  for (const k of Object.keys(c.datas)) {
+    if (!inicio || k < inicio) inicio = k;
+    if (!fim || k > fim) fim = k;
+  }
+  const conjuntos = new Map<string, Set<number>>();
+  return {
+    servicos: c.servicos,
+    periodo: inicio ? { inicio, fim } : null,
+    doDia: (chave) => c.datas[chave] ?? [],
+    anda: (i, chave) => {
+      let s = conjuntos.get(chave);
+      if (!s) {
+        s = new Set(c.datas[chave] ?? []);
+        conjuntos.set(chave, s);
+      }
+      return s.has(i);
+    },
+  };
+}
+
+/** Dias inteiros entre duas chaves `AAAAMMDD`, em UTC para a hora de verão não comer um. */
+function diasEntre(de: string, ate: string): number {
+  const t = (k: string) => Date.UTC(+k.slice(0, 4), +k.slice(4, 6) - 1, +k.slice(6, 8));
+  return Math.round((t(ate) - t(de)) / 86_400_000);
+}
+
+/** A tabela a partir do `calendario.json`. */
+export function calendarioDasMascaras(c: CalendarioEmMascaras): Calendario {
+  const mascaras = c.padroes.map((b64) => Uint8Array.from(atob(b64), (x) => x.charCodeAt(0)));
+  const inicio = c.inicio;
+  const periodo = inicio && c.dias > 0 ? { inicio, fim: chaveMais(inicio, c.dias - 1) } : null;
+  const posicao = (chave: string): number => {
+    if (!inicio) return -1;
+    const j = diasEntre(inicio, chave);
+    return j >= 0 && j < c.dias ? j : -1;
+  };
+  const bit = (i: number, j: number) => {
+    const m = mascaras[c.padrao[i]];
+    return !!m && (m[j >> 3] & (1 << (j & 7))) !== 0;
+  };
+  const dias = new Map<string, number[]>();
+  return {
+    servicos: c.servicos,
+    periodo,
+    doDia: (chave) => {
+      let lista = dias.get(chave);
+      if (!lista) {
+        const j = posicao(chave);
+        lista = [];
+        if (j >= 0) for (let i = 0; i < c.servicos.length; i++) if (bit(i, j)) lista.push(i);
+        dias.set(chave, lista);
+      }
+      return lista;
+    },
+    anda: (i, chave) => {
+      const j = posicao(chave);
+      return j >= 0 && bit(i, j);
+    },
+  };
+}
 
 const cache = new Map<string, Promise<Calendario | null>>();
 
+/** «Não existe»: 404 num servidor de ficheiros, 400 na porta pública do armazém (`dados.ts`). */
+const naoExiste = (r: Response) => r.status === 404 || r.status === 400;
+
 /**
  * A tabela dos dias desta região, buscada uma vez — ou `null` quando não há.
+ *
+ * **Pede-se o `calendario.json`, e só se ele não existir o `servicos.json`.**
+ * O sítio e os dados publicam-se separados: um sítio novo pode encontrar dados
+ * de antes das máscaras, e lê a forma antiga em vez de dizer que não sabe.
  *
  * **Uma falha não fica guardada.** A tabela que não chegou por a rede ter
  * caído não é uma região sem tabela: guardar o `null` desta vez era dizer
@@ -35,9 +148,23 @@ const cache = new Map<string, Promise<Calendario | null>>();
 export function calendarioDe(regiao: string): Promise<Calendario | null> {
   let p = cache.get(regiao);
   if (!p) {
-    p = fetch(enderecoDosDados(regiao, 'servicos.json'))
-      .then((r) => (r.ok ? (r.json() as Promise<Calendario>) : null))
-      .then((c) => (c?.datas && c?.servicos ? c : null))
+    p = fetch(enderecoDosDados(regiao, 'calendario.json'))
+      .then(async (r): Promise<Calendario | null> => {
+        if (r.ok) {
+          const c = (await r.json()) as CalendarioEmMascaras;
+          return Array.isArray(c?.servicos) && Array.isArray(c?.padroes)
+            ? calendarioDasMascaras(c)
+            : null;
+        }
+        if (!naoExiste(r)) throw new Error(`calendario.json: HTTP ${r.status}`);
+        const antiga = await fetch(enderecoDosDados(regiao, 'servicos.json'));
+        if (antiga.ok) {
+          const c = (await antiga.json()) as DatasDosServicos;
+          return c?.datas && c?.servicos ? calendarioDasDatas(c) : null;
+        }
+        if (!naoExiste(antiga)) throw new Error(`servicos.json: HTTP ${antiga.status}`);
+        return null;
+      })
       .catch(() => {
         cache.delete(regiao);
         return null;
@@ -96,13 +223,7 @@ export function chaveMais(chave: string, n: number): string {
  * horários carregados não falam.
  */
 export function periodoDe(cal: Calendario): { inicio: string; fim: string } | null {
-  let inicio = '';
-  let fim = '';
-  for (const k of Object.keys(cal.datas)) {
-    if (!inicio || k < inicio) inicio = k;
-    if (!fim || k > fim) fim = k;
-  }
-  return inicio ? { inicio, fim } : null;
+  return cal.periodo;
 }
 
 /**
@@ -115,7 +236,12 @@ export function periodoDe(cal: Calendario): { inicio: string; fim: string } | nu
 export function servicosNoDia(cal: Calendario, chave: string): Set<string> | null {
   const p = periodoDe(cal);
   if (!p || chave < p.inicio || chave > p.fim) return null;
-  return new Set((cal.datas[chave] ?? []).map((i) => cal.servicos[i]).filter(Boolean));
+  return new Set(
+    cal
+      .doDia(chave)
+      .map((i) => cal.servicos[i])
+      .filter(Boolean),
+  );
 }
 
 /**
@@ -236,7 +362,14 @@ export function proximas<T extends { hora: string; servico_id?: string }>(
   // Dentro do período, um dia sem linha na tabela é um dia sem serviço.
   const partidasDo = (dia: string) =>
     partidas.filter(
-      andaEm(new Set((cal.datas[dia] ?? []).map((i) => cal.servicos[i]).filter(Boolean))),
+      andaEm(
+        new Set(
+          cal
+            .doDia(dia)
+            .map((i) => cal.servicos[i])
+            .filter(Boolean),
+        ),
+      ),
     );
 
   const deHoje = partidasDo(chave);
@@ -268,8 +401,7 @@ export function proximas<T extends { hora: string; servico_id?: string }>(
     const i = p.servico_id ? indice.get(p.servico_id) : undefined;
     if (i !== undefined) daqui.add(i);
   }
-  const andaAlgumaNo = (dia: string) =>
-    todosOsDias || (cal.datas[dia] ?? []).some((i) => daqui.has(i));
+  const andaAlgumaNo = (dia: string) => todosOsDias || [...daqui].some((i) => cal.anda(i, dia));
   for (let n = 1, dia = chaveMais(chave, 1); dia <= periodo.fim; n++, dia = chaveMais(chave, n)) {
     const doDia = andaAlgumaNo(dia) ? partidasDo(dia) : [];
     if (doDia.length) {
