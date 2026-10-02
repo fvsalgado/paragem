@@ -6,7 +6,8 @@ uma região existir são os ficheiros em `regioes/<id>/`.
 
 E não é teoria: o CI faz nascer a **Serra da Pedra Alta** em todas as corridas,
 constrói-a ao lado das que já existem e verifica que nasce inteira, sem misturar um
-byte com a outra. **Se este guia e a prova divergirem, o CI é que tem razão** —
+byte com a outra. E faz o mesmo à região de demonstração, que tem os sete modos
+e um mapa próprio — o caso mais exigente do mesmo contrato. **Se este guia e a prova divergirem, o CI é que tem razão** —
 e o guia é que está errado.
 
 ## Antes de começar: o que é preciso ter
@@ -87,6 +88,23 @@ O campo `acesso` decide o que o pipeline pode fazer:
 | `local` | idem, e não tem endereço nenhum |
 | `nao-usar` | levanta exceção, com a razão nas notas |
 | `proibido-sem-autorizacao` | levanta exceção. É o do Transporte a Pedido |
+
+### Quando a região não tem carta oficial nem OpenStreetMap que sirva
+
+Uma região fora de Portugal — ou inventada, como a de demonstração — não tem
+CAOP, e o OpenStreetMap de onde as coordenadas dela caem pode não servir para
+mapa. Declara a sua geografia num GeoJSON, e a receita aponta-a duas vezes:
+
+```yaml
+limites: { fonte: <id>, camada: concelho, campo_codigo: dico, campo_nome: nome }
+mapa: { fonte: <id>, atribuicao: De quem é o desenho do mapa }
+```
+
+O `pipeline mosaicos` desenha então os mosaicos dessa geografia, sem o
+Planetiler, e a atribuição que aparece no canto do mapa é a declarada. Um
+horário que chegue já em tabela — sem PDF por trás — entra pelo
+`horarios-tabela`, que pode trazer as coordenadas de cada paragem. A região
+de demonstração (`regioes/demo/`) usa os três, e é o exemplo a copiar.
 
 ## Passo 3 — construir
 
