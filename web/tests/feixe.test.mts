@@ -17,6 +17,7 @@ import {
   CARACTERES,
   desenhavel,
   desenharEndereco,
+  ficheiroDoEndereco,
   letras,
   texto,
   tracos,
@@ -145,15 +146,44 @@ test('um endereço que o feixe não sabe desenhar não se desenha — a região 
   const bom = desenharEndereco('prova-municipio.paragem.pt');
   assert.ok(bom);
   assert.equal(bom.endereco, 'prova-municipio.paragem.pt');
-  for (const { viewBox, corpo } of [bom.inteira, bom.reduzida]) {
+  for (const { viewBox } of [bom.inteira, bom.reduzida]) {
     assert.match(viewBox, /^-?[\d.]+ -?[\d.]+ [\d.]+ [\d.]+$/);
-    // Classes e não cores: o sítio pinta-o pelo tema, com os tons da região.
-    assert.match(corpo, /class="l0"/);
-    assert.doesNotMatch(corpo, /stroke="#/);
   }
+  // O desenho não vem: vem a versão do ficheiro onde está.
+  assert.match(bom.versao, /^[0-9a-f]{8}$/);
+  assert.deepEqual(Object.keys(bom).sort(), ['endereco', 'inteira', 'reduzida', 'versao']);
+});
+
+test('o ficheiro do logótipo tem as duas versões, pintadas pelas variáveis de quem o usa', () => {
+  const ficheiro = ficheiroDoEndereco('prova-municipio.paragem.pt');
+  const grupo = (id: string) => ficheiro.match(new RegExp(`<g id="${id}"[^>]*>(.*?)</g>`))![1];
+  const inteira = grupo('inteira');
+  const reduzida = grupo('reduzida');
+  // Variáveis e não cores, nem classes: as classes da página não atravessam o
+  // `<use>`, e as variáveis sim — com elas, os tons da região e o tema.
+  assert.doesNotMatch(ficheiro, /stroke="#|fill="#|class=/);
+  assert.match(inteira, /var\(--feixe-1\)/);
+  assert.match(ficheiro, /var\(--fundo-da-marca,var\(--superficie\)\)/);
   // As três linhas na versão inteira, duas na reduzida.
-  assert.match(bom.inteira.corpo, /class="l2"/);
-  assert.doesNotMatch(bom.reduzida.corpo, /class="l2"/);
+  assert.match(inteira, /var\(--feixe-3\)/);
+  assert.match(reduzida, /var\(--feixe-2\)/);
+  assert.doesNotMatch(reduzida, /var\(--feixe-3\)/);
+  // O mesmo endereço dá o mesmo ficheiro e a mesma versão; outro, outra.
+  assert.equal(ficheiroDoEndereco('prova-municipio.paragem.pt'), ficheiro);
+  assert.notEqual(
+    desenharEndereco('prova.paragem.pt')!.versao,
+    desenharEndereco('prova-municipio.paragem.pt')!.versao,
+  );
+  // As caixas da página são as do desenho do ficheiro, versão a versão.
+  const d = desenharEndereco('prova-municipio.paragem.pt')!;
+  assert.equal(
+    d.inteira.viewBox,
+    texto('prova-municipio.paragem.pt', 'feixe', { variaveis: true }).viewBox,
+  );
+  assert.equal(
+    d.reduzida.viewBox,
+    texto('prova-municipio.paragem.pt', 'reduzido', { variaveis: true }).viewBox,
+  );
 });
 
 test('dois endereços ao mesmo tamanho têm a mesma altura de x', () => {

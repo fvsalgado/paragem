@@ -20,17 +20,13 @@
  * caso de quem não declara marca nenhuma.
  */
 import { test, expect, type Page } from '@playwright/test';
-import { PRODUTO, PROVA, PROVA_MUNICIPIO, REGIAO, anfitriao } from './anfitrioes';
+import { PORTA, PRODUTO, PROVA, PROVA_MUNICIPIO, REGIAO, anfitriao } from './anfitrioes';
 import { corDaMarca, declaracao, temMosaicos } from './dados-da-regiao';
-import { desenhavel } from '../src/lib/feixe.ts';
+import { desenhavel, desenharEndereco } from '../src/lib/feixe.ts';
 import { COR_DO_PRODUTO, feixeDaRegiao } from '../src/lib/marca.ts';
 
 /** A cor de um elemento como `#rrggbb`. */
-async function cor(
-  page: Page,
-  seletor: string,
-  propriedade: 'color' | 'background-color' | 'stroke',
-) {
+async function cor(page: Page, seletor: string, propriedade: 'color' | 'background-color') {
   return await page
     .locator(seletor)
     .first()
@@ -51,6 +47,44 @@ const enderecoDe = (id: string) => {
   const d = declaracao(id)?.dominio;
   return desenhavel(d) ? d : null;
 };
+
+/**
+ * Quantos píxeis de cada tom o logótipo pinta DE FACTO no ecrã. O desenho vem
+ * por `<use>` de um ficheiro à parte, e o que lá está dentro não se lê da
+ * página: fotografa-se. Espera-se que o ficheiro chegue, e conta-se — num
+ * telemóvel, cada linha tem píxeis cheios da cor dela, além das bordas.
+ */
+async function pintados(page: Page, tons: readonly string[]): Promise<number[]> {
+  const logotipo = page.locator('header .endereco-em-feixe');
+  await expect(logotipo).toBeVisible();
+  const contar = async () => {
+    const png = await logotipo.screenshot();
+    return page.evaluate(
+      async ({ b64, tons }) => {
+        const img = new Image();
+        img.src = `data:image/png;base64,${b64}`;
+        await img.decode();
+        const tela = document.createElement('canvas');
+        tela.width = img.width;
+        tela.height = img.height;
+        const ctx = tela.getContext('2d')!;
+        ctx.drawImage(img, 0, 0);
+        const { data } = ctx.getImageData(0, 0, tela.width, tela.height);
+        return tons.map((h) => {
+          const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+          let n = 0;
+          for (let i = 0; i < data.length; i += 4)
+            if (Math.abs(data[i] - r) + Math.abs(data[i + 1] - g) + Math.abs(data[i + 2] - b) < 12)
+              n++;
+          return n;
+        });
+      },
+      { b64: png.toString('base64'), tons: [...tons] },
+    );
+  };
+  await expect.poll(async () => Math.min(...(await contar()))).toBeGreaterThan(40);
+  return contar();
+}
 
 /** `#rrggbb` como o navegador o escreve num valor calculado. */
 const rgb = (hex: string) =>
@@ -91,10 +125,9 @@ test('o cabeçalho é claro, e o logótipo, a régua e as ligações levam os to
     expect(await cor(page, 'header.cabecalho', 'background-color'), id).toBe('#ffffff');
     const tons = feixeDaRegiao(corDaMarca(id)).claro;
     if (enderecoDe(id)) {
-      for (const [i, tom] of tons.entries()) {
-        expect(await cor(page, `header .endereco-em-feixe .inteira .l${i}`, 'stroke'), id).toBe(
-          tom,
-        );
+      // As três linhas do logótipo, cada uma no seu tom da região.
+      for (const [i, n] of (await pintados(page, tons)).entries()) {
+        expect(n, `${id}: ${tons[i]}`).toBeGreaterThan(40);
       }
     }
     // A régua: a linha do meio é o traço, e as de fora e de dentro as sombras.
@@ -116,9 +149,37 @@ test('as provas não têm marca própria: o feixe sai do azul do §6, sem logót
   const tons = feixeDaRegiao(COR_DO_PRODUTO).claro;
   for (const host of [PROVA, PROVA_MUNICIPIO]) {
     await page.goto(`${host}/rede/`);
-    expect(await cor(page, 'header .endereco-em-feixe .inteira .l0', 'stroke'), host).toBe(tons[0]);
+    const [deFora] = await pintados(page, tons);
+    expect(deFora, host).toBeGreaterThan(40);
     await expect(page.locator('header img.logotipo'), host).toHaveCount(0);
   }
+});
+
+test('o desenho do logótipo é um ficheiro da região, para sempre na cache, e só o de agora', async ({
+  page,
+  request,
+}) => {
+  const id = ['prova', 'prova-municipio', REGIAO].find((r) => enderecoDe(r))!;
+  const desenho = desenharEndereco(enderecoDe(id))!;
+  await page.goto(`${anfitriao(id)}/rede/`);
+  // A página leva só a referência: o desenho não vem no HTML.
+  const usos = page.locator('header .endereco-em-feixe use');
+  await expect(usos).toHaveCount(2);
+  await expect(usos.first()).toHaveAttribute('href', `/logotipo/${desenho.versao}.svg#inteira`);
+  expect(await page.locator('header .endereco-em-feixe path').count(), id).toBe(0);
+
+  const pedir = (caminho: string) =>
+    request.get(`http://127.0.0.1:${PORTA}${caminho}`, {
+      headers: { host: `${id}.localhost:${PORTA}` },
+    });
+  const r = await pedir(`/logotipo/${desenho.versao}.svg`);
+  expect(r.status()).toBe(200);
+  expect(r.headers()['content-type']).toContain('image/svg+xml');
+  expect(r.headers()['cache-control']).toContain('immutable');
+  expect(await r.text()).toContain('<g id="reduzida"');
+  // Uma versão que não é a de agora não se serve: seria o desenho errado
+  // guardado para sempre com o nome de outro.
+  expect((await pedir('/logotipo/00000000.svg')).status()).toBe(404);
 });
 
 test('a região que declara um logótipo mostra-o, sem saltar quando chega', async ({ page }) => {

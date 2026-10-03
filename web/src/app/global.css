@@ -2599,10 +2599,11 @@ ul.cartoes .cartao h3 {
 }
 
 /* O FEIXE NO SÍTIO — a marca do produto (`MarcaDoProduto.tsx`) e o
-   logótipo-endereço de cada região (`EnderecoEmFeixe.tsx`): cada linha pela
-   sua classe, nas cores do feixe de quem é a página, e o halo — que faz um
-   traço passar por baixo do outro — da cor do que está por trás. A uma cor,
-   tudo na cor do texto à volta. */
+   logótipo-endereço de cada região (`EnderecoEmFeixe.tsx`). Na marca, cada
+   linha pela sua classe, nas cores do feixe, e o halo — que faz um traço
+   passar por baixo do outro — da cor do que está por trás; a uma cor, tudo na
+   cor do texto à volta. O logótipo-endereço vem por `<use>`, onde as classes
+   da página não chegam: pinta-se com as mesmas variáveis, que lá chegam. */
 .marca-do-produto,
 .endereco-em-feixe svg {
   display: block;
@@ -2610,24 +2611,19 @@ ul.cartoes .cartao h3 {
   width: auto;
   overflow: visible;
 }
-.marca-do-produto .halo,
-.endereco-em-feixe .halo {
+.marca-do-produto .halo {
   stroke: var(--fundo-da-marca, var(--superficie));
 }
-.marca-do-produto .l0,
-.endereco-em-feixe .l0 {
+.marca-do-produto .l0 {
   stroke: var(--feixe-1);
 }
-.marca-do-produto .l1,
-.endereco-em-feixe .l1 {
+.marca-do-produto .l1 {
   stroke: var(--feixe-2);
 }
-.marca-do-produto .l2,
-.endereco-em-feixe .l2 {
+.marca-do-produto .l2 {
   stroke: var(--feixe-3);
 }
-.marca-do-produto .ponto,
-.endereco-em-feixe .ponto {
+.marca-do-produto .ponto {
   fill: var(--feixe-1);
 }
 
