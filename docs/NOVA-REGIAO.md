@@ -215,12 +215,11 @@ logotipo: logotipo.svg
   e das ligações —, e as vizinhas afastam-se ≥ 15 de L*, para se distinguirem
   em cinzento e com daltonismo (CLAUDE.md §6). A cor dá o tom, e não o tom
   exato: uma região não tem de saber desenhar um feixe para ter um.
-- **A cor é validada no pipeline** (`pipeline/src/paragem/marca.py`). A tinta
-  por cima não se declara: escolhe-se pelo contraste, entre o branco e o
-  azul-escuro do texto do §6. Se nenhum dos dois chegar aos 4,5:1, a região
-  **não carrega**, e a mensagem diz a cor mais próxima que passaria — escurecer
-  em silêncio era mudar a marca de alguém sem lhe dizer. Sem `cor:`, os tons
-  saem do azul do §6 (`#0A5C7A`).
+- **Qualquer cor serve.** O pipeline só confere que é uma cor
+  (`pipeline/src/paragem/marca.py`): os tons tiram-se dela e leem-se seja qual
+  for. Até 3/10/2026 era recusada a cor que não se lesse com texto por cima,
+  porque pintava uma faixa com o nome da rede; a faixa saiu, e a regra com ela.
+  Sem `cor:`, os tons saem do azul do §6 (`#0A5C7A`).
 - **O logótipo** é SVG, PNG ou WebP, até 200 kB, e publica-se com os dados
   (`marca/logotipo-<soma>.<ext>`). Um SVG não pode trazer programas nem ir
   buscar nada a outro sítio. No cabeçalho mostra-se com 40 px de altura e a

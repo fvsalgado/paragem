@@ -128,13 +128,11 @@ export type Regiao = {
    * A marca da região: a cor que ela declara — de onde saem os tons do
    * logótipo-endereço e das réguas (`marca.ts`) — e o logótipo publicado ao
    * lado dos dados. Ausente em dados de antes disto — e aí vale a do §6, sem
-   * logótipo. A tinta e o contraste vinham da faixa do cabeçalho, que saiu:
-   * o sítio já não os lê.
+   * logótipo. Dados de antes de 3/10/2026 trazem também a tinta e o contraste
+   * da faixa do cabeçalho, que saiu: nada os lê.
    */
   marca?: {
     cor?: string;
-    tinta?: string;
-    contraste?: number;
     propria?: boolean;
     logotipo?: string | null;
     /** Largura sobre altura do logótipo, lida do ficheiro no pipeline. */

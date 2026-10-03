@@ -1,20 +1,24 @@
-"""A marca de uma região: a cor da faixa e o logótipo, quando os declara.
+"""A marca de uma região: a cor e o logótipo, quando os declara.
 
 O sítio de uma autoridade de transportes é DELA, e não do fornecedor: a
 primeira coisa do cabeçalho era «Paragem.pt», a levar à página de vendas, e o
 nome da região vinha a seguir numa pastilha que parecia um rótulo de estado
-(P4-008, P1-007). Passa a ser a marca da rede, numa faixa com a cor dela —
-e por isso a cor e o logótipo são dados da região, declarados no
-`regiao.yaml` como o resto, e não um commit no código (o «sem um commit de
-código» do §1 vale também para a marca).
+(P4-008, P1-007). Passou a ser a marca da região — e por isso a cor e o
+logótipo são dados da região, declarados no `regiao.yaml` como o resto, e não
+um commit no código (o «sem um commit de código» do §1 vale também para a
+marca).
 
-**A cor é validada aqui, e recusada se não se puder ler.** Por cima da faixa
-vai texto, e a tinta escolhe-se pelo contraste: o branco, ou o azul-escuro do
-texto do §6, o que contrastar mais. Se nenhum dos dois chegar aos 4,5:1 que a
-WCAG 2.1 AA pede ao texto, a região não carrega — com a cor mais próxima que
-passaria escrita na mensagem. Escurecer ou aclarar em silêncio era mudar a
-marca de alguém sem lhe dizer; recusar com a alternativa é deixar a decisão a
-quem é dono da marca.
+**A cor dá o tom, e qualquer cor serve.** O logótipo de uma região é o
+endereço dela desenhado em feixe (CLAUDE.md §6), e os três tons do feixe
+tira-os o sítio da cor declarada, com as luminosidades do do produto
+(`web/src/lib/marca.ts`): leem-se seja qual for a cor, e os testes de lá
+conferem-no. A cor tal e qual só vai para a barra do navegador.
+
+Até 3/10/2026 era recusada aqui a cor que não se lesse nem com branco nem com
+o azul-escuro do texto por cima, porque pintava uma faixa com o nome da rede.
+A faixa saiu. Recusar um laranja médio por causa dela era recusar a marca de
+alguém por uma razão que já não existe — e mandar escurecê-la para uma faixa
+que ninguém ia ver.
 
 **O logótipo é um ficheiro ao lado do `regiao.yaml`**, na raiz de onde a
 região vem — como o resto do que é dela —, e vai para o armazém com os dados.
@@ -31,13 +35,8 @@ import re
 from pathlib import Path
 from typing import Any
 
-#: O mínimo da WCAG 2.1 AA para texto normal.
-MINIMO = 4.5
 #: A cor da marca do §6 — a de quem não declara a sua.
 COR_DO_PRODUTO = "#0a5c7a"
-#: As duas tintas possíveis por cima da faixa: o branco, e o texto do §6.
-TINTA_CLARA = "#ffffff"
-TINTA_ESCURA = "#102c3f"
 #: Os formatos que um `<img>` mostra igual em todo o lado, e o tamanho máximo:
 #: um logótipo é um desenho, e um de 200 kB já é uma fotografia.
 FORMATOS = {".svg": "image/svg+xml", ".png": "image/png", ".webp": "image/webp"}
@@ -61,56 +60,12 @@ def normalizar(cor: Any) -> str:
     return f"#{limpa}"
 
 
-def luminancia(cor: str) -> float:
-    """A luminância relativa, como a WCAG 2.1 a define."""
-    canais = []
-    for i in (1, 3, 5):
-        v = int(cor[i : i + 2], 16) / 255
-        canais.append(v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4)
-    return 0.2126 * canais[0] + 0.7152 * canais[1] + 0.0722 * canais[2]
-
-
-def contraste(a: str, b: str) -> float:
-    claro, escuro = sorted((luminancia(a), luminancia(b)), reverse=True)
-    return (claro + 0.05) / (escuro + 0.05)
-
-
-def tinta(cor: str) -> tuple[str, float] | None:
-    """A tinta que se lê por cima desta cor, e com que contraste — ou `None` se nenhuma chegar."""
-    melhor = max(((t, contraste(cor, t)) for t in (TINTA_CLARA, TINTA_ESCURA)), key=lambda x: x[1])
-    return melhor if melhor[1] >= MINIMO else None
-
-
-def _misturar(cor: str, alvo: str, f: float) -> str:
-    a = [int(cor[i : i + 2], 16) for i in (1, 3, 5)]
-    b = [int(alvo[i : i + 2], 16) for i in (1, 3, 5)]
-    return "#" + "".join(f"{round(x + (y - x) * f):02x}" for x, y in zip(a, b, strict=True))
-
-
-def alternativas(cor: str) -> list[str]:
-    """A cor mais próxima que passaria: escurecida para o branco, aclarada para o azul-escuro."""
-    saida = []
-    for alvo, tinta_alvo in (("#000000", TINTA_CLARA), ("#ffffff", TINTA_ESCURA)):
-        for passo in range(1, 101):
-            tentativa = _misturar(cor, alvo, passo / 100)
-            if contraste(tentativa, tinta_alvo) >= MINIMO:
-                saida.append(tentativa)
-                break
-    return saida
-
-
 def validar_cor(cor: Any, onde: str) -> str:
-    """A cor normalizada, ou a recusa — com a medida e a alternativa escritas."""
-    c = normalizar(cor)
-    if tinta(c) is None:
-        melhor = max(contraste(c, TINTA_CLARA), contraste(c, TINTA_ESCURA))
-        perto = " ou ".join(f"«{x}»" for x in alternativas(c))
-        raise MarcaInvalida(
-            f"{onde}: a cor {c} não se lê com texto por cima — o melhor que dá é "
-            f"{melhor:.1f}:1, e a faixa precisa de {MINIMO}:1 (WCAG 2.1 AA). "
-            f"A mais próxima que passa: {perto}. A escolha é de quem é dono da marca."
-        )
-    return c
+    """A cor normalizada, ou a recusa — a dizer onde está escrita."""
+    try:
+        return normalizar(cor)
+    except MarcaInvalida as e:
+        raise MarcaInvalida(f"{onde}: {e}") from None
 
 
 _PROIBIDO_NUM_SVG = (
@@ -199,14 +154,13 @@ def nome_publicado(caminho: Path) -> str:
 
 
 def marca_publicada(cor: str | None, logotipo: Path | None) -> dict[str, Any]:
-    """O que vai no `regiao.json`: a cor, a tinta e o contraste, e onde está o logótipo."""
-    c = cor or COR_DO_PRODUTO
-    t = tinta(c)
-    assert t is not None, "a cor do produto lê-se com branco por cima"
+    """O que vai no `regiao.json`: a cor, se é dela, e onde está o logótipo.
+
+    A tinta e o contraste deixaram de ir: eram os da faixa do cabeçalho, que
+    saiu, e o sítio não os lia — media outra vez.
+    """
     return {
-        "cor": c,
-        "tinta": t[0],
-        "contraste": round(t[1], 2),
+        "cor": cor or COR_DO_PRODUTO,
         # Se a cor é da região ou é a do produto, por omissão.
         "propria": cor is not None,
         "logotipo": nome_publicado(logotipo) if logotipo else None,
