@@ -150,3 +150,65 @@ test('um nome comprido não muda a altura do cabeçalho, nem empurra a página',
     expect(larga, `${largura} px: a página desliza para o lado`).toBeLessThanOrEqual(0);
   }
 });
+
+/**
+ * O VERMELHO DO PRODUTO FICA NA PÁGINA DO PRODUTO (§6). A marca do produto é
+ * vermelha por fora, e o vermelho do sítio quer dizer alerta: a cores, a marca
+ * vai à montra, ao ícone e ao cartão de partilha, e mais a lado nenhum. Numa
+ * região ou no painel, um vermelho daqueles ao pé de um aviso lia-se como
+ * outro aviso.
+ *
+ * Procura-se a cor em tudo o que a página pinta — texto, fundos, contornos,
+ * traços e preenchimentos —, nos dois temas, nas regiões de prova (que são do
+ * produto: um cliente pode bem ter uma faixa vermelha que é dele) e na
+ * entrada do painel, que leva a marca a uma cor.
+ */
+const VERMELHOS_DO_PRODUTO = ['rgb(194, 40, 28)', 'rgb(242, 87, 63)']; // #c2281c e #f2573f
+
+test('o vermelho da marca do produto não aparece nas regiões nem no painel', async ({
+  browser,
+}) => {
+  for (const tema of ['light', 'dark'] as const) {
+    const contexto = await browser.newContext({ colorScheme: tema });
+    const page = await contexto.newPage();
+    for (const endereco of [
+      `${PROVA}/`,
+      `${PROVA}/rede/`,
+      `${PROVA_MUNICIPIO}/rede/`,
+      `${anfitriao(REGIAO)}/rede/`,
+      `${PRODUTO}/admin/entrar/`,
+    ]) {
+      await page.goto(endereco);
+      const achados = await page.evaluate((vermelhos) => {
+        const propriedades = [
+          'color',
+          'background-color',
+          'border-top-color',
+          'border-right-color',
+          'border-bottom-color',
+          'border-left-color',
+          'outline-color',
+          'text-decoration-color',
+          'fill',
+          'stroke',
+        ];
+        const encontrados: string[] = [];
+        for (const e of document.querySelectorAll('body *')) {
+          if (!e.checkVisibility({ visibilityProperty: true })) continue;
+          const estilo = getComputedStyle(e);
+          for (const p of propriedades) {
+            const v = estilo.getPropertyValue(p);
+            if (vermelhos.some((r) => v.includes(r))) {
+              encontrados.push(
+                `<${e.tagName.toLowerCase()} class="${e.getAttribute('class') ?? ''}"> ${p}`,
+              );
+            }
+          }
+        }
+        return encontrados.slice(0, 8);
+      }, VERMELHOS_DO_PRODUTO);
+      expect(achados, `${tema}: ${endereco}`).toEqual([]);
+    }
+    await contexto.close();
+  }
+});

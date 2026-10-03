@@ -64,12 +64,20 @@ test('a declaração de acessibilidade do produto tem contacto, e nada «por pre
   await expect(principal).not.toContainText(/por preencher/i);
 });
 
-test('a marca do produto parece a marca, e o título não se cola ao cabeçalho', async ({ page }) => {
+test('a marca do produto é o feixe a cores, e o título não se cola ao cabeçalho', async ({
+  page,
+}) => {
   for (const caminho of ['/', '/contacto/']) {
     await page.goto(`${PRODUTO}${caminho}`);
-    const marca = page.getByRole('banner').getByRole('link', { name: /Paragem/ });
-    await expect(marca).toHaveCSS('font-weight', '700');
-    await expect(marca).toHaveCSS('color', 'rgb(10, 92, 122)');
+    // O nome para quem ouve; o desenho para quem vê (§6): uma das duas
+    // versões à vista, com o vermelho do produto por fora.
+    const marca = page.getByRole('banner').getByRole('link', { name: 'Paragem.pt' });
+    await expect(marca).toHaveAttribute('href', /\/$/);
+    const feixe = marca.locator('svg.marca-do-produto:visible');
+    await expect(feixe).toHaveCount(1);
+    await expect(feixe.locator('.l0').first()).toHaveCSS('stroke', 'rgb(194, 40, 28)');
+    await expect(feixe.locator('.ponto')).toHaveCSS('fill', 'rgb(194, 40, 28)');
+    expect((await marca.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     const ar = await page.evaluate(() => {
       const fim = document.querySelector('header')!.getBoundingClientRect().bottom;
       return document.querySelector('h1')!.getBoundingClientRect().top - fim;

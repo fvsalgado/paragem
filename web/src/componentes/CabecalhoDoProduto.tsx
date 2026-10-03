@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import SimboloDoProduto from './SimboloDoProduto';
+import MarcaDoProduto from './MarcaDoProduto';
 
 /**
  * O cabeçalho das páginas do PRODUTO — não o de uma região.
@@ -7,7 +7,14 @@ import SimboloDoProduto from './SimboloDoProduto';
  * A marca era um `<span>` sem estilo: a regra `.cabecalho a.marca` só apanha
  * ligações, e na única página onde a marca não era ligação o nome do produto
  * saía como texto corrido — precisamente na página que o vende (P4-029). Agora
- * é a ligação para o início, com o símbolo ao lado.
+ * é a ligação para o início.
+ *
+ * A MARCA A CORES, SOBRE O PAPEL DO CABEÇALHO (decidido a 3/10/2026). Numa
+ * faixa vermelha teria de ir a branco, e a esta altura três linhas brancas
+ * juntam-se numa letra cheia: o feixe só se vê a cores sobre um fundo claro.
+ * Vão duas no HTML e o CSS mostra uma: as três linhas onde há píxeis para elas
+ * (ecrã largo e denso), e o feixe reduzido a duas no resto — abaixo de ~65
+ * píxeis de ecrã de altura, o vazio entre três linhas deixa de se ver.
  *
  * À direita, «Falar connosco»: é a pergunta de quem chega aqui a decidir, e
  * tem de estar à vista em todas as páginas, como no Coreto. As três âncoras
@@ -25,10 +32,9 @@ export default function CabecalhoDoProduto({ origem = '' }: { origem?: string })
     <header className="cabecalho cabecalho-do-produto">
       <div className="interior">
         <Link href={em('/')} className="marca">
-          <SimboloDoProduto />
-          <span>
-            Paragem<span aria-hidden="true">.</span>pt
-          </span>
+          <MarcaDoProduto className="inteira" />
+          <MarcaDoProduto versao="reduzido" className="reduzida" />
+          <span className="so-para-leitores">Paragem.pt</span>
         </Link>
         <nav aria-label="Produto">
           <ul>

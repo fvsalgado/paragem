@@ -8,6 +8,7 @@ import { temChaveDeServico } from '@/lib/painel/base';
 import { listarRegioes } from '@/lib/painel/consultas';
 import { CABECALHO_DO_CAMINHO, barreiraDoLayout } from '@/lib/painel/guarda';
 import { pode } from '@/lib/painel/papeis';
+import MarcaDoProduto from '@/componentes/MarcaDoProduto';
 
 /** Nada do painel pode ser servido de cache. */
 export const dynamic = 'force-dynamic';
@@ -102,8 +103,11 @@ export default async function LayoutDoPainel({ children }: { children: React.Rea
     <>
       <header className="cabecalho painel-cabecalho">
         <div className="interior">
+          {/* A uma cor e em letra cheia: no painel o vermelho do produto
+              quer dizer perigo, e a esta altura as linhas juntam-se (§6). */}
           <Link href="/admin/" className="marca">
-            Paragem<span aria-hidden="true">.</span>pt
+            <MarcaDoProduto versao="cheia" umaCor />
+            <span className="so-para-leitores">Paragem.pt</span>
           </Link>
           <span className="marca-dados">Painel</span>
           {portao.ok ? (

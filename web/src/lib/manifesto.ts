@@ -19,13 +19,16 @@ export const COR_DO_TEMA = '#0A5C7A';
 export const COR_DE_FUNDO = '#F5F7F4';
 
 /**
- * Os ícones, todos tirados do `app/icon.svg` por
- * `scripts/imagens-do-produto.mjs`. O «maskable» é o mesmo desenho, a cheio e
- * mais pequeno, para o Android o poder recortar num círculo sem lhe comer a
- * placa.
+ * Os ícones do ecrã principal: o «p» vetorial do feixe, em papel, tirado de
+ * `lib/marca-do-produto.ts` por `scripts/imagens-do-produto.mjs`. O
+ * «maskable» é o mesmo desenho, a cheio e mais pequeno, para o Android o poder
+ * recortar num círculo sem lhe comer o bojo.
+ *
+ * O `icon.svg` NÃO ENTRA AQUI. É o «p» desenhado ao píxel para 16 px, e um
+ * SVG com `sizes: any` é o que o Chrome escolhe para o ecrã principal: o
+ * atalho saía com os píxeis de um ícone de separador ampliados doze vezes.
  */
 export const ICONES = [
-  { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
   { src: '/produto/icone-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
   { src: '/produto/icone-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
   {
