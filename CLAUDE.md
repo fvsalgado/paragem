@@ -205,6 +205,28 @@ Por esta ordem, um PR de cada vez: (0) a base, provada num Postgres real;
   - linhas da rede: usar `route_color` do GTFS, garantindo contraste.
 - Expressos e táxis (serviços privados) usam cartões neutros — borda, sem cor
   de modo.
+- **A marca do produto é o feixe** (decidido a 3/10/2026): «paragem.pt»
+  desenhado por três linhas paralelas, como as linhas que partilham a mesma via
+  num mapa de metro, e o «p» como ícone. Sai toda de
+  `web/src/lib/marca-do-produto.ts` — o cabeçalho, os ícones e a imagem de
+  partilha —, e não se desenha à mão em mais lado nenhum:
+  - de fora para dentro, `#C2281C`, `#3F92D4` e `#7FBBF7`; no tema escuro,
+    `#F2573F`, `#7EBAF6` e `#CBE3FF`. A linha de fora fica a ≥ 3:1 em cada
+    fundo, e as vizinhas afastam-se ≥ 15 de L*, para se distinguirem em
+    cinzento e com daltonismo;
+  - **a cores só na página do produto, no ícone e no cartão de partilha.** O
+    vermelho de fora é quase o do alerta: numa região ou no painel lia-se como
+    um aviso, e um teste de interface procura-o lá;
+  - a uma cor, em azul-noite `#102C3F` ou branco, **sempre com três linhas**:
+    duas linhas iguais numa cor é a marca da Optibus, que vende às mesmas
+    autoridades de transportes;
+  - abaixo de ~65 píxeis de ecrã de altura, o feixe passa a duas linhas a
+    cores, e a letra cheia a uma cor;
+  - o ícone desenha-se ao píxel a 16, 32 e 48 px; no separador troca de
+    azulejo com o tema do navegador — azul-noite num separador claro, papel
+    num escuro —, e no ecrã principal vai em papel;
+  - nas regiões, o produto assina «Feito com Paragem.pt», a uma cor e mais
+    pequeno do que a marca da região.
 - Estrutura da página inicial (telemóvel): «Para onde vais?»; faixa de avisos;
   «Perto de ti»; bloco do transporte a pedido; grelha dos modos; «Que título me
   serve?»; concelhos; rodapé.

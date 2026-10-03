@@ -79,7 +79,10 @@ atribuição ODbL embutida.
 ### A marca «Paragem.pt» não é coberta por nenhuma das duas
 
 A licença dá direitos sobre o software, não sobre a identidade com que ele se
-apresenta. Uma região que entre no Paragem.pt promove a **sua** rede, com a
+apresenta. O código que desenha a marca é AGPL como o resto; os ficheiros que a
+mostram — o ícone em todos os tamanhos e a imagem de partilha — estão
+declarados à parte no [`REUSE.toml`](REUSE.toml), e o nome e o desenho não vêm
+com o código. Uma região que entre no Paragem.pt promove a **sua** rede, com a
 marca dela ao lado da assinatura do produto.
 
 O contrário também vale, e é a razão pela qual o produto tem nome próprio: a
@@ -105,4 +108,4 @@ A declaração legível por máquina está em [`REUSE.toml`](REUSE.toml), e o
 
 ---
 
-Reporta-se ao estado do repositório a 2 de outubro de 2026.
+Reporta-se ao estado do repositório a 3 de outubro de 2026.

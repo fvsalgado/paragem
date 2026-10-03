@@ -66,3 +66,31 @@ path = "disponibilidade/fixtures/**"
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Fábio Salgado <fvsalgado@gmail.com>"
 SPDX-License-Identifier = "AGPL-3.0-only"
+
+# A letra do sítio, Atkinson Hyperlegible, cortada em glifos para as etiquetas
+# do mapa (`web/scripts/glifos.mjs`). Nos termos da OFL, mudar-lhe o formato é
+# uma versão modificada, e continua sob OFL: a licença vai ao lado, em
+# `web/public/glifos/OFL.txt`. A origem e a data estão em docs/TERCEIROS.md.
+[[annotations]]
+path = "web/public/glifos/**"
+precedence = "override"
+SPDX-FileCopyrightText = "2020 Braille Institute of America, Inc."
+SPDX-License-Identifier = "OFL-1.1"
+
+# --- A marca ----------------------------------------------------------------
+
+# Os ficheiros que MOSTRAM a marca «Paragem.pt» — o ícone em todos os
+# tamanhos e a imagem de partilha. A marca não é coberta pela licença do código
+# (AUTORIA.md): o código que a desenha (`web/src/lib/marca-do-produto.ts`) é
+# AGPL como o resto, e quem o reutiliza leva o motor, não o nome nem o desenho.
+[[annotations]]
+path = [
+  "web/src/app/icon.svg",
+  "web/src/app/favicon.ico",
+  "web/src/app/apple-icon.png",
+  "web/public/produto/icone-*.png",
+  "web/public/produto/partilha.png",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Fábio Salgado <fvsalgado@gmail.com>"
+SPDX-License-Identifier = "LicenseRef-marca-paragem"
