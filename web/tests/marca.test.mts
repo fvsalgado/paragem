@@ -1,7 +1,7 @@
 /**
- * A marca da região como o sítio a lê (`lib/marca.ts`): a tinta medida outra
- * vez, a do §6 quando os dados não trazem marca ou trazem uma estragada, e os
- * três tons do feixe que se tiram da cor dela.
+ * A marca da região como o sítio a lê (`lib/marca.ts`): a do §6 quando os
+ * dados não trazem marca ou trazem uma estragada, e os três tons do feixe que
+ * se tiram da cor dela — que se leem, seja qual for a cor.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,16 +13,16 @@ import {
   feixeDaRegiao,
   marcaDaRegiao,
   nomesDaAssinatura,
-  tintaPara,
 } from '../src/lib/marca.ts';
 
 /**
  * Cores de região de toda a roda, e as que costumam partir regras: um amarelo
  * e um ciano muito claros, um azul quase preto, um cinzento, o vermelho do
- * alerta, um magenta saturado.
+ * alerta, um magenta saturado, e o laranja médio que a faixa recusava.
  */
 const CORES = [
   COR_DO_PRODUTO,
+  '#d9643a',
   '#f2a541',
   '#2d6a3e',
   '#5b3a8e',
@@ -39,18 +39,10 @@ const CLAROS = ['#f5f7f4', '#ffffff', '#eef2f0'];
 const ESCUROS = ['#0f1a20', '#16242c', '#1d2e37'];
 const croma = (cor: string) => Math.hypot(lab(cor)[1], lab(cor)[2]);
 
-test('a tinta é a que se lê melhor, e nenhuma quando nenhuma chega', () => {
-  assert.equal(tintaPara('#0a5c7a'), '#ffffff');
-  assert.equal(tintaPara('#f2a541'), '#102c3f');
-  // Um laranja médio não dá 4,5:1 nem com branco nem com o azul-escuro.
-  assert.equal(tintaPara('#d9643a'), null);
-});
-
 test('sem marca nos dados, a cor é a do §6, sem logótipo', () => {
   const m = marcaDaRegiao({});
   assert.deepEqual(m, {
     cor: COR_DO_PRODUTO,
-    tinta: '#ffffff',
     feixe: feixeDaRegiao(COR_DO_PRODUTO),
     logotipo: null,
     logotipoProporcao: null,
@@ -58,12 +50,18 @@ test('sem marca nos dados, a cor é a do §6, sem logótipo', () => {
   });
 });
 
-test('uma marca estragada não pinta texto ilegível: fica a do produto', () => {
-  // A tinta que veio escrita não conta — mede-se outra vez.
-  const m = marcaDaRegiao({ marca: { cor: '#d9643a', tinta: '#ffffff', propria: true } });
-  assert.equal(m.cor, COR_DO_PRODUTO);
-  assert.equal(m.tinta, '#ffffff');
-  assert.equal(m.propria, false);
+test('uma cor que não é cor fica a do produto; qualquer cor que o seja é da região', () => {
+  for (const estragada of ['laranja', '#12', '']) {
+    const m = marcaDaRegiao({ marca: { cor: estragada, propria: true } });
+    assert.equal(m.cor, COR_DO_PRODUTO, estragada);
+    assert.equal(m.propria, false, estragada);
+  }
+  // Um laranja médio: a faixa recusava-o — nem o branco nem o azul-escuro se
+  // liam por cima. Os tons tiram-se dele e leem-se (testes abaixo).
+  const m = marcaDaRegiao({ marca: { cor: '#D9643A', propria: true } });
+  assert.equal(m.cor, '#d9643a');
+  assert.equal(m.propria, true);
+  assert.deepEqual(m.feixe, feixeDaRegiao('#d9643a'));
 });
 
 test('o logótipo só vale se for um caminho do armazém da região', () => {
@@ -127,7 +125,7 @@ test('o tom do feixe é o da região, e uma região cinzenta fica cinzenta', () 
 
 test('a linha de fora é a cor dos botões e das ligações, e lê-se nos dois papéis', () => {
   for (const cor of CORES) {
-    const e = estiloDaRegiao(marcaDaRegiao({ marca: { cor: tintaPara(cor) ? cor : undefined } }));
+    const e = estiloDaRegiao(marcaDaRegiao({ marca: { cor } }));
     // Como fundo de um botão, com o branco por cima; como texto de uma
     // ligação, sobre o papel e as superfícies do tema claro.
     for (const chave of ['--regiao-marca', '--regiao-marca-hover']) {

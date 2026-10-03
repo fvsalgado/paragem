@@ -179,7 +179,7 @@ export type DeclaracaoDaRegiao = {
   de: string;
   /** O domínio canónico — o que o logótipo da região escreve, em feixe. */
   dominio?: string | null;
-  marca?: { cor: string; tinta: string; propria: boolean; logotipo: string | null };
+  marca?: { cor: string; propria: boolean; logotipo: string | null };
 };
 export const declaracao = (regiao = REGIAO): DeclaracaoDaRegiao | null =>
   ler<DeclaracaoDaRegiao>(regiao, 'regiao.json');

@@ -10,20 +10,22 @@
  * `regiao.yaml`), validados no pipeline (`pipeline/src/paragem/marca.py`);
  * os três tons do feixe tiram-se da cor, aqui (`feixeDaRegiao`).
  *
- * AQUI MEDE-SE OUTRA VEZ, e não se confia no que veio escrito: um
- * `regiao.json` de antes disto não traz marca nenhuma, e um estragado podia
- * trazer uma tinta ilegível. Nos dois casos fica a do §6 — o azul dos
- * autocarros da rede, com branco por cima —, que é o que uma região sem marca
- * declarada mostra de qualquer maneira.
+ * AQUI NÃO SE CONFIA NO QUE VEIO ESCRITO: um `regiao.json` de antes disto não
+ * traz marca nenhuma, e um estragado podia trazer uma cor que não é cor. Nos
+ * dois casos fica a do §6 — o azul dos autocarros da rede —, que é o que uma
+ * região sem marca declarada mostra de qualquer maneira. Qualquer cor que seja
+ * cor serve: os três tons tiram-se dela, e esses leem-se sempre.
+ *
+ * Até 3/10/2026 a cor pintava uma faixa com o nome da rede por cima, e uma cor
+ * que não se lesse com branco nem com o azul-escuro do texto ficava a do
+ * produto. A faixa saiu, e a regra com ela (`pipeline/src/paragem/marca.py`).
  */
-import { contraste, deLch, lab, MINIMO, normalizar } from './cor.ts';
+import { deLch, lab, normalizar } from './cor.ts';
 import { desenharEndereco, type EnderecoDesenhado } from './feixe.ts';
 import type { Regiao } from './formato';
 
 /** A cor da marca do §6 — a de quem não declara a sua. */
 export const COR_DO_PRODUTO = '#0a5c7a';
-/** As duas tintas possíveis por cima da faixa: o branco, e o texto do §6. */
-const TINTAS = ['#ffffff', '#102c3f'];
 
 /**
  * O feixe de uma região: as três linhas do logótipo, de fora para dentro, nos
@@ -32,8 +34,8 @@ const TINTAS = ['#ffffff', '#102c3f'];
 export type Feixe = { claro: [string, string, string]; escuro: [string, string, string] };
 
 export type Marca = {
+  /** A cor que a região declara, tal e qual: a da barra do navegador. */
   cor: string;
-  tinta: string;
   /** As três linhas do logótipo-endereço, e das réguas do sítio, nos tons da região. */
   feixe: Feixe;
   /** O caminho do logótipo no armazém da região (`marca/logotipo-….svg`), ou `null`. */
@@ -44,12 +46,6 @@ export type Marca = {
   propria: boolean;
 };
 
-/** A tinta que se lê por cima desta cor — a que contrasta mais —, ou `null` se nenhuma chegar. */
-export function tintaPara(cor: string): string | null {
-  const [melhor] = TINTAS.map((t) => ({ t, c: contraste(cor, t) })).sort((a, b) => b.c - a.c);
-  return melhor.c >= MINIMO ? melhor.t : null;
-}
-
 /** Só um caminho do armazém da própria região, com o nome que o pipeline lhe dá. */
 const LOGOTIPO = /^marca\/logotipo-[0-9a-f]+\.(svg|png|webp)$/;
 
@@ -59,11 +55,9 @@ export function marcaDaRegiao(r: Pick<Regiao, 'marca'>): Marca {
   const p = m?.logotipo_proporcao;
   const logotipoProporcao = typeof p === 'number' && Number.isFinite(p) && p > 0 ? p : null;
   const cor = normalizar(m?.cor);
-  const tinta = cor ? tintaPara(cor) : null;
-  if (!cor || !tinta) {
+  if (!cor) {
     return {
       cor: COR_DO_PRODUTO,
-      tinta: '#ffffff',
       feixe: feixeDaRegiao(COR_DO_PRODUTO),
       logotipo,
       logotipoProporcao,
@@ -72,7 +66,6 @@ export function marcaDaRegiao(r: Pick<Regiao, 'marca'>): Marca {
   }
   return {
     cor,
-    tinta,
     feixe: feixeDaRegiao(cor),
     logotipo,
     logotipoProporcao,
