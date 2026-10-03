@@ -195,7 +195,11 @@ Por esta ordem, um PR de cada vez: (0) a base, provada num Postgres real;
 - Cores:
   - fundo `#F5F7F4`, texto `#102C3F`, texto secundário `#4A5C66`;
   - linhas `#D5DDD9`, borda de campos `#6F858F`;
-  - marca / autocarros da rede `#0A5C7A` (hover `#063F54`);
+  - marca do produto `#0F6398` (hover `#044D78`): o azul do feixe escurecido
+    até 6,4:1 sobre branco — os botões e as ligações da página do produto e
+    do painel; numa região, a linha de fora do feixe dela;
+  - autocarros da rede `#0A5C7A`: é um modo e não uma marca, e fica igual em
+    todas as regiões, como o comboio fica com o seu cinzento;
   - a pedido `#8A5300` sobre `#FBF1E1`;
   - bicicletas `#2D6A3E` sobre `#E6F0E9`;
   - comboio `#3F4852`;
@@ -227,10 +231,28 @@ Por esta ordem, um PR de cada vez: (0) a base, provada num Postgres real;
     azulejo com o tema do navegador — azul-noite num separador claro, papel
     num escuro —, e no ecrã principal vai em papel;
   - nas regiões, o produto assina «Feito com Paragem.pt», a uma cor e mais
-    pequeno do que a marca da região — no rodapé e no cartão de partilha, que
-    é da região como o cabeçalho: a cor da faixa e o nome da rede, e na
-    paragem e na linha o nome delas e as tabuletas das linhas
-    (`web/src/lib/cartao.tsx`).
+    pequeno do que a marca da região — no rodapé e no cartão de partilha.
+- **O logótipo de cada região é o endereço dela** (decidido a 3/10/2026),
+  desenhado com o mesmo feixe — «prova.paragem.pt» como «paragem.pt» — e pelo
+  mesmo motor (`web/src/lib/feixe.ts`): o alfabeto de um endereço, e o espaço
+  entre letras pela regra que reproduz o medido à mão no do produto. O
+  endereço é o `dominio:` do `regiao.yaml`; um que o feixe não desenhe deixa a
+  região a assinar em texto. E o desenho do sítio sai do logótipo:
+  - **os tons são da região**, tirados da cor que ela declara — o tom dela,
+    com as luminosidades do feixe do produto. As regras são as dele e
+    conferem-se para qualquer cor: a linha de fora a ≥ 3:1 em cada fundo, as
+    vizinhas a ≥ 15 de L*. Por isso qualquer cor serve; a cor tal e qual vai
+    para a barra do navegador. O vermelho do produto nunca entra numa região;
+  - a linha de fora é a cor dos botões e das ligações da região, como o azul
+    do feixe o é na do produto; no tema escuro, as ligações passam à linha do
+    meio do feixe escuro;
+  - **o cabeçalho é claro** — o feixe só se vê a cores sobre um fundo claro —
+    e fecha com a **régua**: as três linhas de ponta a ponta, nos tons de quem
+    é a página, na região e no produto. O rodapé abre com ela. Foi uma faixa
+    na cor da região, com o nome da rede em texto;
+  - o cartão de partilha da região é o cabeçalho em ponto grande: o endereço
+    em feixe sobre o papel, e a régua a fechar; na paragem e na linha, o nome
+    delas e as tabuletas das linhas (`web/src/lib/cartao.tsx`).
 - Estrutura da página inicial (telemóvel): «Para onde vais?»; faixa de avisos;
   «Perto de ti»; bloco do transporte a pedido; grelha dos modos; «Que título me
   serve?»; concelhos; rodapé.
