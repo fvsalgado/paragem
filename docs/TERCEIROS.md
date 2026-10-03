@@ -51,6 +51,18 @@ inventadas da mesma maneira por `data/manual/demo/inventar.py`. O mapa dessa
 região é desenhado a partir da `demo-geografia`, e não do OpenStreetMap: não
 deve nada a ninguém, e a atribuição no canto do mapa di-lo.
 
+## O que não são dados
+
+| o quê | onde | de quem | licença |
+| --- | --- | --- | --- |
+| Atkinson Hyperlegible, normal e negrito | `web/public/glifos/`, em glifos, para as etiquetas do mapa | Braille Institute of America | **SIL OFL 1.1** — o texto vai ao lado, em `web/public/glifos/OFL.txt` |
+
+A letra vem do repositório público das letras do Google
+(`github.com/google/fonts`, pasta `ofl/atkinsonhyperlegible`). Os glifos do
+mapa são, nos termos da OFL, uma **versão modificada** — a licença conta a
+mudança de formato como modificação —, e por isso continuam sob OFL; esta letra
+não declara nenhum nome reservado, e não há nome a mudar.
+
 ## As duas obrigações que não são negociáveis
 
 ### A atribuição do OpenStreetMap
