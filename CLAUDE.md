@@ -214,9 +214,10 @@ Por esta ordem, um PR de cada vez: (0) a base, provada num Postgres real;
     `#F2573F`, `#7EBAF6` e `#CBE3FF`. A linha de fora fica a ≥ 3:1 em cada
     fundo, e as vizinhas afastam-se ≥ 15 de L*, para se distinguirem em
     cinzento e com daltonismo;
-  - **a cores só na página do produto, no ícone e no cartão de partilha.** O
-    vermelho de fora é quase o do alerta: numa região ou no painel lia-se como
-    um aviso, e um teste de interface procura-o lá;
+  - **a cores só na página do produto, no ícone e no cartão de partilha do
+    produto.** O vermelho de fora é quase o do alerta: numa região ou no
+    painel lia-se como um aviso, e um teste de interface procura-o lá — também
+    no cartão de partilha de cada região;
   - a uma cor, em azul-noite `#102C3F` ou branco, **sempre com três linhas**:
     duas linhas iguais numa cor é a marca da Optibus, que vende às mesmas
     autoridades de transportes;
@@ -226,7 +227,10 @@ Por esta ordem, um PR de cada vez: (0) a base, provada num Postgres real;
     azulejo com o tema do navegador — azul-noite num separador claro, papel
     num escuro —, e no ecrã principal vai em papel;
   - nas regiões, o produto assina «Feito com Paragem.pt», a uma cor e mais
-    pequeno do que a marca da região.
+    pequeno do que a marca da região — no rodapé e no cartão de partilha, que
+    é da região como o cabeçalho: a cor da faixa e o nome da rede, e na
+    paragem e na linha o nome delas e as tabuletas das linhas
+    (`web/src/lib/cartao.tsx`).
 - Estrutura da página inicial (telemóvel): «Para onde vais?»; faixa de avisos;
   «Perto de ti»; bloco do transporte a pedido; grelha dos modos; «Que título me
   serve?»; concelhos; rodapé.
