@@ -41,6 +41,14 @@ test('os ícones respondem em todos os anfitriões, com o tipo certo', async ({ 
   }
 });
 
+test('o ícone do separador troca de azulejo com o tema do navegador', async ({ request }) => {
+  // O «p» ao píxel em azul-noite numa barra clara, e em papel numa escura: com
+  // um azulejo só, num dos temas o ícone fundia-se com a barra (§6).
+  const svg = await (await pedir(request, null, '/icon.svg')).text();
+  expect(svg).toContain('prefers-color-scheme:dark');
+  expect(svg).toContain('shape-rendering="crispEdges"');
+});
+
 test('cada anfitrião tem o seu manifesto, e os ícones dele existem', async ({ request }) => {
   for (const host of ANFITRIOES) {
     const r = await pedir(request, host, '/manifest.webmanifest');

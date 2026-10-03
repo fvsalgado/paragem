@@ -35,6 +35,13 @@
   --alerta-fundo: #fbe9e6;
   --foco: #f2b705;
 
+  /* A marca do produto — o feixe (§6) —, de fora para dentro. Só a página do
+     produto a pinta: nas regiões e no painel o vermelho quer dizer alerta, e
+     um teste de interface procura-o lá (`marca.spec.ts`). */
+  --feixe-1: #c2281c;
+  --feixe-2: #3f92d4;
+  --feixe-3: #7fbbf7;
+
   /* AS CORES QUE MUDAM COM O TEMA (P1-044). No claro são as do §6, ou o
      branco que estava escrito à mão em quarenta sítios; no escuro, as do
      bloco mais abaixo. A marca e os modos têm DOIS papéis, e só um muda: como
@@ -96,6 +103,9 @@
     --a-pedido-fundo: #2e2310;
     --bicicleta-fundo: #16301f;
     --desligado: #3a4a52;
+    --feixe-1: #f2573f;
+    --feixe-2: #7ebaf6;
+    --feixe-3: #cbe3ff;
   }
 }
 
@@ -2532,20 +2542,69 @@ ul.cartoes .cartao h3 {
   }
 }
 
-/* O símbolo: o poste na cor do texto, a placa na da marca. As cores vêm dos
-   tokens, para o símbolo nunca divergir da página à volta dele. */
-.simbolo-do-produto {
+/* A MARCA DO PRODUTO (`MarcaDoProduto.tsx`): cada linha pela sua classe, e o
+   halo — que faz um traço passar por baixo do outro — da cor do que está por
+   trás. A uma cor, tudo na cor do texto à volta. */
+.marca-do-produto {
   display: block;
   flex-shrink: 0;
+  width: auto;
+  overflow: visible;
 }
-.simbolo-do-produto .poste {
-  fill: var(--texto);
+.marca-do-produto .halo {
+  stroke: var(--fundo-da-marca, var(--superficie));
 }
-.simbolo-do-produto .placa {
-  fill: var(--marca);
+.marca-do-produto .l0 {
+  stroke: var(--feixe-1);
 }
-.simbolo-do-produto .olho {
-  fill: #fff;
+.marca-do-produto .l1 {
+  stroke: var(--feixe-2);
+}
+.marca-do-produto .l2 {
+  stroke: var(--feixe-3);
+}
+.marca-do-produto .ponto {
+  fill: var(--feixe-1);
+}
+.marca-do-produto.uma-cor .l0,
+.marca-do-produto.uma-cor .l1,
+.marca-do-produto.uma-cor .l2 {
+  stroke: currentColor;
+}
+.marca-do-produto.uma-cor .ponto {
+  fill: currentColor;
+}
+
+/* No cabeçalho da montra: as três linhas só onde há píxeis para elas. A
+   36 px de altura, o vazio entre linhas mede 0,8 píxeis num ecrã comum e
+   desfaz-se; a partir de 1,8 píxeis por píxel de CSS passa dos 65 píxeis de
+   ecrã que o feixe pede. No resto — e sempre no telemóvel, onde a marca
+   desce a 24 px para o «Falar connosco» caber —, o reduzido de duas linhas. */
+.cabecalho-do-produto .marca-do-produto {
+  height: 2.25rem;
+}
+.cabecalho-do-produto .marca-do-produto.inteira {
+  display: none;
+}
+@media (min-width: 48rem) and (min-resolution: 1.8dppx) {
+  .cabecalho-do-produto .marca-do-produto.inteira {
+    display: block;
+  }
+  .cabecalho-do-produto .marca-do-produto.reduzida {
+    display: none;
+  }
+}
+@media (max-width: 47.99rem) {
+  .cabecalho-do-produto .marca-do-produto {
+    height: 1.5rem;
+  }
+}
+
+/* No painel, a uma cor, na cor do texto: a marca é do produto, mas o painel
+   não pinta de vermelho o que não é perigo. */
+.painel-cabecalho .marca-do-produto {
+  height: 1.375rem;
+  color: var(--texto);
 }
 
 /* A segunda ação, de contorno: o mesmo verbo, com menos peso que a primeira.

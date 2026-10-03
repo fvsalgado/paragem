@@ -11,14 +11,19 @@
  * uma vez por ano. O resultado vai para o repositório — o sítio não gera
  * imagens a pedido —, e este ficheiro é a receita para o voltar a fazer.
  *
- * **ÍCONES.** A fonte é UMA: `src/app/icon.svg`. O `favicon.ico` (16, 32 e
- * 48 px), o `apple-icon.png` e os PNG do manifesto saem dele, para nunca
- * haver um ícone num tamanho que diga outra coisa. Dois cortes: com os cantos
- * redondos e transparentes, para onde o desenho fica tal e qual (o separador,
- * o manifesto «any»); e sem cantos, a cheio, para onde o sistema recorta à
- * sua maneira — o iOS põe preto onde houver transparência, e o Android
- * recorta o ícone «maskable» num círculo, por isso o desenho encolhe para
- * dentro da zona segura.
+ * **ÍCONES.** A fonte é UMA: `src/lib/marca-do-produto.ts`, o mesmo desenho
+ * que o cabeçalho mostra. Dois desenhos do «p», e cada um onde serve:
+ *
+ * - AO PÍXEL, para 16, 32 e 48 px: o `app/icon.svg`, que troca de azulejo com
+ *   o tema do navegador, e o `favicon.ico`, que não pode trocar e leva o
+ *   azul-noite, o da barra clara. Reduzir o desenho grande não servia: a 16 px
+ *   nenhum píxel da letra chegava a 3:1.
+ * - VETORIAL, de 180 px para cima: o `apple-icon.png` e os PNG do manifesto,
+ *   em papel. Dois cortes: com os cantos redondos e transparentes, para onde o
+ *   desenho fica tal e qual (o manifesto «any»); e sem cantos, a cheio, para
+ *   onde o sistema recorta à sua maneira — o iOS põe preto onde houver
+ *   transparência, e o Android recorta o ícone «maskable» num círculo, por
+ *   isso o desenho encolhe para dentro da zona segura.
  *
  * **TELEMÓVEL.** Uma captura REAL de uma região de DEMONSTRAÇÃO a correr, e
  * nunca de um cliente: a página do produto responde a qualquer anfitrião que
@@ -33,12 +38,21 @@
  * **PARTILHA.** 1200 × 630, o tamanho que as pré-visualizações do WhatsApp,
  * do Facebook e companhia esperam. Desenha-se dentro da própria página do
  * produto, que já tem a letra e as cores carregadas: sem ficheiros de letra
- * a mais no repositório, e sem uma segunda cópia das cores.
+ * a mais no repositório, e sem uma segunda cópia das cores. A marca é a
+ * palavra a cores, do mesmo módulo.
  */
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
+import {
+  CORES_CLARO,
+  PAPEL,
+  iconeAoPixel,
+  iconeDoSeparador,
+  iconeVetorial,
+  palavra,
+} from '../src/lib/marca-do-produto.ts';
 
 const WEB = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLICO = join(WEB, 'public', 'produto');
@@ -50,9 +64,6 @@ const opcao = (nome, omissao) => {
 
 const SITIO = opcao('sitio', 'http://127.0.0.1:4321');
 const DADOS = opcao('dados', process.env.PARAGEM_DADOS ?? 'http://127.0.0.1:4322');
-
-/** O fundo do sítio (§6): é o do quadrado do ícone e o dos cortes a cheio. */
-const FUNDO = '#F5F7F4';
 
 async function abrir(opcoes = {}) {
   return await chromium.launch({
@@ -129,32 +140,38 @@ function ico(imagens) {
 }
 
 async function icones() {
-  const svg = readFileSync(join(WEB, 'src', 'app', 'icon.svg'), 'utf8');
   const navegador = await abrir();
   const pagina = await navegador.newPage({ deviceScaleFactor: 1 });
   mkdirSync(PUBLICO, { recursive: true });
 
+  writeFileSync(join(WEB, 'src', 'app', 'icon.svg'), iconeDoSeparador());
+
+  // Ao píxel, cada tamanho com a sua grelha, e no azulejo azul-noite.
   const pequenos = [];
-  for (const lado of [16, 32, 48]) pequenos.push({ lado, png: await icone(pagina, svg, lado) });
+  for (const lado of [16, 32, 48]) {
+    pequenos.push({ lado, png: await icone(pagina, iconeAoPixel(lado, 'noite'), lado) });
+  }
   writeFileSync(join(WEB, 'src', 'app', 'favicon.ico'), ico(pequenos));
 
   // O iOS recorta os cantos à sua maneira e pinta de preto a transparência:
-  // o quadrado vai a cheio, e o desenho com uma folga para o recorte.
+  // o quadrado vai a cheio.
   writeFileSync(
     join(WEB, 'src', 'app', 'apple-icon.png'),
-    await icone(pagina, svg, 180, { escala: 0.9, fundo: FUNDO }),
+    await icone(pagina, iconeVetorial({ cantos: false }), 180),
   );
   for (const lado of [192, 512]) {
-    writeFileSync(join(PUBLICO, `icone-${lado}.png`), await icone(pagina, svg, lado));
+    writeFileSync(join(PUBLICO, `icone-${lado}.png`), await icone(pagina, iconeVetorial(), lado));
   }
   // «maskable»: o Android recorta num círculo de 80 % do lado, e o desenho
   // tem de caber lá dentro inteiro.
   writeFileSync(
     join(PUBLICO, 'icone-mascaravel-512.png'),
-    await icone(pagina, svg, 512, { escala: 0.78, fundo: FUNDO }),
+    await icone(pagina, iconeVetorial({ cantos: false, escala: 0.7 }), 512),
   );
   await navegador.close();
-  console.log('ícones: src/app/favicon.ico, src/app/apple-icon.png, public/produto/icone-*.png');
+  console.log(
+    'ícones: src/app/icon.svg, src/app/favicon.ico, src/app/apple-icon.png, public/produto/icone-*.png',
+  );
 }
 
 // --- a captura do telemóvel -------------------------------------------------
@@ -237,17 +254,15 @@ async function partilha() {
   });
   // A página do produto, pela letra e pelas cores; o conteúdo troca-se.
   await pagina.goto(`${SITIO}/`, { waitUntil: 'networkidle' });
-  const simbolo = readFileSync(join(WEB, 'src', 'app', 'icon.svg'), 'utf8').replace(
-    /<!--[\s\S]*?-->/g,
-    '',
-  );
+  const { viewBox, corpo } = palavra('feixe', { cores: CORES_CLARO, fundo: PAPEL });
+  const marca = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">${corpo}</svg>`;
   await pagina.evaluate(
-    ({ simbolo }) => {
+    ({ marca }) => {
       document.body.className = '';
       document.body.innerHTML = `
         <div class="partilha">
           <div class="partilha-texto">
-            <p class="partilha-marca">${simbolo}<span>Paragem.pt</span></p>
+            <p class="partilha-marca">${marca}</p>
             <p class="partilha-titulo">Os transportes de um território, num sítio só.</p>
             <p class="partilha-modos">Autocarros · comboios · transporte a pedido · bicicletas · expressos · táxis</p>
           </div>
@@ -259,9 +274,8 @@ async function partilha() {
         .partilha { width: 1200px; height: 630px; box-sizing: border-box; padding: 0 72px 0 80px;
           display: grid; grid-template-columns: 1fr 300px; gap: 56px; align-items: center;
           color: var(--texto); border-top: 12px solid var(--marca); }
-        .partilha-marca { display: flex; align-items: center; gap: 18px; margin: 0 0 40px;
-          font-size: 44px; font-weight: 700; color: var(--marca); }
-        .partilha-marca svg { width: 76px; height: 76px; }
+        .partilha-marca { margin: 0 0 40px; }
+        .partilha-marca svg { display: block; height: 84px; width: auto; }
         .partilha-titulo { font-size: 62px; line-height: 1.08; font-weight: 700; margin: 0 0 32px; }
         .partilha-modos { font-size: 25px; color: var(--texto-secundario); margin: 0; line-height: 1.4; }
         .partilha-telemovel { align-self: end; height: 560px; overflow: hidden;
@@ -270,7 +284,7 @@ async function partilha() {
         .partilha-telemovel img { width: 100%; display: block; }`;
       document.head.append(estilo);
     },
-    { simbolo },
+    { marca },
   );
   await pagina.locator('.partilha-telemovel img').evaluate((img) => img.decode());
   await pagina.evaluate(() => document.fonts.ready);
