@@ -6,22 +6,31 @@
  * primeiro ecrã do mapa não tinha marca nenhuma (P1-008), e um nome comprido
  * partia o cabeçalho (P1-043). O que se prova aqui:
  *
- * - o cabeçalho é a assinatura da rede, a levar ao início DA REGIÃO, numa
- *   faixa com a cor que ela declara — e a tinta lê-se por cima dela;
+ * - o cabeçalho é a assinatura da região — o endereço dela em feixe, que é o
+ *   logótipo dela (§6) —, a levar ao início DA REGIÃO;
+ * - o logótipo, as réguas, os botões e as ligações levam os tons tirados da
+ *   cor que ela declara, sobre o fundo claro do sítio;
  * - «Paragem.pt» só aparece discreto, no fim, a levar ao produto;
  * - a assinatura está no primeiro ecrã do mapa e no menu;
- * - um nome comprido não muda a altura do cabeçalho, nem empurra a página.
+ * - um nome ou um endereço comprido não muda a altura do cabeçalho, nem
+ *   empurra a página.
  *
- * NENHUM CLIENTE ESTÁ AQUI: a cor e o logótipo esperados leem-se do
- * `regiao.json` que a construção publicou, e as regiões de prova provam o
+ * NENHUM CLIENTE ESTÁ AQUI: a cor, o endereço e o logótipo esperados leem-se
+ * do `regiao.json` que a construção publicou, e as regiões de prova provam o
  * caso de quem não declara marca nenhuma.
  */
 import { test, expect, type Page } from '@playwright/test';
 import { PRODUTO, PROVA, PROVA_MUNICIPIO, REGIAO, anfitriao } from './anfitrioes';
 import { corDaMarca, declaracao, temMosaicos } from './dados-da-regiao';
+import { desenhavel } from '../src/lib/feixe.ts';
+import { COR_DO_PRODUTO, feixeDaRegiao } from '../src/lib/marca.ts';
 
 /** A cor de um elemento como `#rrggbb`. */
-async function cor(page: Page, seletor: string, propriedade: 'color' | 'background-color') {
+async function cor(
+  page: Page,
+  seletor: string,
+  propriedade: 'color' | 'background-color' | 'stroke',
+) {
   return await page
     .locator(seletor)
     .first()
@@ -34,60 +43,80 @@ async function cor(page: Page, seletor: string, propriedade: 'color' | 'backgrou
     }, propriedade);
 }
 
-function contraste(a: string, b: string): number {
-  const l = (h: string) => {
-    const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
-    const [r, g, bl] = c.map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
-    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
-  };
-  const [x, y] = [l(a), l(b)].sort((p, q) => q - p);
-  return (x + 0.05) / (y + 0.05);
-}
-
 const nomeDaRede = (id: string) =>
   declaracao(id)?.rede?.nome ?? `Transportes ${declaracao(id)!.de}`;
 
-test('o cabeçalho é a assinatura da rede, e leva ao início da região', async ({ page }) => {
+/** O endereço que o logótipo da região escreve, se ela o declara e o feixe o sabe desenhar. */
+const enderecoDe = (id: string) => {
+  const d = declaracao(id)?.dominio;
+  return desenhavel(d) ? d : null;
+};
+
+/** `#rrggbb` como o navegador o escreve num valor calculado. */
+const rgb = (hex: string) =>
+  `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`;
+
+test('o cabeçalho é a assinatura da região, e leva ao início dela', async ({ page }) => {
   for (const id of [REGIAO, 'prova', 'prova-municipio']) {
     if (!declaracao(id)) continue;
     await page.goto(`${anfitriao(id)}/rede/`);
     const cabecalho = page.getByRole('banner');
     const primeira = cabecalho.getByRole('link').first();
-    await expect(primeira, id).toContainText(nomeDaRede(id));
+    const endereco = enderecoDe(id);
+    if (endereco) {
+      // O logótipo é o endereço, e lê-se como o que mostra; por baixo, o que
+      // a região é.
+      await expect(primeira.getByRole('img', { name: endereco }), id).toBeVisible();
+      await expect(primeira, id).toContainText(`Transportes ${declaracao(id)!.de}`);
+    } else {
+      await expect(primeira, id).toContainText(nomeDaRede(id));
+    }
     await expect(primeira, id).toHaveAttribute('href', '/');
     // O produto não está no cabeçalho de uma região.
-    await expect(cabecalho.getByRole('link', { name: /Paragem/ }), id).toHaveCount(0);
-  }
-});
-
-test('a faixa tem a cor da marca da região, e a tinta lê-se por cima', async ({ page }) => {
-  for (const id of [REGIAO, 'prova']) {
-    if (!declaracao(id)) continue;
-    await page.goto(`${anfitriao(id)}/rede/`);
-    const fundo = await cor(page, 'header.cabecalho', 'background-color');
-    expect(fundo, id).toBe(corDaMarca(id));
-    const tinta = await cor(page, 'header.cabecalho .nome-principal', 'color');
-    expect(contraste(fundo, tinta), `${id}: ${tinta} sobre ${fundo}`).toBeGreaterThanOrEqual(4.5);
-    // O foco, dentro da faixa, é da cor da tinta: o amarelo não se via numa faixa clara.
-    await page.getByRole('banner').getByRole('link').first().focus();
-    const contorno = await page
-      .getByRole('banner')
-      .getByRole('link')
-      .first()
-      .evaluate((e) => getComputedStyle(e).outlineColor);
-    expect(contorno, id).toBe(
-      await page
-        .locator('header .nome-principal')
-        .first()
-        .evaluate((e) => getComputedStyle(e).color),
+    await expect(cabecalho.locator(`a[href^="${PRODUTO}"]`), id).toHaveCount(0);
+    await expect(cabecalho.getByRole('link', { name: 'Paragem.pt', exact: true }), id).toHaveCount(
+      0,
     );
   }
 });
 
-test('as provas não têm marca própria: a faixa é a do produto, sem logótipo', async ({ page }) => {
+test('o cabeçalho é claro, e o logótipo, a régua e as ligações levam os tons da região', async ({
+  page,
+}) => {
+  for (const id of [REGIAO, 'prova']) {
+    if (!declaracao(id)) continue;
+    await page.goto(`${anfitriao(id)}/rede/`);
+    // A superfície do sítio, e não uma faixa: o feixe só se vê a cores
+    // sobre um fundo claro (§6).
+    expect(await cor(page, 'header.cabecalho', 'background-color'), id).toBe('#ffffff');
+    const tons = feixeDaRegiao(corDaMarca(id)).claro;
+    if (enderecoDe(id)) {
+      for (const [i, tom] of tons.entries()) {
+        expect(await cor(page, `header .endereco-em-feixe .inteira .l${i}`, 'stroke'), id).toBe(
+          tom,
+        );
+      }
+    }
+    // A régua: a linha do meio é o traço, e as de fora e de dentro as sombras.
+    const regua = page.locator('header .regua-do-feixe');
+    expect(await cor(page, 'header .regua-do-feixe', 'background-color'), id).toBe(tons[1]);
+    const sombras = await regua.evaluate((e) => getComputedStyle(e).boxShadow);
+    expect(sombras, id).toContain(rgb(tons[0]));
+    expect(sombras, id).toContain(rgb(tons[2]));
+    // As ligações da região são da linha de fora, que se lê como texto.
+    expect(await cor(page, 'header nav a', 'color'), id).toBe(tons[0]);
+    // O rodapé fecha com a mesma régua.
+    await expect(page.locator('footer .regua-do-feixe'), id).toHaveCount(1);
+  }
+});
+
+test('as provas não têm marca própria: o feixe sai do azul do §6, sem logótipo', async ({
+  page,
+}) => {
+  const tons = feixeDaRegiao(COR_DO_PRODUTO).claro;
   for (const host of [PROVA, PROVA_MUNICIPIO]) {
     await page.goto(`${host}/rede/`);
-    expect(await cor(page, 'header.cabecalho', 'background-color'), host).toBe('#0a5c7a');
+    expect(await cor(page, 'header .endereco-em-feixe .inteira .l0', 'stroke'), host).toBe(tons[0]);
     await expect(page.locator('header img.logotipo'), host).toHaveCount(0);
   }
 });
@@ -115,39 +144,58 @@ test('«Feito com Paragem.pt» discreto, no fim, a levar ao produto', async ({ p
   await expect(feito.getByRole('link', { name: 'Paragem.pt' })).toHaveAttribute('href', PRODUTO);
 });
 
-test('a marca da rede está no primeiro ecrã do mapa, e no menu', async ({ page }) => {
+test('a marca da região está no primeiro ecrã do mapa, e no menu', async ({ page }) => {
   test.skip(!temMosaicos(), 'a região em teste não tem mapa');
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
+  const endereco = enderecoDe(REGIAO);
+  const assinada = async (onde: ReturnType<Page['locator']>) => {
+    if (endereco) await expect(onde.getByRole('img', { name: endereco })).toBeVisible();
+    else await expect(onde).toContainText(nomeDaRede(REGIAO));
+  };
   const folha = page.locator('.folha-de-abertura');
-  await expect(folha.locator('.assinatura')).toContainText(nomeDaRede(REGIAO));
+  await assinada(folha.locator('.assinatura'));
   await expect(folha.locator('.assinatura')).toBeInViewport();
 
   await page.getByRole('button', { name: 'Abrir o menu' }).click();
   const menu = page.getByRole('dialog', { name: 'Menu' });
-  await expect(menu.locator('.assinatura')).toContainText(nomeDaRede(REGIAO));
+  await assinada(menu.locator('.assinatura'));
   await expect(menu.locator('.feito-com')).toHaveText('Feito com Paragem.pt');
 });
 
-test('um nome comprido não muda a altura do cabeçalho, nem empurra a página', async ({ page }) => {
-  // O nome de uma comunidade intermunicipal tem facilmente sessenta letras.
-  // Mede-se com o nome da região em teste e com um assim, escrito por cima.
-  for (const largura of [320, 390, 1280]) {
-    await page.setViewportSize({ width: largura, height: 800 });
-    await page.goto('/rede/');
-    const altura = async () => (await page.locator('header.cabecalho').boundingBox())!.height;
-    const antes = await altura();
-    await page.evaluate(() => {
-      const longo =
-        'Comunidade Intermunicipal das Terras Altas do Vale do Rio Comprido e Serras Vizinhas';
-      for (const e of document.querySelectorAll('header .nome-principal, header .nome-secundario'))
-        e.textContent = longo;
-    });
-    expect(await altura(), `${largura} px`).toBe(antes);
-    const larga = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    );
-    expect(larga, `${largura} px: a página desliza para o lado`).toBeLessThanOrEqual(0);
+test('um nome ou um endereço comprido não muda a altura do cabeçalho, nem empurra a página', async ({
+  page,
+}) => {
+  // O nome de uma comunidade intermunicipal tem facilmente sessenta letras, e
+  // o endereço mais comprido das provas tem vinte e seis. Mede-se com o nome
+  // da região e com um assim, escrito por cima.
+  for (const id of [REGIAO, 'prova-municipio']) {
+    for (const largura of [320, 390, 1280]) {
+      await page.setViewportSize({ width: largura, height: 800 });
+      await page.goto(`${anfitriao(id)}/rede/`);
+      const altura = async () => (await page.locator('header.cabecalho').boundingBox())!.height;
+      const antes = await altura();
+      await page.evaluate(() => {
+        const longo =
+          'Comunidade Intermunicipal das Terras Altas do Vale do Rio Comprido e Serras Vizinhas';
+        for (const e of document.querySelectorAll(
+          'header .nome-principal, header .nome-secundario',
+        ))
+          e.textContent = longo;
+      });
+      expect(await altura(), `${id}, ${largura} px`).toBe(antes);
+      const larga = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(larga, `${id}, ${largura} px: a página desliza para o lado`).toBeLessThanOrEqual(0);
+      // O logótipo cabe inteiro no ecrã: encolhe, não se corta.
+      const logotipo = page.locator('header .endereco-em-feixe');
+      if (await logotipo.count()) {
+        const caixa = (await logotipo.boundingBox())!;
+        expect(caixa.x, `${id}, ${largura} px`).toBeGreaterThanOrEqual(0);
+        expect(caixa.x + caixa.width, `${id}, ${largura} px`).toBeLessThanOrEqual(largura);
+      }
+    }
   }
 });
 

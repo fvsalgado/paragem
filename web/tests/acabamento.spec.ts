@@ -26,7 +26,7 @@ test('o texto secundário é secundário: mais pequeno, e na cor do §6', async 
 });
 
 test('o título não se cola ao cabeçalho', async ({ page }) => {
-  // Media 0 px entre a faixa e a caixa do título (P1-015).
+  // Media 0 px entre o cabeçalho e a caixa do título (P1-015).
   for (const caminho of [
     '/rede/',
     '/rede/tarifario/',

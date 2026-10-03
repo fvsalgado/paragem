@@ -12,11 +12,12 @@ import { PORTA, PRODUTO, anfitriao, regioes } from './anfitrioes';
 import { corDaMarca } from './dados-da-regiao';
 
 /**
- * A COR DE TEMA é a da marca de quem é o sítio: a do produto na montra, e a
- * da região em cada região — a cor que ela declara, ou a do §6 (P4-008).
+ * A COR DE TEMA é a da marca de quem é o sítio: a do produto na página dele —
+ * o azul-noite, que é a marca a uma cor (§6) —, e a da região em cada região,
+ * a cor que ela declara ou a do §6 (P4-008).
  */
 const corDoTema = (host: string | null) =>
-  host ? corDaMarca(host.replace(/\.localhost$/, '')) : '#0a5c7a';
+  host ? corDaMarca(host.replace(/\.localhost$/, '')) : '#102c3f';
 
 /** Um pedido pelo endereço da máquina, com o `Host` de quem se quer ser. */
 async function pedir(request: APIRequestContext, host: string | null, caminho: string) {

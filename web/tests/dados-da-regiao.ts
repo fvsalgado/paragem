@@ -177,14 +177,17 @@ export type DeclaracaoDaRegiao = {
   mapa?: { atribuicao: string; fonte: 'openstreetmap' | 'propria' } | null;
   rede?: { nome?: string };
   de: string;
+  /** O domínio canónico — o que o logótipo da região escreve, em feixe. */
+  dominio?: string | null;
   marca?: { cor: string; tinta: string; propria: boolean; logotipo: string | null };
 };
 export const declaracao = (regiao = REGIAO): DeclaracaoDaRegiao | null =>
   ler<DeclaracaoDaRegiao>(regiao, 'regiao.json');
 
 /**
- * A cor da faixa da região, como a página a pinta: a que a região declara, ou
- * a do §6. Dados de antes da marca não a trazem, e aí vale a do §6.
+ * A cor da região: a que ela declara, ou a do §6. Dados de antes da marca não
+ * a trazem, e aí vale a do §6. É dela que saem os três tons do feixe
+ * (`feixeDaRegiao`), e é a da barra do navegador.
  */
 export const corDaMarca = (regiao = REGIAO): string =>
   (declaracao(regiao)?.marca?.cor ?? '#0a5c7a').toLowerCase();

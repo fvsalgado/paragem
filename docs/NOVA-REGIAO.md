@@ -164,6 +164,13 @@ e o subdomínio é **declarado** no `regiao.yaml` (`dominio:`), porque um
 identificador com hífen não diz como se escreve. As regiões de prova usam o
 identificador tal e qual (`prova.paragem.pt`).
 
+**O domínio é também o logótipo da região.** O sítio desenha-o em feixe, nos
+tons dela (passo 5), à cabeça de todas as páginas e no cartão de partilha:
+escolher o domínio é escolher o que o cabeçalho escreve — e o nome que quem
+viaja conhece (o da rede) costuma ser melhor do que o do território. O feixe
+desenha letras minúsculas sem acento, algarismos, o ponto e o hífen; um domínio
+com outros caracteres não se desenha, e a região assina com o nome em texto.
+
 A base de dados do painel guarda uma cópia dessa linha em `public.regions`
 (ver [`BASE-DE-DADOS.md`](BASE-DE-DADOS.md)). **As migrações só semeiam as
 regiões de prova**: a linha de uma região real entra pelo painel —
@@ -187,29 +194,37 @@ um domínio da autoridade aponta um CNAME para o que a Vercel indicar. Ver
 ## Passo 5 — a marca da rede, se a região a tiver
 
 O sítio de uma região é da autoridade de transportes, e não do produto: o
-cabeçalho é uma faixa com o nome da rede (`rede.nome`) e o que ela é
-(«Transportes da …»), a levar ao início da região, e «Feito com Paragem.pt»
-fica discreto no rodapé. A cor e o logótipo são **dados da região**, como o
-resto — entram no `regiao.yaml`, e não num commit do produto:
+cabeçalho abre com o logótipo dela — o endereço, desenhado em feixe (passo 4)
+— e o que ela é («Transportes da …»), a levar ao início da região, e «Feito
+com Paragem.pt» fica discreto no rodapé. A cor e o logótipo são **dados da
+região**, como o resto — entram no `regiao.yaml`, e não num commit do produto:
 
 ```yaml
-# A cor da faixa do cabeçalho. Entre aspas: sem elas, o YAML lê o «#» como um
-# comentário — e o carregamento recusa a chave vazia, em vez de a ignorar.
+# A cor da região: dá o tom ao endereço em feixe, às réguas, aos botões e às
+# ligações, e vai tal e qual para a barra do navegador. Entre aspas: sem
+# elas, o YAML lê o «#» como um comentário — e o carregamento recusa a chave
+# vazia, em vez de a ignorar.
 cor: "#5fc2b7"
 # O logótipo da rede ou da autoridade: um ficheiro AO LADO deste.
 logotipo: logotipo.svg
 ```
 
+- **Os três tons do feixe não se declaram**: tiram-se da cor no sítio
+  (`web/src/lib/marca.ts`), com o tom dela e as luminosidades do feixe do
+  produto. A linha de fora fica perto dos 6:1 sobre branco — é a cor dos botões
+  e das ligações —, e as vizinhas afastam-se ≥ 15 de L*, para se distinguirem
+  em cinzento e com daltonismo (CLAUDE.md §6). A cor dá o tom, e não o tom
+  exato: uma região não tem de saber desenhar um feixe para ter um.
 - **A cor é validada no pipeline** (`pipeline/src/paragem/marca.py`). A tinta
   por cima não se declara: escolhe-se pelo contraste, entre o branco e o
   azul-escuro do texto do §6. Se nenhum dos dois chegar aos 4,5:1, a região
   **não carrega**, e a mensagem diz a cor mais próxima que passaria — escurecer
-  em silêncio era mudar a marca de alguém sem lhe dizer. Sem `cor:`, a faixa é
-  a do §6 (`#0A5C7A`).
+  em silêncio era mudar a marca de alguém sem lhe dizer. Sem `cor:`, os tons
+  saem do azul do §6 (`#0A5C7A`).
 - **O logótipo** é SVG, PNG ou WebP, até 200 kB, e publica-se com os dados
   (`marca/logotipo-<soma>.<ext>`). Um SVG não pode trazer programas nem ir
   buscar nada a outro sítio. No cabeçalho mostra-se com 40 px de altura e a
-  largura da proporção dele; o nome vai sempre escrito ao lado.
+  largura da proporção dele, ao lado do endereço.
 - **De quem é o ficheiro** escreve-se no `REUSE.toml` da raiz da região: a
   marca é da autoridade ou da operadora, e quem a põe ali tem de poder usá-la.
 

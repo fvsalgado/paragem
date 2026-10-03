@@ -5,7 +5,7 @@ import Link from '@/componentes/Ligacao';
 import { Acessibilidade, APedido, Aviso, Bilhete, Descarregar, Fechar, Lista } from './Icones';
 import AssinaturaDaRegiao from './AssinaturaDaRegiao';
 import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
-import type { Marca } from '@/lib/marca';
+import type { Assinatura, Marca } from '@/lib/marca';
 
 /**
  * O MENU DO MAPA — onde vive a navegação quando o mapa ocupa o ecrã todo.
@@ -40,7 +40,7 @@ export default function MenuDoMapa({
    * P4-008). Abre agora com a assinatura da rede, como o cabeçalho.
    */
   marca: Marca;
-  assinatura: { principal: string; secundario: string | null };
+  assinatura: Assinatura;
   /**
    * A REGIÃO DECIDE O QUE ESTÁ NO MENU, e não uma lista fixa aqui.
    *
@@ -90,6 +90,7 @@ export default function MenuDoMapa({
             marca={marca}
             principal={assinatura.principal}
             secundario={assinatura.secundario}
+            endereco={assinatura.endereco}
             altura={32}
           />
         </span>

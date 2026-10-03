@@ -13,8 +13,13 @@
  * As cores são as do §6: o fundo do sítio e a cor da marca.
  */
 
-/** A cor da barra do navegador e do ecrã de arranque: a da marca (§6). */
-export const COR_DO_TEMA = '#0A5C7A';
+/**
+ * A cor da barra do navegador e do ecrã de arranque do PRODUTO: o azul-noite,
+ * que é a marca a uma cor (§6). Foi o azul antigo da marca, que não é nenhuma
+ * das cores do feixe; a 3/10/2026 o desenho do produto passou a sair do
+ * logótipo. Uma região usa a cor dela (`app/[regiao]/layout.tsx`).
+ */
+export const COR_DO_TEMA = '#102C3F';
 /** O fundo do sítio (§6), que é também o do quadrado do ícone. */
 export const COR_DE_FUNDO = '#F5F7F4';
 
