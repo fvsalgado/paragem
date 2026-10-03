@@ -24,23 +24,33 @@
  * As moradas vão relativas: o invólucro de cada anfitrião declara a sua
  * (`metadataBase`), e é com ela que o Next as completa — a de uma região é a
  * dela, e a imagem de partilha sai pelo domínio dela.
+ *
+ * A IMAGEM É DE QUEM É A PÁGINA. A do produto é o cartão do produto, com o
+ * feixe a cores; a de uma região é o cartão dela (`lib/partilha.ts`), na cor
+ * da faixa e sem o vermelho do produto (§6) — e a paragem e a linha têm cada
+ * uma o seu, com o nome e as linhas que lá passam.
  */
 import type { Metadata } from 'next';
 import type { Regiao } from './formato';
+import { nomesDaAssinatura } from './marca.ts';
+import { CARTAO, CARTAO_DA_REGIAO } from './partilha.ts';
 
-/**
- * A imagem de partilha do PRODUTO (`scripts/imagens-do-produto.mjs partilha`),
- * 1200 × 630. As regiões usam-na até terem a sua — e quando tiverem, é aqui
- * que a escolha se faz.
- */
-export const IMAGEM_DE_PARTILHA = {
+/** Uma imagem de partilha: a morada, relativa, e o que ela mostra, para quem não a vê. */
+export type ImagemDePartilha = { url: string; alt: string };
+
+/** A imagem de partilha do PRODUTO (`scripts/imagens-do-produto.mjs partilha`). */
+export const IMAGEM_DE_PARTILHA: ImagemDePartilha = {
   url: '/produto/partilha.png',
-  width: 1200,
-  height: 630,
   alt: 'Paragem.pt: os transportes de um território, num sítio só.',
-} as const;
+};
 
-function cartao(titulo: string, descricao: string, caminho: string | undefined, sitio: string) {
+function cartao(
+  titulo: string,
+  descricao: string,
+  caminho: string | undefined,
+  sitio: string,
+  imagem: ImagemDePartilha,
+) {
   return {
     openGraph: {
       type: 'website' as const,
@@ -49,13 +59,13 @@ function cartao(titulo: string, descricao: string, caminho: string | undefined, 
       title: titulo,
       description: descricao,
       ...(caminho ? { url: caminho } : {}),
-      images: [IMAGEM_DE_PARTILHA],
+      images: [{ url: imagem.url, width: CARTAO.largura, height: CARTAO.altura, alt: imagem.alt }],
     },
     twitter: {
       card: 'summary_large_image' as const,
       title: titulo,
       description: descricao,
-      images: [IMAGEM_DE_PARTILHA.url],
+      images: [{ url: imagem.url, alt: imagem.alt }],
     },
   };
 }
@@ -71,8 +81,17 @@ export function metadadosDoProduto(p: {
     title: p.absoluto ? { absolute: p.titulo } : p.titulo,
     description: p.descricao,
     alternates: { canonical: p.caminho },
-    ...cartao(p.titulo, p.descricao, p.caminho, 'Paragem.pt'),
+    ...cartao(p.titulo, p.descricao, p.caminho, 'Paragem.pt', IMAGEM_DE_PARTILHA),
   };
+}
+
+/**
+ * O cartão de partilha da região — o que vai em todas as páginas dela que não
+ * tragam o seu. O texto alternativo é o que o cartão escreve.
+ */
+export function imagemDaRegiao(r: Pick<Regiao, 'rede' | 'de'>): ImagemDePartilha {
+  const { principal, secundario } = nomesDaAssinatura(r);
+  return { url: CARTAO_DA_REGIAO, alt: secundario ? `${principal}: ${secundario}` : principal };
 }
 
 /**
@@ -80,17 +99,24 @@ export function metadadosDoProduto(p: {
  * fica com o título por omissão do invólucro («Transportes da …»). Sem
  * `caminho` é o cartão por omissão do invólucro — o de uma página que não
  * pede o seu, como a de «não encontrada» —, e aí não há morada canónica: uma
- * página que não existe não aponta para o início como se fosse ele.
+ * página que não existe não aponta para o início como se fosse ele. Sem
+ * `imagem` vai o cartão da região.
  */
 export function metadadosDaRegiao(
-  r: Pick<Regiao, 'nome' | 'de'>,
-  p: { titulo?: string; descricao: string; caminho?: string },
+  r: Pick<Regiao, 'nome' | 'de' | 'rede'>,
+  p: { titulo?: string; descricao: string; caminho?: string; imagem?: ImagemDePartilha },
 ): Metadata {
   const doCartao = p.titulo ? `${p.titulo} · ${r.nome}` : `Transportes ${r.de}`;
   return {
     ...(p.titulo ? { title: p.titulo } : {}),
     description: p.descricao,
     ...(p.caminho ? { alternates: { canonical: p.caminho } } : {}),
-    ...cartao(doCartao, p.descricao, p.caminho, `${r.nome} · Paragem.pt`),
+    ...cartao(
+      doCartao,
+      p.descricao,
+      p.caminho,
+      `${r.nome} · Paragem.pt`,
+      p.imagem ?? imagemDaRegiao(r),
+    ),
   };
 }

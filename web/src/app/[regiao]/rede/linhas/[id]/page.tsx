@@ -22,6 +22,7 @@ import { lista, plural } from '@/lib/prosa';
 import Distintivo, { corDoTraco } from '@/componentes/Distintivo';
 import QuadrosPorDia, { type QuadroDoDia } from '@/componentes/QuadrosPorDia';
 import { metadadosDaRegiao } from '@/lib/metadados';
+import { cartaoDaLinha } from '@/lib/partilha';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -49,6 +50,7 @@ export async function generateMetadata({
     titulo: `${l.codigo} — ${l.nome}`,
     descricao: `Linha ${l.codigo}, ${l.nome}: ${plural(l.viagens, 'viagem', 'viagens')} no horário, o percurso e as paragens.`,
     caminho: urlRede(rid, `linhas/${id}/`),
+    imagem: { url: cartaoDaLinha(id), alt: `Linha ${l.codigo}, ${l.nome}` },
   });
 }
 

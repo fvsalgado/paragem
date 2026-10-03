@@ -24,6 +24,7 @@ import Distintivo from '@/componentes/Distintivo';
 import PartidasDaParagem from '@/componentes/PartidasDaParagem';
 import type { QuadroDoDia } from '@/componentes/QuadrosPorDia';
 import { metadadosDaRegiao } from '@/lib/metadados';
+import { cartaoDaParagem } from '@/lib/partilha';
 import { linhasNumaFrase } from '@/lib/prosa';
 
 /**
@@ -58,6 +59,7 @@ export async function generateMetadata({
     titulo: p.nome,
     descricao: `Horário planeado da paragem ${p.nome}${onde}${quais}.`,
     caminho: urlDaParagem(rid, p.id),
+    imagem: { url: cartaoDaParagem(p.id), alt: `Paragem ${p.nome}${onde}${quais}` },
   });
 }
 

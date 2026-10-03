@@ -47,6 +47,20 @@ const config = {
    * leem os mesmos dados que a página já está à espera de ler.
    */
   htmlLimitedBots: /.*/,
+  /*
+   * A LETRA DOS CARTÕES DE PARTILHA vai com as rotas que os desenham
+   * (`src/lib/cartao.tsx`). Hoje o rastreio dos ficheiros de cada função já a
+   * apanha sozinho — o nome sai de uma lista, e ele leva a pasta inteira —,
+   * mas isso é um pormenor do rastreador, e a falta dela não rebenta nada: o
+   * cartão desenhava-se com a letra de reserva, e ninguém dava por isso. Por
+   * isso diz-se aqui. As chaves são padrões sobre o caminho da rota, e o
+   * `[regiao]` não se escreve: num padrão, parênteses retos são uma classe de
+   * caracteres.
+   */
+  outputFileTracingIncludes: {
+    '/*/cartao.png': ['./src/fontes/*.ttf'],
+    '/*/cartao/**': ['./src/fontes/*.ttf'],
+  },
   async headers() {
     return [
       // O processador do mapa leva a versão no caminho
