@@ -991,7 +991,14 @@ export type Pintura =
   /** Cores escritas no SVG: para os ficheiros (ícones, imagens de partilha). */
   | { cores: readonly string[]; fundo: string }
   /** Classes em vez de cores (`halo`, `l0`…`l2`, `ponto`): para o sítio, onde o CSS escolhe a cor pelo tema. */
-  | { classes: true };
+  | { classes: true }
+  /**
+   * As cores nas variáveis de CSS de quem mostra o desenho (`--feixe-1`…
+   * `--feixe-3`, e o fundo): para o ficheiro que o sítio usa por `<use>`
+   * (`ficheiroDoEndereco`), onde as classes da página não chegam e as
+   * variáveis sim. O resto do traço vem do grupo que embrulha o desenho.
+   */
+  | { variaveis: true };
 
 type Desenho = { svg: string; largura: number; meia: number; cap: number };
 
@@ -1006,17 +1013,23 @@ export function tracos(txt: string, versao: Versao, pintura: Pintura): Desenho {
   const meia = meiaDe(versao);
   const tabela = letras(meia + 1.2);
   const halo = (d: string) =>
-    'classes' in pintura
-      ? `<path class="halo" d="${d}" fill="none" stroke-width="${meia * 2 + 3.6}" stroke-linecap="round" stroke-linejoin="round"/>`
-      : `<path d="${d}" fill="none" stroke="${pintura.fundo}" stroke-width="${meia * 2 + 3.6}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    'variaveis' in pintura
+      ? `<path d="${d}" stroke-width="${meia * 2 + 3.6}" style="stroke:var(--fundo-da-marca,var(--superficie))"/>`
+      : 'classes' in pintura
+        ? `<path class="halo" d="${d}" fill="none" stroke-width="${meia * 2 + 3.6}" stroke-linecap="round" stroke-linejoin="round"/>`
+        : `<path d="${d}" fill="none" stroke="${pintura.fundo}" stroke-width="${meia * 2 + 3.6}" stroke-linecap="round" stroke-linejoin="round"/>`;
   const linha = (d: string, i: number) =>
-    'classes' in pintura
-      ? `<path class="l${i}" d="${d}" fill="none" stroke-width="${lw}" stroke-linecap="round" stroke-linejoin="round"/>`
-      : `<path d="${d}" fill="none" stroke="${pintura.cores[i]}" stroke-width="${lw}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    'variaveis' in pintura
+      ? `<path d="${d}" style="stroke:var(--feixe-${i + 1})"/>`
+      : 'classes' in pintura
+        ? `<path class="l${i}" d="${d}" fill="none" stroke-width="${lw}" stroke-linecap="round" stroke-linejoin="round"/>`
+        : `<path d="${d}" fill="none" stroke="${pintura.cores[i]}" stroke-width="${lw}" stroke-linecap="round" stroke-linejoin="round"/>`;
   const circulo = (cx: number, cy: number, r: number) =>
-    'classes' in pintura
-      ? `<circle class="ponto" cx="${cx.toFixed(2)}" cy="${cy}" r="${r}"/>`
-      : `<circle cx="${cx.toFixed(2)}" cy="${cy}" r="${r}" fill="${pintura.cores[0]}"/>`;
+    'variaveis' in pintura
+      ? `<circle cx="${cx.toFixed(2)}" cy="${cy}" r="${r}" style="fill:var(--feixe-1)"/>`
+      : 'classes' in pintura
+        ? `<circle class="ponto" cx="${cx.toFixed(2)}" cy="${cy}" r="${r}"/>`
+        : `<circle cx="${cx.toFixed(2)}" cy="${cy}" r="${r}" fill="${pintura.cores[0]}"/>`;
   let x = 0;
   let svg = '';
   const cs = [...txt];
@@ -1066,11 +1079,17 @@ export function texto(txt: string, versao: Versao, pintura: Pintura, topo = ALTA
   };
 }
 
-/** Um endereço já desenhado nas duas versões do sítio: o que um componente do navegador recebe. */
+/**
+ * Um endereço já desenhado nas duas versões do sítio, como um componente do
+ * navegador o recebe: o endereço, as caixas, e a versão do ficheiro onde está
+ * o desenho (`ficheiroDoEndereco`) — o desenho em si não vem.
+ */
 export type EnderecoDesenhado = {
   endereco: string;
-  inteira: { viewBox: string; corpo: string };
-  reduzida: { viewBox: string; corpo: string };
+  /** Muda quando o desenho muda: vai no caminho do ficheiro, que por isso pode ficar em cache para sempre. */
+  versao: string;
+  inteira: { viewBox: string };
+  reduzida: { viewBox: string };
 };
 
 /**
@@ -1082,18 +1101,56 @@ export function desenhavel(endereco: string | null | undefined): endereco is str
   return !!endereco && CARACTERES.test(endereco);
 }
 
+/** Os ids das duas versões dentro do ficheiro, e a do motor que cada uma é. */
+export const VERSOES_DO_ENDERECO = { inteira: 'feixe', reduzida: 'reduzido' } as const;
+
 /**
- * O endereço de uma região desenhado no servidor, para o componente que o
- * mostra não precisar deste ficheiro — o mapa e o menu correm no navegador, e
- * o desenho viaja já feito. `null` para um endereço que o feixe não sabe
+ * O FICHEIRO DO LOGÓTIPO DE UMA REGIÃO: as duas versões do endereço, cada uma
+ * num grupo com o seu `id`, para a página as usar por `<use>`.
+ *
+ * Ia dentro de cada página, e saía caro: as duas versões, e o Next manda tudo
+ * o que o servidor desenha outra vez nos dados de hidratação — quatro cópias,
+ * 60 KB em bruto, mais de metade do HTML de «A rede», em todas as páginas da
+ * região. Num ficheiro à parte, com a versão no caminho, desce uma vez e fica
+ * na cache do navegador. As cores não vêm escritas: são as variáveis de CSS
+ * da página (`.sitio-da-regiao`), que atravessam o `<use>` — e com elas o
+ * tema escuro e o fundo de cada sítio onde o logótipo aparece.
+ */
+export function ficheiroDoEndereco(endereco: string): string {
+  const grupos = Object.entries(VERSOES_DO_ENDERECO).map(([id, versao]) => {
+    const { lw } = VERSOES[versao];
+    const { svg } = tracos(endereco, versao, { variaveis: true });
+    return `<g id="${id}" fill="none" stroke-width="${lw}" stroke-linecap="round" stroke-linejoin="round">${svg}</g>`;
+  });
+  return `<svg xmlns="http://www.w3.org/2000/svg">${grupos.join('')}</svg>`;
+}
+
+/** Um resumo curto de um texto (FNV-1a, 32 bits): a versão do ficheiro, sem depender do Node. */
+function resumo(texto: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < texto.length; i++) {
+    h ^= texto.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+
+/**
+ * O endereço de uma região pronto para o componente que o mostra: as caixas
+ * das duas versões, e a versão do ficheiro onde está o desenho
+ * (`ficheiroDoEndereco`). O componente não precisa deste módulo — o mapa e o
+ * menu correm no navegador. `null` para um endereço que o feixe não sabe
  * desenhar (um domínio com acentos, por exemplo): quem o recebe escreve o nome.
  */
 export function desenharEndereco(endereco: string | null | undefined): EnderecoDesenhado | null {
   if (!desenhavel(endereco)) return null;
-  const so = ({ viewBox, corpo }: { viewBox: string; corpo: string }) => ({ viewBox, corpo });
+  const caixa = (versao: Versao) => ({
+    viewBox: texto(endereco, versao, { variaveis: true }).viewBox,
+  });
   return {
     endereco,
-    inteira: so(texto(endereco, 'feixe', { classes: true })),
-    reduzida: so(texto(endereco, 'reduzido', { classes: true })),
+    versao: resumo(ficheiroDoEndereco(endereco)),
+    inteira: caixa(VERSOES_DO_ENDERECO.inteira),
+    reduzida: caixa(VERSOES_DO_ENDERECO.reduzida),
   };
 }
