@@ -1,5 +1,7 @@
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
+import type { EnderecoDesenhado } from '@/lib/feixe';
 import type { Marca } from '@/lib/marca';
+import EnderecoEmFeixe from './EnderecoEmFeixe';
 
 /**
  * A ASSINATURA DA REGIÃO: o logótipo da rede, quando a região o declara, e os
@@ -16,12 +18,18 @@ import type { Marca } from '@/lib/marca';
  * ao lado, e dizê-lo duas vezes — «Rede Ameno, logótipo; Rede Ameno» — é
  * ruído. A largura vem guardada da proporção que o pipeline lê do ficheiro, e
  * nada salta quando ele chega.
+ *
+ * **O nome da rede passou a ser o endereço em feixe** (3/10/2026): o
+ * logótipo de cada região é o endereço dela, nos tons dela, como o do produto
+ * é «paragem.pt» (§6). Por baixo fica o que ela é — «Transportes das Terras do
+ * Ameno». Sem endereço que se desenhe, a assinatura é a de texto, como era.
  */
 export default function AssinaturaDaRegiao({
   regiao,
   marca,
   principal,
   secundario,
+  endereco = null,
   altura = 40,
   emLinha = false,
 }: {
@@ -29,6 +37,8 @@ export default function AssinaturaDaRegiao({
   marca: Marca;
   principal: string;
   secundario: string | null;
+  /** O logótipo-endereço já desenhado (`assinaturaDaRegiao`), ou `null` para assinar em texto. */
+  endereco?: EnderecoDesenhado | null;
   /** A altura do logótipo, em px: 40 no cabeçalho, menos na folha do mapa. */
   altura?: number;
   /**
@@ -42,6 +52,9 @@ export default function AssinaturaDaRegiao({
   // Entre um quadrado e uma faixa de quatro para um: um logótipo mais
   // comprido do que isso é o nome escrito por extenso, e já está ao lado.
   const proporcao = Math.min(4, Math.max(0.5, marca.logotipoProporcao ?? 1));
+  // Com o endereço desenhado, a linha de texto é o que a região é: o nome
+  // secundário, ou o principal quando a região não declara rede.
+  const linha = secundario ?? principal;
   return (
     <span className="assinatura">
       {marca.logotipo && (
@@ -54,7 +67,21 @@ export default function AssinaturaDaRegiao({
           decoding="async"
         />
       )}
-      {emLinha ? (
+      {endereco ? (
+        emLinha ? (
+          <span className="nomes em-linha" title={`${endereco.endereco} · ${linha}`}>
+            <EnderecoEmFeixe desenho={endereco} />
+            <span className="nome-secundario"> · {linha}</span>
+          </span>
+        ) : (
+          <span className="nomes">
+            <EnderecoEmFeixe desenho={endereco} />
+            <span className="nome-secundario" title={linha}>
+              {linha}
+            </span>
+          </span>
+        )
+      ) : emLinha ? (
         <span
           className="nomes em-linha"
           title={secundario ? `${principal} · ${secundario}` : principal}

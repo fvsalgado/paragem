@@ -119,9 +119,17 @@ export type Regiao = {
   };
   dominio_env: string | null;
   /**
-   * A marca da região: a cor da faixa do cabeçalho, a tinta que se lê por cima
-   * (medida no pipeline) e o logótipo publicado ao lado dos dados. Ausente em
-   * dados de antes disto — e aí vale a do §6, sem logótipo (`marca.ts`).
+   * O domínio canónico, declarado no `regiao.yaml` (`dominio:`) — o que o
+   * logótipo da região escreve. Ausente em dados de antes disto, e aí a região
+   * assina com o nome da rede em texto.
+   */
+  dominio?: string | null;
+  /**
+   * A marca da região: a cor que ela declara — de onde saem os tons do
+   * logótipo-endereço e das réguas (`marca.ts`) — e o logótipo publicado ao
+   * lado dos dados. Ausente em dados de antes disto — e aí vale a do §6, sem
+   * logótipo. A tinta e o contraste vinham da faixa do cabeçalho, que saiu:
+   * o sítio já não os lê.
    */
   marca?: {
     cor?: string;

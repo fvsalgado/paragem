@@ -7,6 +7,7 @@ export default async function Rodape({ regiao: id }: { regiao: string }) {
   const r = await exigirRegiao(id);
   return (
     <footer className="rodape">
+      <span className="regua-do-feixe" aria-hidden="true" />
       <div className="interior">
         <nav aria-label="Rodapé">
           <ul>

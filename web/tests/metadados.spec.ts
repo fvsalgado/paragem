@@ -10,8 +10,8 @@
  * o `<head>`.
  *
  * A IMAGEM É DE QUEM É A PÁGINA (P4-008): a do produto na página do produto,
- * e numa região o cartão dela — na cor da faixa, sem o vermelho do produto —,
- * com um cartão próprio na paragem e na linha.
+ * e numa região o cartão dela — nos tons do feixe dela, sem o vermelho do
+ * produto —, com um cartão próprio na paragem e na linha.
  */
 import { test, expect, type APIRequestContext } from '@playwright/test';
 import { PORTA, PRODUTO, REGIAO, anfitriao, regioes } from './anfitrioes';
@@ -22,6 +22,7 @@ import {
   temModoLigado,
 } from './dados-da-regiao';
 import { seguro } from '../src/lib/formato.ts';
+import { feixeDaRegiao } from '../src/lib/marca.ts';
 
 /**
  * Um pedido pelo anfitrião de uma região, feito ao endereço local com o
@@ -166,38 +167,45 @@ test('um cartão do que não existe dá 404, e o anfitrião do produto não tem 
 
 const VERMELHOS_DO_PRODUTO = ['#c2281c', '#f2573f'];
 
-test('o cartão de uma região está na cor da faixa dela, e não tem um píxel do vermelho do produto', async ({
+test('o cartão de uma região leva os tons do feixe dela sobre o papel, e nem um píxel do vermelho do produto', async ({
   page,
 }) => {
   for (const id of regioes()) {
     await page.goto(`${anfitriao(id)}/cartao.png`);
+    const tons = feixeDaRegiao(corDaMarca(id)).claro;
     // Pinta-se a imagem numa tela, no mesmo domínio, e lê-se píxel a píxel.
-    const { canto, vermelhos } = await page.evaluate(async (alvos) => {
-      const img = document.querySelector('img')!;
-      await img.decode();
-      const tela = document.createElement('canvas');
-      tela.width = img.naturalWidth;
-      tela.height = img.naturalHeight;
-      const ctx = tela.getContext('2d')!;
-      ctx.drawImage(img, 0, 0);
-      const { data } = ctx.getImageData(0, 0, tela.width, tela.height);
-      const rgb = alvos.map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
-      let vermelhos = 0;
-      for (let i = 0; i < data.length; i += 4) {
-        if (
-          rgb.some(
-            ([r, g, b]) =>
-              Math.abs(data[i] - r) + Math.abs(data[i + 1] - g) + Math.abs(data[i + 2] - b) < 24,
-          )
-        )
-          vermelhos++;
-      }
-      const hex = (i: number) =>
-        '#' + [0, 1, 2].map((k) => data[i + k].toString(16).padStart(2, '0')).join('');
-      return { canto: hex((8 * tela.width + 8) * 4), vermelhos };
-    }, VERMELHOS_DO_PRODUTO);
-    expect(canto, id).toBe(corDaMarca(id));
-    expect(vermelhos, id).toBe(0);
+    const { canto, contagens } = await page.evaluate(
+      async (alvos) => {
+        const img = document.querySelector('img')!;
+        await img.decode();
+        const tela = document.createElement('canvas');
+        tela.width = img.naturalWidth;
+        tela.height = img.naturalHeight;
+        const ctx = tela.getContext('2d')!;
+        ctx.drawImage(img, 0, 0);
+        const { data } = ctx.getImageData(0, 0, tela.width, tela.height);
+        const rgb = alvos.map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
+        const contagens = alvos.map(() => 0);
+        for (let i = 0; i < data.length; i += 4) {
+          rgb.forEach(([r, g, b], k) => {
+            if (Math.abs(data[i] - r) + Math.abs(data[i + 1] - g) + Math.abs(data[i + 2] - b) < 24)
+              contagens[k]++;
+          });
+        }
+        const hex = (i: number) =>
+          '#' + [0, 1, 2].map((k) => data[i + k].toString(16).padStart(2, '0')).join('');
+        return { canto: hex((8 * tela.width + 8) * 4), contagens };
+      },
+      [...tons, ...VERMELHOS_DO_PRODUTO],
+    );
+    // O papel do sítio, como o cabeçalho: o logótipo só se vê a cores sobre claro.
+    expect(canto, id).toBe('#f5f7f4');
+    // Os três tons da região, cada um pelo menos numa régua de ponta a ponta
+    // (1200 × 7 píxeis), e o logótipo por cima.
+    tons.forEach((tom, k) => {
+      expect(contagens[k], `${id}: ${tom}`).toBeGreaterThan(1200 * 7 * 0.9);
+    });
+    expect(contagens.slice(3), id).toEqual([0, 0]);
   }
 });
 

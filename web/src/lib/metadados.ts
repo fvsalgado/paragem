@@ -26,12 +26,13 @@
  * dela, e a imagem de partilha sai pelo domínio dela.
  *
  * A IMAGEM É DE QUEM É A PÁGINA. A do produto é o cartão do produto, com o
- * feixe a cores; a de uma região é o cartão dela (`lib/partilha.ts`), na cor
- * da faixa e sem o vermelho do produto (§6) — e a paragem e a linha têm cada
- * uma o seu, com o nome e as linhas que lá passam.
+ * feixe a cores; a de uma região é o cartão dela (`lib/partilha.ts`), com o
+ * endereço dela em feixe, nos tons dela, e sem o vermelho do produto (§6) — e
+ * a paragem e a linha têm cada uma o seu, com o nome e as linhas que lá passam.
  */
 import type { Metadata } from 'next';
 import type { Regiao } from './formato';
+import { desenhavel } from './feixe.ts';
 import { nomesDaAssinatura } from './marca.ts';
 import { CARTAO, CARTAO_DA_REGIAO } from './partilha.ts';
 
@@ -87,11 +88,17 @@ export function metadadosDoProduto(p: {
 
 /**
  * O cartão de partilha da região — o que vai em todas as páginas dela que não
- * tragam o seu. O texto alternativo é o que o cartão escreve.
+ * tragam o seu. O texto alternativo é o que o cartão escreve: o endereço, que
+ * é o logótipo dela, e o que ela é; sem endereço que se desenhe, os nomes.
  */
-export function imagemDaRegiao(r: Pick<Regiao, 'rede' | 'de'>): ImagemDePartilha {
+export function imagemDaRegiao(r: Pick<Regiao, 'rede' | 'de' | 'dominio'>): ImagemDePartilha {
   const { principal, secundario } = nomesDaAssinatura(r);
-  return { url: CARTAO_DA_REGIAO, alt: secundario ? `${principal}: ${secundario}` : principal };
+  const alt = desenhavel(r.dominio)
+    ? `${r.dominio}: ${secundario ?? principal}`
+    : secundario
+      ? `${principal}: ${secundario}`
+      : principal;
+  return { url: CARTAO_DA_REGIAO, alt };
 }
 
 /**
@@ -103,7 +110,7 @@ export function imagemDaRegiao(r: Pick<Regiao, 'rede' | 'de'>): ImagemDePartilha
  * `imagem` vai o cartão da região.
  */
 export function metadadosDaRegiao(
-  r: Pick<Regiao, 'nome' | 'de' | 'rede'>,
+  r: Pick<Regiao, 'nome' | 'de' | 'rede' | 'dominio'>,
   p: { titulo?: string; descricao: string; caminho?: string; imagem?: ImagemDePartilha },
 ): Metadata {
   const doCartao = p.titulo ? `${p.titulo} · ${r.nome}` : `Transportes ${r.de}`;

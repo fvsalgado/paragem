@@ -53,6 +53,7 @@ export default function CabecalhoDoProduto({ origem = '' }: { origem?: string })
           Falar connosco
         </Link>
       </div>
+      <span className="regua-do-feixe" aria-hidden="true" />
     </header>
   );
 }

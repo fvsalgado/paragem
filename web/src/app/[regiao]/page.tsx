@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { preconnect, preload } from 'react-dom';
 import AppDoMapa from '@/componentes/AppDoMapa';
-import { marcaDaRegiao, nomesDaAssinatura } from '@/lib/marca';
+import { assinaturaDaRegiao, marcaDaRegiao } from '@/lib/marca';
 import CatalogoDaRegiao from '@/componentes/CatalogoDaRegiao';
 import {
   procura,
@@ -174,7 +174,7 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
       <AppDoMapa
         regiao={rid}
         marca={marcaDaRegiao(r)}
-        assinatura={nomesDaAssinatura(r)}
+        assinatura={assinaturaDaRegiao(r)}
         deDaRegiao={r.de}
         emDaRegiao={r.em}
         centro={centro}

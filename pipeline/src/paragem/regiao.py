@@ -141,13 +141,15 @@ class Regiao:
     # regiões sem serviço a pedido, e uma secção vazia à espera de dados que
     # não vêm é pior do que secção nenhuma.
     a_pedido: dict[str, Any] = field(default_factory=dict)
-    #: O domínio canónico em que a região responde — `mediotejo.paragem.pt`,
-    #: `prova.paragem.pt`. DECLARADO, não adivinhado: «medio-tejo» →
-    #: «mediotejo» é uma contração, e este projeto não adivinha contrações. É
-    #: identidade da região, por isso vive aqui e não numa variável de
-    #: ambiente; a base de dados do painel guarda uma cópia, e o CI confere
-    #: que as duas dizem o mesmo (docs/BASE-DE-DADOS.md). Opcional enquanto
-    #: o encaminhamento por host não chegar: sem ele, nada muda.
+    #: O domínio canónico em que a região responde — `meio.paragem.pt`,
+    #: `prova.paragem.pt`. DECLARADO, não adivinhado: de «medio-tejo» não se
+    #: tira «meio», que é o nome da rede e não o do território — e antes disso
+    #: foi «mediotejo», uma contração, e este projeto não adivinha contrações.
+    #: É identidade da região, por isso vive aqui e não numa variável de
+    #: ambiente: é também o LOGÓTIPO dela, desenhado em feixe (CLAUDE.md, §6).
+    #: A base de dados do painel guarda uma cópia, e o CI confere que as duas
+    #: dizem o mesmo (docs/BASE-DE-DADOS.md). Sem ele, a região assina com o
+    #: nome da rede em texto.
     dominio: str | None = None
     #: Nomes de paragem que os feeds de terceiros escrevem noutra língua.
     #:

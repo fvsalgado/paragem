@@ -20,7 +20,7 @@ import { Chegada, DoModo, Hamburguer, Lista } from '@/componentes/Icones';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { usePontos } from '@/lib/pontos-do-navegador';
 import AssinaturaDaRegiao from '@/componentes/AssinaturaDaRegiao';
-import type { Marca as MarcaDaRegiao } from '@/lib/marca';
+import type { Assinatura, Marca as MarcaDaRegiao } from '@/lib/marca';
 import {
   avisoDe,
   comoProcura,
@@ -204,7 +204,7 @@ export default function AppDoMapa({
    * ecrã ficava sem marca nenhuma — nem a da rede, nem a do produto (P1-008).
    */
   marca: MarcaDaRegiao;
-  assinatura: { principal: string; secundario: string | null };
+  assinatura: Assinatura;
   /** «da Serra da Pedra Alta», «do Baixo Sável» — para o título do mapa. */
   deDaRegiao: string;
   /** «na Serra da Pedra Alta», «no Baixo Sável» — escrito pela região, não colado aqui. */
@@ -1117,6 +1117,7 @@ export default function AppDoMapa({
                 marca={marca}
                 principal={assinatura.principal}
                 secundario={assinatura.secundario}
+                endereco={assinatura.endereco}
                 altura={28}
                 emLinha
               />

@@ -15,6 +15,7 @@ export default function RodapeDoProduto({ origem = '' }: { origem?: string }) {
   const em = (caminho: string) => `${origem}${caminho}`;
   return (
     <footer className="rodape rodape-do-produto">
+      <span className="regua-do-feixe" aria-hidden="true" />
       <div className="interior">
         <nav aria-label="Rodapé">
           <ul>
