@@ -6,19 +6,24 @@
  * primeiro ecrã do mapa não tinha marca nenhuma (P1-008), e um nome comprido
  * partia o cabeçalho (P1-043). O que se prova aqui:
  *
- * - o cabeçalho é a assinatura da rede, a levar ao início DA REGIÃO, numa
- *   faixa com a cor que ela declara — e a tinta lê-se por cima dela;
+ * - o cabeçalho é a assinatura da região — o endereço dela em feixe, que é o
+ *   logótipo dela (§6) —, a levar ao início DA REGIÃO;
+ * - o logótipo, as réguas, os botões e as ligações levam os tons tirados da
+ *   cor que ela declara, sobre o fundo claro do sítio;
  * - «Paragem.pt» só aparece discreto, no fim, a levar ao produto;
  * - a assinatura está no primeiro ecrã do mapa e no menu;
- * - um nome comprido não muda a altura do cabeçalho, nem empurra a página.
+ * - um nome ou um endereço comprido não muda a altura do cabeçalho, nem
+ *   empurra a página.
  *
- * NENHUM CLIENTE ESTÁ AQUI: a cor e o logótipo esperados leem-se do
- * `regiao.json` que a construção publicou, e as regiões de prova provam o
+ * NENHUM CLIENTE ESTÁ AQUI: a cor, o endereço e o logótipo esperados leem-se
+ * do `regiao.json` que a construção publicou, e as regiões de prova provam o
  * caso de quem não declara marca nenhuma.
  */
 import { test, expect, type Page } from '@playwright/test';
-import { PRODUTO, PROVA, PROVA_MUNICIPIO, REGIAO, anfitriao } from './anfitrioes';
+import { PORTA, PRODUTO, PROVA, PROVA_MUNICIPIO, REGIAO, anfitriao } from './anfitrioes';
 import { corDaMarca, declaracao, temMosaicos } from './dados-da-regiao';
+import { desenhavel, desenharEndereco } from '../src/lib/feixe.ts';
+import { COR_DO_PRODUTO, feixeDaRegiao } from '../src/lib/marca.ts';
 
 /** A cor de um elemento como `#rrggbb`. */
 async function cor(page: Page, seletor: string, propriedade: 'color' | 'background-color') {
@@ -34,62 +39,147 @@ async function cor(page: Page, seletor: string, propriedade: 'color' | 'backgrou
     }, propriedade);
 }
 
-function contraste(a: string, b: string): number {
-  const l = (h: string) => {
-    const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
-    const [r, g, bl] = c.map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
-    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
-  };
-  const [x, y] = [l(a), l(b)].sort((p, q) => q - p);
-  return (x + 0.05) / (y + 0.05);
-}
-
 const nomeDaRede = (id: string) =>
   declaracao(id)?.rede?.nome ?? `Transportes ${declaracao(id)!.de}`;
 
-test('o cabeçalho é a assinatura da rede, e leva ao início da região', async ({ page }) => {
+/** O endereço que o logótipo da região escreve, se ela o declara e o feixe o sabe desenhar. */
+const enderecoDe = (id: string) => {
+  const d = declaracao(id)?.dominio;
+  return desenhavel(d) ? d : null;
+};
+
+/**
+ * Quantos píxeis de cada tom o logótipo pinta DE FACTO no ecrã. O desenho vem
+ * por `<use>` de um ficheiro à parte, e o que lá está dentro não se lê da
+ * página: fotografa-se. Espera-se que o ficheiro chegue, e conta-se — num
+ * telemóvel, cada linha tem píxeis cheios da cor dela, além das bordas.
+ */
+async function pintados(page: Page, tons: readonly string[]): Promise<number[]> {
+  const logotipo = page.locator('header .endereco-em-feixe');
+  await expect(logotipo).toBeVisible();
+  const contar = async () => {
+    const png = await logotipo.screenshot();
+    return page.evaluate(
+      async ({ b64, tons }) => {
+        const img = new Image();
+        img.src = `data:image/png;base64,${b64}`;
+        await img.decode();
+        const tela = document.createElement('canvas');
+        tela.width = img.width;
+        tela.height = img.height;
+        const ctx = tela.getContext('2d')!;
+        ctx.drawImage(img, 0, 0);
+        const { data } = ctx.getImageData(0, 0, tela.width, tela.height);
+        return tons.map((h) => {
+          const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+          let n = 0;
+          for (let i = 0; i < data.length; i += 4)
+            if (Math.abs(data[i] - r) + Math.abs(data[i + 1] - g) + Math.abs(data[i + 2] - b) < 12)
+              n++;
+          return n;
+        });
+      },
+      { b64: png.toString('base64'), tons: [...tons] },
+    );
+  };
+  await expect.poll(async () => Math.min(...(await contar()))).toBeGreaterThan(40);
+  return contar();
+}
+
+/** `#rrggbb` como o navegador o escreve num valor calculado. */
+const rgb = (hex: string) =>
+  `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`;
+
+test('o cabeçalho é a assinatura da região, e leva ao início dela', async ({ page }) => {
   for (const id of [REGIAO, 'prova', 'prova-municipio']) {
     if (!declaracao(id)) continue;
     await page.goto(`${anfitriao(id)}/rede/`);
     const cabecalho = page.getByRole('banner');
     const primeira = cabecalho.getByRole('link').first();
-    await expect(primeira, id).toContainText(nomeDaRede(id));
+    const endereco = enderecoDe(id);
+    if (endereco) {
+      // O logótipo é o endereço, e lê-se como o que mostra; por baixo, o que
+      // a região é.
+      await expect(primeira.getByRole('img', { name: endereco }), id).toBeVisible();
+      await expect(primeira, id).toContainText(`Transportes ${declaracao(id)!.de}`);
+    } else {
+      await expect(primeira, id).toContainText(nomeDaRede(id));
+    }
     await expect(primeira, id).toHaveAttribute('href', '/');
     // O produto não está no cabeçalho de uma região.
-    await expect(cabecalho.getByRole('link', { name: /Paragem/ }), id).toHaveCount(0);
-  }
-});
-
-test('a faixa tem a cor da marca da região, e a tinta lê-se por cima', async ({ page }) => {
-  for (const id of [REGIAO, 'prova']) {
-    if (!declaracao(id)) continue;
-    await page.goto(`${anfitriao(id)}/rede/`);
-    const fundo = await cor(page, 'header.cabecalho', 'background-color');
-    expect(fundo, id).toBe(corDaMarca(id));
-    const tinta = await cor(page, 'header.cabecalho .nome-principal', 'color');
-    expect(contraste(fundo, tinta), `${id}: ${tinta} sobre ${fundo}`).toBeGreaterThanOrEqual(4.5);
-    // O foco, dentro da faixa, é da cor da tinta: o amarelo não se via numa faixa clara.
-    await page.getByRole('banner').getByRole('link').first().focus();
-    const contorno = await page
-      .getByRole('banner')
-      .getByRole('link')
-      .first()
-      .evaluate((e) => getComputedStyle(e).outlineColor);
-    expect(contorno, id).toBe(
-      await page
-        .locator('header .nome-principal')
-        .first()
-        .evaluate((e) => getComputedStyle(e).color),
+    await expect(cabecalho.locator(`a[href^="${PRODUTO}"]`), id).toHaveCount(0);
+    await expect(cabecalho.getByRole('link', { name: 'Paragem.pt', exact: true }), id).toHaveCount(
+      0,
     );
   }
 });
 
-test('as provas não têm marca própria: a faixa é a do produto, sem logótipo', async ({ page }) => {
+test('o cabeçalho é claro, e o logótipo, a régua e as ligações levam os tons da região', async ({
+  page,
+}) => {
+  for (const id of [REGIAO, 'prova']) {
+    if (!declaracao(id)) continue;
+    await page.goto(`${anfitriao(id)}/rede/`);
+    // A superfície do sítio, e não uma faixa: o feixe só se vê a cores
+    // sobre um fundo claro (§6).
+    expect(await cor(page, 'header.cabecalho', 'background-color'), id).toBe('#ffffff');
+    const tons = feixeDaRegiao(corDaMarca(id)).claro;
+    if (enderecoDe(id)) {
+      // As três linhas do logótipo, cada uma no seu tom da região.
+      for (const [i, n] of (await pintados(page, tons)).entries()) {
+        expect(n, `${id}: ${tons[i]}`).toBeGreaterThan(40);
+      }
+    }
+    // A régua: a linha do meio é o traço, e as de fora e de dentro as sombras.
+    const regua = page.locator('header .regua-do-feixe');
+    expect(await cor(page, 'header .regua-do-feixe', 'background-color'), id).toBe(tons[1]);
+    const sombras = await regua.evaluate((e) => getComputedStyle(e).boxShadow);
+    expect(sombras, id).toContain(rgb(tons[0]));
+    expect(sombras, id).toContain(rgb(tons[2]));
+    // As ligações da região são da linha de fora, que se lê como texto.
+    expect(await cor(page, 'header nav a', 'color'), id).toBe(tons[0]);
+    // O rodapé fecha com a mesma régua.
+    await expect(page.locator('footer .regua-do-feixe'), id).toHaveCount(1);
+  }
+});
+
+test('as provas não têm marca própria: o feixe sai do azul do §6, sem logótipo', async ({
+  page,
+}) => {
+  const tons = feixeDaRegiao(COR_DO_PRODUTO).claro;
   for (const host of [PROVA, PROVA_MUNICIPIO]) {
     await page.goto(`${host}/rede/`);
-    expect(await cor(page, 'header.cabecalho', 'background-color'), host).toBe('#0a5c7a');
+    const [deFora] = await pintados(page, tons);
+    expect(deFora, host).toBeGreaterThan(40);
     await expect(page.locator('header img.logotipo'), host).toHaveCount(0);
   }
+});
+
+test('o desenho do logótipo é um ficheiro da região, para sempre na cache, e só o de agora', async ({
+  page,
+  request,
+}) => {
+  const id = ['prova', 'prova-municipio', REGIAO].find((r) => enderecoDe(r))!;
+  const desenho = desenharEndereco(enderecoDe(id))!;
+  await page.goto(`${anfitriao(id)}/rede/`);
+  // A página leva só a referência: o desenho não vem no HTML.
+  const usos = page.locator('header .endereco-em-feixe use');
+  await expect(usos).toHaveCount(2);
+  await expect(usos.first()).toHaveAttribute('href', `/logotipo/${desenho.versao}.svg#inteira`);
+  expect(await page.locator('header .endereco-em-feixe path').count(), id).toBe(0);
+
+  const pedir = (caminho: string) =>
+    request.get(`http://127.0.0.1:${PORTA}${caminho}`, {
+      headers: { host: `${id}.localhost:${PORTA}` },
+    });
+  const r = await pedir(`/logotipo/${desenho.versao}.svg`);
+  expect(r.status()).toBe(200);
+  expect(r.headers()['content-type']).toContain('image/svg+xml');
+  expect(r.headers()['cache-control']).toContain('immutable');
+  expect(await r.text()).toContain('<g id="reduzida"');
+  // Uma versão que não é a de agora não se serve: seria o desenho errado
+  // guardado para sempre com o nome de outro.
+  expect((await pedir('/logotipo/00000000.svg')).status()).toBe(404);
 });
 
 test('a região que declara um logótipo mostra-o, sem saltar quando chega', async ({ page }) => {
@@ -115,39 +205,58 @@ test('«Feito com Paragem.pt» discreto, no fim, a levar ao produto', async ({ p
   await expect(feito.getByRole('link', { name: 'Paragem.pt' })).toHaveAttribute('href', PRODUTO);
 });
 
-test('a marca da rede está no primeiro ecrã do mapa, e no menu', async ({ page }) => {
+test('a marca da região está no primeiro ecrã do mapa, e no menu', async ({ page }) => {
   test.skip(!temMosaicos(), 'a região em teste não tem mapa');
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
+  const endereco = enderecoDe(REGIAO);
+  const assinada = async (onde: ReturnType<Page['locator']>) => {
+    if (endereco) await expect(onde.getByRole('img', { name: endereco })).toBeVisible();
+    else await expect(onde).toContainText(nomeDaRede(REGIAO));
+  };
   const folha = page.locator('.folha-de-abertura');
-  await expect(folha.locator('.assinatura')).toContainText(nomeDaRede(REGIAO));
+  await assinada(folha.locator('.assinatura'));
   await expect(folha.locator('.assinatura')).toBeInViewport();
 
   await page.getByRole('button', { name: 'Abrir o menu' }).click();
   const menu = page.getByRole('dialog', { name: 'Menu' });
-  await expect(menu.locator('.assinatura')).toContainText(nomeDaRede(REGIAO));
+  await assinada(menu.locator('.assinatura'));
   await expect(menu.locator('.feito-com')).toHaveText('Feito com Paragem.pt');
 });
 
-test('um nome comprido não muda a altura do cabeçalho, nem empurra a página', async ({ page }) => {
-  // O nome de uma comunidade intermunicipal tem facilmente sessenta letras.
-  // Mede-se com o nome da região em teste e com um assim, escrito por cima.
-  for (const largura of [320, 390, 1280]) {
-    await page.setViewportSize({ width: largura, height: 800 });
-    await page.goto('/rede/');
-    const altura = async () => (await page.locator('header.cabecalho').boundingBox())!.height;
-    const antes = await altura();
-    await page.evaluate(() => {
-      const longo =
-        'Comunidade Intermunicipal das Terras Altas do Vale do Rio Comprido e Serras Vizinhas';
-      for (const e of document.querySelectorAll('header .nome-principal, header .nome-secundario'))
-        e.textContent = longo;
-    });
-    expect(await altura(), `${largura} px`).toBe(antes);
-    const larga = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    );
-    expect(larga, `${largura} px: a página desliza para o lado`).toBeLessThanOrEqual(0);
+test('um nome ou um endereço comprido não muda a altura do cabeçalho, nem empurra a página', async ({
+  page,
+}) => {
+  // O nome de uma comunidade intermunicipal tem facilmente sessenta letras, e
+  // o endereço mais comprido das provas tem vinte e seis. Mede-se com o nome
+  // da região e com um assim, escrito por cima.
+  for (const id of [REGIAO, 'prova-municipio']) {
+    for (const largura of [320, 390, 1280]) {
+      await page.setViewportSize({ width: largura, height: 800 });
+      await page.goto(`${anfitriao(id)}/rede/`);
+      const altura = async () => (await page.locator('header.cabecalho').boundingBox())!.height;
+      const antes = await altura();
+      await page.evaluate(() => {
+        const longo =
+          'Comunidade Intermunicipal das Terras Altas do Vale do Rio Comprido e Serras Vizinhas';
+        for (const e of document.querySelectorAll(
+          'header .nome-principal, header .nome-secundario',
+        ))
+          e.textContent = longo;
+      });
+      expect(await altura(), `${id}, ${largura} px`).toBe(antes);
+      const larga = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(larga, `${id}, ${largura} px: a página desliza para o lado`).toBeLessThanOrEqual(0);
+      // O logótipo cabe inteiro no ecrã: encolhe, não se corta.
+      const logotipo = page.locator('header .endereco-em-feixe');
+      if (await logotipo.count()) {
+        const caixa = (await logotipo.boundingBox())!;
+        expect(caixa.x, `${id}, ${largura} px`).toBeGreaterThanOrEqual(0);
+        expect(caixa.x + caixa.width, `${id}, ${largura} px`).toBeLessThanOrEqual(largura);
+      }
+    }
   }
 });
 

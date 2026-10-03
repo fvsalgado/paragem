@@ -1,6 +1,7 @@
 /*
- * O sistema de desenho, do §8 do briefing. As cores estão lá uma a uma e não
- * se inventam aqui — há um teste que compara este ficheiro com o §8.
+ * O sistema de desenho, do §6 do briefing. As cores estão lá uma a uma e não
+ * se inventam aqui; o contraste de cada par volta a medi-lo o axe, página a
+ * página (`tests/acessibilidade.spec.ts`).
  *
  * Três coisas que não são gosto:
  *
@@ -22,9 +23,14 @@
   --linhas: #d5ddd9;
   --borda-campo: #6f858f;
 
-  /* Marca e modos */
-  --marca: #0a5c7a;
-  --marca-hover: #063f54;
+  /* A MARCA E OS MODOS. A marca é a cor dos botões e das ligações de quem é
+     a página: no produto, o azul do feixe (`--feixe-2`) escurecido até 6,4:1
+     sobre branco; numa região, a linha de fora do feixe dela
+     (`.sitio-da-regiao`, mais abaixo). O autocarro é um modo e não uma marca:
+     fica com o azul da rede em todas, como o comboio fica com o seu cinzento. */
+  --marca: #0f6398;
+  --marca-hover: #044d78;
+  --autocarro: #0a5c7a;
   --a-pedido: #8a5300;
   --a-pedido-fundo: #fbf1e1;
   --bicicleta: #2d6a3e;
@@ -72,15 +78,16 @@
    ecrã claro encandeia — e as aplicações de transportes que as pessoas
    conhecem têm todas o seu. A paleta é a que a auditoria visual propôs, com
    os contrastes medidos: o texto a 14,9:1 sobre o fundo, o secundário a
-   8,7:1, a marca a 7,5:1, o alerta a 7,0:1 sobre o seu fundo, o a pedido a
+   8,7:1, a marca a 8,6:1, o alerta a 7,0:1 sobre o seu fundo, o a pedido a
    6,9:1 — todos acima dos 4,5:1, também sobre as superfícies e os realces,
    e os traços de estado acima dos 3:1. O foco continua o amarelo do §6, que
    se vê nos dois.
 
-   O que NÃO muda: a faixa da marca de cada região (traz a sua própria tinta,
-   medida), os botões e os círculos dos modos (fundo cheio com branco por
-   cima, que se lê nos dois temas), os distintivos das linhas (a cor delas,
-   já escurecida para o branco) e os controlos do mapa. */
+   O que NÃO muda: os botões e os círculos dos modos (fundo cheio com branco
+   por cima, que se lê nos dois temas), os distintivos das linhas (a cor
+   delas, já escurecida para o branco) e os controlos do mapa. As cores de
+   uma região mudam no bloco dela (`.sitio-da-regiao`, mais abaixo): o feixe
+   escuro, tirado da mesma cor. */
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
@@ -94,8 +101,8 @@
     --texto-secundario: #a9b8bf;
     --linhas: #2a3a43;
     --borda-campo: #7f95a0;
-    --marca-texto: #5fb3d3;
-    --marca-texto-hover: #8fcbe2;
+    --marca-texto: #7ebaf6;
+    --marca-texto-hover: #cbe3ff;
     --alerta-texto: #ff8a7a;
     --alerta-texto-forte: #ff8a7a;
     --alerta-fundo: #3a1714;
@@ -197,7 +204,7 @@ h3 {
   max-width: var(--medida);
   margin: 0 auto;
   /* O TÍTULO NÃO SE COLA AO CABEÇALHO (P1-015). A caixa do `h1` começava
-     exatamente onde a faixa acabava, e a folga que se via era só a entrelinha
+     exatamente onde o cabeçalho acabava, e a folga que se via era só a entrelinha
      do título: o ritmo da página começava mal em todas as páginas. */
   padding: 1.5rem 1rem 4rem;
 }
@@ -290,33 +297,32 @@ code {
   padding: 0 0.25rem;
 }
 
-/* O CABEÇALHO DE UMA REGIÃO É A FAIXA DA MARCA DELA (P4-008, P1-007): a cor
-   dela, e a tinta que se lê por cima. As duas vêm da região já medidas — no
-   pipeline, e outra vez no sítio (`lib/marca.ts`) — e chegam aqui em
-   `--cor-da-marca` e `--tinta-da-marca`; sem elas, a cor do §6 com branco. O
-   do produto e o do painel continuam brancos: não são de região nenhuma.
+/* O CABEÇALHO DE UMA REGIÃO É A MARCA DELA (P4-008, P1-007): o endereço
+   dela desenhado em feixe, nos tons dela, sobre a superfície — como o do
+   produto é «paragem.pt» sobre o papel —, e por baixo a régua de três linhas
+   nos mesmos tons. Foi uma faixa na cor da região, com o nome em texto; a
+   3/10/2026 passou a isto, para o logótipo poder ir a cores. A cor da região
+   continua na barra do navegador (`generateViewport`).
 
    Num telemóvel, duas filas fixas: a assinatura, e as duas ligações por
-   baixo. A altura não depende do nome da região — um nome comprido corta-se
-   com reticências, em vez de empurrar a navegação para uma terceira linha
+   baixo. A altura não depende do nome da região — o nome corta-se com
+   reticências, em vez de empurrar a navegação para uma terceira linha
    (P1-043). A partir de 48 rem, uma fila só. */
 .cabecalho-da-regiao {
   border-bottom: 0;
-  background: var(--cor-da-marca, var(--marca));
-  color: var(--tinta-da-marca, #fff);
+  background: var(--superficie);
+  color: var(--texto);
 }
 .cabecalho-da-regiao .interior {
-  padding: 0.25rem 1rem;
+  padding: 0.5rem 1rem 0.25rem;
   justify-content: space-between;
   gap: 0 1.5rem;
 }
 .cabecalho-da-regiao a {
   color: inherit;
 }
-/* O FOCO, DENTRO DA FAIXA, NA COR DA TINTA. O amarelo do sítio não se vê
-   sobre uma faixa clara, e a tinta foi medida para se ler sobre ela. */
-.cabecalho-da-regiao :focus-visible {
-  outline-color: var(--tinta-da-marca, #fff);
+.cabecalho-da-regiao nav a {
+  color: var(--marca-texto);
 }
 .cabecalho-da-regiao a.marca-da-regiao {
   display: flex;
@@ -326,7 +332,7 @@ code {
   min-height: 3.5rem;
   text-decoration: none;
 }
-.cabecalho-da-regiao a.marca-da-regiao:hover .nome-principal {
+.cabecalho-da-regiao a.marca-da-regiao:hover .nome-secundario {
   text-decoration: underline;
 }
 .cabecalho-da-regiao nav ul {
@@ -341,6 +347,56 @@ code {
   }
   .cabecalho-da-regiao nav {
     flex: none;
+  }
+}
+
+/* A RÉGUA DO FEIXE: as três linhas do logótipo de ponta a ponta, como as que
+   partilham a mesma via num mapa de metro — a de fora em cima. Fecha o
+   cabeçalho e abre o rodapé, nos tons de quem é a página. São três faixas de
+   cor lisa, uma em cada sombra: não há gradiente nenhum. */
+.regua-do-feixe {
+  display: block;
+  height: 2.5px;
+  margin: 3.5px 0;
+  background: var(--feixe-2);
+  box-shadow:
+    0 -3.5px 0 var(--feixe-1),
+    0 3.5px 0 var(--feixe-3);
+}
+/* Onde há régua, ela é a borda: a linha cinzenta de antes sai. No rodapé vai
+   de ponta a ponta, por cima do espaço dele. */
+.cabecalho:has(> .regua-do-feixe) {
+  border-bottom: 0;
+}
+.rodape:has(> .regua-do-feixe) {
+  border-top: 0;
+}
+.rodape > .regua-do-feixe {
+  margin: calc(3.5px - 1.5rem) -1rem calc(1.5rem - 3.5px);
+}
+
+/* AS CORES DA REGIÃO NAS PÁGINAS DELA. O invólucro (`app/[regiao]/layout.tsx`)
+   traz os tons medidos (`lib/marca.ts`, `estiloDaRegiao`), e aqui escolhem-se
+   os do tema. O feixe pinta o logótipo e as réguas; a linha de fora é a cor
+   dos botões e das ligações, como o azul do feixe o é na página do produto.
+   O vermelho do produto não chega aqui: o `--feixe-1` de uma região é dela. */
+.sitio-da-regiao {
+  display: contents;
+  --feixe-1: var(--regiao-feixe-1);
+  --feixe-2: var(--regiao-feixe-2);
+  --feixe-3: var(--regiao-feixe-3);
+  --marca: var(--regiao-marca);
+  --marca-hover: var(--regiao-marca-hover);
+  --marca-texto: var(--regiao-marca);
+  --marca-texto-hover: var(--regiao-marca-hover);
+}
+@media (prefers-color-scheme: dark) {
+  .sitio-da-regiao {
+    --feixe-1: var(--regiao-feixe-escuro-1);
+    --feixe-2: var(--regiao-feixe-escuro-2);
+    --feixe-3: var(--regiao-feixe-escuro-3);
+    --marca-texto: var(--regiao-feixe-escuro-2);
+    --marca-texto-hover: var(--regiao-feixe-escuro-3);
   }
 }
 
@@ -440,7 +496,7 @@ code {
   margin: 0.75rem 0;
 }
 .cartao.modo-autocarro {
-  border-left: 4px solid var(--marca);
+  border-left: 4px solid var(--autocarro);
 }
 .cartao.modo-a-pedido {
   border-left: 4px solid var(--a-pedido);
@@ -1148,7 +1204,7 @@ ol.percurso-da-linha li::before {
   bottom: 0;
   width: 4px;
   border-radius: 2px;
-  background: var(--cor-da-linha, var(--marca));
+  background: var(--cor-da-linha, var(--autocarro));
 }
 ol.percurso-da-linha li.primeira::before {
   top: 50%;
@@ -1168,11 +1224,11 @@ ol.percurso-da-linha li::after {
   height: 0.85rem;
   margin-top: -0.425rem;
   border-radius: 999px;
-  border: 3px solid var(--cor-da-linha, var(--marca));
+  border: 3px solid var(--cor-da-linha, var(--autocarro));
   background: var(--superficie);
 }
 ol.percurso-da-linha li.ponta::after {
-  background: var(--cor-da-linha, var(--marca));
+  background: var(--cor-da-linha, var(--autocarro));
 }
 ol.percurso-da-linha a {
   display: flex;
@@ -2358,7 +2414,7 @@ ol.percurso .no {
 }
 ol.percurso .no.primeiro,
 ol.percurso .no.ultimo {
-  background: var(--marca);
+  background: var(--autocarro);
 }
 ol.percurso .fio {
   justify-self: center;
@@ -2366,7 +2422,7 @@ ol.percurso .fio {
   min-height: 2.1rem;
   height: 100%;
   border-radius: 2px;
-  background: var(--marca);
+  background: var(--autocarro);
 }
 ol.percurso li.troco {
   align-items: stretch;
@@ -2542,10 +2598,14 @@ ul.cartoes .cartao h3 {
   }
 }
 
-/* A MARCA DO PRODUTO (`MarcaDoProduto.tsx`): cada linha pela sua classe, e o
-   halo — que faz um traço passar por baixo do outro — da cor do que está por
-   trás. A uma cor, tudo na cor do texto à volta. */
-.marca-do-produto {
+/* O FEIXE NO SÍTIO — a marca do produto (`MarcaDoProduto.tsx`) e o
+   logótipo-endereço de cada região (`EnderecoEmFeixe.tsx`). Na marca, cada
+   linha pela sua classe, nas cores do feixe, e o halo — que faz um traço
+   passar por baixo do outro — da cor do que está por trás; a uma cor, tudo na
+   cor do texto à volta. O logótipo-endereço vem por `<use>`, onde as classes
+   da página não chegam: pinta-se com as mesmas variáveis, que lá chegam. */
+.marca-do-produto,
+.endereco-em-feixe svg {
   display: block;
   flex-shrink: 0;
   width: auto;
@@ -2565,6 +2625,69 @@ ul.cartoes .cartao h3 {
 }
 .marca-do-produto .ponto {
   fill: var(--feixe-1);
+}
+
+/* O LOGÓTIPO-ENDEREÇO DE UMA REGIÃO, em cada sítio onde ela assina: as três
+   linhas só onde há píxeis para elas — o feixe pede uns 65 píxeis de ecrã de
+   altura —, e no resto o reduzido de duas (§6). Um endereço comprido num
+   ecrã estreito encolhe por inteiro, em vez de empurrar a página para o lado. */
+.endereco-em-feixe {
+  display: flex;
+  flex: none;
+  max-width: 100%;
+  height: 2.125rem;
+}
+.endereco-em-feixe svg {
+  height: 100%;
+  max-width: 100%;
+}
+.endereco-em-feixe .inteira {
+  display: none;
+}
+@media (min-resolution: 1.92dppx) {
+  .endereco-em-feixe .inteira {
+    display: block;
+  }
+  .endereco-em-feixe .reduzida {
+    display: none;
+  }
+}
+@media (min-width: 48rem) {
+  .cabecalho-da-regiao .endereco-em-feixe {
+    height: 2.5rem;
+  }
+}
+@media (min-width: 48rem) and (min-resolution: 1.63dppx) {
+  .cabecalho-da-regiao .endereco-em-feixe .inteira {
+    display: block;
+  }
+  .cabecalho-da-regiao .endereco-em-feixe .reduzida {
+    display: none;
+  }
+}
+.menu-marca .endereco-em-feixe {
+  height: 1.6rem;
+}
+@media (max-resolution: 2.53dppx) {
+  .menu-marca .endereco-em-feixe .inteira {
+    display: none;
+  }
+  .menu-marca .endereco-em-feixe .reduzida {
+    display: block;
+  }
+}
+/* Na folha do mapa, numa linha com o nome do território: pequeno, e por isso
+   sempre o reduzido. */
+.nomes.em-linha .endereco-em-feixe {
+  display: inline-flex;
+  height: 1.3rem;
+  vertical-align: -0.3rem;
+}
+.nomes.em-linha .endereco-em-feixe .inteira {
+  display: none;
+}
+.nomes.em-linha .endereco-em-feixe .reduzida {
+  display: block;
 }
 .marca-do-produto.uma-cor .l0,
 .marca-do-produto.uma-cor .l1,
@@ -3486,7 +3609,7 @@ a.circulo .bolha {
   width: 3.25rem;
   height: 3.25rem;
   border-radius: 999px;
-  background: var(--marca);
+  background: var(--autocarro);
   color: #fff;
 }
 a.circulo .nome {

@@ -1,4 +1,4 @@
-"""A marca de uma região — a cor da faixa e o logótipo — e a recusa do que não se lê.
+"""A marca de uma região — a cor e o logótipo — e a recusa do que não é cor nem desenho.
 
 As cores dos testes são de exemplo. As regiões que se carregam são cópias das
 de prova numa pasta temporária, com a marca mexida: nenhum cliente entra aqui.
@@ -14,16 +14,10 @@ import pytest
 from conftest import regiao_ou_salta
 from paragem.marca import (
     COR_DO_PRODUTO,
-    MINIMO,
-    TINTA_CLARA,
-    TINTA_ESCURA,
     MarcaInvalida,
-    alternativas,
-    contraste,
     marca_publicada,
     normalizar,
     proporcao,
-    tinta,
     validar_cor,
 )
 from paragem.regiao import ErroDeRegiao, Regiao
@@ -37,34 +31,24 @@ def test_a_cor_escreve_se_de_uma_maneira_so():
         normalizar("azul")
 
 
-def test_a_tinta_e_a_que_se_le_melhor():
-    """Sobre uma cor clara, o azul-escuro do texto; sobre uma escura, o branco."""
-    assert tinta("#5fc2b7")[0] == TINTA_ESCURA
-    assert tinta(COR_DO_PRODUTO)[0] == TINTA_CLARA
-    for cor in ("#5fc2b7", COR_DO_PRODUTO, "#f2a541", "#ffffff", "#000000"):
-        assert tinta(cor)[1] >= MINIMO
+def test_qualquer_cor_serve_porque_os_tons_se_tiram_dela():
+    """Um laranja médio já não é recusado: a faixa que o recusava saiu (3/10/2026).
 
-
-def test_uma_cor_que_nao_se_le_com_nenhuma_tinta_e_recusada_com_a_alternativa():
-    """Escurecer em silêncio era mudar a marca de alguém sem lhe dizer.
-
-    A recusa diz quanto dá, quanto é preciso e a cor mais próxima que passa —
-    e a mais próxima passa mesmo.
+    Os três tons do feixe tira-os o sítio da cor, e esses leem-se seja qual
+    for (`web/tests/marca.test.mts`). O que continua a não passar é o que não é
+    cor — e a recusa diz onde está escrito.
     """
-    with pytest.raises(MarcaInvalida) as e:
-        validar_cor("#d9643a", "teste")
-    mensagem = str(e.value)
-    assert "4.5:1" in mensagem
-    escurecida, aclarada = alternativas("#d9643a")
-    assert escurecida in mensagem and aclarada in mensagem
-    assert contraste(escurecida, TINTA_CLARA) >= MINIMO
-    assert contraste(aclarada, TINTA_ESCURA) >= MINIMO
+    assert validar_cor("#d9643a", "teste") == "#d9643a"
+    with pytest.raises(MarcaInvalida, match="^teste: .*entre aspas"):
+        validar_cor("laranja", "teste")
 
 
-def test_sem_cor_declarada_a_faixa_e_a_do_produto():
+def test_sem_cor_declarada_fica_a_do_produto():
     m = marca_publicada(None, None)
-    assert m["cor"] == COR_DO_PRODUTO and m["tinta"] == TINTA_CLARA
+    assert m["cor"] == COR_DO_PRODUTO
     assert m["propria"] is False and m["logotipo"] is None
+    # A tinta e o contraste eram os da faixa do cabeçalho, que saiu.
+    assert "tinta" not in m and "contraste" not in m
 
 
 def _png(caminho, largura, altura):
@@ -120,16 +104,25 @@ def test_as_provas_continuam_sem_marca_propria():
         assert r.cor is None and r.logotipo is None
 
 
-def test_uma_cor_clara_entra_com_tinta_escura(prova):
-    """Uma marca clara: o branco não se lê por cima (2,1:1), o texto escuro sim."""
+def test_a_cor_da_regiao_entra_na_forma_de_sempre(prova):
     r = _com(prova, 'cor: "#5FC2B7"')
     assert r.cor == "#5fc2b7"
-    assert marca_publicada(r.cor, r.logotipo)["tinta"] == TINTA_ESCURA
+    assert marca_publicada(r.cor, r.logotipo) == {
+        "cor": "#5fc2b7",
+        "propria": True,
+        "logotipo": None,
+        "logotipo_proporcao": None,
+    }
 
 
-def test_uma_cor_ilegivel_nao_deixa_a_regiao_carregar(prova):
-    with pytest.raises(ErroDeRegiao, match="não se lê com texto por cima"):
-        _com(prova, 'cor: "#d9643a"')
+def test_uma_cor_media_deixa_a_regiao_carregar(prova):
+    """Era recusada enquanto pintava uma faixa com texto por cima."""
+    assert _com(prova, 'cor: "#d9643a"').cor == "#d9643a"
+
+
+def test_o_que_nao_e_cor_nao_deixa_a_regiao_carregar(prova):
+    with pytest.raises(ErroDeRegiao, match="não é uma cor"):
+        _com(prova, 'cor: "laranja"')
 
 
 def test_uma_cor_sem_aspas_nao_passa_por_cor_nenhuma(prova):

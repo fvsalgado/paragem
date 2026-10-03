@@ -76,3 +76,20 @@ test('uma região leva o cartão dela, e não a imagem do produto', () => {
   const semRede = imagemDaRegiao({ rede: {}, de: 'do Baixo Sável' });
   assert.equal(semRede.alt, 'Transportes do Baixo Sável');
 });
+
+test('com o endereço declarado, o cartão escreve-o como logótipo, e o texto alternativo também', () => {
+  const r = { rede: { nome: 'Rede Alta' }, de: 'da Serra da Pedra Alta' };
+  assert.equal(
+    imagemDaRegiao({ ...r, dominio: 'prova.paragem.pt' }).alt,
+    'prova.paragem.pt: Transportes da Serra da Pedra Alta',
+  );
+  assert.equal(
+    imagemDaRegiao({ rede: {}, de: 'do Baixo Sável', dominio: 'sem-rede.paragem.pt' }).alt,
+    'sem-rede.paragem.pt: Transportes do Baixo Sável',
+  );
+  // Um endereço que o feixe não desenha não vai no cartão, nem no texto dele.
+  assert.equal(
+    imagemDaRegiao({ ...r, dominio: 'são.paragem.pt' }).alt,
+    'Rede Alta: Transportes da Serra da Pedra Alta',
+  );
+});

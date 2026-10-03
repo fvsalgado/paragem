@@ -7,8 +7,9 @@
  * UM CARTÃO É DA REGIÃO, e não do produto. O sítio de uma autoridade de
  * transportes é dela (P4-008): partilhar a paragem dela mostrava o cartão de
  * vendas da Paragem.pt, com o vermelho do produto, que nas regiões não entra
- * (§6). O cartão de uma região tem a faixa da cor dela e o nome da rede, como
- * o cabeçalho; o produto assina por baixo, discreto.
+ * (§6). O cartão de uma região tem o logótipo dela — o endereço em feixe, nos
+ * tons dela — e a régua de três linhas, como o cabeçalho; o produto assina
+ * por baixo, discreto.
  *
  * Os cartões são rotas do sítio, e não a convenção `opengraph-image` do Next:
  * a convenção cunha o endereço a partir do caminho INTERNO, com a região lá

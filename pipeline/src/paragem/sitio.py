@@ -327,9 +327,9 @@ class Sitio:
             # quando a região declara os artigos (`Regiao.prosa_da_autoridade`).
             "autoridade": {**r.autoridade, **r.prosa_da_autoridade},
             "rede": {**r.rede, **r.prosa_do_operador},
-            # A MARCA DA REGIÃO: a cor da faixa, a tinta que se lê por cima dela
-            # (já medida aqui, e recusada no carregamento se não chegasse) e o
-            # logótipo publicado ao lado. Sem cor declarada, a do §6.
+            # A MARCA DA REGIÃO: a cor que ela declara — de onde o sítio tira
+            # os três tons do feixe — e o logótipo publicado ao lado. Sem cor
+            # declarada, a do §6.
             "marca": marca_publicada(r.cor, r.logotipo),
             "dominio_env": r.dominio_env,
             # O domínio canónico, declarado na região. É o que o middleware

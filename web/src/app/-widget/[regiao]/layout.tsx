@@ -1,5 +1,7 @@
+import type { CSSProperties } from 'react';
 import type { Metadata } from 'next';
 import { exigirRegiao } from '@/lib/dados';
+import { estiloDaRegiao, marcaDaRegiao } from '@/lib/marca';
 import AlturaParaOAnfitriao from '@/componentes/widget/AlturaParaOAnfitriao';
 
 /**
@@ -31,11 +33,14 @@ export default async function InvolucroDaCaixa({
   children: React.ReactNode;
   params: Promise<{ regiao: string }>;
 }) {
-  await exigirRegiao((await params).regiao);
+  const r = await exigirRegiao((await params).regiao);
+  // Os botões e as ligações da caixa nos tons da região, como no sítio dela.
   return (
-    <main id="conteudo" className="widget">
-      {children}
-      <AlturaParaOAnfitriao />
-    </main>
+    <div className="sitio-da-regiao" style={estiloDaRegiao(marcaDaRegiao(r)) as CSSProperties}>
+      <main id="conteudo" className="widget">
+        {children}
+        <AlturaParaOAnfitriao />
+      </main>
+    </div>
   );
 }

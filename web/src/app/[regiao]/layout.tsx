@@ -1,6 +1,7 @@
+import type { CSSProperties } from 'react';
 import type { Metadata, Viewport } from 'next';
 import { exigirRegiao, origemDaRegiao, regiao } from '@/lib/dados';
-import { marcaDaRegiao } from '@/lib/marca';
+import { estiloDaRegiao, marcaDaRegiao } from '@/lib/marca';
 import { COR_DO_TEMA } from '@/lib/manifesto';
 import { metadadosDaRegiao } from '@/lib/metadados';
 import { origemDoProduto } from '@/lib/produto';
@@ -75,8 +76,9 @@ export async function generateMetadata({
 }
 
 /**
- * A BARRA DO NAVEGADOR NA COR DA MARCA DA REGIÃO — a mesma da faixa do
- * cabeçalho, e não a do produto: é o sítio da autoridade (P4-008).
+ * A BARRA DO NAVEGADOR NA COR DA MARCA DA REGIÃO — a que ela declara, de onde
+ * saem os tons do logótipo e das réguas —, e não a do produto: é o sítio da
+ * autoridade (P4-008).
  */
 export async function generateViewport({
   params,
@@ -98,15 +100,18 @@ export default async function LayoutDaRegiao({
   const { regiao: id } = await params;
   // A região que não existe — ou que o painel desligou — é 404 aqui, antes de
   // qualquer página lá dentro tentar ler o que não há.
-  await exigirRegiao(id);
+  const r = await exigirRegiao(id);
+  // OS TONS DA REGIÃO PARA TUDO O QUE ESTÁ CÁ DENTRO: o feixe do logótipo e
+  // das réguas, e a cor dos botões e das ligações (`estiloDaRegiao`). O
+  // invólucro não ocupa lugar (`display: contents`); só passa as cores.
   return (
-    <>
+    <div className="sitio-da-regiao" style={estiloDaRegiao(marcaDaRegiao(r)) as CSSProperties}>
       <Cabecalho regiao={id} />
       <main id="conteudo" className="pagina">
         <MarcaDeDemonstracao regiao={id} />
         {children}
       </main>
       <Rodape regiao={id} />
-    </>
+    </div>
   );
 }

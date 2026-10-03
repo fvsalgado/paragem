@@ -5,8 +5,9 @@ import { nomesDaAssinatura } from '@/lib/marca';
 /**
  * `GET /cartao.png` no anfitrião de uma região: a imagem que acompanha uma
  * ligação ao sítio dela, e a de qualquer página que não tenha a sua
- * (`lib/partilha.ts`). É a assinatura do cabeçalho em ponto grande — o nome
- * da rede e, por baixo, de onde são os transportes —, na cor da faixa.
+ * (`lib/partilha.ts`). É a assinatura do cabeçalho em ponto grande — o
+ * endereço da região em feixe, nos tons dela, e por baixo de onde são os
+ * transportes. Sem endereço que se desenhe, o nome da rede em texto.
  *
  * Desenha-se à primeira e serve-se da cache daí em diante, como as páginas:
  * a lista vazia faz da rota «estática com caminhos a pedido», e as leituras
