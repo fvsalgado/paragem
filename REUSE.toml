@@ -67,12 +67,14 @@ precedence = "override"
 SPDX-FileCopyrightText = "2026 Fábio Salgado <fvsalgado@gmail.com>"
 SPDX-License-Identifier = "AGPL-3.0-only"
 
-# A letra do sítio, Atkinson Hyperlegible, cortada em glifos para as etiquetas
-# do mapa (`web/scripts/glifos.mjs`). Nos termos da OFL, mudar-lhe o formato é
-# uma versão modificada, e continua sob OFL: a licença vai ao lado, em
-# `web/public/glifos/OFL.txt`. A origem e a data estão em docs/TERCEIROS.md.
+# A letra do sítio, Atkinson Hyperlegible, em dois sítios: cortada em glifos
+# para as etiquetas do mapa (`web/scripts/glifos.mjs`) — nos termos da OFL,
+# mudar-lhe o formato é uma versão modificada, e continua sob OFL —, e tal como
+# vem, em TTF, para desenhar os cartões de partilha das regiões
+# (`web/src/lib/cartao.tsx`). A licença vai ao lado de cada uma, em `OFL.txt`.
+# A origem e a data estão em docs/TERCEIROS.md.
 [[annotations]]
-path = "web/public/glifos/**"
+path = ["web/public/glifos/**", "web/src/fontes/**"]
 precedence = "override"
 SPDX-FileCopyrightText = "2020 Braille Institute of America, Inc."
 SPDX-License-Identifier = "OFL-1.1"

@@ -8,16 +8,41 @@
  * Lê-se o HTML tal como sai do servidor, e não a página depois de o navegador
  * a arrumar: os robôs das pré-visualizações não correm JavaScript, e só leem
  * o `<head>`.
+ *
+ * A IMAGEM É DE QUEM É A PÁGINA (P4-008): a do produto na página do produto,
+ * e numa região o cartão dela — na cor da faixa, sem o vermelho do produto —,
+ * com um cartão próprio na paragem e na linha.
  */
 import { test, expect, type APIRequestContext } from '@playwright/test';
-import { PORTA, PRODUTO, REGIAO, anfitriao } from './anfitrioes';
-import { linhaComMaisViagens, paragemComMaisPartidas } from './dados-da-regiao';
+import { PORTA, PRODUTO, REGIAO, anfitriao, regioes } from './anfitrioes';
+import {
+  corDaMarca,
+  linhaComMaisViagens,
+  paragemComMaisPartidas,
+  temModoLigado,
+} from './dados-da-regiao';
+import { seguro } from '../src/lib/formato.ts';
+
+/**
+ * Um pedido pelo anfitrião de uma região, feito ao endereço local com o
+ * `Host` dela: fora do navegador, os `*.localhost` resolvem no DNS da máquina,
+ * e numa caixa sem `systemd-resolved` não resolvem (`playwright.config.ts`).
+ */
+function pedir(
+  request: APIRequestContext,
+  host: string | null,
+  caminho: string,
+  opcoes: { maxRedirects?: number } = {},
+) {
+  return request.get(`http://127.0.0.1:${PORTA}${caminho}`, {
+    ...opcoes,
+    headers: host ? { host: `${host}:${PORTA}` } : {},
+  });
+}
 
 /** O `<head>` de uma página, tal como o servidor o manda, pelo anfitrião pedido. */
 async function cabeca(request: APIRequestContext, host: string | null, caminho: string) {
-  const r = await request.get(`http://127.0.0.1:${PORTA}${caminho}`, {
-    headers: host ? { host: `${host}:${PORTA}` } : {},
-  });
+  const r = await pedir(request, host, caminho);
   expect(r.status(), `${host ?? 'produto'} ${caminho}`).toBe(200);
   const html = await r.text();
   const head = html.slice(0, html.indexOf('</head>'));
@@ -60,25 +85,120 @@ test('cada página de uma região diz o que é e de onde, no domínio dela', asy
   const paragem = paragemComMaisPartidas();
   const linha = linhaComMaisViagens();
   const descricoes = new Set<string>();
-  for (const caminho of [
-    '/',
-    '/rede/',
-    `/rede/paragens/${paragem.id}/`,
-    `/rede/linhas/${linha.id}/`,
-    '/rede/tarifario/',
+  const daRegiao = `${anfitriao(id)}/cartao.png`;
+  for (const [caminho, imagem] of [
+    ['/', daRegiao],
+    ['/rede/', daRegiao],
+    [`/rede/paragens/${paragem.id}/`, `${anfitriao(id)}/cartao/paragens/${seguro(paragem.id)}.png`],
+    [`/rede/linhas/${linha.id}/`, `${anfitriao(id)}/cartao/linhas/${seguro(linha.id)}.png`],
+    ['/rede/tarifario/', daRegiao],
   ]) {
     const { meta, canonica } = await cabeca(request, host, caminho);
     // O título do cartão leva o nome da região, e não a marca do produto.
     expect(meta('og:title'), caminho).not.toMatch(/Paragem\.pt/);
     expect(meta('og:site_name'), caminho).toMatch(/· Paragem\.pt$/);
     expect(canonica, caminho).toBe(`${anfitriao(id)}${caminho}`);
-    // A imagem é a do produto, servida pelo domínio da região.
-    expect(meta('og:image'), caminho).toBe(`${anfitriao(id)}/produto/partilha.png`);
+    // A imagem é o cartão da região — ou o da paragem, ou o da linha —,
+    // servido pelo domínio dela. A do produto não entra.
+    expect(meta('og:image'), caminho).toBe(imagem);
+    expect(meta('og:image:width'), caminho).toBe('1200');
+    expect(meta('og:image:height'), caminho).toBe('630');
+    expect(meta('og:image:alt'), caminho).toBeTruthy();
+    expect(meta('twitter:image'), caminho).toBe(imagem);
     expect(meta('twitter:card'), caminho).toBe('summary_large_image');
     descricoes.add(meta('description') ?? '');
   }
   // Uma descrição por página — era a mesma em todas.
   expect(descricoes.size).toBe(5);
+});
+
+/** A largura e a altura de um PNG, lidas do cabeçalho (`IHDR`), sem o descodificar. */
+function medidaDoPng(corpo: Buffer): { largura: number; altura: number } {
+  expect(corpo.subarray(0, 8).toString('hex'), 'assinatura do PNG').toBe('89504e470d0a1a0a');
+  expect(corpo.subarray(12, 16).toString('ascii')).toBe('IHDR');
+  return { largura: corpo.readUInt32BE(16), altura: corpo.readUInt32BE(20) };
+}
+
+test('cada região responde o seu cartão, o da paragem e o da linha: 1200 × 630, e não para sempre', async ({
+  request,
+}) => {
+  const corpos = new Set<string>();
+  for (const id of regioes()) {
+    const caminhos = ['/cartao.png'];
+    if (temModoLigado('autocarro', id)) {
+      caminhos.push(
+        `/cartao/paragens/${seguro(paragemComMaisPartidas(id).id)}.png`,
+        `/cartao/linhas/${seguro(linhaComMaisViagens(id).id)}.png`,
+      );
+    }
+    for (const caminho of caminhos) {
+      const r = await pedir(request, `${id}.localhost`, caminho);
+      expect(r.status(), `${id} ${caminho}`).toBe(200);
+      expect(r.headers()['content-type'], `${id} ${caminho}`).toBe('image/png');
+      // Muda com os dados: o `immutable` por um ano do desenhador não serve.
+      expect(r.headers()['cache-control'] ?? '', `${id} ${caminho}`).not.toMatch(/immutable/);
+      const corpo = await r.body();
+      expect(medidaDoPng(corpo), `${id} ${caminho}`).toEqual({ largura: 1200, altura: 630 });
+      corpos.add(corpo.toString('base64'));
+    }
+  }
+  // Nenhum cartão sai igual a outro: cada um diz de que região, paragem ou linha é.
+  expect(corpos.size).toBe(
+    regioes().reduce((n, id) => n + (temModoLigado('autocarro', id) ? 3 : 1), 0),
+  );
+});
+
+test('um cartão do que não existe dá 404, e o anfitrião do produto não tem cartão de região', async ({
+  request,
+}) => {
+  for (const caminho of [
+    '/cartao/paragens/nao-existe.png',
+    '/cartao/linhas/nao-existe.png',
+    // Só `<id>.png`: uma paragem que existe, pedida com outra extensão, não.
+    `/cartao/paragens/${seguro(paragemComMaisPartidas().id)}.jpg`,
+  ]) {
+    const r = await pedir(request, `${REGIAO}.localhost`, caminho, { maxRedirects: 0 });
+    expect(r.status(), caminho).toBe(404);
+  }
+  const r = await pedir(request, null, '/cartao.png');
+  expect(r.status()).toBe(404);
+});
+
+const VERMELHOS_DO_PRODUTO = ['#c2281c', '#f2573f'];
+
+test('o cartão de uma região está na cor da faixa dela, e não tem um píxel do vermelho do produto', async ({
+  page,
+}) => {
+  for (const id of regioes()) {
+    await page.goto(`${anfitriao(id)}/cartao.png`);
+    // Pinta-se a imagem numa tela, no mesmo domínio, e lê-se píxel a píxel.
+    const { canto, vermelhos } = await page.evaluate(async (alvos) => {
+      const img = document.querySelector('img')!;
+      await img.decode();
+      const tela = document.createElement('canvas');
+      tela.width = img.naturalWidth;
+      tela.height = img.naturalHeight;
+      const ctx = tela.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      const { data } = ctx.getImageData(0, 0, tela.width, tela.height);
+      const rgb = alvos.map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
+      let vermelhos = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        if (
+          rgb.some(
+            ([r, g, b]) =>
+              Math.abs(data[i] - r) + Math.abs(data[i + 1] - g) + Math.abs(data[i + 2] - b) < 24,
+          )
+        )
+          vermelhos++;
+      }
+      const hex = (i: number) =>
+        '#' + [0, 1, 2].map((k) => data[i + k].toString(16).padStart(2, '0')).join('');
+      return { canto: hex((8 * tela.width + 8) * 4), vermelhos };
+    }, VERMELHOS_DO_PRODUTO);
+    expect(canto, id).toBe(corDaMarca(id));
+    expect(vermelhos, id).toBe(0);
+  }
 });
 
 test('a paragem diz de que paragem é o horário, e a linha quantas viagens tem', async ({

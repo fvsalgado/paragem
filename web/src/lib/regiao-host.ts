@@ -250,8 +250,9 @@ export type Decisao =
  *
  * O `/produto/` são as imagens do produto — a captura do telemóvel, a imagem
  * de partilha, os ícones do manifesto (`scripts/imagens-do-produto.mjs`). São
- * as mesmas em qualquer anfitrião: a imagem de partilha de uma página de
- * paragem é a do produto até a região ter a sua.
+ * as mesmas em qualquer anfitrião. A imagem de partilha de uma REGIÃO não
+ * está aqui: é dela (`/cartao.png`, `lib/partilha.ts`), e vai para dentro da
+ * região como as páginas.
  *
  * Os três ícones de raiz são convenções do Next (`app/icon.svg`,
  * `app/apple-icon.png`, `app/favicon.ico`): estavam nesta lista à espera
