@@ -82,10 +82,11 @@ nomes de lugares e de linhas da região real.
    «Por preencher»: honesto, mas a região fica sem o mecanismo de contacto que a lei pede. Pedir à
    autoridade o contacto, a via de queixa e o responsável pelos dados (`docs/ENTRADA.md:28-32`); até
    lá, mostrar um contacto do produto, apresentado como tal.
-4. **Medição e endereço IP.** Confirmar no projeto de medição a definição que descarta o IP, ou
-   corrigir a frase da página de privacidade (XP-04).
-5. **A base do painel.** Aplicar e confirmar em produção as migrações 0008 a 0010: o
-   `docs/BASE-DE-DADOS.md` dava a 0009 e a 0010 por aplicar a 2/10, e nada no CI o diria (XP-10).
+4. **Medição e endereço IP.** Confirmado a 4/10: o projeto de medição descarta o IP
+   (`anonymize_ips`). Falta a página de privacidade dizer que é uma definição do projeto, e não do
+   código (XP-04).
+5. **A base do painel.** Confirmado a 4/10: as dez migrações estão aplicadas em produção, a 0009 e a
+   0010 desde 2/10. O que falta é o CI sabê-lo sem ninguém abrir a consola (XP-10).
 6. **Os dois testes de ferramentas que não estão no repositório** (`test_esqueleto_publico.py`,
    `test_raiz_da_regiao.py`, 20 casos que saltam sempre): entregar as ferramentas ou retirar os
    testes. Recomendação: retirar — o próprio `test_raiz_da_regiao.py:95-100` diz que «os geradores
@@ -153,9 +154,9 @@ validador produz amostras vazias (`validador.py:200-204`).
 - A página de privacidade promete que o sítio «não regista o teu endereço IP»
   (`app/[regiao]/privacidade/page.tsx:60-61,105`; `docs/MEDICAO.md:11,47`; `SECURITY.md:41`). As
   opções `ip:` e `property_denylist: ['$ip']` de `lib/medicao.ts:97-98` não têm efeito na versão
-  instalada (a biblioteca di-lo por extenso): o IP lê-se no servidor da medição. Tirar as duas
-  opções, confirmar a definição do projeto que descarta o IP, e dizê-lo como o Coreto o diz — o que
-  o código garante e o que depende de uma definição que o repositório não prova.
+  instalada (a biblioteca di-lo por extenso): quem descarta o IP é a definição do projeto de
+  medição, que está ligada (confirmado a 4/10). Tirar as duas opções e dizê-lo como o Coreto o diz —
+  o que o código garante e o que depende de uma definição que o repositório não prova.
 - A medição só no layout da região, nunca no painel (`<Medicao/>` está no layout de raiz,
   `app/layout.tsx:62`), e um `before_send` que corta a query de `$current_url` e de `$referrer`.
 - O `tipo` e o `id` das vistas saem errados em todas as páginas `/rede/…` (`Medicao.tsx:29-30`
@@ -465,7 +466,11 @@ Coreto. — **M · médio** · aprende com o Coreto.
   `app/[regiao]/page.tsx:184`, `publicacao.py:52,345`) e cache imutável.
 - Um mapa próprio sem atribuição cai na do OSM (`sitio.py:2138-2140`, `Mapa.tsx:387,395`): exigir
   `mapa.atribuicao` em `regiao.py` quando há `mapa.fonte`.
-- O crédito do esquema OpenMapTiles (CC BY 4.0) no mapa e no `docs/TERCEIROS.md` — por confirmar.
+- O crédito «© OpenMapTiles» no mapa e no `docs/TERCEIROS.md`. Os mosaicos seguem o esquema
+  OpenMapTiles, que é o que o Planetiler produz (`estilo-mapa.ts:12`), e a licença de desenho dele
+  (CC BY 4.0) pede o crédito à vista em quem usa mapas derivados do esquema (confirmado a 4/10 no
+  `LICENSE.md` do OpenMapTiles); a atribuição de hoje só nomeia o OpenStreetMap
+  (`estilo-mapa.ts:110-111`). O Coreto já o faz (`coreto/apps/web/src/lib/mapa.ts:641-650`).
 - Os nomes de água (`estilo-mapa.ts:414-432`: `symbol-placement: line` sobre `water_name` não desenha
   lagos nem albufeiras), e os comentários desmentidos (`estilo-mapa.ts:391-395`, `Mapa.tsx:400-402`).
 - O *locale* completo do MapLibre, testado, como o do Coreto (`lib/mapa.ts:609-635`).
@@ -616,10 +621,10 @@ O que é seguro fazer já, seja qual for a decisão:
 
 | Passo do §5.3 | Estado a 4/10 |
 | --- | --- |
-| (0) A base, provada num Postgres real | Feito no CI (10 migrações, Postgres 17, cerca de 120 asserções); produção por confirmar a partir da 0008 (XP-10). |
+| (0) A base, provada num Postgres real | Feito no CI (10 migrações, Postgres 17, cerca de 120 asserções); em produção, as dez aplicadas (confirmado a 4/10; falta o CI sabê-lo, XP-10). |
 | (1) Sair da exportação estática | Feito: sem `output`, `revalidate = 3600`, etiquetas por região, `/api/revalidate`. Na Vercel a cache funciona; fora dela, não (XP-13). |
 | (2) Uma região por domínio | Feito (`decidir()` puro, alias 308, anfitrião desconhecido → produto). Falta a guarda de produção do ambiente (XP-12). |
-| (3) O painel | Feito no código; as contas dependem da 0009 e da 0010; falta a autenticação em dois passos. |
+| (3) O painel | Feito, com a 0009 e a 0010 aplicadas em produção; falta a autenticação em dois passos. |
 | (4) Os módulos a fazerem efeito | Feito, com teste. |
 
 | Fase do §9 | Estado a 4/10 |
