@@ -149,8 +149,9 @@ export async function capacidadeDe(regiao: string, motor = ''): Promise<Capacida
  * viagem toca duas ou três linhas, por isso desenhar custa uns poucos kB — em
  * vez dos 216 kB que seriam todos juntos.
  *
- * **E SÓ SE PEDEM OS QUE EXISTEM (P3-011).** O pipeline só desenha os
- * traçados da rede própria: o comboio e os expressos não têm ficheiro. O
+ * **E SÓ SE PEDEM OS QUE EXISTEM (P3-011).** Nem todas as linhas têm
+ * traçado: o pipeline desenha as que os feeds trazem, e o comboio pelos carris
+ * do recorte onde o ficheiro não traz nenhum — o resto fica sem ficheiro. O
  * planeador pedia-os na mesma — `percursos/209.json`, um 400 em cada procura,
  * um erro na consola por cada um, e os erros que importam escondidos por
  * baixo deles. O `percursos/indice.json` diz quais há, e lê-se uma vez.

@@ -244,6 +244,8 @@ def _cmd_sitio(args: argparse.Namespace) -> int:
         )
         for x in grandes:
             print(f"       {x.bytes / 1024:8.0f} kB  {x.caminho.name:24} {x.registos} registos")
+        for nota in s.notas:
+            print(f"     {nota}")
         if territorio is None:
             print("     ATENÇÃO: sem carta administrativa — concelhos pelo prefixo do stop_id")
         # O `sitio` LIMPA A PASTA antes de escrever, e os transbordos vivem lá

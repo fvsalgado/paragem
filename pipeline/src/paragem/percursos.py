@@ -217,13 +217,38 @@ def construir(
     prefixo: str,
     tolerancia: float = TOLERANCIA_METROS,
 ) -> Resultado:
-    """Junta os troços à grelha horária, agrupados pela linha que os percorre.
+    """Junta os troços de um feed à grelha horária, agrupados pela linha que os percorre.
 
-    `prefixo` é o do feed da própria rede na grelha (`meio:`, por exemplo): a
-    base geométrica é outro ficheiro, mas as paragens são as mesmas, e é assim
-    que os dois se encontram.
+    `prefixo` é o do feed na grelha (`meio:`, por exemplo): é assim que os
+    troços do ficheiro e as paragens da grelha se encontram.
     """
-    trocos = _trocos_do_feed(base, tolerancia)
+    return construir_de([(prefixo, base)], grelha, tolerancia)
+
+
+def construir_de(
+    feeds: list[tuple[str, Gtfs]],
+    grelha: dict[str, Any],
+    tolerancia: float = TOLERANCIA_METROS,
+    outros: dict[tuple[str, str], list[tuple[float, float]]] | None = None,
+) -> Resultado:
+    """Junta os troços de VÁRIOS feeds à grelha, e os que vieram de outro lado.
+
+    Eram só os do feed da própria rede, e o comboio e os expressos saíam a
+    direito no mapa mesmo quando o ficheiro do operador trazia o traçado
+    (P1-038). Cada feed entra com o prefixo das suas paragens na grelha, e o
+    primeiro a trazer um troço fica com ele — a rede própria vem primeiro.
+
+    `outros` são troços já com as chaves da grelha (`cp:94003>cp:94011`, por
+    exemplo), desenhados por nós: o comboio encaminhado pelos carris, onde o
+    ficheiro não traz traçado nenhum (`tracados.pelos_carris`).
+    """
+    trocos: dict[tuple[str, str], list[tuple[float, float]]] = {}
+    for prefixo, base in feeds:
+        for (a, b), forma in _trocos_do_feed(base, tolerancia).items():
+            trocos.setdefault((prefixo + a, prefixo + b), forma)
+    for chave, forma in (outros or {}).items():
+        trocos.setdefault(chave, simplificar(forma, tolerancia))
+
     r = Resultado()
     if not trocos:
         return r
@@ -236,17 +261,13 @@ def construir(
             if (linha, a, b) in vistos:
                 continue
             vistos.add((linha, a, b))
-            ia, ib = ids[a], ids[b]
-            if not (ia.startswith(prefixo) and ib.startswith(prefixo)):
-                r.sem_forma += 1
-                continue
-            forma = trocos.get((ia[len(prefixo) :], ib[len(prefixo) :]))
-            if not forma:
+            troco = trocos.get((ids[a], ids[b]))
+            if not troco:
                 r.sem_forma += 1
                 continue
             r.com_forma += 1
-            r.pontos += len(forma)
-            r.por_linha.setdefault(linha, {})[f"{a}>{b}"] = codificar(forma)
+            r.pontos += len(troco)
+            r.por_linha.setdefault(linha, {})[f"{a}>{b}"] = codificar(troco)
     return r
 
 
