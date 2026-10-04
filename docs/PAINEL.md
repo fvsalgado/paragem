@@ -268,9 +268,10 @@ edge, sem base. Trocar o segredo invalida todas as sessões de uma vez.
 
 As palavras-passe conferem-se com scrypt (32 MiB por verificação), em tempo
 constante; o trabalho é o mesmo exista o email ou não, e a frase de erro também
-(«Email ou palavra-passe incorretos.»). O **limite conta só as tentativas
-falhadas**, por origem e por email: cinco num quarto de hora e essa origem — ou
-esse email, venha de onde vier — espera um quarto de hora; uma entrada certa
+(«O email ou a palavra-passe não estão certos.», a mesma do painel do Coreto).
+O **limite conta só as tentativas falhadas**, por origem e por email: cinco num
+quarto de hora e essa origem — ou esse email, venha de onde vier — espera um
+quarto de hora, e a entrada diz a hora a que volta a abrir; uma entrada certa
 limpa a contagem. Nem o endereço nem o email se guardam, só hashes com sal.
 
 **O público degrada, a segurança fecha.** Sem `ADMIN_PASSWORD_HASH` ou

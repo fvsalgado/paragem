@@ -10,20 +10,32 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Entrar' };
 
 interface Props {
-  searchParams: Promise<{ destino?: string; erro?: string; email?: string }>;
+  searchParams: Promise<{ destino?: string; erro?: string; email?: string; ate?: string }>;
 }
 
 /*
  * A MENSAGEM NÃO DIZ SE O EMAIL EXISTE. «Esse email não tem conta» e
  * «palavra-passe errada» são duas respostas, e quem tenta às cegas aprende com
  * a diferença qual dos dois acertou. É uma frase só, para os dois casos.
+ *
+ * A do limite diz a hora, que é o que quem está do outro lado precisa de saber,
+ * e diz porquê — sem sugerir um ataque a uma equipa que só se enganou a
+ * escrever. São as frases do painel do Coreto, letra a letra: os dois painéis
+ * são da mesma casa, e respondiam ao mesmo engano com duas frases diferentes.
  */
-const MENSAGENS: Record<string, string> = {
-  credenciais: 'Email ou palavra-passe incorretos.',
-  demasiadas:
-    'Demasiadas tentativas falhadas. Tenta outra vez daqui a um quarto de hora — ou pede ajuda a quem gere o painel.',
-  configuracao: 'O painel ainda não está configurado.',
-};
+function mensagem(erro: string | undefined, ate: string | undefined): string | undefined {
+  if (erro === 'credenciais') return 'O email ou a palavra-passe não estão certos.';
+  if (erro === 'demasiadas') {
+    // A hora vem da barra de endereços: só se mostra se tiver a forma de uma.
+    const hora = ate && /^\d{2}h\d{2}$/.test(ate) ? ate : null;
+    return (
+      'Foram feitas demasiadas tentativas com a palavra-passe errada, a partir desta rede ou ' +
+      `para este email. ${hora ? `Podes voltar a tentar às ${hora}.` : 'Podes voltar a tentar daqui a um quarto de hora.'}`
+    );
+  }
+  if (erro === 'configuracao') return 'O painel ainda não está configurado.';
+  return undefined;
+}
 
 /**
  * A porta: o email e a palavra-passe de cada pessoa (0009).
@@ -54,7 +66,7 @@ export default async function Entrar({ searchParams }: Props) {
     );
   }
 
-  const erro = params.erro ? MENSAGENS[params.erro] : undefined;
+  const erro = mensagem(params.erro, params.ate);
 
   return (
     <>
