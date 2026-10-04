@@ -71,122 +71,132 @@ export default async function Tarifario({ params }: { params: Promise<{ regiao: 
         </div>
       )}
 
-      {/* «QUE TÍTULO ME SERVE?» antes das tabelas, com o que o tarifário
-          declara e mais nada (`lib/tarifario.ts`): o que se paga a cada uso,
-          o que vale por um período — e quantos bilhetes se compram pelo
-          mesmo preço —, e o que não se paga, com as condições escritas na
-          fonte. Que linhas cobre uma assinatura, ou quem tem direito a um
-          passe, não está nos dados, e não se adivinha. */}
-      {ajuda.length > 0 && (
-        <section aria-labelledby="qual">
-          <h2 id="qual">Que título me serve?</h2>
-          {ajuda.map((a) => (
-            <div key={a.rede} className="ajuda-da-rede">
-              {ajuda.length > 1 && <h3>{a.rede}</h3>}
-              <dl className="qual-titulo">
-                {a.aCadaUso.length > 0 && (
-                  <>
-                    <dt>Pagar só quando viajas</dt>
-                    {a.aCadaUso.map((x) => (
-                      <dd key={x.id}>
-                        <NomeEPreco t={x} /> <Nota t={x} />
-                      </dd>
-                    ))}
-                  </>
-                )}
-                {a.porPeriodo.length > 0 && (
-                  <>
-                    <dt>Pagar uma vez, por um período</dt>
-                    {a.porPeriodo.map((x) => (
-                      <dd key={x.id}>
-                        <NomeEPreco t={x} />
-                        {x.equivale && (
+      {/* DUAS COLUNAS NUM ECRÃ LARGO (P1-014), como a paragem: as tabelas à
+          esquerda e o «Que título me serve?» ao lado delas. No telemóvel, a
+          ajuda continua a vir antes das tabelas. */}
+      <div className="em-colunas">
+        {/* «QUE TÍTULO ME SERVE?» antes das tabelas, com o que o tarifário
+            declara e mais nada (`lib/tarifario.ts`): o que se paga a cada uso,
+            o que vale por um período — e quantos bilhetes se compram pelo
+            mesmo preço —, e o que não se paga, com as condições escritas na
+            fonte. Que linhas cobre uma assinatura, ou quem tem direito a um
+            passe, não está nos dados, e não se adivinha. */}
+        {ajuda.length > 0 && (
+          <section className="coluna-lateral" aria-labelledby="qual">
+            <h2 id="qual">Que título me serve?</h2>
+            {ajuda.map((a) => (
+              <div key={a.rede} className="ajuda-da-rede">
+                {ajuda.length > 1 && <h3>{a.rede}</h3>}
+                <dl className="qual-titulo">
+                  {a.aCadaUso.length > 0 && (
+                    <>
+                      <dt>Pagar só quando viajas</dt>
+                      {a.aCadaUso.map((x) => (
+                        <dd key={x.id}>
+                          <NomeEPreco t={x} /> <Nota t={x} />
+                        </dd>
+                      ))}
+                    </>
+                  )}
+                  {a.porPeriodo.length > 0 && (
+                    <>
+                      <dt>Pagar uma vez, por um período</dt>
+                      {a.porPeriodo.map((x) => (
+                        <dd key={x.id}>
+                          <NomeEPreco t={x} />
+                          {x.equivale && (
+                            <>
+                              {' '}
+                              — pelo mesmo preço compram-se {x.equivale.vezes} «{x.equivale.de.nome}
+                              ».
+                            </>
+                          )}{' '}
+                          <Nota t={x} />
+                        </dd>
+                      ))}
+                    </>
+                  )}
+                  {a.semPagar.length > 0 && (
+                    <>
+                      <dt>Sem pagar</dt>
+                      {a.semPagar.map((x) => (
+                        <dd key={x.id}>
+                          <strong>{x.nome}</strong>
+                          {!x.confirmado && <span className="secundario"> (por confirmar)</span>}
+                          {x.nota ? (
+                            <> — {semMaiusculas(x.nota)}</>
+                          ) : (
+                            <span className="secundario"> — a fonte não escreve condições.</span>
+                          )}
+                        </dd>
+                      ))}
+                    </>
+                  )}
+                </dl>
+              </div>
+            ))}
+            <p className="secundario">
+              Os preços, um a um, estão nas tabelas de cada rede.
+            </p>
+          </section>
+        )}
+
+        <div className="coluna-principal">
+          {[...porRede.entries()].map(([rede, titulos]) => (
+            <section key={rede}>
+              <h2>{rede}</h2>
+              <table className="horario">
+                <thead>
+                  <tr>
+                    <th scope="col">Título</th>
+                    <th scope="col" className="preco">
+                      Preço
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {titulos.map((x) => (
+                    <tr key={x.id}>
+                      <td>
+                        {x.nome}
+                        {!x.confirmado && (
                           <>
                             {' '}
-                            — pelo mesmo preço compram-se {x.equivale.vezes} «{x.equivale.de.nome}».
+                            <span
+                              className="distintivo"
+                              style={{
+                                borderColor: 'var(--alerta)',
+                                color: 'var(--alerta)',
+                              }}
+                            >
+                              por confirmar
+                            </span>
                           </>
-                        )}{' '}
-                        <Nota t={x} />
-                      </dd>
-                    ))}
-                  </>
-                )}
-                {a.semPagar.length > 0 && (
-                  <>
-                    <dt>Sem pagar</dt>
-                    {a.semPagar.map((x) => (
-                      <dd key={x.id}>
-                        <strong>{x.nome}</strong>
-                        {!x.confirmado && <span className="secundario"> (por confirmar)</span>}
-                        {x.nota ? (
-                          <> — {semMaiusculas(x.nota)}</>
-                        ) : (
-                          <span className="secundario"> — a fonte não escreve condições.</span>
                         )}
-                      </dd>
-                    ))}
-                  </>
-                )}
-              </dl>
-            </div>
+                        {x.nota && (
+                          <>
+                            <br />
+                            <span className="secundario">{semMaiusculas(x.nota)}</span>
+                          </>
+                        )}
+                      </td>
+                      {/* «Grátis» e não «0,00 €»: um zero com moeda lê-se como um
+                          preço por preencher, e o que a fonte diz é que não se paga. */}
+                      <td className="preco">
+                        {typeof x.valor !== 'number'
+                          ? '—'
+                          : x.valor === 0
+                            ? 'Grátis'
+                            : moeda.format(x.valor)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
           ))}
-          <p className="secundario">Os preços, um a um, estão nas tabelas de cada rede, abaixo.</p>
-        </section>
-      )}
-
-      {[...porRede.entries()].map(([rede, titulos]) => (
-        <section key={rede}>
-          <h2>{rede}</h2>
-          <table className="horario">
-            <thead>
-              <tr>
-                <th scope="col">Título</th>
-                <th scope="col" className="preco">
-                  Preço
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {titulos.map((x) => (
-                <tr key={x.id}>
-                  <td>
-                    {x.nome}
-                    {!x.confirmado && (
-                      <>
-                        {' '}
-                        <span
-                          className="distintivo"
-                          style={{
-                            borderColor: 'var(--alerta)',
-                            color: 'var(--alerta)',
-                          }}
-                        >
-                          por confirmar
-                        </span>
-                      </>
-                    )}
-                    {x.nota && (
-                      <>
-                        <br />
-                        <span className="secundario">{semMaiusculas(x.nota)}</span>
-                      </>
-                    )}
-                  </td>
-                  {/* «Grátis» e não «0,00 €»: um zero com moeda lê-se como um
-                      preço por preencher, e o que a fonte diz é que não se paga. */}
-                  <td className="preco">
-                    {typeof x.valor !== 'number'
-                      ? '—'
-                      : x.valor === 0
-                        ? 'Grátis'
-                        : moeda.format(x.valor)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      ))}
+        </div>
+      </div>
 
       <h2>Quem gere</h2>
       <p>{redeEQuemAGere(r)}. Os preços são os que a operadora publica.</p>

@@ -214,9 +214,9 @@ h3 {
    deixava 400 de cada lado, com o «A seguir» a quilómetros do horário. A
    medida larga vale para as páginas que têm colunas (`.em-colunas`), e o
    cabeçalho e o rodapé acompanham-nas, para as margens alinharem. */
-.pagina:has(.em-colunas),
-body:has(.pagina .em-colunas) .cabecalho-da-regiao .interior,
-body:has(.pagina .em-colunas) .rodape .interior {
+.pagina:has(.em-colunas, .colunas-do-concelho),
+body:has(.pagina :is(.em-colunas, .colunas-do-concelho)) .cabecalho-da-regiao .interior,
+body:has(.pagina :is(.em-colunas, .colunas-do-concelho)) .rodape .interior {
   max-width: var(--medida-dados);
 }
 @media (min-width: 64rem) {
@@ -243,6 +243,26 @@ body:has(.pagina .em-colunas) .rodape .interior {
   }
   .em-colunas > * > .parte-do-sentido:first-child {
     margin-top: 0;
+  }
+
+  /* O CONCELHO tem várias secções de cada lado, e a ordem do telemóvel é para
+     guardar: sair, o a pedido (antes das linhas, de propósito), as linhas, as
+     paragens. Por isso não há duas caixas, uma por coluna: as secções da
+     esquerda são filhas da grelha, uma por linha, e a coluna da direita é uma
+     caixa só, ao lado das três. */
+  .colunas-do-concelho {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 22rem;
+    column-gap: 2.5rem;
+    align-items: start;
+  }
+  .colunas-do-concelho > * {
+    grid-column: 1;
+    min-width: 0;
+  }
+  .colunas-do-concelho > .coluna-lateral {
+    grid-column: 2;
+    grid-row: 1 / span 3;
   }
 }
 
