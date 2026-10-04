@@ -428,10 +428,17 @@ export default async function Produto() {
               oferecer a outros pela rede com alterações tem de as partilhar.{' '}
               <a href={CODIGO}>Ver o código</a>.
             </p>
+            <p>«Paragem.pt» é o nome do produto e não é abrangido pela licença do código.</p>
+            {/* OS TERMOS DOS DADOS, como o código os dá (`_termos`, no pipeline, e
+                o §7 do briefing). Dizia que os dados não levavam licença
+                declarada — e uma região já declara ODbL no que assenta no
+                OpenStreetMap: a frase que o código desmente saiu. */}
             <p>
-              «Paragem.pt» é o nome do produto e não é abrangido pela licença do código. Os dados
-              que o produto constrói não levam licença declarada: publicá-los com licença aberta
-              depende de a autoridade de transportes autorizar a reutilização.
+              Cada ficheiro que se descarrega diz os seus termos. O que deriva do OpenStreetMap sai
+              sob ODbL, com a atribuição lá dentro; o ficheiro de outra entidade leva os termos
+              dela; e o que construímos a partir de fontes sem licença aberta sai para consulta —
+              publicá-lo com licença aberta depende de a autoridade de transportes autorizar a
+              reutilização.
             </p>
           </div>
         </div>
