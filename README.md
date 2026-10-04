@@ -163,11 +163,21 @@ em vez de falhar em silêncio.
 
 ## Licença
 
-O **software** é [AGPL-3.0-only](LICENSE). Os **dados** que o pipeline produz
-não levam licença declarada — são derivados de fontes de terceiros cujos termos
-estão registados um a um em `data/sources.yaml`, e publicá-los sob uma licença
-aberta é a Fase 5, depois de a autoridade de transportes a autorizar. O que
-deriva do OpenStreetMap é ODbL e leva a atribuição obrigatória.
+O **software** é [AGPL-3.0-only](LICENSE). **Cada ficheiro de dados que o sítio
+publica diz os seus termos**, e o rótulo sai do código (`_termos`, em
+`pipeline/src/paragem/sitio.py`), e não de uma frase escrita à parte:
+
+- **ODbL**, quando a receita da região o declara — o que deriva do
+  OpenStreetMap, com a atribuição dentro do próprio ficheiro;
+- **de terceiros**, no ficheiro de outra entidade filtrado à região: os termos
+  são os dela;
+- **para consulta**, no que construímos a partir de fontes sem licença aberta
+  declarada — publicá-lo com licença aberta é a Fase 5, depois de a autoridade
+  de transportes o autorizar;
+- **obra da casa**, nas regiões de prova (sob a licença do código) e no
+  relatório da construção (CC BY 4.0).
+
+Os termos de cada fonte estão registados um a um em `data/sources.yaml`.
 
 A marca **Paragem.pt** não é coberta pela licença do código. Os pormenores
 estão em [`AUTORIA.md`](AUTORIA.md); a declaração legível por máquina está em
