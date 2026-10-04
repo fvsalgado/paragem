@@ -418,6 +418,22 @@ def _janela_de_servico(r, feed, rotulo: str) -> None:
     hoje = date.today()
     primeira, ultima = _d(datas[0]), _d(datas[-1])
 
+    # ONDE A JANELA COMEÇA é o que o feed declara (`feed_info.feed_start_date`,
+    # o dia da construção), e não a primeira data com serviço. Eram a mesma
+    # coisa até a 4/10/2026: um domingo antes de um feriado, o transporte a
+    # pedido — que só anda em dias úteis — teve a primeira viagem na terça, e a
+    # verificação chumbou um feed certo como se começasse daí a dois dias. Um
+    # feed que não declara o início fica com a primeira data, como era.
+    declarado = next((x.get("feed_start_date", "") for x in feed.obter("feed_info.txt")), "")
+    inicio = _d(declarado) if declarado else primeira
+    if declarado:
+        # E as datas não começam antes do início que o feed declara.
+        r.afirmar(
+            primeira >= inicio,
+            f"{rotulo}: nenhuma data de serviço antes do início declarado"
+            f" ({datas[0]}, início {declarado})",
+        )
+
     # A JANELA NÃO COMEÇA AMANHÃ, E NÃO COMEÇOU NO MÊS PASSADO.
     #
     # «Começa hoje» seria a afirmação óbvia e estaria errada pela mesma razão
@@ -427,12 +443,12 @@ def _janela_de_servico(r, feed, rotulo: str) -> None:
     # velho deixa de ser «de ontem» e passa a ser um feed que ninguém
     # reconstrói.
     r.afirmar(
-        primeira <= hoje,
-        f"{rotulo}: a janela de serviço já começou ({datas[0]}, hoje é {hoje:%Y%m%d})",
+        inicio <= hoje,
+        f"{rotulo}: a janela de serviço já começou ({inicio:%Y%m%d}, hoje é {hoje:%Y%m%d})",
     )
     r.afirmar(
-        primeira >= hoje - timedelta(days=7),
-        f"{rotulo}: e não começou há mais de uma semana ({datas[0]})",
+        inicio >= hoje - timedelta(days=7),
+        f"{rotulo}: e não começou há mais de uma semana ({inicio:%Y%m%d})",
     )
 
     # E COBRE MESMO UM ANO. Sem o limite de baixo, um calendário que colapsasse

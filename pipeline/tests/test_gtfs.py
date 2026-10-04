@@ -35,7 +35,7 @@ def test_horas_depois_da_meia_noite():
 # apanham está aqui — cada uma com o feed que a faz falhar.
 
 
-def _feed_com_janela(primeira, ultima, servicos=("A",), sem_datas=()):
+def _feed_com_janela(primeira, ultima, servicos=("A",), sem_datas=(), inicio=None):
     from paragem.gtfs import Gtfs
 
     feed = Gtfs()
@@ -53,6 +53,13 @@ def _feed_com_janela(primeira, ultima, servicos=("A",), sem_datas=()):
             for d in (primeira, ultima)
         ],
     )
+    if inicio is not None:
+        # O início da janela, como os feeds próprios o declaram: o dia da construção.
+        feed.definir(
+            "feed_info.txt",
+            ["feed_publisher_name", "feed_start_date"],
+            [{"feed_publisher_name": "x", "feed_start_date": inicio.strftime("%Y%m%d")}],
+        )
     return feed
 
 
@@ -94,6 +101,38 @@ def test_um_feed_que_so_comeca_para_a_semana_reprova():
 
     amanha = date.today() + timedelta(days=7)
     assert _falhas(_feed_com_janela(amanha, amanha + timedelta(days=364)))
+
+
+def test_um_servico_que_nao_anda_hoje_passa_se_o_feed_comecou_hoje():
+    """O caso de 4/10/2026: domingo, e segunda-feira feriado.
+
+    O transporte a pedido só anda em dias úteis, e a primeira data com serviço
+    era terça. O feed estava certo — começava no dia da construção, e dizia-o
+    no `feed_info` — e a verificação chumbava-o como se começasse daí a dois
+    dias.
+    """
+    from datetime import date, timedelta
+
+    hoje = date.today()
+    terca = hoje + timedelta(days=2)
+    assert not _falhas(_feed_com_janela(terca, hoje + timedelta(days=364), inicio=hoje))
+
+
+def test_um_feed_que_diz_comecar_amanha_reprova():
+    """O que a verificação existe para apanhar continua apanhado."""
+    from datetime import date, timedelta
+
+    amanha = date.today() + timedelta(days=1)
+    assert _falhas(_feed_com_janela(amanha, amanha + timedelta(days=364), inicio=amanha))
+
+
+def test_datas_antes_do_inicio_declarado_reprovam():
+    from datetime import date, timedelta
+
+    hoje = date.today()
+    ontem = hoje - timedelta(days=1)
+    falhas = _falhas(_feed_com_janela(ontem, hoje + timedelta(days=364), inicio=hoje))
+    assert any("antes do início declarado" in m for m in falhas)
 
 
 def test_um_calendario_que_colapsou_reprova():
