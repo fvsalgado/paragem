@@ -7,7 +7,13 @@
  * pelo que o CSS diz, que é o que já os tinha deixado passar uma vez.
  */
 import { test, expect } from '@playwright/test';
-import { linhaComMaisViagens, paragemComMaisPartidas, temMosaicos, SEM } from './dados-da-regiao';
+import {
+  concelhoComMaisParagens,
+  linhaComMaisViagens,
+  paragemComMaisPartidas,
+  temMosaicos,
+  SEM,
+} from './dados-da-regiao';
 
 test('o texto secundário é secundário: mais pequeno, e na cor do §6', async ({ page }) => {
   // A classe aparecia setenta vezes e não tinha regra fora das listas: as
@@ -88,6 +94,40 @@ test('num ecrã largo, o «A seguir» fica ao lado do horário, e não por cima 
     .locator('section[aria-labelledby="horario"]')
     .boundingBox())!;
   expect(horarioNoTelemovel.y).toBeGreaterThan(seguirNoTelemovel.y);
+});
+
+test('num ecrã largo, o concelho e o tarifário também vão a duas colunas', async ({ page }) => {
+  // O P1-014 ficou a meio: a paragem e a linha alargaram, e o concelho e o
+  // tarifário continuavam uma coluna de 608 px num ecrã de 1440.
+  const doConcelho = `/rede/concelhos/${concelhoComMaisParagens().id}/`;
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(doConcelho);
+  const lateral = page.locator('.colunas-do-concelho > .coluna-lateral');
+  test.skip((await lateral.count()) === 0, 'o concelho com mais paragens não tem o que ir ao lado');
+  const aoLado = (await lateral.boundingBox())!;
+  const paragens = (await page.locator('section[aria-labelledby="c-paragens"]').boundingBox())!;
+  expect(aoLado.x, 'o a pedido e os outros modos à direita').toBeGreaterThanOrEqual(
+    paragens.x + paragens.width,
+  );
+
+  await page.goto('/rede/tarifario/');
+  const ajuda = page.locator('section[aria-labelledby="qual"]');
+  if (await ajuda.count()) {
+    const caixaDaAjuda = (await ajuda.boundingBox())!;
+    const tabela = (await page.locator('table.horario').first().boundingBox())!;
+    expect(caixaDaAjuda.x, '«Que título me serve?» ao lado das tabelas').toBeGreaterThanOrEqual(
+      tabela.x + tabela.width,
+    );
+  }
+
+  // No telemóvel, a ordem de sempre: o a pedido antes das linhas.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(doConcelho);
+  const aPedido = page.locator('section[aria-labelledby="c-a-pedido"]');
+  const linhas = page.locator('section[aria-labelledby="c-linhas"]');
+  if ((await aPedido.count()) && (await linhas.count())) {
+    expect((await linhas.boundingBox())!.y).toBeGreaterThan((await aPedido.boundingBox())!.y);
+  }
 });
 
 test('o tema escuro vem do sistema, e o mapa muda com ele', async ({ page }) => {

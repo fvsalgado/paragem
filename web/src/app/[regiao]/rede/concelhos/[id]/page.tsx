@@ -163,216 +163,233 @@ export default async function Concelho({
       <p className="secundario">{numeros.join(' · ')}.</p>
       <MarcaDeDados regiao={rid} />
 
-      {/* «COMO SAIO DAQUI?», primeiro. É a pergunta de quem mora cá, e era a
-          que a página não respondia: as linhas eram números soltos, sem
-          destino nem ligação. Os destinos saem das viagens que param no
-          concelho (`lib/concelho.ts`). */}
-      {saidas.length > 0 && (
-        <section aria-labelledby="c-sair">
-          {/* «Sair do concelho», e não «Sair de Porto»: o artigo de um concelho
-              não está nos dados («do Porto», «da Guarda»), e não se
-              adivinha. */}
-          <h2 id="c-sair">Sair do concelho</h2>
-          <p className="secundario">
-            Para onde se vai daqui de autocarro, sem mudar, e a que horas sai do concelho.
-          </p>
-          <ul className="saidas">
-            {saidas.slice(0, 6).map((sd) => (
-              <li key={sd.chave}>
-                <h3>{sd.nome}</h3>
-                <p className="linhas-da-saida">
-                  <span className="so-para-leitores">
-                    {sd.linhas.length === 1 ? 'Linha ' : 'Linhas '}
-                  </span>
-                  {sd.linhas.map((l) => (
-                    <Distintivo key={l.id} codigo={l.codigo} cor={l.cor} />
+      {/* DUAS COLUNAS NUM ECRÃ LARGO (P1-014), como a paragem e a linha: à
+          esquerda o que se lê de alto a baixo — sair, as linhas, as paragens —,
+          e à direita o que é curto. Era uma coluna de 608 px em qualquer ecrã. */}
+      <div className="colunas-do-concelho">
+        {/* «COMO SAIO DAQUI?», primeiro. É a pergunta de quem mora cá, e era a
+            que a página não respondia: as linhas eram números soltos, sem
+            destino nem ligação. Os destinos saem das viagens que param no
+            concelho (`lib/concelho.ts`). */}
+        {saidas.length > 0 && (
+          <section aria-labelledby="c-sair">
+            {/* «Sair do concelho», e não «Sair de Porto»: o artigo de um concelho
+                não está nos dados («do Porto», «da Guarda»), e não se
+                adivinha. */}
+            <h2 id="c-sair">Sair do concelho</h2>
+            <p className="secundario">
+              Para onde se vai daqui de autocarro, sem mudar, e a que horas sai do concelho.
+            </p>
+            <ul className="saidas">
+              {saidas.slice(0, 6).map((sd) => (
+                <li key={sd.chave}>
+                  <h3>{sd.nome}</h3>
+                  <p className="linhas-da-saida">
+                    <span className="so-para-leitores">
+                      {sd.linhas.length === 1 ? 'Linha ' : 'Linhas '}
+                    </span>
+                    {sd.linhas.map((l) => (
+                      <Distintivo key={l.id} codigo={l.codigo} cor={l.cor} />
+                    ))}
+                  </p>
+                  {sd.porDia.slice(0, 2).map(({ dia, horas }) => (
+                    <p key={dia} className="horas-da-saida">
+                      <strong>{dia}:</strong> {horas.slice(0, HORAS_A_MOSTRAR).join(', ')}
+                      {horas.length > HORAS_A_MOSTRAR &&
+                        ` e mais ${horas.length - HORAS_A_MOSTRAR}`}
+                    </p>
                   ))}
-                </p>
-                {sd.porDia.slice(0, 2).map(({ dia, horas }) => (
-                  <p key={dia} className="horas-da-saida">
-                    <strong>{dia}:</strong> {horas.slice(0, HORAS_A_MOSTRAR).join(', ')}
-                    {horas.length > HORAS_A_MOSTRAR && ` e mais ${horas.length - HORAS_A_MOSTRAR}`}
+                  {sd.porDia.length > 2 && (
+                    <p className="secundario">
+                      E noutros dias:{' '}
+                      {sd.porDia
+                        .slice(2)
+                        .map((d) => d.dia)
+                        .join('; ')}
+                      .
+                    </p>
+                  )}
+                  <p className="cartao-accoes">
+                    <Link
+                      href={url(
+                        rid,
+                        `/viagem/?${new URLSearchParams({
+                          ...(principal ? { de: principal.nome } : {}),
+                          para: sd.para,
+                        }).toString()}`,
+                      )}
+                    >
+                      Como chegar a {sd.nome}
+                    </Link>
                   </p>
-                ))}
-                {sd.porDia.length > 2 && (
-                  <p className="secundario">
-                    E noutros dias:{' '}
-                    {sd.porDia
-                      .slice(2)
-                      .map((d) => d.dia)
-                      .join('; ')}
-                    .
-                  </p>
-                )}
-                <p className="cartao-accoes">
-                  <Link
-                    href={url(
-                      rid,
-                      `/viagem/?${new URLSearchParams({
-                        ...(principal ? { de: principal.nome } : {}),
-                        para: sd.para,
-                      }).toString()}`,
-                    )}
-                  >
-                    Como chegar a {sd.nome}
-                  </Link>
-                </p>
-              </li>
-            ))}
-          </ul>
-          {saidas.length > 6 && (
-            <p>
-              <strong>Mais destinos:</strong> {lista(saidas.slice(6).map((sd) => sd.nome))}.
-            </p>
-          )}
-        </section>
-      )}
-
-      {/* O A PEDIDO VEM ANTES DAS LINHAS, e é de propósito: num concelho
-          rural há freguesias sem carreira nenhuma, e para quem mora lá esta é
-          a única secção desta página que responde. */}
-      {temAPedido && (
-        <section aria-labelledby="c-a-pedido">
-          <h2 id="c-a-pedido">Transporte a pedido</h2>
-          <div className="faixa a-pedido">
-            <p>
-              Só circula se alguém o reservar
-              {pedido?.reservas.prazo
-                ? ` — ${pedido.reservas.prazo.charAt(0).toLowerCase()}${pedido.reservas.prazo.slice(1)}`
-                : ''}
-              .
-            </p>
-            {zonas.length > 0 && (
-              <ul className="zonas-do-concelho">
-                {zonas.map((z) => (
-                  <li key={z.id}>
-                    {z.circuitos.length
-                      ? `${plural(z.circuitos.length, 'circuito', 'circuitos')} na zona ${z.nome}`
-                      : z.entre?.length
-                        ? `${z.nome}, ligação entre concelhos`
-                        : `Zona ${z.nome}`}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {horariosAPedido.map((h) => (
-              <p key={h.id}>
-                <Link href={url(rid, `a-pedido/#tap-${h.id}`)}>
-                  O horário dos circuitos do concelho
-                  {h.circuito_de ? ` — ${h.circuito_de}` : ''}
-                </Link>{' '}
-                ({plural(h.viagens, 'viagem', 'viagens')}).
-              </p>
-            ))}
-            <p className="cartao-accoes">
-              {pedido?.reservas.telefone && (
-                <a className="botao" href={`tel:${pedido.reservas.telefone}`}>
-                  Ligar {pedido.reservas.telefone_apresentado ?? pedido.reservas.telefone}
-                </a>
-              )}
-              <Link href={url(rid, 'a-pedido/')}>Como funciona</Link>
-            </p>
-          </div>
-        </section>
-      )}
-
-      {detalhes.length > 0 && (
-        <section aria-labelledby="c-linhas">
-          <h2 id="c-linhas">Linhas que passam aqui</h2>
-          <ul className="linhas-do-concelho">
-            {detalhes
-              .slice()
-              .sort((a, b) => a.ordem.localeCompare(b.ordem))
-              .map((l) => (
-                <li key={l.id}>
-                  <Link href={urlRede(rid, `linhas/${l.id}/`)}>
-                    <Distintivo codigo={l.codigo} cor={l.cor} tamanho="medio" />
-                    <span>{l.nome}</span>
-                  </Link>
                 </li>
               ))}
-          </ul>
-        </section>
-      )}
+            </ul>
+            {saidas.length > 6 && (
+              <p>
+                <strong>Mais destinos:</strong> {lista(saidas.slice(6).map((sd) => sd.nome))}.
+              </p>
+            )}
+          </section>
+        )}
 
-      {es.length > 0 && (
-        <section aria-labelledby="c-estacoes">
-          <h2 id="c-estacoes">Estações de comboio</h2>
-          <ul className="lista">
-            {es.map((e) => (
-              <li key={e.id}>
-                <Link href={urlRede(rid, `estacoes/${e.id.replace(/[^a-zA-Z0-9\-_]/g, '-')}/`)}>
-                  <span>{e.nome}</span>
-                  <span className="secundario">
-                    {e.sem_ligacao ? 'sem autocarro perto' : 'com autocarro perto'}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+        {/* AO LADO, NUM ECRÃ LARGO, o que é curto: o transporte a pedido, as
+            estações e os outros modos. No telemóvel vêm logo a seguir ao «Sair
+            do concelho» — o a pedido antes das linhas, como sempre. */}
+        {(temAPedido || es.length > 0 || presentes.length > 0 || ausentes.length > 0) && (
+          <div className="coluna-lateral">
+            {/* O A PEDIDO VEM ANTES DAS LINHAS, e é de propósito: num concelho
+              rural há freguesias sem carreira nenhuma, e para quem mora lá esta é
+              a única secção desta página que responde. */}
+            {temAPedido && (
+              <section aria-labelledby="c-a-pedido">
+                <h2 id="c-a-pedido">Transporte a pedido</h2>
+                <div className="faixa a-pedido">
+                  <p>
+                    Só circula se alguém o reservar
+                    {pedido?.reservas.prazo
+                      ? ` — ${pedido.reservas.prazo.charAt(0).toLowerCase()}${pedido.reservas.prazo.slice(1)}`
+                      : ''}
+                    .
+                  </p>
+                  {zonas.length > 0 && (
+                    <ul className="zonas-do-concelho">
+                      {zonas.map((z) => (
+                        <li key={z.id}>
+                          {z.circuitos.length
+                            ? `${plural(z.circuitos.length, 'circuito', 'circuitos')} na zona ${z.nome}`
+                            : z.entre?.length
+                              ? `${z.nome}, ligação entre concelhos`
+                              : `Zona ${z.nome}`}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {horariosAPedido.map((h) => (
+                    <p key={h.id}>
+                      <Link href={url(rid, `a-pedido/#tap-${h.id}`)}>
+                        O horário dos circuitos do concelho
+                        {h.circuito_de ? ` — ${h.circuito_de}` : ''}
+                      </Link>{' '}
+                      ({plural(h.viagens, 'viagem', 'viagens')}).
+                    </p>
+                  ))}
+                  <p className="cartao-accoes">
+                    {pedido?.reservas.telefone && (
+                      <a className="botao" href={`tel:${pedido.reservas.telefone}`}>
+                        Ligar {pedido.reservas.telefone_apresentado ?? pedido.reservas.telefone}
+                      </a>
+                    )}
+                    <Link href={url(rid, 'a-pedido/')}>Como funciona</Link>
+                  </p>
+                </div>
+              </section>
+            )}
 
-      {(presentes.length > 0 || ausentes.length > 0) && (
-        <section aria-labelledby="c-outros">
-          <h2 id="c-outros">Outros transportes</h2>
-          {presentes.length > 0 && (
-            <ul className="lista">
-              {presentes.map((o) => (
-                <li key={o.modo}>
-                  <Link className={`cartao modo-${o.modo}`} href={url(rid, `modos/${o.modo}/`)}>
-                    <span>{o.nome}</span>
-                    <span className="secundario">{o.quantos}</span>
+            {es.length > 0 && (
+              <section aria-labelledby="c-estacoes">
+                <h2 id="c-estacoes">Estações de comboio</h2>
+                <ul className="lista">
+                  {es.map((e) => (
+                    <li key={e.id}>
+                      <Link
+                        href={urlRede(rid, `estacoes/${e.id.replace(/[^a-zA-Z0-9\-_]/g, '-')}/`)}
+                      >
+                        <span>{e.nome}</span>
+                        <span className="secundario">
+                          {e.sem_ligacao ? 'sem autocarro perto' : 'com autocarro perto'}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {(presentes.length > 0 || ausentes.length > 0) && (
+              <section aria-labelledby="c-outros">
+                <h2 id="c-outros">Outros transportes</h2>
+                {presentes.length > 0 && (
+                  <ul className="lista">
+                    {presentes.map((o) => (
+                      <li key={o.modo}>
+                        <Link
+                          className={`cartao modo-${o.modo}`}
+                          href={url(rid, `modos/${o.modo}/`)}
+                        >
+                          <span>{o.nome}</span>
+                          <span className="secundario">{o.quantos}</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {ausentes.length > 0 && (
+                  <p className="secundario">
+                    Sem registo neste concelho: {lista(ausentes.map((o) => o.nome))}.
+                    {algumPorLevantar &&
+                      ' Onde o levantamento ainda não está completo, não quer dizer que não haja — quer dizer que ainda não está nos dados.'}
+                  </p>
+                )}
+              </section>
+            )}
+          </div>
+        )}
+        {detalhes.length > 0 && (
+          <section aria-labelledby="c-linhas">
+            <h2 id="c-linhas">Linhas que passam aqui</h2>
+            <ul className="linhas-do-concelho">
+              {detalhes
+                .slice()
+                .sort((a, b) => a.ordem.localeCompare(b.ordem))
+                .map((l) => (
+                  <li key={l.id}>
+                    <Link href={urlRede(rid, `linhas/${l.id}/`)}>
+                      <Distintivo codigo={l.codigo} cor={l.cor} tamanho="medio" />
+                      <span>{l.nome}</span>
+                    </Link>
+                  </li>
+                ))}
+            </ul>
+          </section>
+        )}
+
+        {/* AS PARAGENS, com o nome por inteiro e as linhas por baixo. Lado a
+            lado, a coluna das linhas espremia o nome até o partir letra a letra
+            («Abran / tes / (Termi / nal)») — precisamente nas paragens com mais
+            linhas, que são as que se procuram. Muitas, ficam fechadas. */}
+        <section aria-labelledby="c-paragens">
+          <h2 id="c-paragens">Paragens</h2>
+          <details className="paragens-do-concelho" open={ps.length <= 30}>
+            <summary>
+              {ps.length === 1 ? 'A paragem do concelho' : `As ${ps.length} paragens do concelho`}
+            </summary>
+            <ul className="lista paragens-com-linhas">
+              {ps.slice(0, 300).map((p) => (
+                <li key={p.id}>
+                  <Link href={urlDaParagem(rid, p.id)}>
+                    <span className="nome">{p.nome}</span>
+                    {p.linhas.length > 0 && (
+                      <span className="linhas-da-paragem">
+                        <span className="so-para-leitores">Linhas </span>
+                        {p.linhas.map((codigo) => (
+                          <Distintivo key={codigo} codigo={codigo} cor={corDe.get(codigo)} />
+                        ))}
+                      </span>
+                    )}
                   </Link>
                 </li>
               ))}
             </ul>
-          )}
-          {ausentes.length > 0 && (
-            <p className="secundario">
-              Sem registo neste concelho: {lista(ausentes.map((o) => o.nome))}.
-              {algumPorLevantar &&
-                ' Onde o levantamento ainda não está completo, não quer dizer que não haja — quer dizer que ainda não está nos dados.'}
-            </p>
-          )}
+            {ps.length > 300 && (
+              <p className="secundario">
+                São {ps.length} ao todo; mostram-se as primeiras 300. A lista inteira está em{' '}
+                <Link href={urlRede(rid, 'paragens/')}>Paragens</Link>.
+              </p>
+            )}
+          </details>
         </section>
-      )}
-
-      {/* AS PARAGENS, com o nome por inteiro e as linhas por baixo. Lado a
-          lado, a coluna das linhas espremia o nome até o partir letra a letra
-          («Abran / tes / (Termi / nal)») — precisamente nas paragens com mais
-          linhas, que são as que se procuram. Muitas, ficam fechadas. */}
-      <section aria-labelledby="c-paragens">
-        <h2 id="c-paragens">Paragens</h2>
-        <details className="paragens-do-concelho" open={ps.length <= 30}>
-          <summary>
-            {ps.length === 1 ? 'A paragem do concelho' : `As ${ps.length} paragens do concelho`}
-          </summary>
-          <ul className="lista paragens-com-linhas">
-            {ps.slice(0, 300).map((p) => (
-              <li key={p.id}>
-                <Link href={urlDaParagem(rid, p.id)}>
-                  <span className="nome">{p.nome}</span>
-                  {p.linhas.length > 0 && (
-                    <span className="linhas-da-paragem">
-                      <span className="so-para-leitores">Linhas </span>
-                      {p.linhas.map((codigo) => (
-                        <Distintivo key={codigo} codigo={codigo} cor={corDe.get(codigo)} />
-                      ))}
-                    </span>
-                  )}
-                </Link>
-              </li>
-            ))}
-          </ul>
-          {ps.length > 300 && (
-            <p className="secundario">
-              São {ps.length} ao todo; mostram-se as primeiras 300. A lista inteira está em{' '}
-              <Link href={urlRede(rid, 'paragens/')}>Paragens</Link>.
-            </p>
-          )}
-        </details>
-      </section>
+      </div>
     </>
   );
 }
