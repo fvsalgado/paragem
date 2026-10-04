@@ -23,7 +23,7 @@
  * política de privacidade com base legal, e contrato de subcontratação com
  * quem processa. Está escrito em `docs/MEDICAO.md` o que isso implica.
  */
-import type { PostHog } from 'posthog-js';
+import type { PostHog } from 'posthog-js/dist/module.slim.no-external';
 
 const CHAVE = process.env.NEXT_PUBLIC_PARAGEM_POSTHOG ?? '';
 const SERVIDOR = process.env.NEXT_PUBLIC_PARAGEM_POSTHOG_HOST ?? 'https://eu.i.posthog.com';
@@ -45,6 +45,17 @@ const COM_IDENTIFICADOR = process.env.NEXT_PUBLIC_PARAGEM_MEDICAO_IDENTIFICADA =
  * resposta que se está a medir. O que se pede antes disso espera numa fila,
  * com a hora a que aconteceu — uma visita contada dois segundos depois
  * continua a ser contada à hora certa.
+ *
+ * E CHEGA A VERSÃO LEVE. A de omissão traz junto cerca de vinte extensões —
+ * marcadores de funcionalidades, captura automática de cliques, gravação de
+ * sessões, mapas de calor, inquéritos, erros, a barra de ferramentas — e este
+ * sítio não usa nenhuma: conta visitas, saídas e meia dúzia de eventos, e
+ * isso é do núcleo. Medido na 1.434: 99 kB comprimidos e 317 kB a avaliar na
+ * de omissão, 52 kB e 166 kB nesta — que nunca vai buscar scripts de fora,
+ * diga a configuração o que disser. O caminho entra em `dist/` porque o
+ * pacote ainda não a publica como `posthog-js/slim`, que a documentação dele
+ * já nomeia; se uma versão nova a mudar de sítio, a construção falha alto, e
+ * não em silêncio.
  */
 let carregada: Promise<PostHog | null> | null = null;
 
@@ -62,7 +73,7 @@ export function comecar(): void {
   if (carregada || !CHAVE || typeof window === 'undefined') return;
   carregada = new Promise((resolver) =>
     quandoLivre(() => {
-      import('posthog-js')
+      import('posthog-js/dist/module.slim.no-external')
         .then(({ default: posthog }) => {
           posthog.init(CHAVE, {
             api_host: SERVIDOR,

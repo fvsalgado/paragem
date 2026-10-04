@@ -135,9 +135,7 @@ export default async function Tarifario({ params }: { params: Promise<{ regiao: 
                 </dl>
               </div>
             ))}
-            <p className="secundario">
-              Os preços, um a um, estão nas tabelas de cada rede.
-            </p>
+            <p className="secundario">Os preços, um a um, estão nas tabelas de cada rede.</p>
           </section>
         )}
 
