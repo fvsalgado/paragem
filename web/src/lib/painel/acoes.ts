@@ -13,7 +13,7 @@ import {
   paragens as paragensNoArmazem,
   regiao as regiaoNoArmazem,
 } from '../dados';
-import { doCampoLocal } from '../fuso';
+import { doCampoLocal, horaNoFuso } from '../fuso';
 import {
   SemPermissao,
   abrirSessao,
@@ -137,9 +137,10 @@ export async function entrar(formData: FormData): Promise<void> {
   const email = texto(formData, 'email').toLowerCase();
   const senha = String(formData.get('senha') ?? '');
   // O destino viaja com o erro, para não se perder o gesto a meio de uma gralha.
-  const deVolta = (erro: string) =>
+  const deVolta = (erro: string, ate = '') =>
     `${CAMINHO_DA_ENTRADA}?${new URLSearchParams({
       erro,
+      ...(ate ? { ate } : {}),
       ...(email ? { email } : {}),
       ...(destino !== '/admin/' ? { destino } : {}),
     })}`;
@@ -155,7 +156,7 @@ export async function entrar(formData: FormData): Promise<void> {
     ...(email ? [`admin-entrar-email:${hashDoEmail(email)}`] : []),
   ];
   const limite = await verificarEntrada(baldes, JANELA_DAS_TENTATIVAS_S, LIMITE_DE_TENTATIVAS);
-  if (!limite.permitido) redirect(deVolta('demasiadas'));
+  if (!limite.permitido) redirect(deVolta('demasiadas', horaNoFuso(limite.repoeEm)));
 
   const quem = await conferirCredenciais(email, senha);
   if (!quem) {

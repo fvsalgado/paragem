@@ -118,6 +118,27 @@ export function porExtenso(iso: string | null | undefined, fuso: string = FUSO):
 }
 
 /**
+ * A hora de um instante, no fuso da casa e como se diz: «10h42». Vazia quando
+ * não há instante, ou quando ele não é um instante.
+ */
+export function horaNoFuso(iso: string | null | undefined, fuso: string = FUSO): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('pt-PT', {
+      timeZone: fuso,
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+      .formatToParts(d)
+      .map((x) => [x.type, x.value]),
+  ) as Record<string, string>;
+  return p.hour && p.minute ? `${p.hour}h${p.minute}` : '';
+}
+
+/**
  * O dia civil de um instante, no fuso da casa: `AAAA-MM-DD`.
  *
  * O `toISOString().slice(0, 10)` é o dia em UTC, e o servidor do painel corre

@@ -32,11 +32,28 @@ export type ModoDoLimite = 'falhadas' | 'todas' | 'sem-limite';
 export interface Limite {
   permitido: boolean;
   modo: ModoDoLimite;
+  /**
+   * Quando se pode voltar a tentar, se a resposta for não: o fim da janela do
+   * balde cheio que fecha mais tarde. Sem ele, a entrada diz «daqui a um quarto
+   * de hora»; com ele, diz a hora — que é o que quem está do outro lado precisa
+   * de saber.
+   */
+  repoeEm: string | null;
 }
 
 type Linha = { allowed: boolean; hits: number; reset_at: string | null };
 
 const primeira = (r: Linha[] | Linha): Linha | undefined => (Array.isArray(r) ? r[0] : r);
+
+/** O instante mais tarde de uma lista, saltando os vazios e os que não são instantes. */
+function maisTarde(instantes: (string | null)[]): string | null {
+  let melhor: string | null = null;
+  for (const instante of instantes) {
+    if (!instante || Number.isNaN(Date.parse(instante))) continue;
+    if (!melhor || Date.parse(instante) > Date.parse(melhor)) melhor = instante;
+  }
+  return melhor;
+}
 
 /**
  * Pode tentar-se mais uma vez? `baldes[0]` é o da origem — o único que existia
@@ -48,7 +65,7 @@ export async function verificarEntrada(
   janelaSegundos: number,
   limite: number,
 ): Promise<Limite> {
-  if (!chamar || baldes.length === 0) return { permitido: true, modo: 'sem-limite' };
+  if (!chamar || baldes.length === 0) return { permitido: true, modo: 'sem-limite', repoeEm: null };
   try {
     const respostas = await Promise.all(
       baldes.map((b) =>
@@ -59,14 +76,16 @@ export async function verificarEntrada(
         }),
       ),
     );
+    const cheios = respostas.map(primeira).filter((r) => r && !r.allowed);
     return {
-      permitido: respostas.every((r) => primeira(r)?.allowed ?? true),
+      permitido: cheios.length === 0,
       modo: 'falhadas',
+      repoeEm: maisTarde(cheios.map((r) => r?.reset_at ?? null)),
     };
   } catch (erro) {
     if (!ehEsquemaPorAplicar(erro)) {
       console.error('rate_limit_check', erro);
-      return { permitido: true, modo: 'sem-limite' };
+      return { permitido: true, modo: 'sem-limite', repoeEm: null };
     }
   }
   // A 0009 ainda não está na base: o limite de antes, que conta tudo.
@@ -76,10 +95,12 @@ export async function verificarEntrada(
       p_window_seconds: janelaSegundos,
       p_limit: limite,
     });
-    return { permitido: primeira(r)?.allowed ?? true, modo: 'todas' };
+    const linha = primeira(r);
+    const permitido = linha?.allowed ?? true;
+    return { permitido, modo: 'todas', repoeEm: permitido ? null : (linha?.reset_at ?? null) };
   } catch (erro) {
     console.error('rate_limit_hit', erro);
-    return { permitido: true, modo: 'sem-limite' };
+    return { permitido: true, modo: 'sem-limite', repoeEm: null };
   }
 }
 

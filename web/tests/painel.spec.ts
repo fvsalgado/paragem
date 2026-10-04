@@ -70,7 +70,9 @@ test('uma palavra-passe errada não entra, e diz-o', async ({ page }) => {
   await expect(page).toHaveURL(`${PRODUTO}/admin/entrar/?erro=credenciais&email=dono%40exemplo.pt`);
   // O anunciador de rotas do Next também é um `role="alert"`; o nosso é o parágrafo.
   // A frase não diz se o email existe: é a mesma para os dois casos.
-  await expect(page.locator('p[role="alert"]')).toHaveText('Email ou palavra-passe incorretos.');
+  await expect(page.locator('p[role="alert"]')).toHaveText(
+    'O email ou a palavra-passe não estão certos.',
+  );
   // E o email que se escreveu fica na caixa, para corrigir só a palavra-passe.
   await expect(page.getByLabel('Email')).toHaveValue('dono@exemplo.pt');
   await semViolacoes(page, /Entrar · Painel/);

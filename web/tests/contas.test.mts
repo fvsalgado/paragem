@@ -22,6 +22,7 @@ import {
 } from '../src/lib/painel/base-pura.ts';
 import { destinoSeguro, ehPublicaDoPainel } from '../src/lib/painel/guarda.ts';
 import { limitesDoMes } from '../src/lib/painel/auditoria.ts';
+import { horaNoFuso } from '../src/lib/fuso.ts';
 
 const DONO: Acesso = { dono: true, papeis: {} };
 const EDITORA_DA_A: Acesso = { dono: false, papeis: { a: 'editor' } };
@@ -167,7 +168,38 @@ test('sem base, ou com o limitador em baixo, deixa passar', async () => {
   assert.deepEqual(await verificarEntrada(emBaixo, ['ip:x'], 900, 5), {
     permitido: true,
     modo: 'sem-limite',
+    repoeEm: null,
   });
+});
+
+test('trancada, a entrada diz quando volta a abrir: o balde cheio que fecha mais tarde', async () => {
+  // A origem fecha às 10h20 e o email às 10h42 (UTC): só se entra quando os
+  // dois tiverem aberto, e é essa a hora que se diz.
+  const fecho: Record<string, string> = {
+    'ip:x': '2026-10-04T09:20:00Z',
+    'email:ana': '2026-10-04T09:42:00Z',
+  };
+  const cheia: Chamar = async <T,>(_funcao: string, args: Record<string, unknown>) =>
+    [{ allowed: false, hits: 5, reset_at: fecho[String(args.p_bucket)] ?? null }] as T;
+  const limite = await verificarEntrada(cheia, ['ip:x', 'email:ana'], 900, 5);
+  assert.equal(limite.permitido, false);
+  assert.equal(limite.repoeEm, '2026-10-04T09:42:00Z');
+  assert.equal(horaNoFuso(limite.repoeEm, 'Europe/Lisbon'), '10h42');
+
+  // Um balde aberto não conta para a hora: a origem fechada é que manda.
+  const meia: Chamar = async <T,>(_funcao: string, args: Record<string, unknown>) =>
+    [
+      String(args.p_bucket) === 'ip:x'
+        ? { allowed: false, hits: 5, reset_at: '2026-10-04T09:20:00Z' }
+        : { allowed: true, hits: 1, reset_at: '2026-10-04T09:59:00Z' },
+    ] as T;
+  assert.equal(
+    (await verificarEntrada(meia, ['ip:x', 'email:ana'], 900, 5)).repoeEm,
+    '2026-10-04T09:20:00Z',
+  );
+
+  // Aberta, não há hora a dizer.
+  assert.equal((await verificarEntrada(baseAFingir().chamar, ['ip:x'], 900, 5)).repoeEm, null);
 });
 
 // --- a chave em cada pedido ------------------------------------------------------
