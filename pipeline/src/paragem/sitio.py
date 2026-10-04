@@ -182,6 +182,10 @@ class Sitio:
         self.regiao = regiao
         self.destino = Path(destino) / "sitio"
         self.saidas: list[Saida] = []
+        # O que a construção tem a dizer a quem a corre, além dos ficheiros:
+        # o que ficou a meio e porquê (o comboio que não se encaminhou, por
+        # exemplo). O `pipeline sitio` imprime-as.
+        self.notas: list[str] = []
         self._feeds: dict[str, Gtfs] = {}
         # As paragens da rede que já têm concelho, para atribuir os pontos dos
         # outros modos numa região sem carta administrativa (`_concelho_de`).
@@ -1790,33 +1794,101 @@ def dias_das_mascaras(c: dict[str, Any]) -> dict[str, list[int]]:
 
 
 def _percursos(s: Sitio, regiao: Regiao, g) -> tuple[int, int]:
-    """Os traçados por linha, a partir do `shapes.txt` do feed da própria rede.
+    """Os traçados por linha: os que os feeds trazem, e o comboio pelos carris.
 
-    ERA de um feed de terceiro declarado como «base geométrica», e deixou de
-    ser (CLAUDE.md §11.8): a rede passou a construir-se com os seus próprios
-    traçados, e os do feed são exatamente os percursos destas viagens — não os
-    de outra edição da rede, com paragens a mais e a menos.
+    ERAM SÓ OS DA REDE PRÓPRIA, e o comboio e os expressos saíam a direito no
+    mapa — mesmo quando o ficheiro do operador trazia o traçado (P1-038).
+    Passam a entrar todos os feeds que o motor lê e que tragam `shapes.txt`,
+    cada um com o prefixo das suas paragens na grelha. A rede própria vem
+    primeiro: um troço que dois ficheiros desenhem fica com o dela.
 
-    Não sabe o que é a região: pergunta-lhe qual é o feed da rede própria. Um
-    feed sem `shapes.txt` não tem traçados, e a interface desenha a direito —
-    que é o que sempre fez.
+    O COMBOIO SEM TRAÇADO encaminha-se pelos carris do recorte do
+    OpenStreetMap (`_comboio_pelos_carris`): uma estação está em cima da via, e
+    o caminho pela via entre duas estações é por onde o comboio passa. Onde não
+    houver recorte, ou caminho, o troço continua a direito — e o mapa
+    desenha-o a tracejado, a dizer que é aproximado.
+
+    Não sabe o que é a região: pergunta-lhe que feeds há, qual é o da rede
+    própria e qual é o do comboio.
     """
     from . import percursos as _mod
 
+    grelha = g.para_json((regiao.motor or {}).get("fuso", "UTC"))
+    partilha = s.paragens_partilhadas
     proprio = s.feed_proprio
-    if not proprio:
-        return 0, 0
-    feed = s._feed(proprio)
-    if feed is None or "shapes.txt" not in feed:
-        return 0, 0
-    feito = _mod.construir(
-        feed,
-        g.para_json((regiao.motor or {}).get("fuso", "UTC")),
-        prefixo=f"{proprio.removesuffix('.zip')}:",
-    )
+    nomes = [str(n).split("/")[-1] for n in ((regiao.motor or {}).get("gtfs") or [])]
+    nomes.sort(key=lambda nome: nome != proprio)
+    com_tracado: list[tuple[str, Gtfs]] = []
+    comboio_sem_tracado: list[str] = []
+    for nome in nomes:
+        feed = s._feed(nome)
+        if feed is None:
+            continue
+        chave = nome.removesuffix(".zip")
+        prefixo = f"{partilha.get(chave, chave)}:"
+        if "shapes.txt" in feed:
+            com_tracado.append((prefixo, feed))
+        elif nome == s.feed_de_comboio:
+            comboio_sem_tracado.append(prefixo)
+
+    outros = _comboio_pelos_carris(s, regiao, grelha, comboio_sem_tracado)
+    feito = _mod.construir_de(com_tracado, grelha, outros=outros)
     if not feito.por_linha:
         return 0, 0
-    return _mod.escrever(s.destino, feito, g.para_json((regiao.motor or {}).get("fuso", "UTC")))
+    return _mod.escrever(s.destino, feito, grelha)
+
+
+def _comboio_pelos_carris(
+    s: Sitio, regiao: Regiao, grelha: dict[str, Any], prefixos: list[str]
+) -> dict[tuple[str, str], list[tuple[float, float]]]:
+    """Por onde o comboio passa entre duas estações, pelos carris do recorte.
+
+    O ficheiro do operador ferroviário não traz traçados, e o troço saía a
+    direito — uma linha por cima de serras e rios, que o mapa desenhava a
+    tracejado para não fingir (P1-038). O recorte do OpenStreetMap que a
+    região já tem (`base-osm`) traz a via, e o caminho mais curto pela via
+    entre duas estações consecutivas é o da linha.
+
+    O que daqui sai deriva do OpenStreetMap, e é ODbL como o resto do que vem
+    dele: a atribuição está no mapa onde se desenha.
+    """
+    from . import tracados
+
+    if not prefixos:
+        return {}
+    recorte = next(
+        (s.destino.parent / d.saida for d in regiao.saidas if d.papel == "base-osm" and d.saida),
+        None,
+    )
+    if recorte is None or not recorte.exists():
+        return {}
+
+    paragens = grelha["paragens"]
+    pares: dict[tuple[str, str], tuple[tuple[float, float], tuple[float, float]]] = {}
+    for _linha, _servico, horas in grelha["viagens"]:
+        seq = horas[0::3]
+        for a, b in zip(seq, seq[1:], strict=False):
+            ia, ib = paragens[a][0], paragens[b][0]
+            if any(ia.startswith(p) and ib.startswith(p) for p in prefixos):
+                pares.setdefault(
+                    (ia, ib),
+                    ((paragens[a][1], paragens[a][2]), (paragens[b][1], paragens[b][2])),
+                )
+    if not pares:
+        return {}
+
+    lat0 = sum(a[0] for a, _ in pares.values()) / len(pares)
+    grafo = tracados.ler_rede_ferroviaria(recorte, None, lat0)
+    if grafo is None:
+        s.notas.append("comboio a direito: o recorte não tem carris")
+        return {}
+    caminhos, recusas = tracados.pelos_carris(grafo, pares)
+    s.notas.append(
+        f"comboio pelos carris: {len(caminhos)} de {len(pares)} troços"
+        + (f" ({len(recusas)} a direito)" if recusas else "")
+    )
+    s.notas.extend(f"  a direito — {r}" for r in recusas[:10])
+    return caminhos
 
 
 def _procura(

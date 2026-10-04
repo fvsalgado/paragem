@@ -52,6 +52,13 @@ CLASSES = (
     "tertiary_link",
 )
 
+# OS CARRIS POR ONDE UM COMBOIO ANDA. A via larga e a métrica, e o metro de
+# superfície. Ficam de fora as que já não andam — `abandoned`, `disused`,
+# `razed` são outros valores da mesma etiqueta — e as que ainda não andam
+# (`construction`), porque um comboio desenhado por uma linha fechada é um
+# percurso que ninguém faz.
+CLASSES_FERROVIARIAS = ("rail", "narrow_gauge", "light_rail")
+
 
 @dataclass(frozen=True)
 class Parametros:
@@ -73,18 +80,28 @@ class Tracado:
 
 
 class _Vias:
-    """As vias por onde um autocarro anda, lidas do recorte.
+    """As vias por onde um autocarro anda — ou um comboio —, lidas do recorte.
 
     Escrito à mão e não com `osmium.SimpleHandler` genérico porque a caixa
     importa: o recorte da região leva margem para as linhas que atravessam a
     fronteira, e encaminhar sobre essa margem toda é memória que não se usa.
+
+    `etiqueta` diz que rede é: `highway` para a estrada, `railway` para os
+    carris. Um carril não tem sentido único — o comboio anda nos dois na mesma
+    via —, e as exceções de acesso são da estrada.
     """
 
-    def __init__(self, caixa: dict[str, float] | None, classes: tuple[str, ...]) -> None:
+    def __init__(
+        self,
+        caixa: dict[str, float] | None,
+        classes: tuple[str, ...],
+        etiqueta: str = "highway",
+    ) -> None:
         import osmium
 
         self.caixa = caixa
         self.classes = set(classes)
+        self.etiqueta = etiqueta
         self.vias: list[tuple[list[tuple[float, float]], bool, bool]] = []
         handler = self
 
@@ -104,7 +121,7 @@ class _Vias:
         import osmium
 
         etiquetas = {t.k: t.v for t in w.tags}
-        classe = etiquetas.get("highway")
+        classe = etiquetas.get(self.etiqueta)
         if classe not in self.classes:
             return
         # Uma via de serviço fechada ao público não é caminho: é o parque de
@@ -116,6 +133,9 @@ class _Vias:
         except osmium.InvalidLocationError:
             return
         if not any(self._dentro(lat, lon) for lat, lon in pontos):
+            return
+        if self.etiqueta != "highway":
+            self.vias.append((pontos, False, False))
             return
         sentido = etiquetas.get("oneway")
         rotunda = etiquetas.get("junction") == "roundabout"
@@ -254,6 +274,76 @@ class Grafo:
 
 def ler_rede(caminho: Path, caixa: dict[str, float] | None, lat0: float) -> Grafo:
     return Grafo(_Vias(caixa, CLASSES).ler(caminho), lat0)
+
+
+def ler_rede_ferroviaria(
+    caminho: Path, caixa: dict[str, float] | None, lat0: float
+) -> Grafo | None:
+    """Os carris do recorte, prontos a encaminhar — ou `None`, se não houver nenhum."""
+    vias = _Vias(caixa, CLASSES_FERROVIARIAS, etiqueta="railway").ler(caminho)
+    return Grafo(vias, lat0) if vias else None
+
+
+@dataclass(frozen=True)
+class ParametrosDaVia:
+    """Os limites do comboio encaminhado pelos carris.
+
+    Uma estação fica em cima da via, e por isso a tolerância é mais apertada do
+    que a da paragem de autocarro: a 300 m já não é aquela estação, é a via de
+    outra coisa — um ramal de mercadorias, uma linha que passa ao lado. E um
+    desvio pelos carris é raro: o comboio vai pela linha, e um caminho três
+    vezes mais comprido do que a reta é um ramal que o algoritmo achou mais
+    curto e que nenhum comboio de passageiros faz.
+    """
+
+    estacao_longe_m: float = 300
+    desvio: float = 3.0
+    desvio_m: float = 2000
+    #: Acima disto as duas estações estão fora do recorte — a viagem entra
+    #: inteira na grelha, de Lisboa ao Porto, e o recorte é só o da região. Não
+    #: é uma recusa: é um troço que este recorte não cobre.
+    fora_do_recorte_m: float = 5000
+
+
+def pelos_carris(
+    grafo: Grafo,
+    pares: dict[Any, tuple[tuple[float, float], tuple[float, float]]],
+    par: ParametrosDaVia | None = None,
+) -> tuple[dict[Any, list[tuple[float, float]]], list[str]]:
+    """O caminho pelos carris entre cada par de estações, onde ele existir.
+
+    `pares` vai de uma chave qualquer às coordenadas das duas estações. Fica de
+    fora — e diz-se porquê — o par com uma estação longe da via, sem caminho
+    entre as duas, ou com um caminho que é um desvio absurdo: o troço desenha-se
+    a direito, como sempre se desenhou, e uma reta vê-se que é esquemática.
+    """
+    par = par or ParametrosDaVia()
+    caminhos: dict[Any, list[tuple[float, float]]] = {}
+    recusas: list[str] = []
+    for chave, (a, b) in pares.items():
+        pa, da = grafo.projetar(a[0], a[1])
+        pb, db = grafo.projetar(b[0], b[1])
+        if min(da, db) > par.fora_do_recorte_m:
+            continue
+        if max(da, db) > par.estacao_longe_m:
+            recusas.append(f"{chave}: estação a {round(max(da, db))} m da via")
+            continue
+        if pa == pb:
+            continue
+        caminho = grafo.caminho(pa, pb)
+        if caminho is None:
+            recusas.append(f"{chave}: sem caminho pelos carris")
+            continue
+        comprimento = grafo.comprimento(caminho)
+        reta = grafo.em_linha_reta(pa, pb)
+        if comprimento > par.desvio * reta + par.desvio_m:
+            recusas.append(
+                f"{chave}: {comprimento / 1000:.1f} km pelos carris contra "
+                f"{reta / 1000:.1f} km em reta"
+            )
+            continue
+        caminhos[chave] = grafo.pontos(caminho)
+    return caminhos, recusas
 
 
 def _projetar(lat: float, lon: float, kx: float, ky: float) -> tuple[float, float]:
