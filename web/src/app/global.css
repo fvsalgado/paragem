@@ -74,14 +74,15 @@
   --medida-dados: 72rem;
 }
 
-/* O TEMA ESCURO, quando o sistema o pede (P1-044). De noite, numa paragem, um
-   ecrã claro encandeia — e as aplicações de transportes que as pessoas
-   conhecem têm todas o seu. A paleta é a que a auditoria visual propôs, com
-   os contrastes medidos: o texto a 14,9:1 sobre o fundo, o secundário a
-   8,7:1, a marca a 8,6:1, o alerta a 7,0:1 sobre o seu fundo, o a pedido a
-   6,9:1 — todos acima dos 4,5:1, também sobre as superfícies e os realces,
-   e os traços de estado acima dos 3:1. O foco continua o amarelo do §6, que
-   se vê nos dois.
+/* O TEMA ESCURO, quando o sistema o pede (P1-044) ou quando se escolhe — no
+   interruptor do cabeçalho ou nas escolhas do rodapé (`lib/tema.ts`). De
+   noite, numa paragem, um ecrã claro encandeia — e as aplicações de
+   transportes que as pessoas conhecem têm todas o seu. A paleta é a que a
+   auditoria visual propôs, com os contrastes medidos: o texto a 14,9:1 sobre
+   o fundo, o secundário a 8,7:1, a marca a 8,6:1, o alerta a 7,0:1 sobre o
+   seu fundo, o a pedido a 6,9:1 — todos acima dos 4,5:1, também sobre as
+   superfícies e os realces, e os traços de estado acima dos 3:1. O foco
+   continua o amarelo do §6, que se vê nos dois.
 
    O que NÃO muda: os botões e os círculos dos modos (fundo cheio com branco
    por cima, que se lê nos dois temas), os distintivos das linhas (a cor
@@ -89,7 +90,7 @@
    uma região mudam no bloco dela (`.sitio-da-regiao`, mais abaixo): o feixe
    escuro, tirado da mesma cor. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:where(:not([data-tema='claro'])) {
     color-scheme: dark;
     --fundo: #0f1a20;
     --superficie: #16242c;
@@ -114,6 +115,33 @@
     --feixe-2: #7ebaf6;
     --feixe-3: #cbe3ff;
   }
+}
+/* O escuro escolhido à mão (`lib/tema.ts`): as mesmas cores, uma a uma. Um
+   teste confere que os dois blocos não divergem (`tests/tema.test.mts`). */
+:root:where([data-tema='escuro']) {
+  color-scheme: dark;
+  --fundo: #0f1a20;
+  --superficie: #16242c;
+  --superficie-suave: #1d2e37;
+  --realce: #1f3a47;
+  --realce-forte: #21404f;
+  --fundo-do-mapa: #1b262c;
+  --texto: #e6edf0;
+  --texto-secundario: #a9b8bf;
+  --linhas: #2a3a43;
+  --borda-campo: #7f95a0;
+  --marca-texto: #7ebaf6;
+  --marca-texto-hover: #cbe3ff;
+  --alerta-texto: #ff8a7a;
+  --alerta-texto-forte: #ff8a7a;
+  --alerta-fundo: #3a1714;
+  --a-pedido-texto: #e0a24a;
+  --a-pedido-fundo: #2e2310;
+  --bicicleta-fundo: #16301f;
+  --desligado: #3a4a52;
+  --feixe-1: #f2573f;
+  --feixe-2: #7ebaf6;
+  --feixe-3: #cbe3ff;
 }
 
 *,
@@ -383,6 +411,103 @@ code {
     0 -3.5px 0 var(--feixe-1),
     0 3.5px 0 var(--feixe-3);
 }
+/* O TEMA À ESCOLHA (`EscolherTema.tsx`).
+
+   O INTERRUPTOR DO CABEÇALHO é um botão redondo de 44 px com a lua: apagado,
+   só o contorno; aceso — no tema escuro —, cheio na cor das ligações, com a
+   lua na cor do fundo (8,6:1 no produto). O aceso tira-se do tema, e não do
+   `aria-pressed`, que só existe depois de o React acordar: na primeira
+   pintura o botão já está certo. */
+.botao-do-tema {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--alvo);
+  height: var(--alvo);
+  padding: 0;
+  border: 1px solid var(--borda-campo);
+  border-radius: 50%;
+  background: var(--superficie);
+  color: var(--marca-texto);
+  cursor: pointer;
+}
+.botao-do-tema:hover {
+  border-color: var(--marca-texto);
+}
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-tema='claro'])) .botao-do-tema {
+    background: var(--marca-texto);
+    border-color: var(--marca-texto);
+    color: var(--fundo);
+  }
+}
+:where(:root[data-tema='escuro']) .botao-do-tema {
+  background: var(--marca-texto);
+  border-color: var(--marca-texto);
+  color: var(--fundo);
+}
+
+/* AS AÇÕES DO CABEÇALHO DE UMA REGIÃO: as duas ligações e o interruptor. Num
+   telemóvel são a segunda fila — as ligações à esquerda, o interruptor à
+   direita —; num ecrã largo, o fim da fila única. */
+.acoes-do-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  flex: 1 1 100%;
+}
+@media (min-width: 48rem) {
+  .acoes-do-cabecalho {
+    flex: none;
+  }
+}
+
+/* AS TRÊS ESCOLHAS DO TEMA, no rodapé e no menu do mapa: rádios à vista, como
+   o «Quando» do planeador — o alvo de 44 px é a etiqueta inteira. É aqui que
+   se volta ao tema do aparelho. */
+.escolha-do-tema {
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  padding: 0.25rem 0.75rem 0.5rem;
+  margin: 1rem 0;
+  min-width: 0;
+}
+.escolha-do-tema legend {
+  padding: 0 0.35rem;
+  font-size: 0.85rem;
+  color: var(--texto-secundario);
+}
+.opcoes-do-tema {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.25rem;
+}
+.opcoes-do-tema label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: var(--alvo);
+  /* sem a margem das etiquetas dos formulários, que é de uma etiqueta por
+     cima do seu campo e aqui abria um vão por cima de cada fila */
+  margin: 0;
+  color: var(--texto);
+  cursor: pointer;
+}
+.opcoes-do-tema input[type='radio'] {
+  min-height: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--marca-texto);
+}
+.nota-do-tema {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--texto-secundario);
+}
+
 /* Onde há régua, ela é a borda: a linha cinzenta de antes sai. No rodapé vai
    de ponta a ponta, por cima do espaço dele. */
 .cabecalho:has(> .regua-do-feixe) {
@@ -411,13 +536,20 @@ code {
   --marca-texto-hover: var(--regiao-marca-hover);
 }
 @media (prefers-color-scheme: dark) {
-  .sitio-da-regiao {
+  :where(:root:not([data-tema='claro'])) .sitio-da-regiao {
     --feixe-1: var(--regiao-feixe-escuro-1);
     --feixe-2: var(--regiao-feixe-escuro-2);
     --feixe-3: var(--regiao-feixe-escuro-3);
     --marca-texto: var(--regiao-feixe-escuro-2);
     --marca-texto-hover: var(--regiao-feixe-escuro-3);
   }
+}
+:where(:root[data-tema='escuro']) .sitio-da-regiao {
+  --feixe-1: var(--regiao-feixe-escuro-1);
+  --feixe-2: var(--regiao-feixe-escuro-2);
+  --feixe-3: var(--regiao-feixe-escuro-3);
+  --marca-texto: var(--regiao-feixe-escuro-2);
+  --marca-texto-hover: var(--regiao-feixe-escuro-3);
 }
 
 /* A ASSINATURA DA REGIÃO — o logótipo e os dois nomes —, a mesma no
@@ -2617,6 +2749,14 @@ ul.cartoes .cartao h3 {
     margin-left: auto;
   }
 }
+/* O interruptor do tema fecha a fila — e abaixo dos 23rem não cabe: a 320 px,
+   a marca, o «Falar connosco» e ele somam 363 px. Aí sai, e a escolha fica no
+   rodapé, com as três opções. */
+@media (max-width: 22.99rem) {
+  .cabecalho-do-produto .botao-do-tema {
+    display: none;
+  }
+}
 
 /* O FEIXE NO SÍTIO — a marca do produto (`MarcaDoProduto.tsx`) e o
    logótipo-endereço de cada região (`EnderecoEmFeixe.tsx`). Na marca, cada
@@ -4024,6 +4164,11 @@ dialog.menu-do-mapa .lista .secundario {
 }
 .painel-cabecalho .interior .quem + form.sair {
   margin-left: 0;
+}
+/* O interruptor do tema fecha a fila, encostado à direita também à porta,
+   onde ainda não há quem nem «Sair» a empurrá-lo. */
+.painel-cabecalho .marca-dados + .botao-do-tema {
+  margin-left: auto;
 }
 .painel-cabecalho .marca-dados {
   flex: 0 0 auto;

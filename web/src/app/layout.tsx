@@ -3,6 +3,7 @@ import { Atkinson_Hyperlegible } from 'next/font/google';
 import './global.css';
 import Medicao from '@/componentes/Medicao';
 import { COR_DO_TEMA } from '@/lib/manifesto';
+import { GUIAO_DO_TEMA } from '@/lib/tema';
 
 /**
  * O invólucro de TUDO — do produto e de cada região.
@@ -52,10 +53,18 @@ const letra = Atkinson_Hyperlegible({
   variable: '--letra',
 });
 
+/**
+ * O TEMA ESCOLHIDO, ANTES DA PRIMEIRA PINTURA (`lib/tema.ts`). O guião é o
+ * primeiro do `<body>` e corre enquanto a página se lê, antes de haver o que
+ * pintar: quem escolheu o escuro não vê um clarão branco a cada página. Muda
+ * um atributo do `<html>` que o servidor não conhece — daí o
+ * `suppressHydrationWarning`, que só vale para esse elemento.
+ */
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-PT" className={letra.variable}>
+    <html lang="pt-PT" className={letra.variable} suppressHydrationWarning>
       <body>
+        <script dangerouslySetInnerHTML={{ __html: GUIAO_DO_TEMA }} />
         <a className="saltar" href="#conteudo">
           Saltar para o conteúdo
         </a>

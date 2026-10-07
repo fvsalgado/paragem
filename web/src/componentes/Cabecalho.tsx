@@ -1,5 +1,6 @@
 import Link from '@/componentes/Ligacao';
 import AssinaturaDaRegiao from '@/componentes/AssinaturaDaRegiao';
+import BotaoDoTema from '@/componentes/BotaoDoTema';
 import { exigirRegiao, temMosaicos, url } from '@/lib/dados';
 import { assinaturaDaRegiao, marcaDaRegiao } from '@/lib/marca';
 
@@ -23,6 +24,9 @@ import { assinaturaDaRegiao, marcaDaRegiao } from '@/lib/marca';
  * Ficam duas ligações: **o mapa**, que é a aplicação, e **a rede**, que é o
  * catálogo onde tudo o resto continua a viver — e continua a ser o caminho
  * de quem não pode ou não quer usar um mapa.
+ *
+ * E o interruptor do tema escuro (`BotaoDoTema.tsx`), no fim da fila: o
+ * sítio é de quem o usa de noite numa paragem tanto como de dia.
  */
 export default async function Cabecalho({ regiao: id }: { regiao: string }) {
   const r = await exigirRegiao(id);
@@ -43,16 +47,19 @@ export default async function Cabecalho({ regiao: id }: { regiao: string }) {
             endereco={endereco}
           />
         </Link>
-        <nav aria-label="Principal">
-          <ul>
-            <li>
-              <Link href={url(id)}>{temMapa ? 'Mapa' : 'Início'}</Link>
-            </li>
-            <li>
-              <Link href={url(id, 'rede/')}>A rede</Link>
-            </li>
-          </ul>
-        </nav>
+        <div className="acoes-do-cabecalho">
+          <nav aria-label="Principal">
+            <ul>
+              <li>
+                <Link href={url(id)}>{temMapa ? 'Mapa' : 'Início'}</Link>
+              </li>
+              <li>
+                <Link href={url(id, 'rede/')}>A rede</Link>
+              </li>
+            </ul>
+          </nav>
+          <BotaoDoTema />
+        </div>
       </div>
       <span className="regua-do-feixe" aria-hidden="true" />
     </header>
