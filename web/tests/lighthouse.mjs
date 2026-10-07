@@ -195,12 +195,21 @@ try {
  * pouco — não para voltar a biblioteca da medição a cada página (96 kB), nem uma
  * segunda cópia do mapa (300). Quem o passar de propósito sobe-o aqui, com a
  * razão escrita, como esta.
+ *
+ * A 7/10/2026, O TEMA CLARO OU ESCURO À ESCOLHA (`lib/tema.ts`) passou-o de
+ * propósito. Custa entre 2,6 e 3,5 KiB em cada página, medidos na mesma
+ * máquina contra o `main` de antes dele: o JavaScript do interruptor e das
+ * escolhas (1,5, com o pedido), o HTML deles, que o Next manda duas vezes
+ * (0,9), e o CSS (0,3). A folga estava gasta: «como chegar» estava a 289,8 de
+ * 290, e a paragem a 207,5 de 210. Sobem esses dois totais, 5 KiB cada; os
+ * outros ainda cabem, a um ou dois KiB do teto — o próximo a passar sabe que
+ * está lá.
  */
 const ORCAMENTO = {
   início: { htmlEJs: 520, total: 680 },
   'a rede': { htmlEJs: 170, total: 210 },
-  'como chegar': { htmlEJs: 180, total: 290 },
-  paragem: { htmlEJs: 170, total: 210 },
+  'como chegar': { htmlEJs: 180, total: 295 },
+  paragem: { htmlEJs: 170, total: 215 },
   linha: { htmlEJs: 155, total: 200 },
   tarifário: { htmlEJs: 170, total: 210 },
 };
