@@ -52,14 +52,19 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
           <p>
             <strong>Este sítio está configurado para seguir a mesma pessoa entre visitas.</strong>{' '}
             Nesse modo guarda-se um identificador no teu dispositivo, e isso exige o teu
-            consentimento e uma base legal declarada.
+            consentimento e uma base legal declarada. O tema claro ou escuro, se o escolheres,
+            também fica guardado no teu navegador.
           </p>
         </div>
       ) : (
         <p>
-          <strong>Este sítio não guarda nada no teu dispositivo</strong> e não regista o teu
-          endereço IP. Não há cookies, não há identificador, não há forma de ligar duas visitas à
-          mesma pessoa.
+          <strong>
+            Este sítio só guarda uma coisa no teu dispositivo, e só se a escolheres: o tema claro ou
+            escuro.
+          </strong>{' '}
+          Fica no teu navegador, não é enviada a ninguém, e escolher «Como o aparelho» apaga-a. O
+          sítio não regista o teu endereço IP. Não há cookies, não há identificador, não há forma de
+          ligar duas visitas à mesma pessoa.
         </p>
       )}
 

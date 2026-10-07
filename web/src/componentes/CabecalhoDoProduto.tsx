@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import MarcaDoProduto from './MarcaDoProduto';
+import BotaoDoTema from './BotaoDoTema';
 
 /**
  * O cabeçalho das páginas do PRODUTO — não o de uma região.
@@ -26,6 +27,8 @@ import MarcaDoProduto from './MarcaDoProduto';
  * uma região desligada — aí `/` voltava a ser essa página, e as ligações têm
  * de levar à montra pela morada dela.
  */
+// No fim da fila, o interruptor do tema escuro (`BotaoDoTema.tsx`), como nas
+// regiões.
 export default function CabecalhoDoProduto({ origem = '' }: { origem?: string }) {
   const em = (caminho: string) => `${origem}${caminho}`;
   return (
@@ -52,6 +55,7 @@ export default function CabecalhoDoProduto({ origem = '' }: { origem?: string })
         <Link href={em('/contacto/')} className="botao">
           Falar connosco
         </Link>
+        <BotaoDoTema />
       </div>
       <span className="regua-do-feixe" aria-hidden="true" />
     </header>

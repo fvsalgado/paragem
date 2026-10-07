@@ -9,6 +9,7 @@ import { listarRegioes } from '@/lib/painel/consultas';
 import { CABECALHO_DO_CAMINHO, barreiraDoLayout } from '@/lib/painel/guarda';
 import { pode } from '@/lib/painel/papeis';
 import MarcaDoProduto from '@/componentes/MarcaDoProduto';
+import BotaoDoTema from '@/componentes/BotaoDoTema';
 
 /** Nada do painel pode ser servido de cache. */
 export const dynamic = 'force-dynamic';
@@ -125,6 +126,7 @@ export default async function LayoutDoPainel({ children }: { children: React.Rea
               </form>
             </>
           ) : null}
+          <BotaoDoTema />
         </div>
         {portao.ok && (itens.length > 0 || minhas.length > 0) ? (
           <div className="interior navegacao-do-painel">

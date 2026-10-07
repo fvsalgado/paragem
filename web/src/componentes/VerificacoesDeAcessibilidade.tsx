@@ -23,7 +23,10 @@ export default function VerificacoesDeAcessibilidade({ comLinhas }: { comLinhas:
         <li>Foco visível em todos os elementos que o recebem.</li>
         <li>Uma ligação para saltar diretamente ao conteúdo.</li>
         <li>Respeito por «reduzir movimento» quando o sistema o pede.</li>
-        <li>Tema escuro quando o sistema o pede, com os mesmos contrastes.</li>
+        <li>
+          Tema claro ou escuro à escolha de quem vê — por omissão, o do aparelho —, com os mesmos
+          contrastes.
+        </li>
       </ul>
       <p>
         Estas verificações correm em cada alteração, com o{' '}

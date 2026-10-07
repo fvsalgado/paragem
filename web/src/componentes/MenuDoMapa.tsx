@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import Link from '@/componentes/Ligacao';
 import { Acessibilidade, APedido, Aviso, Bilhete, Descarregar, Fechar, Lista } from './Icones';
 import AssinaturaDaRegiao from './AssinaturaDaRegiao';
+import { EscolhaDoTema } from './EscolherTema';
 import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
 import type { Assinatura, Marca } from '@/lib/marca';
 
@@ -113,6 +114,8 @@ export default function MenuDoMapa({
           ))}
         </ul>
       </nav>
+      {/* O TEMA: aqui não há cabeçalho nem rodapé, e o mapa também muda com ele. */}
+      <EscolhaDoTema />
       {/* A ASSINATURA DO PRODUTO, discreta e no fim, como no rodapé das outras
           páginas — que esta não tem. Era uma entrada do menu, «Sobre o
           Paragem.pt», ao lado das da rede, e antes disso «Outras regiões»: o

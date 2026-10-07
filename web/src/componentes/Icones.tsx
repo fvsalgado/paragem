@@ -311,3 +311,12 @@ export function Acessibilidade(p: Props) {
     </Svg>
   );
 }
+
+/** A lua do tema escuro: um crescente, no mesmo traço dos outros. */
+export function Lua(p: Props) {
+  return (
+    <Svg {...p}>
+      <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5Z" />
+    </Svg>
+  );
+}

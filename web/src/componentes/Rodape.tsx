@@ -2,6 +2,7 @@ import Link from '@/componentes/Ligacao';
 import { exigirRegiao, url } from '@/lib/dados';
 import { redeEQuemAGere } from '@/lib/prosa';
 import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
+import { EscolhaDoTema } from '@/componentes/EscolherTema';
 
 export default async function Rodape({ regiao: id }: { regiao: string }) {
   const r = await exigirRegiao(id);
@@ -33,6 +34,9 @@ export default async function Rodape({ regiao: id }: { regiao: string }) {
             </li>
           </ul>
         </nav>
+        {/* O TEMA, com a volta ao do aparelho — o interruptor do cabeçalho só
+            troca entre o claro e o escuro (`EscolherTema.tsx`). */}
+        <EscolhaDoTema />
         {/* A FRASE QUE NOMEIA O CLIENTE, em todas as páginas. Dizia «Rede Rede
             Alta gerida por Comunidade Intermunicipal…, com operação de …»:
             sem os artigos e com a palavra repetida (`prosa.ts`). */}

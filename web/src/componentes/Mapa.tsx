@@ -7,6 +7,7 @@ import { camadasDe, type CamadaDePontos } from '@/lib/pontos-no-mapa';
 import { DENSIDADE, imagemDaPlaca } from '@/lib/icones-do-mapa';
 import type { Ponto } from '@/lib/formato';
 import type { PercursoGeo } from '@/lib/otp';
+import { ouvirTema, temaEfetivo } from '@/lib/tema';
 
 /**
  * O mapa. Não é um componente numa página — é a página.
@@ -136,10 +137,13 @@ const semMovimento = () =>
   typeof window !== 'undefined' &&
   !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-/** O tema que o sistema pede — o mesmo `prefers-color-scheme` das cores da página. */
-const ESCURO = '(prefers-color-scheme: dark)';
-function temaDoSistema(): TemaDoMapa {
-  return typeof window !== 'undefined' && window.matchMedia?.(ESCURO).matches ? 'escuro' : 'claro';
+/**
+ * O tema da página — o escolhido no cabeçalho, ou o do aparelho (`lib/tema.ts`).
+ * Era só o do sistema: com o tema à escolha, um mapa claro numa página que se
+ * escolheu escura voltava a encandear.
+ */
+function temaDaPagina(): TemaDoMapa {
+  return temaEfetivo();
 }
 
 /**
@@ -381,10 +385,10 @@ export default function Mapa({
 
         criado = new Map({
           container: caixa.current,
-          // O MAPA NO TEMA DO SISTEMA, como o resto da página (P1-044): um mapa
+          // O MAPA NO TEMA DA PÁGINA, como o resto dela (P1-044): um mapa
           // claro no meio de uma página escura encandeava exatamente onde o
           // tema escuro devia poupar os olhos.
-          style: estiloDoMapa(mosaicos, atribuicao || undefined, temaDoSistema()),
+          style: estiloDoMapa(mosaicos, atribuicao || undefined, temaDaPagina()),
           center: [centro[1], centro[0]],
           zoom,
           // A ATRIBUIÇÃO JÁ ESCRITA QUANDO O CONTROLO NASCE. Vinha só da fonte
@@ -720,16 +724,13 @@ export default function Mapa({
     }
   }, [modosVisiveis, pontos, estado]);
 
-  // O TEMA SEGUE O DO SISTEMA COM O MAPA ABERTO: quem tem o telemóvel a mudar
-  // sozinho ao anoitecer vê o mapa mudar com a página, e não fica com um
-  // retângulo claro no meio dela.
+  // O TEMA SEGUE O DA PÁGINA COM O MAPA ABERTO: quem escolhe o escuro no
+  // menu, ou tem o telemóvel a mudar sozinho ao anoitecer, vê o mapa mudar
+  // com a página, e não fica com um retângulo claro no meio dela.
   useEffect(() => {
     const m = mapa.current;
-    if (!m || estado !== 'pronto' || !window.matchMedia) return;
-    const consulta = window.matchMedia(ESCURO);
-    const mudou = () => aplicarTema(m, mosaicos, atribuicao || undefined, temaDoSistema());
-    consulta.addEventListener('change', mudou);
-    return () => consulta.removeEventListener('change', mudou);
+    if (!m || estado !== 'pronto') return;
+    return ouvirTema(() => aplicarTema(m, mosaicos, atribuicao || undefined, temaDaPagina()));
   }, [estado, mosaicos, atribuicao]);
 
   // Os pontos podem mudar depois de o mapa estar pronto (uma procura, um

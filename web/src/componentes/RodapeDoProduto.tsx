@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AUTOR, CODIGO, CONTACTO, correioPara } from '@/lib/produto';
+import { EscolhaDoTema } from './EscolherTema';
 
 /**
  * O rodapé das páginas do produto: com quem se fala, o que é de quem, e onde
@@ -33,6 +34,7 @@ export default function RodapeDoProduto({ origem = '' }: { origem?: string }) {
             </li>
           </ul>
         </nav>
+        <EscolhaDoTema />
         <p>
           O Paragem.pt é desenhado e desenvolvido por {AUTOR.nome}. Contacto:{' '}
           <a href={correioPara('Paragem.pt')} className="endereco-de-correio">
