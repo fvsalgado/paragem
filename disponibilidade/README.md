@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2026 Fábio Salgado <fvsalgado@gmail.com>
+SPDX-FileCopyrightText: 2026 Fábio Salgado <correio@paragem.pt>
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 

@@ -34,6 +34,7 @@ import { naFrase } from '@/lib/painel/ficha';
 import { nomeDoPapel } from '@/lib/painel/papeis';
 import { pessoasDaRegiao } from '@/lib/painel/pessoas';
 import { contactosDoPainel } from '@/lib/painel/contactos';
+import { DO_PRODUTO } from '@/lib/contactos';
 import { aAutoridade, lista } from '@/lib/prosa';
 
 export const dynamic = 'force-dynamic';
@@ -369,7 +370,7 @@ export default async function FichaDaRegiao({ params, searchParams }: Props) {
           <>
             <p>
               Esta instalação ainda não guarda estes contactos: a declaração de acessibilidade e a
-              página de privacidade dizem «Por preencher».
+              página de privacidade mostram o responsável e o contacto do produto.
             </p>
             <details className="para-quem-gere">
               <summary>Para quem gere a instalação</summary>
@@ -386,9 +387,9 @@ export default async function FichaDaRegiao({ params, searchParams }: Props) {
               O que as páginas{' '}
               <a href={`https://${regiao.domain}/acessibilidade/`}>Acessibilidade</a> e{' '}
               <a href={`https://${regiao.domain}/privacidade/`}>Privacidade</a> {frase.de} dizem a
-              quem quer reclamar ou saber dos dados. O que ficar em branco aparece como «Por
-              preencher»: um contacto inventado é pior do que nenhum, porque quem reclama fica à
-              espera.
+              quem quer reclamar ou saber dos dados. O que ficar em branco é respondido pelo
+              produto: {DO_PRODUTO.responsavel}, pelo endereço {DO_PRODUTO.email}. Um contacto
+              inventado é pior do que nenhum, porque quem reclama fica à espera.
             </p>
             <form action={guardarContactos} className="formulario formulario-largo">
               <input type="hidden" name="regiao" value={regiao.id} />

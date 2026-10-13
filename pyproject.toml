@@ -5,7 +5,7 @@ description = "Paragem.pt — pipeline de dados de transportes, por região"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "AGPL-3.0-only" }
-authors = [{ name = "Fábio Salgado", email = "fvsalgado@gmail.com" }]
+authors = [{ name = "Fábio Salgado", email = "correio@paragem.pt" }]
 
 dependencies = [
   "pyyaml>=6.0.2",

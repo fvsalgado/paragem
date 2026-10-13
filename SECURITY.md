@@ -2,7 +2,7 @@
 
 ## Comunicar uma vulnerabilidade
 
-Por email para **fvsalgado@gmail.com**, com «Paragem.pt» no assunto. Não abras
+Por email para **correio@paragem.pt**, com «Paragem.pt» no assunto. Não abras
 um issue público para uma falha explorável.
 
 Diz o que conseguires: o que viste, como se reproduz, e o que achas que é

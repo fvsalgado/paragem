@@ -1,14 +1,26 @@
 /**
  * Os contactos que a declaração de acessibilidade e a privacidade mostram
  * (P4-024): escreve-os quem gere a região, no painel; leem-se aqui com a chave
- * pública, como os avisos publicados (migração 0010).
+ * pública, como os avisos publicados (migração 0010). VIVEM NA BASE DO PAINEL,
+ * e não no repositório nem na declaração da região.
  *
- * `null` quando não se sabe — sem base, sem a migração aplicada, sem linha —
- * e as páginas dizem «Por preencher», que é o que diziam antes de haver onde
- * os pôr. Um contacto inventado é pior do que nenhum: quem reclamar fica à
- * espera.
+ * `null` quando não se sabe — sem base, sem a migração aplicada, sem linha.
+ * Aí, e em cada campo que a autoridade ainda não indicou, responde QUEM FAZ O
+ * PRODUTO, com o contacto do produto (`DO_PRODUTO`): é quem publica o sítio
+ * enquanto a autoridade não indicar os seus, e o contacto recebe. As páginas
+ * diziam «Por preencher» — honesto, mas deixava quem quer reclamar sem para
+ * onde escrever. Inventado continua a não haver nada: o nome e o endereço são
+ * os do `lib/produto.ts`, e o `AUTORIA.md` publica os mesmos.
  */
 import { IDENTIFICADOR } from './formato.ts';
+import { AUTOR, CONTACTO } from './produto.ts';
+
+/** Quem responde, e para onde se escreve, enquanto a autoridade não indicar os seus. */
+export const DO_PRODUTO = {
+  /** «Fábio Salgado, que faz o Paragem.pt» — para a frase «o responsável … é …». */
+  responsavel: `${AUTOR.nome}, que faz o Paragem.pt`,
+  email: CONTACTO,
+} as const;
 
 export type Contactos = {
   region_id: string;
