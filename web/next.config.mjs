@@ -125,6 +125,37 @@ export const CABECALHOS_DAS_CAIXAS = [
   { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
 ];
 
+/**
+ * OS FICHEIROS QUE NÃO SÃO PÁGINAS não levam os cabeçalhos delas.
+ *
+ * A política de conteúdo, as molduras, as permissões e o isolamento da janela
+ * só valem num documento: num pedaço de JavaScript, numa letra ou num glifo o
+ * navegador ignora-os. E pesam: são 1,1 KiB por resposta, e uma página da rede
+ * pede vinte e duas — medido a 13/10/2026, quando estes cabeçalhos entraram e o
+ * orçamento de peso do Lighthouse (`tests/lighthouse.mjs`) apanhou 16 a 20 KiB
+ * a mais em cada página. A expressão é a que a documentação do Next usa para a
+ * política de conteúdo — tudo menos `_next/static` e `_next/image` —, e aqui
+ * também o processador do mapa, os glifos e as imagens.
+ *
+ * O `nosniff` fica em todos, porque é neles que conta: é o que impede um
+ * ficheiro servido com o tipo errado de correr como script ou folha de estilos.
+ *
+ * AS IMAGENS levam, além dele, uma política de conteúdo própria, e curta. Um
+ * SVG aberto sozinho no separador é um documento, e podia correr scripts; a
+ * política fecha-lhe tudo menos os estilos que ele traz dentro (o ícone muda
+ * de cor com o tema, e o logótipo pinta-se com as variáveis da região). Num
+ * PNG não faz nada, e não custa nada.
+ */
+export const FICHEIROS = '/:pasta(_next/static|_next/image|maplibre|glifos)/:caminho*';
+export const IMAGENS = '/(.*\\.(?:svg|png|ico))';
+export const PAGINAS =
+  '/((?!widget/|_next/static/|_next/image|maplibre/|glifos/)(?!.*\\.(?:svg|png|ico)$).*)';
+export const CABECALHOS_DOS_FICHEIROS = [{ key: 'X-Content-Type-Options', value: 'nosniff' }];
+export const CABECALHOS_DAS_IMAGENS = [
+  { key: 'Content-Security-Policy', value: "default-src 'none'; style-src 'unsafe-inline'" },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+];
+
 const config = {
   reactStrictMode: true,
   env: { NEXT_PUBLIC_MAPLIBRE: MAPLIBRE },
@@ -165,10 +196,13 @@ const config = {
   },
   async headers() {
     return [
-      // As caixas para os sítios das câmaras, e tudo o resto, cada um com os
-      // seus — a expressão do segundo deixa as caixas de fora, como no Coreto.
+      // As caixas para os sítios das câmaras, as páginas, os ficheiros e as
+      // imagens, cada um com os seus — a expressão das páginas deixa os outros
+      // de fora.
       { source: '/widget/:caminho*', headers: CABECALHOS_DAS_CAIXAS },
-      { source: '/((?!widget/).*)', headers: CABECALHOS_DE_SEGURANCA },
+      { source: PAGINAS, headers: CABECALHOS_DE_SEGURANCA },
+      { source: FICHEIROS, headers: CABECALHOS_DOS_FICHEIROS },
+      { source: IMAGENS, headers: CABECALHOS_DAS_IMAGENS },
       // O processador do mapa leva a versão no caminho
       // (`scripts/copiar-maplibre.mjs`): um caminho que muda com a versão pode
       // ser imutável, e um Worker que não se volta a pedir é um mapa que abre
