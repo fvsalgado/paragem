@@ -1,7 +1,9 @@
+import { Fragment } from 'react';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { entrar } from '@/lib/painel/acoes';
 import { sessaoAtual } from '@/lib/painel/autenticacao';
+import { faltaNoPainel } from '@/lib/painel/configuracao';
 import { destinoSeguro } from '@/lib/painel/guarda';
 import { inicioDe } from '@/lib/painel/papeis';
 
@@ -40,9 +42,9 @@ function mensagem(erro: string | undefined, ate: string | undefined): string | u
 /**
  * A porta: o email e a palavra-passe de cada pessoa (0009).
  *
- * O dono entra com a palavra-passe do ambiente, como sempre entrou — e com o
- * email declarado em `ADMIN_EMAIL`, quando está; sem ele, com qualquer email.
- * As outras pessoas entram com o email e a palavra-passe que escolheram ao
+ * O dono entra com a palavra-passe do ambiente, como sempre entrou, e com o
+ * email declarado em `ADMIN_EMAIL` — sem ele, o painel não abre. As outras
+ * pessoas entram com o email e a palavra-passe que escolheram ao
  * abrir a ligação que o dono lhes mandou. Sem configuração a porta não abre —
  * e diz porquê a quem a saiba ler.
  */
@@ -53,15 +55,41 @@ export default async function Entrar({ searchParams }: Props) {
   const params = await searchParams;
 
   if (portao.razao === 'por-configurar') {
+    // OS NOMES DO QUE FALTA, e nunca os valores: quem gere a instalação
+    // precisa de saber qual pôr, e mais ninguém precisa de saber mais nada.
+    const falta = faltaNoPainel();
     return (
       <>
         <h1>Painel por configurar</h1>
         <p>
-          Faltam as variáveis <code>ADMIN_PASSWORD_HASH</code> e <code>ADMIN_SESSION_SECRET</code>{' '}
-          no ambiente do servidor. A primeira gera-se com <code>node scripts/senha.mjs</code>; a
-          segunda é uma cadeia aleatória com pelo menos 32 caracteres. Enquanto faltarem, esta área
+          {falta.length === 1 ? 'Falta a variável ' : 'Faltam as variáveis '}
+          {falta.map((v, i) => (
+            <Fragment key={v}>
+              {i > 0 ? (i === falta.length - 1 ? ' e ' : ', ') : null}
+              <code>{v}</code>
+            </Fragment>
+          ))}{' '}
+          no ambiente do servidor. Enquanto {falta.length === 1 ? 'faltar' : 'faltarem'}, esta área
           não abre — que é o comportamento pretendido (<code>docs/PAINEL.md</code>).
         </p>
+        <ul>
+          {falta.includes('ADMIN_PASSWORD_HASH') ? (
+            <li>
+              <code>ADMIN_PASSWORD_HASH</code> gera-se com <code>node scripts/senha.mjs</code>.
+            </li>
+          ) : null}
+          {falta.includes('ADMIN_SESSION_SECRET') ? (
+            <li>
+              <code>ADMIN_SESSION_SECRET</code> é uma cadeia aleatória com pelo menos 32 caracteres.
+            </li>
+          ) : null}
+          {falta.includes('ADMIN_EMAIL') ? (
+            <li>
+              <code>ADMIN_EMAIL</code> é o email do dono. Sem ela, a palavra-passe do dono entrava
+              com qualquer email; por isso o painel fica fechado até ela estar definida.
+            </li>
+          ) : null}
+        </ul>
       </>
     );
   }

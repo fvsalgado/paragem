@@ -3,6 +3,7 @@ import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { temChaveDeServico } from './base';
+import { SEGREDO_MINIMO, emailDeclarado, faltaNoPainel } from './configuracao';
 import { CAMINHO_DA_ENTRADA } from './guarda';
 import { pode, type Acesso, type Papel } from './papeis';
 import { actorDe, papeisDe, pessoaPorId, type Pessoa } from './pessoas';
@@ -48,24 +49,25 @@ export type Portao = Dentro | { ok: false; razao: 'por-configurar' | 'sem-sessao
  */
 export function segredoDaSessao(): string | null {
   const segredo = process.env.ADMIN_SESSION_SECRET ?? '';
-  return segredo.length >= 32 ? segredo : null;
-}
-
-/** `true` quando o painel tem configuração suficiente para existir. */
-export function painelConfigurado(): boolean {
-  return Boolean(process.env.ADMIN_PASSWORD_HASH) && segredoDaSessao() !== null;
+  return segredo.length >= SEGREDO_MINIMO ? segredo : null;
 }
 
 /**
- * O email do dono, quando está declarado (`ADMIN_EMAIL`). Sem ele, o dono
- * entra com qualquer email e a palavra-passe dele — como entrava antes das
- * contas, quando não havia email nenhum. A segurança é a mesma de então: o
- * segredo é a palavra-passe. Declará-lo é o que tira o dono do caminho de
- * quem escreve outro email (`docs/PAINEL.md`).
+ * `true` quando o painel tem configuração suficiente para existir: a
+ * palavra-passe do dono, o segredo da sessão e o email do dono
+ * (`configuracao.ts`). Sem qualquer um dos três, o painel não abre.
+ */
+export function painelConfigurado(): boolean {
+  return faltaNoPainel().length === 0;
+}
+
+/**
+ * O email do dono (`ADMIN_EMAIL`). É obrigatório: sem ele o painel está «por
+ * configurar» e a porta do dono não abre (`configuracao.ts`). Antes, sem ele,
+ * o dono entrava com QUALQUER email e a palavra-passe dele (`docs/PAINEL.md`).
  */
 export function emailDoDono(): string | null {
-  const email = (process.env.ADMIN_EMAIL ?? '').trim().toLowerCase();
-  return email || null;
+  return emailDeclarado();
 }
 
 /** «dono», ou «dono · email» quando o email está declarado. */

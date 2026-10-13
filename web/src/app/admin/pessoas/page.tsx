@@ -5,7 +5,7 @@ import NovaLigacao from '@/componentes/painel/NovaLigacao';
 import SemChaveDeServico from '@/componentes/painel/SemChaveDeServico';
 import { porExtenso } from '@/lib/fuso';
 import { ativarOuDesativarPessoa, mudarPapeis } from '@/lib/painel/acoes-das-pessoas';
-import { emailDoDono, paginaDoDono } from '@/lib/painel/autenticacao';
+import { paginaDoDono } from '@/lib/painel/autenticacao';
 import { temChaveDeServico } from '@/lib/painel/base';
 import { listarRegioes } from '@/lib/painel/consultas';
 import { nomeDoPapel } from '@/lib/painel/papeis';
@@ -41,7 +41,6 @@ export default async function Pessoas({ searchParams }: Props) {
 
   const [pessoas, regioes] = await Promise.all([listarPessoas(), listarRegioes()]);
   const nomeDaRegiao = new Map(regioes.map((r) => [r.id, r.name]));
-  const declarado = emailDoDono();
 
   if (pessoas === null) {
     return (
@@ -72,17 +71,6 @@ export default async function Pessoas({ searchParams }: Props) {
       </p>
 
       <Aviso texto={aviso} />
-
-      {!declarado ? (
-        <details className="para-quem-gere">
-          <summary>Para quem gere a instalação: o teu email de dono</summary>
-          <p>
-            Entras com a palavra-passe do ambiente e qualquer email, porque <code>ADMIN_EMAIL</code>{' '}
-            não está definido. Define-o com o teu email: passas a entrar só com ele, e uma pessoa
-            convidada que escreva outro email nunca cai na tua porta (<code>docs/PAINEL.md</code>).
-          </p>
-        </details>
-      ) : null}
 
       <section aria-labelledby="convidar" className="cartao">
         <h2 id="convidar">Convidar uma pessoa</h2>
