@@ -11,6 +11,7 @@ import {
   contarFalhada,
   limparDepoisDeEntrar,
   type Chamar,
+  esquecerMemoriaDoLimite,
 } from '../src/lib/painel/limite-puro.ts';
 import {
   ErroDaBase,
@@ -160,16 +161,47 @@ test('sem a migração 0009, conta como contava: todas, só pela origem', async 
   assert.equal(base.contas.has('email:ana'), false, 'o balde do email não existia antes');
 });
 
-test('sem base, ou com o limitador em baixo, deixa passar', async () => {
+test('sem chave de serviço, deixa passar: é o desenvolvimento e o CI', async () => {
   assert.equal((await verificarEntrada(null, ['ip:x'], 900, 5)).permitido, true);
+});
+
+test('com o limitador em baixo, conta na memória: cinco falhadas trancam, e uma certa limpa', async () => {
+  esquecerMemoriaDoLimite();
   const emBaixo: Chamar = async () => {
     throw new ErroDaBase('fetch failed', 0);
   };
-  assert.deepEqual(await verificarEntrada(emBaixo, ['ip:x'], 900, 5), {
+  const agora = Date.parse('2026-10-13T10:00:00Z');
+  const tentarEmBaixo = async (baldes: string[], certa: boolean) => {
+    const limite = await verificarEntrada(emBaixo, baldes, 900, 5, agora);
+    if (!limite.permitido) return limite;
+    if (certa) await limparDepoisDeEntrar(emBaixo, baldes, limite.modo);
+    else await contarFalhada(emBaixo, baldes, limite.modo, 900, 5, agora);
+    return limite;
+  };
+  assert.deepEqual(await verificarEntrada(emBaixo, ['ip:x'], 900, 5, agora), {
     permitido: true,
-    modo: 'sem-limite',
+    modo: 'memoria',
     repoeEm: null,
   });
+  for (let i = 0; i < 5; i++) await tentarEmBaixo(['ip:x', 'email:ana'], false);
+  const trancada = await verificarEntrada(emBaixo, ['ip:x', 'email:outra'], 900, 5, agora);
+  assert.equal(trancada.permitido, false, 'a mesma origem fica trancada');
+  assert.equal(trancada.repoeEm, '2026-10-13T10:00:00.000Z'.replace('10:00', '10:15'));
+  // Outra origem e outro email continuam a entrar.
+  assert.equal(
+    (await verificarEntrada(emBaixo, ['ip:y', 'email:outra'], 900, 5, agora)).permitido,
+    true,
+  );
+  // Na janela seguinte, abre outra vez.
+  assert.equal(
+    (await verificarEntrada(emBaixo, ['ip:x'], 900, 5, agora + 900 * 1000)).permitido,
+    true,
+  );
+  esquecerMemoriaDoLimite();
+  for (let i = 0; i < 4; i++) await tentarEmBaixo(['ip:z', 'email:rui'], false);
+  await tentarEmBaixo(['ip:z', 'email:rui'], true);
+  assert.equal((await verificarEntrada(emBaixo, ['ip:z'], 900, 5, agora)).permitido, true);
+  esquecerMemoriaDoLimite();
 });
 
 test('trancada, a entrada diz quando volta a abrir: o balde cheio que fecha mais tarde', async () => {
