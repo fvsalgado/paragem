@@ -55,6 +55,11 @@ export function manifesto(p: {
     name: p.nome,
     short_name: p.nomeCurto,
     description: p.descricao,
+    // A IDENTIDADE DA APLICAÇÃO INSTALADA. Sem `id`, o navegador usa o
+    // `start_url`, e um `start_url` que um dia mude — com uma query de
+    // campanha, por exemplo — faz do mesmo sítio uma aplicação nova no ecrã de
+    // quem já o tinha. A raiz do anfitrião, que é uma por região.
+    id: '/',
     lang: 'pt-PT',
     dir: 'ltr',
     // A raiz do anfitrião: numa região é o mapa dela, no produto é a montra.

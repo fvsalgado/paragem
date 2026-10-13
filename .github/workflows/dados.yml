@@ -66,7 +66,7 @@ jobs:
       # O `servir-dados.mjs` não é preciso aqui, mas o `wait-on` é.
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '22'
+          node-version-file: .nvmrc
 
       # Java 21 e não 17: o validador dá-se bem com qualquer um a partir da 17,
       # mas o OpenTripPlanner 2.6 é compilado para 21 e em 17 morre com

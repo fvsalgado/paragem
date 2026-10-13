@@ -223,7 +223,7 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: "22"
+          node-version-file: .nvmrc
 
       # SÓ PRODUÇÃO, E SÓ ALTO E CRÍTICO, pela razão do Coreto: uma ferramenta
       # de construção com um aviso não serve nada a quem visita, e um alarme
