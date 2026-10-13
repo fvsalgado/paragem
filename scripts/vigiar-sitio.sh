@@ -40,10 +40,15 @@ falhou() {
 
 # O corpo fica em corpo.tmp; o código HTTP sai no stdout — 000 quando nem
 # chegou a ligar.
+#
+# O `--write-out` escreve 000 mesmo quando o curl falha, e o `|| true` não
+# acrescenta nada: um `|| echo 000` dava «000000».
 pedir() {
-  curl --silent --location --max-time 20 \
+  local codigo
+  codigo=$(curl --silent --location --max-time 20 \
     --user-agent 'Paragem (vigilancia)' \
-    --output corpo.tmp --write-out '%{http_code}' "$@" || echo 000
+    --output corpo.tmp --write-out '%{http_code}' "$@") || true
+  echo "${codigo:-000}"
 }
 
 # pagina <nome> <url> <texto que o corpo tem de trazer>
