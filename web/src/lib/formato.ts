@@ -518,8 +518,8 @@ export type Circuito = {
    *
    * O catálogo do sistema de reservas divide por zona de operação e as
    * brochuras por concelho, e os dois nomes do mesmo circuito muitas vezes
-   * não coincidem — «Constância Sul» é «Constância – Constância-Sul e Santa
-   * Margarida da Coutada» na folha. A ligação foi decidida uma a uma, pelas
+   * não coincidem — o nome curto de uma zona no catálogo é, na folha, o nome
+   * da vila seguido das duas freguesias que o circuito serve. A ligação foi decidida uma a uma, pelas
    * horas e pelas paragens; aqui chega já resolvida, e ausente quer dizer
    * que nenhuma fonte publica as horas deste.
    */
@@ -867,7 +867,7 @@ export function operadorCurto(nome: string): string {
   if (partes.length < 2) return limpo;
   const cauda = partes[partes.length - 1].trim();
   // Só se corta o que é mesmo forma jurídica. Uma vírgula a meio de um nome
-  // — «Rodoviária do Tejo, Norte» — não é motivo para perder metade dele.
+  // — «Transportes do Vale, Norte» — não é motivo para perder metade dele.
   return /^(unipessoal[ ,.]*)?(l\.?d\.?a\.?|s\.?a\.?|crl|e\.?m\.?|e\.?p\.?e\.?)\.?$/i.test(cauda)
     ? partes.slice(0, -1).join(',').trim()
     : limpo;

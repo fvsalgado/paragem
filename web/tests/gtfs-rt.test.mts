@@ -167,8 +167,8 @@ test('um valor que não existe na especificação não corrompe o feed', () => {
 
 test('acentos e caracteres fora do ASCII sobrevivem à viagem', () => {
   const a = ler(
-    feedDeAvisos([{ ...UM, titulo: 'Supressão em Ourém', texto: 'Ligação à Sertã — 3 €' }]),
+    feedDeAvisos([{ ...UM, titulo: 'Supressão em Sável', texto: 'Ligação à Pedra Alta — 3 €' }]),
   ).entity![0].alert!;
-  assert.equal(a.headerText?.translation?.[0]?.text, 'Supressão em Ourém');
-  assert.equal(a.descriptionText?.translation?.[0]?.text, 'Ligação à Sertã — 3 €');
+  assert.equal(a.headerText?.translation?.[0]?.text, 'Supressão em Sável');
+  assert.equal(a.descriptionText?.translation?.[0]?.text, 'Ligação à Pedra Alta — 3 €');
 });

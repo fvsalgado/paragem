@@ -147,8 +147,8 @@ O código de estação do gateway é **o mesmo** do GTFS público, com hífen em
 de underscore:
 
 ```
-gateway   94-32466
-GTFS      94_32466     Riachos - Torres Novas - Golega
+gateway   94-NNNNN
+GTFS      94_NNNNN     (o nome da estação)
 ```
 
 Não é preciso tabela de correspondência nenhuma. No dia em que houver
@@ -219,11 +219,17 @@ marca de uma fonte que existe e não se toca. A da CP está marcada
 FlixBus está marcada `api-em-direto`, que é a marca para uma API que se
 pergunta e não se descarrega.
 
-**Das três, só a da FlixBus é consumida**, e desde 21/09/2026: a rota
-`web/src/app/api/expressos/route.js` responde ao formulário de preços da página dos expressos,
-um par origem→destino de cada vez, com as duas reservas acima por cima. Medido
-nesse dia, para 23/09: Tomar → Lisboa (Oriente) às 09:45 por 3,98 € com 46
-lugares, e Abrantes → Lisboa (Oriente) às 18:15 por 6,98 € com 25.
+**Das três, só a da FlixBus foi consumida**, de 21/09/2026 a 13/10/2026: a rota
+`web/src/app/api/expressos/route.js` respondia ao formulário de preços da página
+dos expressos, um par origem→destino de cada vez, com as duas reservas acima por
+cima. Medido nesse dia, para 23/09, a partir de duas cidades de uma região: uma
+viagem para Lisboa (Oriente) às 09:45 por 3,98 € com 46 lugares, e outra às
+18:15 por 6,98 € com 25.
+
+**A 13/10/2026 ficou desligada em código** (`disponibilidade/autorizacao.mjs`),
+com a das bicicletas: a pesquisa não é documentada e os termos de reutilização
+continuam por confirmar, e não há acordo escrito publicado. Os horários dos
+expressos continuam a vir do GTFS público.
 
 E repara na diferença que justifica o trabalho: o feed estático liga estas
 paragens a **Lisboa (Oriente)** e não a Sete Rios — perguntar por Sete Rios

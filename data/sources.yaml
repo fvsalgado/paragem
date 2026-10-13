@@ -118,8 +118,8 @@ fontes:
       estação. Não existe alternativa aberta: procurado no dados.gov.pt e no
       NAP a 21/09/2026, a CP publica o GTFS estático e nada de tempo real.
       O trabalho de identificadores JÁ ESTÁ FEITO: o código de estação do
-      gateway é o do GTFS com hífen em vez de underscore — `94-32466` para
-      `94_32466`, Riachos. Não é preciso mapa de correspondência nenhum.
+      gateway é o do GTFS com hífen em vez de underscore — `94-NNNNN` para
+      `94_NNNNN`. Não é preciso mapa de correspondência nenhum.
 
   - id: nap-portugal
     ambito: nacional
