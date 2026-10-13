@@ -1,0 +1,81 @@
+version: 2
+
+# As atualizações de versão vão para o `pre`, como tudo o resto: confere-se lá
+# e só depois passam ao `main`. As de segurança, o GitHub abre-as sempre contra
+# o ramo por omissão. O desenho é o do Coreto (fvsalgado/coreto).
+updates:
+  - package-ecosystem: npm
+    directory: /web
+    target-branch: pre
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Lisbon
+    open-pull-requests-limit: 5
+    versioning-strategy: increase-if-necessary
+    commit-message:
+      prefix: deps
+      prefix-development: deps-dev
+    groups:
+      # O Next e o React sobem juntos ou não sobem: um sem o outro dá quase
+      # sempre uma incompatibilidade de tipos.
+      framework:
+        patterns:
+          - next
+          - react
+          - react-dom
+          - "@types/react"
+          - "@types/react-dom"
+      # As ferramentas de desenvolvimento em bloco: uma revisão por semana chega.
+      ferramentas:
+        dependency-type: development
+        exclude-patterns:
+          - "@types/react"
+          - "@types/react-dom"
+
+  # O pipeline: as dependências que o `uv.lock` fixa.
+  - package-ecosystem: uv
+    directory: /
+    target-branch: pre
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Lisbon
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: deps
+    groups:
+      pipeline:
+        patterns: ["*"]
+
+  # A imagem do serviço de disponibilidade. A versão do Node está fixada de
+  # propósito (`disponibilidade/Dockerfile`): o PR propõe, e subir continua a
+  # ser uma decisão.
+  - package-ecosystem: docker
+    directory: /disponibilidade
+    target-branch: pre
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Lisbon
+    open-pull-requests-limit: 1
+    commit-message:
+      prefix: deps
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: pre
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Lisbon
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: ci
+    groups:
+      acoes:
+        patterns: ["*"]

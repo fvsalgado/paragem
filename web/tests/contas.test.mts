@@ -238,7 +238,9 @@ test('trancada, a entrada diz quando volta a abrir: o balde cheio que fecha mais
 
 test('uma chave nova (sb_…) vai só no apikey; a antiga, um JWT, vai nos dois', () => {
   assert.deepEqual(cabecalhosDaChave('sb_secret_abc123'), { apikey: 'sb_secret_abc123' });
-  const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.assinatura';
+  // Um JWT de brincar — `{"alg":"HS256"}.{"role":"service_role"}` com a
+  // assinatura «assinatura» —, e não uma chave: daí o aviso ao gitleaks.
+  const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.assinatura'; // gitleaks:allow
   assert.deepEqual(cabecalhosDaChave(jwt), { apikey: jwt, authorization: `Bearer ${jwt}` });
 });
 

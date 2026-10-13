@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "maplibre-gl": "6.11.2",
-    "next": "15.5.25",
+    "next": "15.5.27",
     "pmtiles": "4.4.0",
     "posthog-js": "^1.434.2",
     "react": "19.1.1",
@@ -35,8 +35,12 @@
     "gtfs-realtime-bindings": "^2.2.0",
     "lighthouse": "^13.5.0",
     "prettier": "3.6.2",
-    "serve": "^14.2.6",
     "typescript": "5.7.2",
     "wait-on": "^9.1.0"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.30"
+    }
   }
 }
