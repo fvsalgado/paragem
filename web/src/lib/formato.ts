@@ -172,8 +172,50 @@ export type Regiao = {
    * página tem de dizer qual das duas é. Ausente em dados de antes disto.
    */
   concelhos_pela_carta?: boolean;
+  /**
+   * De quando são os horários de cada modo (`AAAA-MM-DD`): a data de obtenção
+   * que as fontes trazem no registo (`sitio.py`, `datas_dos_horarios`).
+   * `null` num modo em que alguma fonte não a tem; ausente em dados de antes
+   * disto. Nos dois casos não se mostra data nenhuma (`dataDosHorarios`).
+   */
+  dados_de?: Record<string, string | null>;
   caixa: { lat_min: number; lat_max: number; lon_min: number; lon_max: number };
 };
+
+/**
+ * «3/9/2026»: de quando são os horários destes modos — o mais antigo deles —,
+ * ou `null` quando algum não tem data, ou quando não se sabe.
+ *
+ * SEM PALPITE. Um modo sem data não herda a de outro, e uma região de dados
+ * antigos não ganha a do dia da construção: «dados de» é uma afirmação sobre
+ * a fonte, e só se faz com o que a fonte diz (§4.4). Sem `modos`, são os da
+ * região que estão ligados — é o caso do planeador, que os mistura todos.
+ */
+export function dataDosHorarios(
+  r: Pick<Regiao, 'dados_de' | 'modos'> | null | undefined,
+  modos?: readonly string[],
+): string | null {
+  const datas = r?.dados_de;
+  if (!datas) return null;
+  const quais = modos ?? Object.keys(datas).filter((m) => r.modos.includes(m));
+  if (!quais.length) return null;
+  let maisAntiga = '';
+  for (const m of quais) {
+    const d = datas[m];
+    if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
+    if (!maisAntiga || d < maisAntiga) maisAntiga = d;
+  }
+  const [ano, mes, dia] = maisAntiga.split('-');
+  return `${Number(dia)}/${Number(mes)}/${ano}`;
+}
+
+/**
+ * A frase que vai com os horários: «Horários planeados · dados de 3/9/2026,
+ * não em tempo real.» — e sem a data quando ela não existe.
+ */
+export function fraseDosHorarios(data: string | null | undefined): string {
+  return `Horários planeados${data ? ` · dados de ${data}` : ''}, não em tempo real.`;
+}
 
 export type Concelho = {
   id: string;

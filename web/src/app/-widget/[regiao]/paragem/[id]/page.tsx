@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import PartidasDaCaixa from '@/componentes/widget/PartidasDaCaixa';
 import { compactar, exigirModo, linhas, paragem as lerParagem, regiao } from '@/lib/dados';
 import { nomeDaRede } from '@/lib/prosa';
+import { dataDosHorarios, fraseDosHorarios } from '@/lib/formato';
 
 export async function generateMetadata({
   params,
@@ -33,6 +34,10 @@ export default async function CaixaDaParagem({
   const [ficha, r, catalogo] = await Promise.all([lerParagem(rid, id), regiao(rid), linhas(rid)]);
   if (!ficha || !r) notFound();
   const cores = Object.fromEntries(catalogo.map((l) => [l.id, l.cor]));
+  // A data dos horários dos modos das linhas que passam aqui, como na página
+  // da paragem: sem data numa fonte, sem data na caixa.
+  const idsDasLinhas = new Set(ficha.partidas.map((d) => d.linha_id));
+  const modos = [...new Set(catalogo.filter((l) => idsDasLinhas.has(l.id)).map((l) => l.modo))];
   const pagina = `/rede/paragens/${encodeURIComponent(ficha.paragem.id)}/`;
   return (
     <section className="caixa" aria-labelledby="caixa-titulo">
@@ -44,7 +49,7 @@ export default async function CaixaDaParagem({
       </h1>
       <PartidasDaCaixa regiao={rid} partidas={compactar(ficha.partidas)} cores={cores} />
       <p className="rodape-da-caixa">
-        Horários planeados, não em tempo real.{' '}
+        {fraseDosHorarios(dataDosHorarios(r, modos.length ? modos : ['autocarro']))}{' '}
         <a href={pagina} target="_blank" rel="noopener">
           Horário completo<span className="so-para-leitores"> (abre noutro separador)</span>
         </a>

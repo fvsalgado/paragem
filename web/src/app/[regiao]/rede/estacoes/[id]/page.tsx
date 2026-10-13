@@ -112,7 +112,7 @@ export default async function Estacao({
         {/* Só onde há mapa: numa região sem mosaicos o início não tem mapa. */}
         {temMapa && <a href={url(rid, `/?ponto=${encodeURIComponent(e.id)}`)}>Ver no mapa</a>}
       </p>
-      <MarcaDeDados regiao={rid} />
+      <MarcaDeDados regiao={rid} modos={['comboio']} />
 
       {/* OS COMBOIOS QUE O SÍTIO JÁ TEM. A página dizia «os horários da CP não
           são publicados aqui», e o planeador do mesmo sítio propunha comboios

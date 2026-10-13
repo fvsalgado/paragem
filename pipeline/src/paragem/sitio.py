@@ -358,6 +358,10 @@ class Sitio:
             # contrário do que a atribuição existe para garantir.
             "mapa": _mapa(r),
             "atribuicoes": _atribuicoes(self.raiz, r),
+            # DE QUANDO SÃO OS HORÁRIOS, por modo: a data de obtenção que as
+            # fontes trazem, ou `None` quando alguma não a tem — e aí o sítio
+            # não mostra data nenhuma (`datas_dos_horarios`).
+            "dados_de": datas_dos_horarios(self.raiz, r),
             # SE O CONCELHO DE CADA PONTO VEIO DA CARTA. Sem ela, um ponto sem
             # concelho não está fora da região — está por atribuir —, e a
             # página das bicicletas punha a estação do terminal «Fora da
@@ -2150,6 +2154,37 @@ def _mapa(regiao: Regiao) -> dict[str, Any] | None:
 
 #: Os nomes das licenças como se escrevem numa frase, e não como no SPDX.
 NOMES_DAS_LICENCAS = {"ODBL-1.0": "ODbL", "CC-BY-4.0": "CC BY 4.0", "CC-BY-3.0": "CC BY 3.0"}
+
+
+def datas_dos_horarios(raiz: Path, regiao: Regiao) -> dict[str, str | None]:
+    """DE QUANDO SÃO OS HORÁRIOS de cada modo, para o sítio o dizer ao lado deles.
+
+    O §4.4 pede «Horários planeados» com a data dos dados, e a data só
+    aparecia nos Dados abertos — que é a da CONSTRUÇÃO, e muda todas as
+    semanas mesmo quando a fonte não mudou: um PDF de março reconstruído hoje
+    dizia «dados de hoje».
+
+    A data aqui é a que as fontes JÁ TRAZEM no registo — a de obtenção
+    (`Registo.data_de_obtencao`) — e só das saídas que dão horários: os feeds
+    GTFS e os horários em papel ou em tabela. Por modo, e a mais antiga: um
+    modo com dois feeds é tão recente como o mais velho deles. E SE UMA DELAS
+    NÃO TIVER DATA, O MODO NÃO TEM DATA (`None`): mostrar a de uma fonte ao
+    lado dos horários de outra era dar por datado o que não está.
+    """
+    from .fontes import Registo
+
+    registo = Registo.carregar(raiz)
+    por_modo: dict[str, list[date | None]] = {}
+    for s in regiao.saidas:
+        if not s.modo or not s.saida:
+            continue
+        if not (s.saida.endswith(".zip") or s.leitor in LEITORES_DE_HORARIO):
+            continue
+        por_modo.setdefault(s.modo, []).append(registo.data_de_obtencao(s.fonte))
+    return {
+        modo: (min(d for d in datas if d is not None).isoformat() if all(datas) else None)
+        for modo, datas in sorted(por_modo.items())
+    }
 
 
 def _atribuicoes(raiz: Path, regiao: Regiao) -> list[dict[str, Any]]:

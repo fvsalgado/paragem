@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Mapa, { type Marca } from '@/componentes/Mapa';
 import EscolherPonto from '@/componentes/EscolherPonto';
 import Direccoes, { type Percurso } from '@/componentes/Direccoes';
-import { NOME_DOS_MODOS, type Partida, type Ponto } from '@/lib/formato';
+import { NOME_DOS_MODOS, fraseDosHorarios, type Partida, type Ponto } from '@/lib/formato';
 import { aplicaAParagem, redeToda, type AvisoNoMapa } from '@/lib/avisos';
 import Distintivo from '@/componentes/Distintivo';
 import { calendarioDe, horaDoRelogio, proximas, type Calendario } from '@/lib/dias';
@@ -195,6 +195,7 @@ export default function AppDoMapa({
   motorDaRegiao = '',
   disponibilidadeDaRegiao = '',
   servicosSemDatas = 0,
+  dadosDe = null,
   avisos = [],
 }: {
   regiao: string;
@@ -235,6 +236,8 @@ export default function AppDoMapa({
   disponibilidadeDaRegiao?: string;
   /** Quantos serviços ainda não têm os dias em que circulam — ver `Direccoes`. */
   servicosSemDatas?: number;
+  /** De quando são os horários — ver `Direccoes`. */
+  dadosDe?: string | null;
   /**
    * Os avisos em vigor (P4-019). Publicados no painel, apareciam na página de
    * avisos e em mais lado nenhum que se visse: não no mapa, que é o ecrã
@@ -958,7 +961,7 @@ export default function AppDoMapa({
               Num cartão de uma praça de táxi não há horário nenhum a ser
               planeado, e a nota só confundia. */}
             {(escolhido.tipo === 'paragem' || escolhido.tipo === 'estacao') && (
-              <p className="secundario">Horários planeados, não em tempo real.</p>
+              <p className="secundario">{fraseDosHorarios(dadosDe)}</p>
             )}
           </section>
         )}
@@ -976,6 +979,7 @@ export default function AppDoMapa({
             modosDesligados={modosDesligados}
             motorDaRegiao={motorDaRegiao}
             servicosSemDatas={servicosSemDatas}
+            dadosDe={dadosDe}
             temAPedido={temAPedido}
             deInicial={direcoes.de}
             paraInicial={direcoes.para}

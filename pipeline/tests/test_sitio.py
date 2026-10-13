@@ -933,3 +933,54 @@ def test_os_sitios_levam_o_concelho_para_dois_homonimos_se_distinguirem(tmp_path
     # Sem quem atribua, o campo existe e fica vazio: não se adivinha.
     sem = _sitios(tmp_path, SimpleNamespace(id="ensaio"))
     assert {s[i] for s in sem["sitios"]} == {""}
+
+
+def test_a_data_dos_horarios_e_a_que_as_fontes_trazem_e_nenhuma_quando_falta(tmp_path, monkeypatch):
+    """«Horários planeados · dados de …» — e só quando todas as fontes do modo a têm.
+
+    A data é a de obtenção que o registo já traz: a declarada no
+    `sources.yaml` ou a da última descarga (`.cache/obtencoes.yaml`). Nunca a
+    do dia da construção, que diria «dados de hoje» de um ficheiro velho. Um
+    modo com uma fonte sem data fica sem data — não se mostra a de outra.
+    """
+    from paragem.regiao import RAIZES_EXTRA, Saida
+    from paragem.sitio import datas_dos_horarios
+
+    monkeypatch.delenv(RAIZES_EXTRA, raising=False)
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "sources.yaml").write_text(
+        """
+versao: 1
+fontes:
+  - {id: t-papel, nome: Caderno, formato: pdf, acesso: manual, obtido_em: 2026-09-03}
+  - {id: t-feed, nome: Feed, formato: gtfs, acesso: automatico, url: https://x.example.org/g.zip}
+  - {id: t-sem-data, nome: Outro, formato: gtfs, acesso: local}
+  - {id: t-osm, nome: OSM, formato: osm-xml, acesso: manual, obtido_em: 2020-01-01}
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / ".cache").mkdir()
+    (tmp_path / ".cache" / "obtencoes.yaml").write_text(
+        "t-feed: {obtido_em: '2026-10-05', endereco: https://x.example.org/g.zip}\n",
+        encoding="utf-8",
+    )
+
+    class Receita:
+        saidas = [
+            Saida("t-papel", "horarios-pdf-operadora", "gtfs/rede.zip", "autocarro"),
+            Saida("t-feed", "gtfs-filtrado", "gtfs/comboio.zip", "comboio"),
+            Saida("t-papel", "horarios-tabela", "tabelas/x/", "comboio"),
+            Saida("t-sem-data", "gtfs-arquivo", "gtfs/expressos.zip", "expresso"),
+            Saida("t-feed", "gtfs-arquivo", "gtfs/outro.zip", "expresso"),
+            # Um traçado do OpenStreetMap não é um horário, e a data dele não conta.
+            Saida("t-osm", "osm-bicicletas", "gbfs/x/", "bicicleta"),
+        ]
+
+    datas = datas_dos_horarios(tmp_path, Receita())  # type: ignore[arg-type]
+    assert datas == {
+        "autocarro": "2026-09-03",
+        # Dois horários no mesmo modo: vale o mais antigo.
+        "comboio": "2026-09-03",
+        # Um dos dois sem data: o modo fica sem data.
+        "expresso": None,
+    }

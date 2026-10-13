@@ -31,7 +31,7 @@ import {
   periodoDe,
   quandoE,
 } from '@/lib/dias';
-import { seguro, type APedido, type Ponto } from '@/lib/formato';
+import { fraseDosHorarios, seguro, type APedido, type Ponto } from '@/lib/formato';
 import {
   planear,
   capacidadeDe,
@@ -162,6 +162,7 @@ export default function Direccoes({
   modosDesligados = [],
   motorDaRegiao = '',
   servicosSemDatas = 0,
+  dadosDe = null,
   temAPedido = false,
 }: {
   /**
@@ -178,6 +179,11 @@ export default function Direccoes({
    * o vazio o pode dizer. Dizê-lo sempre culpava um calendário já transcrito.
    */
   servicosSemDatas?: number;
+  /**
+   * De quando são os horários — «3/9/2026» —, para a nota «Horários
+   * planeados». `null` quando alguma fonte não tem data (`dataDosHorarios`).
+   */
+  dadosDe?: string | null;
   /** Os módulos que o painel desligou: o planeador não propõe as linhas deles. */
   modosDesligados?: string[];
   /** O endereço do motor desta região, lido no servidor. '' quando não há. */
@@ -1169,7 +1175,7 @@ export default function Direccoes({
               pertence à mesma frase. */}
           {estado.tipo === 'resultados' && !problema && lista.length > 0 && (
             <p className="marca-dados">
-              Horários planeados, não em tempo real.
+              {fraseDosHorarios(dadosDe)}
               {motorEmBaixo
                 ? ' O motor de ruas não respondeu: as distâncias a pé são estimadas em linha reta.'
                 : porqueEstimado

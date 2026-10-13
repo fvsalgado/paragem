@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import Distintivo from '@/componentes/Distintivo';
-import { esperaLegivel, horaLegivel, type Partida, type Ponto } from '@/lib/formato';
+import {
+  esperaLegivel,
+  fraseDosHorarios,
+  horaLegivel,
+  type Partida,
+  type Ponto,
+} from '@/lib/formato';
 import {
   calendarioDe,
   chaveDoDia,
@@ -85,6 +91,7 @@ export default function PertoDeTi({
   variante = 'pagina',
   posicao = null,
   aoEscolher,
+  dadosDe = null,
 }: {
   regiao: string;
   /**
@@ -104,6 +111,8 @@ export default function PertoDeTi({
   posicao?: [number, number] | null;
   /** No mapa, tocar numa paragem abre o cartão dela em vez de mudar de página. */
   aoEscolher?: (p: Ponto) => void;
+  /** De quando são os horários — «3/9/2026» —, ou `null` sem data (`dataDosHorarios`). */
+  dadosDe?: string | null;
 }) {
   const noMapa = variante === 'mapa';
   const [estado, setEstado] = useState<Estado>({ tipo: 'parado' });
@@ -393,8 +402,8 @@ export default function PertoDeTi({
             )}
             {!noMapa && (
               <p className="secundario">
-                Horários planeados, não em tempo real. Uma hora estimada foi calculada por nós entre
-                duas do horário publicado.
+                {fraseDosHorarios(dadosDe)} Uma hora estimada foi calculada por nós entre duas do
+                horário publicado.
               </p>
             )}
           </>
