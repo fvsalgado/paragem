@@ -1,6 +1,7 @@
 import VerificacoesDeAcessibilidade from '@/componentes/VerificacoesDeAcessibilidade';
 import { AUTOR, CONTACTO, correioPara } from '@/lib/produto';
 import { metadadosDoProduto } from '@/lib/metadados';
+import QueixasDeAcessibilidade from '@/componentes/QueixasDeAcessibilidade';
 
 export const metadata = metadadosDoProduto({
   titulo: 'Acessibilidade',
@@ -79,6 +80,7 @@ export default function AcessibilidadeDoProduto() {
         </a>
         .
       </p>
+      <QueixasDeAcessibilidade voz="voce" />
       <p className="secundario">
         O sítio de cada região tem a sua declaração, no endereço da região, com o contacto de quem
         responde por ela.

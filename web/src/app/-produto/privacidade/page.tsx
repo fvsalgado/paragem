@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import DireitosDePrivacidade from '@/componentes/DireitosDePrivacidade';
 import { AUTOR, CONTACTO, correioPara } from '@/lib/produto';
 import { metadadosDoProduto } from '@/lib/metadados';
 
@@ -110,6 +111,8 @@ export default function PrivacidadeDoProduto() {
         </a>
         , e serve para lhe responder.
       </p>
+
+      <DireitosDePrivacidade voz="voce" mede={mede} identificada={identificada} email={CONTACTO} />
 
       <h2>Quem responde</h2>
       <p>
