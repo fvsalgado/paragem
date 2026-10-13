@@ -294,6 +294,9 @@ export const FICHEIROS_DE_CADA_ANFITRIAO = [
  * vai para dentro dela, e num anfitrião desconhecido não está nesta lista.
  */
 export const PAGINAS_DO_PRODUTO = ['/', '/contacto/', '/privacidade/', '/acessibilidade/'] as const;
+
+/** O caminho que a RFC 9116 dá ao contacto de segurança. */
+export const CAMINHO_DO_SECURITY_TXT = '/.well-known/security.txt';
 export const SEGMENTO_DO_PRODUTO = '/-produto';
 
 /**
@@ -330,6 +333,12 @@ export function decidir(
   // Da API nada é de uma região: o sinal, as contagens, os expressos servem
   // todas. E os ficheiros a sério saem de `public/` tal como estão.
   if (pathname.startsWith('/api/')) return { tipo: 'passar' };
+  // O `security.txt` é o mesmo em todos os anfitriões, e é do produto: quem
+  // corrige o software é quem o escreve (`app/-produto/security.txt`). O App
+  // Router não aceita pastas começadas por ponto, e por isso o nome dá-se aqui.
+  if (pathname === CAMINHO_DO_SECURITY_TXT) {
+    return { tipo: 'reescrever', para: `${SEGMENTO_DO_PRODUTO}/security.txt` };
+  }
   if (
     FICHEIROS_DE_RAIZ.includes(pathname as (typeof FICHEIROS_DE_RAIZ)[number]) ||
     CAMINHOS_DE_FICHEIROS.some((prefixo) => pathname.startsWith(prefixo))

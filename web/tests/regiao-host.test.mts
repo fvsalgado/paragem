@@ -303,3 +303,16 @@ test('fora da pré-visualização, a marca não quer dizer nada: é um anfitriã
     para: `${SEGMENTO_DO_PRODUTO}/`,
   });
 });
+
+test('o security.txt é o do produto em todos os anfitriões', () => {
+  for (const host of [
+    'prova.exemplo.pt',
+    'desconhecido.exemplo.pt',
+    'www.prova-municipio.exemplo.pt',
+  ]) {
+    assert.deepEqual(decidir(host, '/.well-known/security.txt', MAPA), {
+      tipo: 'reescrever',
+      para: `${SEGMENTO_DO_PRODUTO}/security.txt`,
+    });
+  }
+});
