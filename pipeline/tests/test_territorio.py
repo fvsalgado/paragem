@@ -10,7 +10,8 @@ import struct
 
 import pytest
 
-from conftest import regiao_ou_salta
+from conftest import ids_das_regioes, regiao_ou_salta
+from paragem.construcao import _simplificar
 from paragem.territorio import (
     ErroDeTerritorio,
     Limite,
@@ -18,6 +19,7 @@ from paragem.territorio import (
     _gpkg_srs,
     _gpkg_wkb,
     ler_caop,
+    ler_limites_geojson,
 )
 
 shapely = pytest.importorskip("shapely")
@@ -120,46 +122,93 @@ def test_a_prova_nao_declara_limites_e_isso_e_legitimo(raiz):
     assert not regiao_ou_salta("prova").limites
 
 
-def test_o_medio_tejo_declara_limites(raiz):
-    limites = regiao_ou_salta("medio-tejo").limites
-    assert limites.get("fonte") == "caop"
-    assert limites.get("campo_codigo") == "dtmn"
+def _com_limites(id_regiao: str):
+    r = regiao_ou_salta(id_regiao)
+    if not r.limites:
+        pytest.skip(f"{id_regiao} não declara limites — atribui pela caixa")
+    return r
 
 
-def test_todos_os_concelhos_declaram_dico(raiz):
+@pytest.mark.parametrize("id_regiao", ids_das_regioes())
+def test_quem_declara_limites_diz_de_onde_e_por_que_codigo(raiz, id_regiao):
+    """A CAOP pede-se pelo código DTMN; um GeoJSON, pelo campo que declarar."""
+    r = _com_limites(id_regiao)
+    assert r.limites.get("fonte"), "limites sem fonte"
+    if r.limites["fonte"] == "caop":
+        assert r.limites.get("campo_codigo", "dtmn") == "dtmn"
+
+
+@pytest.mark.parametrize("id_regiao", ids_das_regioes())
+def test_todos_os_concelhos_declaram_dico(raiz, id_regiao):
     """Sem `dico` não há como pedir o limite: pede-se por código, não por nome."""
-    r = regiao_ou_salta("medio-tejo")
-    assert len(r.dicos) == len(r.concelhos) == 13
+    r = _com_limites(id_regiao)
+    assert r.concelhos, "uma região com limites e sem concelhos"
+    assert len(r.dicos) == len(r.concelhos)
 
 
 # --- a carta a sério -------------------------------------------------------
 
 
-def test_a_caop_responde_pelos_treze_concelhos(raiz):
-    """Salta-se quando a carta não está descarregada: são 111 MB, e um teste
-    que não pode verificar tem de o dizer em vez de fingir que verificou.
-    """
-    caop = raiz / ".cache" / "caop.zip"
-    if not caop.exists():
-        pytest.skip("sem a CAOP em .cache/caop.zip (uv run pipeline fetch --regiao medio-tejo)")
+def _territorio_declarado(raiz, r) -> Territorio:
+    """Os limites da região, lidos como a construção os lê — sem ir à rede.
 
-    r = regiao_ou_salta("medio-tejo")
-    t = ler_caop(caop, r.dicos, cache=raiz / ".cache" / "caop.gpkg")
-    assert len(t) == 13
+    Salta quando a carta não está em disco: a CAOP são 111 MB, e um teste que
+    não pode verificar tem de o dizer em vez de fingir que verificou.
+    """
+    from paragem.fontes import ACESSO_AUTOMATICO, ErroDeFonte, Registo, _extensao
+
+    decl = r.limites
+    registo = Registo.carregar(raiz)
+    fonte = registo.obter(decl["fonte"])
+    if fonte.acesso == ACESSO_AUTOMATICO:
+        caminho = raiz / ".cache" / f"{fonte.id}{_extensao(fonte)}"
+        if not caminho.exists():
+            pytest.skip(f"sem {caminho.name} em .cache (uv run pipeline fetch --regiao {r.id})")
+    else:
+        try:
+            caminho = registo.caminho(fonte.id, descarregar=False)
+        except ErroDeFonte as e:
+            pytest.skip(str(e))
+
+    if fonte.formato == "geojson":
+        return ler_limites_geojson(
+            caminho,
+            r.dicos,
+            camada=decl.get("camada", "concelho"),
+            campo_codigo=decl.get("campo_codigo", "dico"),
+            campo_nome=decl.get("campo_nome", "nome"),
+        )
+    return ler_caop(
+        caminho,
+        r.dicos,
+        camada=decl.get("camada", "cont_municipios"),
+        campo_codigo=decl.get("campo_codigo", "dtmn"),
+        campo_nome=decl.get("campo_nome", "municipio"),
+        cache=raiz / ".cache" / f"{fonte.id}.gpkg",
+    )
+
+
+@pytest.mark.parametrize("id_regiao", ids_das_regioes())
+def test_os_limites_respondem_por_todos_os_concelhos_declarados(raiz, id_regiao):
+    r = _com_limites(id_regiao)
+    t = _territorio_declarado(raiz, r)
+    assert len(t) == len(r.dicos)
     assert t.codigos == set(r.dicos)
 
     # Os nomes da carta são os nomes declarados. Um código trocado dá aqui um
     # concelho com o nome de outro — que é exatamente o erro que ninguém vê.
     for limite in t.limites:
-        assert r.concelho_por_dico(limite.codigo).nome == limite.nome
+        c = r.concelho_por_dico(limite.codigo)
+        assert c is not None and _simplificar(c.nome) == _simplificar(limite.nome), (
+            f"{limite.codigo}: declarado {c.nome if c else None!r}, carta {limite.nome!r}"
+        )
 
-    # Pontos de controlo: dois dentro, um em cada lado da fronteira da região,
-    # e dois de fora que a CAIXA apanhava e a geometria não.
-    assert t.concelho_de(39.6039, -8.4126).nome == "Tomar"
-    assert t.concelho_de(39.6317, -8.6725).nome == "Ourém"  # Fátima
-    assert t.concelho_de(39.8064, -8.0972).nome == "Sertã"
-    assert t.concelho_de(39.7436, -8.8070) is None, "Leiria não é da região"
-    assert t.concelho_de(39.2362, -8.6860) is None, "Santarém não é da região"
+    # Fora da caixa da região, não há concelho da região. (Os pontos de
+    # controlo que a CAIXA apanhava e a geometria não são de cada território:
+    # vivem nos testes da raiz que tem os dados dele.)
+    cx = r.caixa
+    assert t.concelho_de(cx.lat_max + 1.0, cx.lon_min - 1.0) is None
+    assert t.concelho_de(cx.lat_min - 1.0, cx.lon_max + 1.0) is None
 
 
 # --- os limites num GeoJSON ----------------------------------------------------

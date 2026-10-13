@@ -20,6 +20,7 @@ import pytest
 import yaml
 
 from conftest import RAIZ
+from paragem.regiao import carregar_todas
 
 GERADOR = RAIZ / "ferramentas" / "esqueleto-publico.py"
 
@@ -164,14 +165,24 @@ def test_a_varredura_nao_depende_do_acento(gerador):
     ciclo saltava-as todas. Verde a verificar zero, que é o defeito que este
     ficheiro inteiro existe para apanhar.
 
-    O nome tem de estar escrito uma vez: não se testa «isto apanha o nome
-    seja como for escrito» sem o escrever. Uma é o mínimo, e as outras oito
-    saem dela.
+    A terceira tinha o nome escrito UMA vez, e era uma vez a mais: a suite é
+    pública, e o §10 não deixa nomear um cliente nos testes. Agora o nome vem
+    das regiões REAIS que a raiz declara — as que não são demonstração —, e
+    onde não há nenhuma o teste SALTA e diz porquê, em vez de passar sem
+    afirmar nada. O gerador vive onde a região do cliente vive, e é lá que
+    isto corre a sério.
     """
-    grafias = _grafias("Médio Tejo")
-    assert len(grafias) == 9, "as grafias deixaram de se gerar — isto passaria a vazio"
-    for grafia in grafias:
-        assert gerador.MARCAS.search(grafia), f"a varredura deixa passar {grafia!r}"
+    reais = [r for r in carregar_todas(RAIZ) if not r.demonstracao]
+    if not reais:
+        pytest.skip(
+            "nenhuma região real nesta raiz: não há nome de cliente com que provar a "
+            "varredura, e escrevê-lo aqui era nomeá-lo"
+        )
+    for r in reais:
+        grafias = _grafias(r.nome)
+        assert len(grafias) == 9, "as grafias deixaram de se gerar — isto passaria a vazio"
+        for grafia in grafias:
+            assert gerador.MARCAS.search(grafia), f"a varredura deixa passar {grafia!r}"
 
 
 def test_a_varredura_nao_apanha_palavra_comum(gerador):

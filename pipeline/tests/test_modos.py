@@ -89,15 +89,18 @@ def test_a_disponibilidade_de_bicicletas_nunca_se_promete(raiz):
 
 
 def test_o_filtro_dos_urbanos_nunca_e_pela_rede(raiz):
-    """`network=TUT` também é usado a 130 km daqui (§6.4). O filtro é pelo OPERADOR.
+    """A mesma etiqueta `network=` foi medida em duas cidades a 130 km. O filtro é pelo OPERADOR.
 
-    Está declarado na receita como `nunca_filtrar_por: network` — e este teste
-    existe para que apagar essa linha não passe despercebido.
+    Em TODAS as regiões que declaram traçados de rotas — e não só numa, pelo
+    nome: está declarado na receita como `nunca_filtrar_por: network`, e este
+    teste existe para que apagar essa linha não passe despercebido.
     """
-    r = regiao_ou_salta("medio-tejo")
-    rotas = [s for s in _declaracoes_de_modo(r) if s.leitor == "osm-rotas"]
-    assert rotas, "a região deixou de declarar traçados de rotas"
-    for s in rotas:
-        assert s.params["nunca_filtrar_por"] == "network"
-        assert "operator" in s.params["filtro"], f"{s.saida} não filtra pelo operador"
-        assert "network" not in s.params["filtro"], f"{s.saida} filtra pela rede"
+    vistas = 0
+    for regiao in ids_das_regioes():
+        r = regiao_ou_salta(regiao)
+        for s in (s for s in _declaracoes_de_modo(r) if s.leitor == "osm-rotas"):
+            vistas += 1
+            assert s.params.get("nunca_filtrar_por") == "network", f"{regiao}: {s.saida}"
+            assert "operator" in s.params["filtro"], f"{regiao}: {s.saida} não filtra pelo operador"
+            assert "network" not in s.params["filtro"], f"{regiao}: {s.saida} filtra pela rede"
+    assert vistas, "nenhuma região declara traçados de rotas — o teste deixou de afirmar"

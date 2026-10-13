@@ -111,10 +111,9 @@ class Calendario:
 
         Há concelhos com feriado MÓVEL — medido numa região real, quatro em
         treze: dois na Segunda-feira de Páscoa e dois na Quinta-feira da
-        Ascensão. Escrever
-        uma data fixa para esses fica errado já no ano seguinte, e ninguém dá
-        por isso porque o ficheiro continua preenchido. Daí o
-        `deslocamento_pascoa`.
+        Ascensão. Escrever uma data fixa para esses fica errado já no ano
+        seguinte, e ninguém dá por isso porque o ficheiro continua preenchido.
+        Daí o `deslocamento_pascoa`.
 
         Ficam de fora daqui os NACIONAIS de propósito: um feriado municipal
         vale num concelho e não no resto do território, e misturá-los era

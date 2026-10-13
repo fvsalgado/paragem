@@ -27,8 +27,8 @@ DUAS REGRAS QUE EVITAM O PIOR
 «Bombeiros» e «Continente» existem em todo o país; sem o limite
 administrativo, uma paragem de uma cidade da região ia parar a outra cidade —
 o recorte de OSM de uma região real tinha 2 358 paragens de outra rede urbana
-lá dentro. E alargar a procura ao
-resto da região quando o concelho não responde é PIOR do que não responder:
+lá dentro. E alargar a procura ao resto da região quando o concelho não
+responde é PIOR do que não responder:
 havendo um só «Centro de Saúde» na região, e sendo noutro concelho, a procura
 alargada devolve-o com toda a confiança.
 
