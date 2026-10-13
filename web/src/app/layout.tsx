@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Atkinson_Hyperlegible } from 'next/font/google';
 import './global.css';
+import FaixaDePreVisualizacao from '@/componentes/FaixaDePreVisualizacao';
 import Medicao from '@/componentes/Medicao';
 import { COR_DO_TEMA } from '@/lib/manifesto';
 import { GUIAO_DO_TEMA } from '@/lib/tema';
@@ -68,6 +69,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <a className="saltar" href="#conteudo">
           Saltar para o conteúdo
         </a>
+        <FaixaDePreVisualizacao />
         <Medicao />
         {children}
       </body>
