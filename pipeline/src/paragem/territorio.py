@@ -179,7 +179,7 @@ def ler_caop(
     """Os limites dos concelhos com estes códigos, já em graus.
 
     `codigos` são os `dico` declarados pela região. Pedir por código e não por
-    nome é deliberado: «Sertã» escreve-se de uma maneira e «Serta» de outra, e
+    nome é deliberado: «Sável» escreve-se de uma maneira e «Savel» de outra, e
     um acento perdido numa codificação não pode fazer desaparecer um concelho.
     """
     import shapely

@@ -1,10 +1,11 @@
 """`gbfs-operadora` — as estações de bicicletas, ditas pelo próprio sistema.
 
 O `osm-bicicletas` tira-as do OpenStreetMap, e o OpenStreetMap é bom nisto:
-das 77 estações que o sítio do meioB lista, 77 estão no mapa a menos de 60 m.
-O que o mapa NÃO tem é o nome que o sistema lhes dá. Escreve «Bicicletas meioB
-- Estação Ferroviária» — uma etiqueta de mapa —, e o sistema escreve «Tomar -
-Estação Ferroviária», que é o que está no poste e o que a pessoa procura.
+medido num sistema real, das 77 estações que o sítio dele lista, 77 estão no
+mapa a menos de 60 m. O que o mapa NÃO tem é o nome que o sistema lhes dá.
+Escreve «Bicicletas <marca> - Estação Ferroviária» — uma etiqueta de mapa —, e
+o sistema escreve «<cidade> - Estação Ferroviária», que é o que está no poste e
+o que a pessoa procura.
 
 Por isso este leitor existe, e por isso NÃO substitui o outro: corre a seguir,
 lê a lista da operadora e CONFRONTA-A com a do mapa. Uma estação que só um dos
@@ -70,9 +71,9 @@ def ler(ctx: Contexto, saida: Saida) -> Resultado:
     p = saida.params
     estacoes = _do_instantaneo(ctx.caminho_da_fonte(saida.fonte))
 
-    # O sítio lista os dois sistemas na mesma página e distingue-os pelo campo
-    # «cidade»: o BUE é do Entroncamento e aparece com a cidade «BUE». Uma
-    # região que sirva mais sistemas declara o seu filtro aqui.
+    # Um sítio pode listar dois sistemas na mesma página e distingui-los pelo
+    # campo «cidade»: medido num, o segundo sistema aparecia com o nome dele
+    # nesse campo. Uma região que sirva mais sistemas declara o seu filtro aqui.
     so = p.get("cidades")
     excepto = p.get("excepto_cidades")
     if so:

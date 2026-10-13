@@ -36,7 +36,7 @@ ENDERECO = "https://github.com/onthegomap/planetiler/releases/download/v{versao}
 # O Planetiler corre com o Java 21, como o OTP.
 JAVA_MINIMO = 21
 
-# Medido a 20/09/2026, no recorte do Médio Tejo (82 MB de `.osm.pbf`):
+# Medido a 20/09/2026, no recorte de uma região real (82 MB de `.osm.pbf`):
 #
 #     -Xmx4g   ·  2m15s  ·  66 MB de saída  ·  zoom 0 a 14
 #
@@ -145,7 +145,7 @@ def construir(raiz: Path, regiao: Regiao, *, memoria: str = MEMORIA) -> Mosaicos
         # os números de porta não têm lugar num mapa de transportes.
         #
         # E não é só peso: eram eles que enchiam os mosaicos das vilas densas.
-        # O de Tomar no zoom 14 tinha 133 kB e não carregava — o mapa ficava
+        # O da maior vila no zoom 14 tinha 133 kB e não carregava — o mapa ficava
         # em branco por cima da maior vila da região, sem um erro na consola.
         f"--exclude-layers={','.join(FORA)}",
         "--download",

@@ -88,7 +88,7 @@ CATALOGO_PROPRIO = {"horarios", "feed-proprio", "catalogo-proprio"}
 
 
 def _por_extenso(operador: str) -> str:
-    """«C.M. Torres Novas» e «Câmara Municipal de Torres Novas» são a mesma.
+    """«C.M. Pedra Alta» e «Câmara Municipal de Pedra Alta» são a mesma.
 
     A primeira é a etiqueta `operator` do OpenStreetMap, a segunda é como a
     câmara se escreve nos cartazes dela. Sem isto, a linha «Gerido por» da
@@ -107,7 +107,7 @@ def com_nomes_da_regiao(feed, regiao):
     **É PÚBLICA PORQUE O ORÁCULO TAMBÉM PRECISA DELA.** O teste que confere
     cada perna contra o GTFS em bruto lia os nomes do ficheiro e comparava-os
     com os que o planeador devolveu — e o planeador já os vê corrigidos. As
-    três pernas de expresso de Fátima para Tomar reprovaram com «nenhuma
+    três pernas de expresso entre duas cidades de uma região reprovaram com «nenhuma
     viagem bate certo», e batiam: o que não batia eram as duas grafias do
     mesmo cais. Chamar a MESMA função dos dois lados é o que impede as duas
     de voltarem a divergir.
@@ -115,8 +115,8 @@ def com_nomes_da_regiao(feed, regiao):
     Aplica-se AO FEED e não à apresentação, e a diferença é o que faz isto
     valer a pena: a fusão de paragens exige mesma distância e MESMO NOME, e
     por isso um nome corrigido aqui funde duas paragens que eram a mesma —
-    medido, 19 metros entre a paragem dos expressos e a da rede em Tomar, em
-    Fátima e em Torres Novas. Corrigir só à vista deixava-as duas, e a viagem
+    medido, 19 metros entre a paragem dos expressos e a da rede em três
+    cidades da mesma região. Corrigir só à vista deixava-as duas, e a viagem
     continuava a mostrar uma caminhada de «0 min · 19 m» entre elas.
 
     Uma região sem `nomes.yaml` — as duas de prova não têm — passa incólume.
@@ -137,9 +137,9 @@ def _sem_repetidas(lista: list[dict]) -> list[dict]:
     Não é a mesma coisa que o filtro do dia. Estas são partidas iguais em
     TUDO — mesma hora, mesma linha, mesmo destino e mesmo serviço — e vêm de
     duas viagens distintas no feed, que é como uma linha que se divide em dois
-    percursos a meio aparece duas vezes no princípio. Medido em Fátima
-    (Terminal): sete pares, entre eles «08:40 · 107 · Nazaré (Terminal)» três
-    vezes seguidas.
+    percursos a meio aparece duas vezes no princípio. Medido no terminal de
+    uma cidade: sete pares, entre eles «08:40 · 107 · <destino>» três vezes
+    seguidas.
 
     Guarda-se a PRIMEIRA, e a ordem não muda: a lista já vem ordenada, e
     reordenar aqui trocava a ordem de apresentação por causa de uma limpeza.
@@ -319,7 +319,7 @@ class Sitio:
             "nome": r.nome,
             "artigo": r.artigo,
             # A prosa vem daqui já feita. O sítio não tem regra de contração
-            # nenhuma: «do Médio Tejo» e «da Serra da Pedra Alta» vêm
+            # nenhuma: «do Baixo Sável» e «da Serra da Pedra Alta» vêm
             # escritos, porque nenhuma heurística acerta nos topónimos
             # portugueses.
             "nome_com_artigo": r.nome_com_artigo,
@@ -440,7 +440,7 @@ class Sitio:
         # ganhar a linha que as serve.
         #
         # É o mesmo critério que o feed da própria rede já usa: ele traz as
-        # paragens dele em Leiria e em Santarém, porque o §2 proíbe cortar uma
+        # paragens dele nos distritos vizinhos, porque o §2 proíbe cortar uma
         # carreira na fronteira, e uma paragem sem página é um corte.
         vistas: dict[str, dict] = {}
         for ficheiro in [self.feed_proprio, *self.feeds_na_mesma_paragem]:
@@ -545,7 +545,7 @@ class Sitio:
                         # perguntar «isto anda HOJE?».
                         #
                         # Sem ela a folha da paragem mostrava os três tipos de
-                        # dia ao mesmo tempo: em Fátima (Terminal) liam-se três
+                        # dia ao mesmo tempo: no terminal de uma cidade liam-se três
                         # partidas às 19:30 na linha 107 — uma de dias úteis,
                         # uma de sábados e uma de domingos — como se fossem
                         # três autocarros. Quem lá está numa terça-feira vê
@@ -1283,9 +1283,9 @@ class Sitio:
         #
         # Um destino é uma paragem que vem DEPOIS desta na mesma viagem — e
         # não qualquer paragem da mesma linha. A diferença não é subtil: a
-        # linha que passa em Tomar a caminho de Lisboa também passa em Coimbra,
-        # mas quem está em Tomar não vai a Coimbra nesse autocarro. Pôr Coimbra
-        # na lista era prometer uma viagem que não existe.
+        # linha que passa por uma cidade a caminho de Lisboa também passa pela
+        # cidade de onde veio, mas quem está na primeira não vai à segunda nesse
+        # autocarro. Pô-la na lista era prometer uma viagem que não existe.
         destinos_de: dict[str, set[str]] = collections.defaultdict(set)
         for ps in sequencia.values():
             percurso = [s for _, s in sorted(ps)]
@@ -1522,7 +1522,7 @@ def construir(raiz: Path, regiao: Regiao, destino: Path, territorio=None) -> Sit
 
     # ISTO EXISTE PORQUE FALHOU EM SILÊNCIO UMA VEZ.
     #
-    # O `sitio.py` pedia o feed pelo nome do ficheiro do Médio Tejo. Quando a
+    # O `sitio.py` pedia o feed pelo nome do ficheiro de um cliente. Quando a
     # segunda região entrou, não encontrou o dela e escreveu um sítio completo
     # e vazio — todas as páginas, zero paragens —, sem um aviso. Um erro que se
     # vê é barato; uma página vazia que parece certa custa a quem a abrir.
@@ -1640,7 +1640,7 @@ def construir(raiz: Path, regiao: Regiao, destino: Path, territorio=None) -> Sit
 
     # OS SÍTIOS VÃO NUM FICHEIRO À PARTE, e é uma decisão de dados móveis.
     #
-    # São 28 mil no Médio Tejo, contra 2 419 paragens. Juntá-los ao
+    # São 28 mil numa região real, contra 2 419 paragens. Juntá-los ao
     # `procura.json` multiplicava por dez o que o telemóvel descarrega ao abrir
     # a página — e quem só quer ver o mapa não escreve nada na caixa.
     #
@@ -1655,7 +1655,7 @@ def construir(raiz: Path, regiao: Regiao, destino: Path, territorio=None) -> Sit
     # O limite da plataforma são 15 000, e o mapa ainda não tinha entrado —
     # ou seja, o desenho partia na região seguinte.
     #
-    # Medido, por concelho: o maior é Tomar com 904 paragens, 1,3 MB em bruto
+    # Medido, por concelho: o maior de uma região real tem 904 paragens, 1,3 MB em bruto
     # e **50 kB com gzip**. Um pedido. Quem está numa paragem está num
     # concelho, e é esse que o navegador busca.
     #
@@ -1673,7 +1673,7 @@ def construir(raiz: Path, regiao: Regiao, destino: Path, territorio=None) -> Sit
     # O ficheiro do concelho é para o NAVEGADOR — o mapa e o «Perto de ti»
     # pedem-no uma vez e servem dezenas de paragens. A página de uma paragem
     # é outra conta: rende-se no servidor e fica em cache, e a cache de dados
-    # do Next não guarda respostas acima de 2 MB — Tomar, em base64, passa
+    # do Next não guarda respostas acima de 2 MB — esse concelho, em base64, passa
     # disso. Uma página que relê 1,6 MB a cada renderização para tirar de lá
     # cinco linhas é o desenho errado. A ficha traz a paragem e as partidas
     # dela: alguns kB, e é só isso que a página lê.
@@ -1902,13 +1902,13 @@ def _procura(
 
     **Vai em listas e não em objetos, de propósito.** O `paragens.json` tem
     843 kB e serve para construir as páginas — carregá-lo no telemóvel de
-    alguém que só quer escrever «Tomar» era gastar-lhe os dados por nada. Aqui
+    alguém que só quer escrever o nome de uma terra era gastar-lhe os dados por nada. Aqui
     cada paragem é `[nome, lat, lon, tipo]` e as chaves estão no cabeçalho: dá
     cerca de um terço, e o resto faz-se com o `gzip` do servidor.
     """
     # O `id` entrou para o «Perto de ti». O planeador só precisava de
-    # coordenadas — manda-as ao motor e acabou —, mas quem vê «a 180 m: Tomar
-    # (Hospital)» quer tocar-lhe e ver as horas. Sem o identificador não há
+    # coordenadas — manda-as ao motor e acabou —, mas quem vê «a 180 m: Pedra
+    # Alta (Hospital)» quer tocar-lhe e ver as horas. Sem o identificador não há
     # ligação para a página, e o bloco ficava a ser uma lista de nomes sem
     # saída.
     campos = ["nome", "lat", "lon", "tipo", "paragens", "id", "concelho"]
@@ -1916,7 +1916,7 @@ def _procura(
     # UM PONTO POR NOME. Uma paragem tem quase sempre duas: uma de cada lado da
     # estrada. Na página fazem falta as duas — são sítios diferentes onde se
     # espera. Na procura são a mesma resposta escrita duas vezes, e quem
-    # escreve «Tomar» não quer escolher entre duas linhas iguais.
+    # escreve o nome da terra não quer escolher entre duas linhas iguais.
     #
     # Fica a MAIS SERVIDA de cada nome, que é a que tem mais hipóteses de ser
     # aquela em que a pessoa está a pensar. O motor parte de coordenadas e
@@ -1943,7 +1943,7 @@ def _procura(
 
     for e in estacoes:
         # As estações entram sempre, mesmo com o mesmo nome de uma paragem:
-        # «Entroncamento» a estação e «Entroncamento (Bombeiros)» a paragem são
+        # «Vale Escuro» a estação e «Vale Escuro (Bombeiros)» a paragem são
         # sítios diferentes, e quem procura a estação procura a estação.
         melhor[f"{e['nome']} (estação)"] = [
             f"{e['nome']} (estação)",
@@ -2014,7 +2014,7 @@ def _pontos_dos_modos(modos: dict[str, Any], campos: list[str]) -> dict[str, lis
         # AS PARAGENS DE UM MODO SÃO PONTOS COMO OS OUTROS.
         #
         # Faltava este ramo, e o que faltava no mapa eram os quatro cais dos
-        # expressos — Abrantes, Fátima, Tomar e Torres Novas. O leitor sempre
+        # expressos de uma região real. O leitor sempre
         # os trouxe com coordenadas; ninguém os lia aqui, e o mapa não tinha
         # filtro «Expresso» porque não tinha um único ponto desse tipo. Quem
         # quisesse saber de onde parte a camioneta para Lisboa tinha de
@@ -2073,7 +2073,7 @@ def _sitios(
     cada sítio é uma lista. Dá cerca de um terço, e o resto faz-se com o gzip.
 
     A `classe` crua vai junto para a interface poder ordenar: quem escreve
-    «Tomar» quer a cidade antes de uma pastelaria com o mesmo nome, e sem a
+    o nome de uma cidade quer a cidade antes de uma pastelaria com o mesmo nome, e sem a
     classe não há como saber qual é qual.
 
     E O CONCELHO, para dois sítios com o mesmo nome se distinguirem (P2-037):
@@ -2323,7 +2323,7 @@ def _com_horario(
 def _catalogo(circuitos: list[dict[str, Any]], horarios: list[dict[str, Any]]) -> list[dict]:
     """O catálogo com o grupo onde está o horário de cada circuito.
 
-    O `horario_em` da declaração nomeia o FICHEIRO de saída (`tap/sardoal.json`)
+    O `horario_em` da declaração nomeia o FICHEIRO de saída (`tap/<circuito>.json`)
     porque é isso que se sabe quando se decide a ligação. A página precisa do
     identificador do grupo, que é o mesmo nome sem a pasta nem a extensão.
 

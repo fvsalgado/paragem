@@ -6,14 +6,14 @@ consegue testar contra os números do §6.1 sem construir um feed inteiro.
 
 A forma do documento, que o §6.1 descreve e que se confirmou página a página:
 
-    10 Abrantes - Tomar                          ← cabeçalho: código + nome
+    10 Pedra Alta - Vale Escuro                  ← cabeçalho: código + nome
 
     IDA                       E    FE     E      ← período, com prefixo
     OUTBOUND                  U     U     U      ← dias, com prefixo
-    Abrantes (Terminal)     13:45 16:30 17:00    ← ponto de horário
-    Escola Sec. M. Fernandes 13:47   -   17:02   ← «-» é «não para aqui»
+    Pedra Alta (Terminal)   13:45 16:30 17:00    ← ponto de horário
+    Escola Sec. da Serra    13:47   -   17:02    ← «-» é «não para aqui»
                           C 10:40 19:20   -      ← chegada
-    Fátima (Terminal)                            ← … o nome sozinho …
+    Ribeira Branca (Terminal)                    ← … o nome sozinho …
                           P 10:50 19:30   -      ← … e a partida
 
     E-U | Escolar - Dias Úteis | School Days     ← legenda, que é normativa

@@ -22,7 +22,7 @@ import yaml
 
 from .marca import MarcaInvalida, validar_cor, validar_logotipo
 
-# As contrações. A prosa do produto pendura toda daqui — «do Médio Tejo», «na
+# As contrações. A prosa do produto pendura toda daqui — «do Baixo Sável», «na
 # Serra da Pedra Alta» — e nenhuma heurística acerta nos topónimos
 # portugueses. Por isso a região DECLARA o artigo e o resto deriva.
 _CONTRACOES: dict[str, dict[str, str]] = {
@@ -142,9 +142,10 @@ class Regiao:
     # não vêm é pior do que secção nenhuma.
     a_pedido: dict[str, Any] = field(default_factory=dict)
     #: O domínio canónico em que a região responde — `meio.paragem.pt`,
-    #: `prova.paragem.pt`. DECLARADO, não adivinhado: de «medio-tejo» não se
-    #: tira «meio», que é o nome da rede e não o do território — e antes disso
-    #: foi «mediotejo», uma contração, e este projeto não adivinha contrações.
+    #: `prova.paragem.pt`. DECLARADO, não adivinhado: do identificador de uma
+    #: região real não se tira o subdomínio dela, que foi primeiro o nome da
+    #: rede e depois uma contração do território — e este projeto não adivinha
+    #: contrações.
     #: É identidade da região, por isso vive aqui e não numa variável de
     #: ambiente: é também o LOGÓTIPO dela, desenhado em feixe (CLAUDE.md, §6).
     #: A base de dados do painel guarda uma cópia, e o CI confere que as duas
@@ -154,7 +155,7 @@ class Regiao:
     #: Nomes de paragem que os feeds de terceiros escrevem noutra língua.
     #:
     #: A interface é em português europeu (CLAUDE.md, primeira linha) e o feed
-    #: pan-europeu dos expressos escreve «Tomar (Bus Station)» e «Fatima» sem
+    #: pan-europeu dos expressos escreve «<Cidade> (Bus Station)» e nomes sem
     #: acento — 37 das 91 paragens dele. Isto não é inventar um dado (§4.4): é
     #: escrever em português o nome de uma terra portuguesa, e a correção fica
     #: declarada numa tabela que se revê, não espalhada pelo código.
@@ -183,7 +184,7 @@ class Regiao:
     # --- prosa -----------------------------------------------------------
 
     def com(self, preposicao: str) -> str:
-        """«do Médio Tejo», «na Serra da Pedra Alta», «ao Médio Tejo»."""
+        """«do Baixo Sável», «na Serra da Pedra Alta», «ao Baixo Sável»."""
         return f"{_CONTRACOES[self.artigo][preposicao]} {self.nome}"
 
     @property
@@ -307,7 +308,8 @@ class Regiao:
         if artigo not in _CONTRACOES:
             raise ErroDeRegiao(
                 f"{pasta.name}: o artigo tem de ser 'o', 'a', 'os' ou 'as' e é {artigo!r}. "
-                "Não se adivinha: é «o» Médio Tejo e «a» Lezíria, e nenhuma regra acerta nos dois."
+                "Não se adivinha: é «o» Baixo Sável e «a» Serra da Pedra Alta, e nenhuma regra "
+                "acerta nos dois."
             )
 
         # Os artigos da autoridade e do operador são opcionais — mas, se

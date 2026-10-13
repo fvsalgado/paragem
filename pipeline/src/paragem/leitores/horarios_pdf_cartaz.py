@@ -8,7 +8,7 @@ rodapé.
 
 **Não produz GTFS, e é de propósito.** Um feed precisa de coordenadas para
 cada paragem, e estes cartazes não as têm: dos 94 nomes distintos dos quatro
-cartazes dos TUT, 39 casam com uma paragem que já conhecemos e 55 não casam
+cartazes de uma rede urbana, 39 casam com uma paragem que já conhecemos e 55 não casam
 com nada. Inventar as que faltam era pôr paragens no sítio errado no mapa e no
 planeador (§4.4). Enquanto elas não vierem — do STePP, do OpenStreetMap ou da
 própria câmara —, o que se publica é o HORÁRIO, que é o que responde à
@@ -46,7 +46,7 @@ QUOTA_DE_HORAS_IMPOSSIVEIS = 0.1
 # Já aconteceu duas vezes: um parâmetro declarado na receita da região que o
 # leitor nunca passava ao `pdf_cartazes`. Não rebenta — o cartaz lê-se na
 # mesma, com a afinação por omissão, e sai um horário errado com ar de certo.
-# Do `excluir_linhas` de Vila de Rei saíram as oito viagens a recuar, porque o
+# Do `excluir_linhas` de uma brochura saíram as oito viagens a recuar, porque o
 # painel das ligações intermunicipais continuava a entrar na grelha.
 #
 # Com a tabela, um parâmetro novo no `pdf_cartazes.ler` que aqui falte é
@@ -83,7 +83,7 @@ def ler(ctx: Contexto, saida: Saida) -> Resultado:
     # Não eram. As colunas batem certo ao ponto do papel — x=220 dá 8.04,
     # 8.35 e 8.06 em três paragens seguidas, e x=236 dá 8.35, 8.36 e 8.37 nas
     # mesmas três. A folha imprime 8.35 onde devia estar 8.05. Foi um juízo
-    # à vista, e custou cinco carreiras do Entroncamento sem horário.
+    # à vista, e custou cinco carreiras de uma cidade sem horário.
     impossiveis: list[str] = []
     if p.get("tolera_gralhas"):
         viagens, impossiveis = _limpar(viagens)
@@ -111,7 +111,7 @@ def ler(ctx: Contexto, saida: Saida) -> Resultado:
     # AS REGRAS DE SERVIÇO: as do cartaz, ou as que alguém leu do cartaz.
     #
     # O extrator procura prosa com «sábados», «feriados», «dias úteis». Num
-    # cartaz com a regra sozinha no rodapé — os dos TUT — acerta. Numa FOLHA
+    # cartaz com a regra sozinha no rodapé — os de uma rede urbana — acerta. Numa FOLHA
     # DESENHADA não: o desdobrável do TURE tem uma caixa de preçário e outra
     # de locais de venda, e delas saíam «SERVIÇOS SOCIAIS 3.ª Feira a Sábado»
     # e «Tarifas em vigor» publicadas como regras da carreira. As regras a

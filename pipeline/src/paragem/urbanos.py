@@ -25,8 +25,9 @@ DUAS REGRAS QUE EVITAM O PIOR
 -----------------------------
 **O concelho fecha a procura, e não se alarga.** «Centro de Saúde»,
 «Bombeiros» e «Continente» existem em todo o país; sem o limite
-administrativo, uma paragem de Torres Novas ia parar a Coimbra — o recorte de
-OSM desta região tem 2 358 paragens do SMTUC lá dentro. E alargar a procura ao
+administrativo, uma paragem de uma cidade da região ia parar a outra cidade —
+o recorte de OSM de uma região real tinha 2 358 paragens de outra rede urbana
+lá dentro. E alargar a procura ao
 resto da região quando o concelho não responde é PIOR do que não responder:
 havendo um só «Centro de Saúde» na região, e sendo noutro concelho, a procura
 alargada devolve-o com toda a confiança.
@@ -111,8 +112,8 @@ def _sem_parenteses(s: str) -> str:
     """«Meia Via (Poço)» → «meia via».
 
     O cartaz distingue plataformas entre parênteses; o mapa muitas vezes não.
-    É a última tentativa, e a mais fraca — «Riachos (Eucaliptos)» e «Riachos
-    (Variante)» reduzem-se as duas a «riachos», e é a regra da dispersão que
+    É a última tentativa, e a mais fraca — «Aldeia (Eucaliptos)» e «Aldeia
+    (Variante)» reduzem-se as duas a «aldeia», e é a regra da dispersão que
     as recusa: nove candidatos espalhados por 1,6 km não são uma paragem.
     """
     return _simples(re.sub(r"\(.*?\)", " ", s))

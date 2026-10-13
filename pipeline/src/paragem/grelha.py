@@ -199,7 +199,7 @@ def construir(
     em vez de uns 200.
 
     A viagem que toca a região entra INTEIRA, e não o troço. Quem apanha o
-    comboio em Tomar vai para Lisboa, e cortar a viagem na fronteira era
+    comboio numa estação da região vai para Lisboa, e cortar a viagem na fronteira era
     esconder-lhe o destino (é o que o §5 já manda fazer aos expressos).
 
     **`paragens_partilhadas` É A EXCEÇÃO AO PREFIXO, e só para as paragens.**
