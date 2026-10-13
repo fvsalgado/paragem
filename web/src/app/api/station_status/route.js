@@ -47,9 +47,10 @@ export async function OPTIONS() {
 }
 
 export async function GET() {
-  // DESLIGADA EM CÓDIGO, até haver acordo escrito com quem publica a página
-  // (`disponibilidade/autorizacao.mjs`). Responde-se sem tocar na fonte, e o
-  // sítio nem chega a perguntar: sem leitura autorizada, não recebe endereço.
+  // LIGADA OU DESLIGADA EM CÓDIGO, com a razão escrita ao lado
+  // (`disponibilidade/autorizacao.mjs`). Desligada, responde-se sem tocar na
+  // fonte, e o sítio nem chega a perguntar: sem leitura autorizada, não recebe
+  // endereço.
   const porque = desligada(cfg);
   if (porque) {
     return Response.json(

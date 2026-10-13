@@ -7,14 +7,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 Duas leituras que um sítio estático não consegue fazer sozinho, num serviço só.
 
-> **As duas estão DESLIGADAS em código** (`autorizacao.mjs`). Leem sistemas de
-> terceiros — a página de estações de um sistema de bicicletas e uma pesquisa
-> não documentada de um operador de expressos — sem acordo escrito publicado
-> com quem os publica. Desligadas, o sítio não as pede, as rotas respondem
-> `501` com a razão sem tocar na fonte, e o contentor não as levanta; as
-> estações de bicicletas continuam no mapa sem contagem, e os horários dos
-> expressos continuam a sair do GTFS público. Ligar uma é um commit que muda
-> `autorizacao.mjs` e cita o acordo — nunca uma variável de ambiente. O resto
+> **Cada uma liga-se ou desliga-se em código** (`autorizacao.mjs`), com a
+> razão escrita ao lado. Leem sistemas de terceiros — a página de estações de
+> um sistema de bicicletas e uma pesquisa não documentada de um operador de
+> expressos — sem acordo escrito publicado com quem os publica. **As
+> bicicletas estão ligadas**, por decisão do dono a 13/10/2026: a página lida
+> é a que o próprio sistema publica para quem procura uma bicicleta. **Os
+> expressos estão desligados**: o sítio não os pede, a rota responde `501`
+> com a razão sem tocar na fonte, o contentor não os levanta, e os horários
+> continuam a sair do GTFS público. Mudar uma é um commit que muda
+> `autorizacao.mjs` e diz porquê — nunca uma variável de ambiente. O resto
 > desta página descreve o que fazem quando estão ligadas.
 
 **As bicicletas.** Lê a página que um sistema de bicicletas publica — onde o

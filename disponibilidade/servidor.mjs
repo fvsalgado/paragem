@@ -47,7 +47,7 @@ const cfgX = configExpressos(process.env);
 const PORTA = Number.parseInt(process.env.PARAGEM_PORTA || '8080', 10);
 
 // UMA CAPACIDADE DESLIGADA EM CÓDIGO NÃO SE LEVANTA, esteja ou não configurada
-// (`autorizacao.mjs`): as duas leem sistemas de terceiros sem acordo escrito.
+// (`autorizacao.mjs`, que diz qual está ligada e porquê).
 const temBicicletas = !desligada(cfg) && faltaNaConfiguracao(cfg).length === 0;
 const temExpressos = !expressosDesligados(cfgX) && faltaExpressos(cfgX).length === 0;
 

@@ -1,5 +1,5 @@
 /**
- * O INTERRUPTOR DAS LEITURAS AO VIVO — em código, e desligado.
+ * O INTERRUPTOR DAS LEITURAS AO VIVO — em código, e com a razão ao lado.
  *
  * As duas leituras deste serviço vão buscar dados a SISTEMAS DE TERCEIROS no
  * momento em que alguém abre a página:
@@ -10,24 +10,30 @@
  *     operador, sem autenticação, cujos termos de reutilização estão «por
  *     confirmar» (a fonte da pesquisa de expressos, em `data/sources.yaml`).
  *
- * Nenhuma das duas tem um acordo escrito publicado com quem publica a fonte. O
- * §4.3 do briefing não deixa automatizar o que não se sabe se se pode, e uma
- * autoridade de transportes não deve servir no seu sítio uma leitura que o
- * dono da fonte pode desautorizar amanhã. Por isso ficam DESLIGADAS: o sítio
- * não as pede (`web/src/lib/enderecos.ts`), as rotas respondem que estão
- * desligadas sem tocar na fonte, e o contentor não as levanta.
+ * Nenhuma das duas tem um acordo escrito publicado com quem publica a fonte.
  *
- * O que se perde é só o que é ao vivo. Os horários dos expressos continuam a
- * sair dos ficheiros públicos (GTFS), e as estações de bicicletas continuam no
- * mapa e na página do modo, sem a contagem — nenhuma secção fica vazia.
+ * AS BICICLETAS ESTÃO LIGADAS, por decisão do dono a 13 de outubro de 2026:
+ * «As contagens de bicicletas podem e devem entrar.» A página que se lê é a
+ * que o próprio sistema publica para quem procura uma bicicleta — a mesma
+ * informação, à mesma hora — e a contagem é o que faz a página do modo servir
+ * a quem está na rua. A regra do §4.3 do briefing continua a valer: se o
+ * `robots.txt` ou os termos do sítio lido passarem a proibir a leitura, ou o
+ * dono do sistema a desautorizar, volta-se a desligar aqui, num commit.
  *
- * LIGAR UMA É UM COMMIT, e não uma variável de ambiente: tem de ficar escrito
- * no histórico, ao lado do acordo que a autoriza — citado aqui e registado na
- * fonte, no `sources.yaml` da raiz da região. Uma variável mudava-se num painel
- * de alojamento sem ninguém saber porquê.
+ * OS EXPRESSOS CONTINUAM DESLIGADOS: perguntar preços a uma pesquisa não
+ * documentada de um operador privado é outra coisa, e espera por um acordo. O
+ * sítio não pede a leitura (`web/src/lib/enderecos.ts`), a rota responde que
+ * está desligada sem tocar na fonte, e o contentor não a levanta. Os horários
+ * dos expressos continuam a sair dos ficheiros públicos (GTFS) — nenhuma
+ * secção fica vazia.
+ *
+ * LIGAR OU DESLIGAR UMA É UM COMMIT, e não uma variável de ambiente: tem de
+ * ficar escrito no histórico, com a razão — citada aqui e registada na fonte,
+ * no `sources.yaml` da raiz da região. Uma variável mudava-se num painel de
+ * alojamento sem ninguém saber porquê.
  */
 export const LEITURAS_AUTORIZADAS = Object.freeze({
-  bicicletas: false,
+  bicicletas: true,
   expressos: false,
 });
 

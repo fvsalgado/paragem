@@ -74,13 +74,13 @@ export function enderecoDoServico(
 export const motorDaRegiao = (regiao: string, demonstracao = false): string =>
   enderecoDoServico('OTP', regiao, demonstracao);
 /**
- * AS DUAS LEITURAS AO VIVO, SÓ COM AUTORIZAÇÃO. Leem sistemas de terceiros sem
- * acordo escrito publicado, e por isso estão desligadas em código
- * (`disponibilidade/autorizacao.mjs`): desligadas, não há endereço — e sem
- * endereço o sítio não pergunta. A página das bicicletas mostra as estações
- * sem a contagem, e a dos expressos os horários do GTFS sem o formulário dos
- * preços: as duas como quando o serviço não está configurado. Uma variável de
- * ambiente esquecida no alojamento não as volta a ligar.
+ * AS DUAS LEITURAS AO VIVO, SÓ COM AUTORIZAÇÃO. Leem sistemas de terceiros, e
+ * cada uma liga-se ou desliga-se em código, com a razão escrita ao lado
+ * (`disponibilidade/autorizacao.mjs`): desligada, não há endereço — e sem
+ * endereço o sítio não pergunta. Sem a leitura, a página das bicicletas
+ * mostra as estações sem a contagem, e a dos expressos os horários do GTFS sem
+ * o formulário dos preços: as duas como quando o serviço não está
+ * configurado. Uma variável de ambiente esquecida no alojamento não as liga.
  */
 export const disponibilidadeDaRegiao = (regiao: string, demonstracao = false): string =>
   LEITURAS_AUTORIZADAS.bicicletas ? enderecoDoServico('DISPONIBILIDADE', regiao, demonstracao) : '';

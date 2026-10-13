@@ -226,10 +226,12 @@ cima. Medido nesse dia, para 23/09, a partir de duas cidades de uma região: uma
 viagem para Lisboa (Oriente) às 09:45 por 3,98 € com 46 lugares, e outra às
 18:15 por 6,98 € com 25.
 
-**A 13/10/2026 ficou desligada em código** (`disponibilidade/autorizacao.mjs`),
-com a das bicicletas: a pesquisa não é documentada e os termos de reutilização
-continuam por confirmar, e não há acordo escrito publicado. Os horários dos
-expressos continuam a vir do GTFS público.
+**A 13/10/2026 ficou desligada em código** (`disponibilidade/autorizacao.mjs`):
+a pesquisa não é documentada, os termos de reutilização continuam por
+confirmar, e não há acordo escrito publicado. Os horários dos expressos
+continuam a vir do GTFS público. (A contagem das bicicletas, que se desligou no
+mesmo dia, voltou a ligar-se por decisão do dono: lê a página que o próprio
+sistema publica para quem procura uma bicicleta.)
 
 E repara na diferença que justifica o trabalho: o feed estático liga estas
 paragens a **Lisboa (Oriente)** e não a Sete Rios — perguntar por Sete Rios
