@@ -288,8 +288,8 @@ export function proximaLigacao(
       // podiam ser todas voltas de madrugada — o expresso das quatro e meia
       // para a capital — e a carreira direta do meio-dia nem chegava a ser
       // vista. Pergunta-se outra vez a partir da última que veio, até haver
-      // uma que sirva ou o dia acabar. As horas são as do relógio de quem
-      // pergunta, como as da procura que trouxe aqui.
+      // uma que sirva ou o dia acabar. As horas são as do relógio da região,
+      // como as da procura que trouxe aqui — e não as do telemóvel.
       let hora = '00:00';
       let its: Itinerario[] = [];
       for (let vez = 0; vez < 4; vez++) {

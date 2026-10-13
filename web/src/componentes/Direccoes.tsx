@@ -40,6 +40,7 @@ import {
   type Capacidade,
 } from '@/lib/planeador';
 import { arrumarParaMostrar, contarTransbordos } from '@/lib/viagens';
+import { instanteNaRegiao } from '@/lib/fuso';
 import { aPedidoNasPontas, type PropostaAPedido } from '@/lib/a-pedido';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { comoProcura, escreverViagem } from '@/lib/endereco-da-viagem';
@@ -205,9 +206,11 @@ export default function Direccoes({
   const [de, setDe] = useState<Ponto | null>(deInicial);
   const [para, setPara] = useState<Ponto | null>(paraInicial);
   const [quando, setQuando] = useState<'agora' | 'marcado'>(diaInicial ? 'marcado' : 'agora');
-  // O DIA E A HORA DO MESMO RELÓGIO. O dia vinha do `toISOString()`, que é
-  // UTC, e a hora do relógio de quem lê: no verão, entre a meia-noite e a uma,
-  // o campo abria no dia de ontem (`dataDoCampo`, em `lib/dias.ts`).
+  // O DIA E A HORA DO MESMO RELÓGIO, E É O DA REGIÃO. O dia vinha do
+  // `toISOString()`, que é UTC, e a hora do relógio do aparelho: no verão,
+  // entre a meia-noite e a uma, o campo abria no dia de ontem; e num telemóvel
+  // na hora de Espanha, «agora» era uma hora mais tarde do que na paragem
+  // (`dataDoCampo` e `horaDoRelogio`, em `lib/dias.ts`).
   const [data, setData] = useState(diaInicial ?? dataDoCampo(agora));
   const [hora, setHora] = useState(horaInicial ?? horaDoRelogio(agora));
   const [abertoQuando, setAbertoQuando] = useState(false);
@@ -241,8 +244,12 @@ export default function Direccoes({
    * É o dia PERGUNTADO e não o de hoje: quem marca uma viagem para sábado tem
    * de ler «domingo, 07:30» e não «amanhã, 07:30». Com `partir agora` os dois
    * coincidem, e é por isso que o engano passava despercebido.
+   *
+   * E O DIA E A HORA SÃO DA REGIÃO. `new Date('…T…')` lia-os no fuso do
+   * telemóvel: nos Açores, as 23h30 perguntadas passavam a ser a 00h30 do dia
+   * seguinte em Lisboa, e as partidas desse dia saíam marcadas «ontem».
    */
-  const referencia = new Date(`${data}T${hora}:00`).getTime();
+  const referencia = instanteNaRegiao(data, hora);
 
   function usarALocalizacao() {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
