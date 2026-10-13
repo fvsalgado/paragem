@@ -2665,6 +2665,24 @@ ol.percurso li.modo-bicicleta .fio {
   font-weight: 700;
 }
 
+/* A FAIXA DA PRÉ-VISUALIZAÇÃO (`componentes/FaixaDePreVisualizacao.tsx`).
+   Azul-noite com letra branca nos dois temas — 14,6:1 —, e o amarelo do foco
+   por baixo, para se distinguir também do fundo escuro. Não é um alerta: o
+   vermelho fica para os avisos de serviço. Só existe na pré-visualização. */
+.faixa-pre-visualizacao {
+  background: #102c3f;
+  color: #ffffff;
+  border-bottom: 3px solid #f2b705;
+  padding: 0.5rem 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.faixa-pre-visualizacao p {
+  margin: 0 auto;
+  max-width: 72rem;
+}
+
 /* Uma lista de cartões sem marcadores. É `ul` e não `div` porque são mesmo
    uma lista: quem usa leitor de ecrã ouve quantas regiões há antes de as
    percorrer. */

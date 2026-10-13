@@ -17,6 +17,7 @@ import 'server-only';
  */
 
 import { ErroDaBase, cabecalhosDaChave } from './base-pura.ts';
+import { emPreVisualizacao } from '../pre-visualizacao.ts';
 
 export {
   ErroDaBase,
@@ -65,6 +66,11 @@ async function erroDe(resposta: Response, contexto: string): Promise<ErroDaBase>
 }
 
 function exigirChave(): void {
+  // A SEGUNDA BARREIRA DA PRÉ-VISUALIZAÇÃO: o painel já não abre lá, e esta
+  // porta também não, mesmo que o alojamento lhe dê a chave — a base é a de
+  // produção (`pre-visualizacao.ts`).
+  if (emPreVisualizacao())
+    throw new ErroDaBase('na pré-visualização não se lê nem se escreve pela porta de serviço', 0);
   if (!temChaveDeServico()) throw new ErroDaBase('SUPABASE_SERVICE_ROLE_KEY em falta', 0);
 }
 

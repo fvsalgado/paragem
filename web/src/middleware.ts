@@ -6,6 +6,7 @@ import {
   ehPublicaDoPainel,
 } from '@/lib/painel/guarda';
 import { COOKIE_DA_SESSAO, lerSessao } from '@/lib/painel/sessao';
+import { emPreVisualizacao } from '@/lib/pre-visualizacao';
 import { NAO_E_ENDERECO, decidir, mapaDeDominios } from '@/lib/regiao-host';
 
 /**
@@ -34,6 +35,15 @@ import { NAO_E_ENDERECO, decidir, mapaDeDominios } from '@/lib/regiao-host';
  * `painel/guarda.ts`.
  */
 export async function middleware(request: NextRequest): Promise<NextResponse> {
+  const resposta = await responder(request);
+  // UMA PRÉ-VISUALIZAÇÃO NÃO SE INDEXA, página nenhuma dela (`pre-visualizacao.ts`).
+  // Já fecha por trás do início de sessão da plataforma; isto é para o dia em
+  // que alguém abrir a porta sem pensar no resto.
+  if (emPreVisualizacao()) resposta.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  return resposta;
+}
+
+async function responder(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
   if (ehDoPainel(pathname)) {
@@ -48,7 +58,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   }
 
   const mapa = await mapaDeDominios();
-  const decisao = decidir(request.headers.get('host'), pathname, mapa);
+  const decisao = decidir(request.headers.get('host'), pathname, mapa, emPreVisualizacao());
   switch (decisao.tipo) {
     case 'passar':
       return NextResponse.next();
@@ -98,6 +108,12 @@ function deixarPassar(request: NextRequest): NextResponse {
 async function guardarPainel(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
   if (ehPublicaDoPainel(pathname)) return deixarPassar(request);
+
+  // NA PRÉ-VISUALIZAÇÃO NÃO HÁ SESSÃO QUE VALHA: o painel escreveria nos dados
+  // reais. Vai-se para a entrada, que diz porquê (`pre-visualizacao.ts`).
+  if (emPreVisualizacao()) {
+    return NextResponse.redirect(new URL(caminhoDaEntrada(pathname), request.url));
+  }
 
   const segredo = process.env.ADMIN_SESSION_SECRET;
   const token = request.cookies.get(COOKIE_DA_SESSAO)?.value;

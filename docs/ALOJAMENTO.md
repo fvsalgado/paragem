@@ -73,10 +73,19 @@ Para uma região nova responder são três coisas, e nenhuma é um deploy:
    a Vercel indicar, e é dela;
 3. cinco minutos: o mapa refaz-se por si.
 
-Nas pré-visualizações, `PARAGEM_DOMINIOS` — só nesse ambiente — soma ao mapa
-o endereço provisório do ramo, para se poder ver uma região antes de fundir.
-Nos testes são os `*.localhost` (`web/tests/anfitrioes.ts`). Em produção a
-variável não existe: quem manda é a base.
+Na pré-visualização do ramo `pre`, cada região responde no seu endereço com a
+marca — `<região>.pre.paragem.pt` para `<região>.paragem.pt` — sem configurar
+nada por região: o middleware tira a marca e segue o mapa da base
+([`PRE-VISUALIZACAO.md`](PRE-VISUALIZACAO.md)). Nas pré-visualizações de cada
+PR, `PARAGEM_DOMINIOS` — só nesse ambiente — soma ao mapa o endereço
+provisório do ramo, para se poder ver uma região antes de fundir. Nos testes
+são os `*.localhost` (`web/tests/anfitrioes.ts`). Em produção a variável não
+existe: quem manda é a base.
+
+**As chaves do painel e de escrita são só de produção.** Uma pré-visualização
+lê a base de produção, e o código fecha-lhe o painel e a porta de serviço
+mesmo que as tenha (`web/src/lib/pre-visualizacao.ts`); dar-lhas no alojamento
+seria guardar uma segunda cópia dos segredos onde não fazem nada.
 
 ### O que a Vercel precisa (Environment Variables)
 
@@ -84,7 +93,7 @@ variável não existe: quem manda é a base.
 | --- | --- | --- |
 | `NEXT_PUBLIC_PARAGEM_DADOS` | todos | a porta pública do balde: `https://<ref>.supabase.co/storage/v1/object/public/sitio` |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | todos | a base do painel — a lista das regiões ligadas, lida com a chave pública |
-| `REVALIDATE_SECRET` | produção e pré-visualização, sensível | o que o pipeline apresenta ao avisar; 16 caracteres ou mais |
+| `REVALIDATE_SECRET` | produção, sensível | o que o pipeline apresenta ao avisar; 16 caracteres ou mais. A pré-visualização não precisa dele: o pipeline só avisa a produção |
 | `NEXT_PUBLIC_PARAGEM_PRODUTO` | todos | a montra, `https://www.paragem.pt`: para onde levam a marca e o «Sobre o Paragem.pt» a partir de qualquer região. Mostra só as regiões de demonstração, nunca a de um cliente. É também O endereço do produto — o único anfitrião onde o `robots.txt` do produto deixa indexar, e a morada do mapa do sítio dele |
 | `NEXT_PUBLIC_PARAGEM_CONTACTO` | opcional | o correio para onde a página do produto manda escrever («Falar connosco», «Marcar uma demonstração», «Pedir proposta»). Sem ela, ou com um valor que não seja um endereço, vale o que o repositório já publica no `AUTORIA.md` e no `SECURITY.md` |
 | `PARAGEM_DOMINIOS` | só pré-visualização | `id=host,…` somado ao mapa da base; nos testes é o mapa inteiro |
@@ -93,10 +102,10 @@ variável não existe: quem manda é a base.
 | `PARAGEM_OTP_<REGIAO>` | quem tiver motor | o endereço do OpenTripPlanner dessa região. **A chave calcula-se** (`medio` → `PARAGEM_OTP_MEDIO`), lê-se no servidor e segue para o navegador por propriedade: uma região nova entra com uma variável e zero linhas de código. Sem sufixo serve quem aloja uma região só |
 | `PARAGEM_DISPONIBILIDADE_<REGIAO>`, `PARAGEM_EXPRESSOS_<REGIAO>` (os nomes com `NEXT_PUBLIC_` continuam a servir) | todos | `/api/station_status/` e `/api/expressos/` — caminhos, não domínios: as rotas são servidas pelo mesmo deployment, e o endereço de uma pré-visualização muda a cada publicação |
 | `PARAGEM_PAINEL_URL`, `PARAGEM_EXPRESSOS_URL` | produção | as fontes das duas rotas ([`disponibilidade/README.md`](../disponibilidade/README.md)). **Só servem com a leitura ligada em código** (`disponibilidade/autorizacao.mjs`): hoje as bicicletas estão ligadas, por decisão do dono, e os expressos desligados. Definida, a variável de uma leitura desligada não liga nada |
-| `ADMIN_PASSWORD_HASH`, `ADMIN_SESSION_SECRET` | produção e pré-visualização, sensíveis | a porta do painel `/admin` ([`PAINEL.md`](PAINEL.md)): o hash da palavra-passe do DONO (`web/scripts/senha.mjs`) e o segredo que assina a sessão, 32 caracteres ou mais. Sem eles o painel não abre. As outras pessoas têm a sua palavra-passe na base, e não aqui |
-| `ADMIN_EMAIL` | produção e pré-visualização, **obrigatória** | o email do dono: a palavra-passe do ambiente só entra com este email. Sem ela o painel não abre — diz «Painel por configurar» e o nome da variável que falta |
-| `SUPABASE_SERVICE_ROLE_KEY` | produção e pré-visualização, sensível | a chave **secreta** «painel» do projeto Supabase: é com ela que o painel lê e chama as funções da base. Nunca `NEXT_PUBLIC_`; só o servidor a vê |
-| `IP_HASH_SALT` | produção e pré-visualização, sensível | o sal dos hashes de origem do painel (limite de tentativas, auditoria); 16 caracteres ou mais |
+| `ADMIN_PASSWORD_HASH`, `ADMIN_SESSION_SECRET` | produção, sensíveis | a porta do painel `/admin` ([`PAINEL.md`](PAINEL.md)): o hash da palavra-passe do DONO (`web/scripts/senha.mjs`) e o segredo que assina a sessão, 32 caracteres ou mais. Sem eles o painel não abre. As outras pessoas têm a sua palavra-passe na base, e não aqui |
+| `ADMIN_EMAIL` | produção, **obrigatória** | o email do dono: a palavra-passe do ambiente só entra com este email. Sem ela o painel não abre — diz «Painel por configurar» e o nome da variável que falta |
+| `SUPABASE_SERVICE_ROLE_KEY` | produção, sensível | a chave **secreta** «painel» do projeto Supabase: é com ela que o painel lê e chama as funções da base. Nunca `NEXT_PUBLIC_`; só o servidor a vê |
+| `IP_HASH_SALT` | produção, sensível | o sal dos hashes de origem do painel (limite de tentativas, auditoria); 16 caracteres ou mais |
 | `POSTHOG_CHAVE_PESSOAL`, `POSTHOG_PROJETO` | produção, a chave sensível | para o painel ler as procuras sem resposta de cada região (P4-030, [`MEDICAO.md`](MEDICAO.md)): uma chave pessoal do PostHog **só de leitura** (âmbito `query:read`) e o número do projeto. A chave do sítio não serve — só escreve, e é pública. Sem elas, o relatório diz o que falta. `POSTHOG_API` é opcional: por omissão `https://eu.posthog.com` |
 | `PARAGEM_FUSO` | opcional | o fuso em que o painel lê e escreve as horas dos avisos. Por omissão `Europe/Lisbon`. **É declarado e não adivinhado**: o servidor corre em UTC e o campo `datetime-local` não leva fuso nenhum — sem isto, um aviso das 8h ficava guardado uma hora adiantado no verão, sem erro e sem aviso |
 

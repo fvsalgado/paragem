@@ -38,6 +38,8 @@
  * `next/cache`: a memória é do módulo, com prazo.
  */
 
+import { semAMarcaDePre } from './pre-visualizacao.ts';
+
 /** Quanto tempo o mapa domínio→região vale antes de se voltar a perguntar. */
 export const VALIDADE_DO_MAPA_MS = 5 * 60 * 1000;
 /** Depois de uma falha, volta-se a tentar depressa — sem martelar. */
@@ -323,6 +325,7 @@ export function decidir(
   hostHeader: string | null | undefined,
   pathname: string,
   mapa: Mapa,
+  preVisualizacao = false,
 ): Decisao {
   // Da API nada é de uma região: o sinal, as contagens, os expressos servem
   // todas. E os ficheiros a sério saem de `public/` tal como estão.
@@ -334,11 +337,23 @@ export function decidir(
     return { tipo: 'passar' };
   }
 
-  const host = normalizarHost(hostHeader);
+  const pedido = normalizarHost(hostHeader);
+  let host = pedido;
 
-  // Um alias não serve: redireciona para o canónico, caminho intacto (308).
-  const canonico = host ? mapa.redirecionamentos[host] : undefined;
-  if (canonico) return { tipo: 'redirecionar', host: canonico };
+  // NA PRÉ-VISUALIZAÇÃO, um endereço com a marca vale o de produção que ele
+  // representa (`pre-visualizacao.ts`): `demo.pre.…` mostra a região de
+  // `demo.…`. Um alias serve em vez de redirecionar — o 308 mandava para o
+  // domínio de produção, para fora da pré-visualização. Fora dela a marca não
+  // quer dizer nada: um `pre.…` em produção é um anfitrião como outro
+  // qualquer, desconhecido, e vê a montra.
+  const naPre = preVisualizacao && pedido ? semAMarcaDePre(pedido) : null;
+  if (naPre !== null) {
+    host = mapa.redirecionamentos[naPre] ?? naPre;
+  } else {
+    // Um alias não serve: redireciona para o canónico, caminho intacto (308).
+    const canonico = host ? mapa.redirecionamentos[host] : undefined;
+    if (canonico) return { tipo: 'redirecionar', host: canonico };
+  }
 
   const regiao = host ? (mapa.dominios[host] ?? null) : null;
   if (regiao === null) {
