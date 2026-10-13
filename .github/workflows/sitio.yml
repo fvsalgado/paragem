@@ -1,8 +1,8 @@
 # O sítio: constrói-se, e verifica-se que é acessível.
 #
 # A acessibilidade não é um extra que se vê no fim: para uma autoridade de
-# transportes é o Decreto-Lei n.º 83/2018, e uma violação grave impede a
-# publicação. Corre aqui, em cada alteração, e não à mão quando alguém se
+# transportes é o Decreto-Lei n.º 83/2018, e uma violação deixa esta corrida a
+# vermelho. Corre aqui, em cada alteração, e não à mão quando alguém se
 # lembra.
 name: Sítio
 
@@ -458,7 +458,9 @@ jobs:
         working-directory: web
         run: npx playwright install --with-deps chromium
 
-      # Uma violação grave do axe impede a publicação. Não há `continue-on-error`.
+      # Uma violação do axe deixa esta corrida a vermelho — não há
+      # `continue-on-error`. Não trava sozinha a publicação: a Vercel constrói
+      # o que chega ao `main`, e quem funde é que tem de ver o vermelho.
       # E o planeador é perguntado ao motor a sério: as viagens do §9, pedidas
       # pela interface e não pela API.
       - name: Acessibilidade (axe) e as direções
