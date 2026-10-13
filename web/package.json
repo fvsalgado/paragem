@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "Paragem.pt — o sítio. Uma região por domínio; o que muda são os dados, não o código.",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dados": "node scripts/servir-dados.mjs ../build 4322",
     "dev": "node scripts/copiar-maplibre.mjs && next dev",

@@ -1,4 +1,5 @@
 import Link from '@/componentes/Ligacao';
+import { DO_PRODUTO, lerContactos } from '@/lib/contactos';
 import { exigirRegiao, url } from '@/lib/dados';
 import { redeEQuemAGere } from '@/lib/prosa';
 import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
@@ -6,6 +7,12 @@ import { EscolhaDoTema } from '@/componentes/EscolherTema';
 
 export default async function Rodape({ regiao: id }: { regiao: string }) {
   const r = await exigirRegiao(id);
+  // O CORREIO À VISTA EM TODAS AS PÁGINAS, e não só na acessibilidade e na
+  // privacidade: é o que a autoridade indicou no painel, e enquanto não indicar
+  // responde quem faz o produto — o mesmo critério da página de
+  // acessibilidade, para as duas nunca dizerem endereços diferentes.
+  const contactos = await lerContactos(id);
+  const correio = contactos?.acessibilidade_email || DO_PRODUTO.email;
   return (
     <footer className="rodape">
       <span className="regua-do-feixe" aria-hidden="true" />
@@ -41,6 +48,9 @@ export default async function Rodape({ regiao: id }: { regiao: string }) {
             Alta gerida por Comunidade Intermunicipal…, com operação de …»:
             sem os artigos e com a palavra repetida (`prosa.ts`). */}
         <p>Horários planeados. {redeEQuemAGere(r)}.</p>
+        <p>
+          Contacto: <a href={`mailto:${correio}`}>{correio}</a>
+        </p>
         <Atribuicoes r={r} />
         {/* A ASSINATURA DO PRODUTO, discreta e no fim (P4-008, P3-029). O
             sítio é da autoridade, e quem o fez assina por baixo — como num
