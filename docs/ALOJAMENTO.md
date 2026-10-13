@@ -124,6 +124,28 @@ nota; os dados construídos ficam como artefacto da corrida. Um CI vermelho
 porque falta uma credencial é um CI vermelho por hábito, e um CI vermelho por
 hábito deixa de ser sinal.
 
+### A vigilância (Variables e Secrets)
+
+O fluxo `Vigilância do sítio` pergunta de seis em seis horas, de fora, se a
+página do produto, cada região desta raiz e os dados dela respondem, e se os
+certificados ainda duram (`scripts/vigiar-sitio.sh`). Quando alguma coisa
+falha abre um issue «O sítio não responde», comenta-o enquanto durar e
+fecha-o quando volta.
+
+| onde | nome | o que é |
+| --- | --- | --- |
+| Variables | `PARAGEM_PRODUTO_URL` | o endereço da página do produto, com `https://`. Sem ela, a página do produto não se pergunta — o domínio não se fixa no código |
+| Secrets | `NTFY_URL` | o tópico do ntfy para onde vai o aviso do telemóvel, `https://ntfy.sh/<tópico>` com um nome longo e aleatório |
+| Secrets | `NTFY_TOKEN` | opcional: o token, se o servidor do ntfy o pedir |
+
+**Aqui, sem `NTFY_URL`, a vigilância fica vermelha quando o sítio cai** — de
+propósito, e ao contrário da publicação: o aviso urgente só corre quando alguma
+coisa já falhou, e «falhou e ninguém foi avisado» não pode acabar a verde.
+
+O `paragem.pt` não entra numa verificação de prazos, como o `coreto.org`: o
+registo `.pt` não diz a data de expiração por RDAP. A renovação do domínio
+fica num lembrete do dono.
+
 ### As definições do projeto na Vercel
 
 Estão assim, e quem recriar o projeto tem de as pôr assim:
