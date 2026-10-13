@@ -87,8 +87,8 @@ const INCLUI: { titulo: string; itens: string[] }[] = [
   {
     titulo: 'Para todos',
     itens: [
-      'Acessível: WCAG 2.1 AA, verificado em cada alteração, com declaração de acessibilidade (Decreto-Lei n.º 83/2018).',
-      'Sem cookies e sem dados pessoais: mede-se o que se procura, não quem procura.',
+      'Feito para as WCAG 2.1 AA, com testes automáticos de acessibilidade em cada alteração — o axe-core e o Lighthouse, nos dois temas — e declaração de acessibilidade (Decreto-Lei n.º 83/2018). Ainda sem avaliação manual: a declaração diz o que foi verificado e como.',
+      'Sem cookies e sem contas para quem viaja: mede-se o que se procura — as páginas vistas e as viagens pedidas, pelo nome das paragens —, e não quem procura. A página de privacidade diz o que se regista.',
       'Dados para descarregar — GTFS, GBFS e GeoJSON —, cada ficheiro com a origem e os termos.',
       'Código livre, sob AGPL.',
     ],
@@ -226,7 +226,7 @@ export default async function Produto() {
               Ou escreva para <span className="endereco-de-correio">{CONTACTO}</span>.
             </p>
             <ul className="produto-garantias" aria-label="Em resumo">
-              <li>Acessível: WCAG 2.1 AA</li>
+              <li>Testes de acessibilidade (WCAG 2.1 AA)</li>
               <li>Sem cookies</li>
               <li>Dados abertos em GTFS e GBFS</li>
               <li>Código livre (AGPL)</li>

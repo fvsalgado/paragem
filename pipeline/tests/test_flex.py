@@ -211,7 +211,7 @@ def test_a_tabela_manual_vale_por_cima_de_tudo():
 
 def test_uma_tabela_de_partidas_nao_se_resolve():
     """Não é um percurso: não há por onde passar, e por isso não há o que decidir."""
-    paragens = {"g:1": _paragem("g:1", "Abrantes")}
+    paragens = {"g:1": _paragem("g:1", "Pedra Alta")}
     circuitos = {"X01": _circuito(paragens=("g:1",))}
-    q = _quadro("c.json", "Ligações", tipo="partidas", paragens=["Abrantes"])
+    q = _quadro("c.json", "Ligações", tipo="partidas", paragens=["Pedra Alta"])
     assert resolver([q], {("c.json", "Ligações"): "X01"}, circuitos, paragens) == {}

@@ -23,6 +23,7 @@ import DireccoesDaPagina from '@/componentes/DireccoesDaPagina';
 import { avisosEmVigor } from '@/lib/avisos';
 import { catalogoDosAvisos } from '@/lib/avisos-do-sitio';
 import { motorDaRegiao } from '@/lib/enderecos';
+import { dataDosHorarios } from '@/lib/formato';
 import { lista, plural } from '@/lib/prosa';
 
 /**
@@ -113,6 +114,7 @@ export default async function CatalogoDaRegiao({
               modosDesligados={r.modos_desligados ?? []}
               motorDaRegiao={motorDaRegiao(rid, r.demonstracao)}
               servicosSemDatas={servicosSemDatas(await lacunas(rid))}
+              dadosDe={dataDosHorarios(r)}
               temAPedido={r.modos.includes('a-pedido') && !!pedido}
             />
           </section>
@@ -155,7 +157,7 @@ export default async function CatalogoDaRegiao({
 
       <FaixaDeAvisos avisos={as} catalogo={catalogo} />
 
-      <PertoDeTi regiao={rid} modosDesligados={desligados} />
+      <PertoDeTi regiao={rid} modosDesligados={desligados} dadosDe={dataDosHorarios(r)} />
 
       {/* O TELEFONE FICA AQUI, e não só na página própria. Quem chega a esta
           página a procurar transporte numa freguesia sem carreira precisa do

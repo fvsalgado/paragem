@@ -20,24 +20,29 @@ def test_carrega_pelo_menos_a_prova_e_mais_uma(raiz):
     assert len(ids) >= 2, f"são precisas duas regiões para o multi-região se provar: {ids}"
 
 
-def test_medio_tejo_tem_11_membros_e_13_servidos(raiz):
-    """Os dois números são diferentes, e é preciso que sejam.
+def test_os_membros_e_os_servidos_batem_com_a_lista_de_concelhos(raiz):
+    """Os dois números podem ser diferentes, e é preciso que possam.
 
-    A CIMT tem 11 municípios; a rede serve 13, porque a Sertã e Vila de Rei
-    saíram para a CIM da Beira Baixa e continuam servidas pela concessão.
+    Medido numa região real: a comunidade intermunicipal tem 11 municípios e a
+    rede serve 13, porque dois concelhos saíram para outra comunidade e
+    continuam servidos pela concessão. Em TODAS as regiões, os dois números
+    têm de bater com a lista: os membros com os marcados como membros, os
+    servidos com a lista inteira.
     """
-    r = regiao_ou_salta("medio-tejo")
-    assert r.municipios_membros == 11
-    assert r.concelhos_servidos == 13
-    assert len(r.concelhos) == 13
-    assert {c.id for c in r.concelhos_servidos_nao_membros} == {"serta", "vila-de-rei"}
+    for r in carregar_todas(raiz):
+        membros = [c for c in r.concelhos if c.membro]
+        assert r.municipios_membros == len(membros), r.id
+        assert r.concelhos_servidos == len(r.concelhos), r.id
+        assert {c.id for c in r.concelhos_servidos_nao_membros} == {
+            c.id for c in r.concelhos if not c.membro
+        }, r.id
 
 
 def test_contracoes(raiz):
-    mt = regiao_ou_salta("medio-tejo")
+    municipio = regiao_ou_salta("prova-municipio")
     prova = regiao_ou_salta("prova")
-    assert mt.com("de") == "do Médio Tejo"
-    assert mt.com("em") == "no Médio Tejo"
+    assert municipio.com("de") == "do Baixo Sável"
+    assert municipio.com("em") == "no Baixo Sável"
     assert prova.com("de") == "da Serra da Pedra Alta"
     assert prova.com("em") == "na Serra da Pedra Alta"
     assert prova.com("a") == "à Serra da Pedra Alta"
@@ -92,18 +97,32 @@ def test_recusa_artigo_adivinhado(raiz, tmp_path):
 
 
 def test_caixas_nao_se_sobrepoem(raiz):
-    """Uma coordenada trocada entre regiões tem de falhar, não cair nas duas."""
-    mt, prova = regiao_ou_salta("medio-tejo"), regiao_ou_salta("prova")
-    assert not mt.caixa.sobrepoe(prova.caixa)
+    """Uma coordenada trocada entre regiões tem de falhar, não cair nas duas.
+
+    Todas as regiões que a raiz vê, duas a duas — e não um par escolhido pelo
+    nome.
+    """
+    regioes = carregar_todas(raiz)
+    for i, a in enumerate(regioes):
+        for b in regioes[i + 1 :]:
+            assert not a.caixa.sobrepoe(b.caixa), f"{a.id} e {b.id}"
 
 
 def test_margem_de_recorte_alarga_a_caixa(raiz):
-    """Há linhas que atravessam a fronteira. Cortá-las era servir meia viagem."""
-    mt = regiao_ou_salta("medio-tejo")
-    assert mt.caixa_de_recorte.lon_min < mt.caixa.lon_min
-    # A Nazaré está a −9,07 — 0,22° a oeste do limite da área de serviço.
-    assert mt.caixa_de_recorte.contem(39.60, -9.07)
-    assert not mt.caixa.contem(39.60, -9.07)
+    """Há linhas que atravessam a fronteira. Cortá-las era servir meia viagem.
+
+    Medido numa região real: a margem traz para dentro do recorte uma vila da
+    costa a 0,22° a oeste do limite da área de serviço, onde uma carreira da
+    região acaba.
+    """
+    for r in carregar_todas(raiz):
+        if not r.margem_recorte_graus:
+            continue
+        c, recorte = r.caixa, r.caixa_de_recorte
+        assert recorte.lon_min < c.lon_min and recorte.lon_max > c.lon_max, r.id
+        assert recorte.lat_min < c.lat_min and recorte.lat_max > c.lat_max, r.id
+        fora = (c.lat_min + c.lat_max) / 2, c.lon_min - r.margem_recorte_graus / 2
+        assert recorte.contem(*fora) and not c.contem(*fora), r.id
 
 
 def test_caixa_contem():
@@ -112,27 +131,22 @@ def test_caixa_contem():
     assert not c.contem(41.0, -8.5)
 
 
-def test_prefixos_de_paragem_sao_os_13_concelhos(raiz):
-    """O §6.4 lista os prefixos; cada um tem de corresponder a um concelho."""
-    r = regiao_ou_salta("medio-tejo")
-    prefixos = {c.prefixo_stop_id for c in r.concelhos}
-    assert prefixos == {
-        "abt",
-        "acn",
-        "cns",
-        "ent",
-        "fzz",
-        "mac",
-        "orm",
-        "srd",
-        "srt",
-        "tmr",
-        "tnv",
-        "vlr",
-        "vnb",
-    }
-    assert r.concelho_por_prefixo("srt").id == "serta"
-    assert r.concelho_por_prefixo("xxx") is None
+def test_cada_prefixo_de_paragem_e_de_um_concelho(raiz):
+    """Os prefixos do `stop_id` dizem o concelho; cada um tem de ser de um só.
+
+    Em todas as regiões que os declaram — e um prefixo que nenhum concelho tem
+    não é de concelho nenhum, em vez de cair no primeiro.
+    """
+    vistos = 0
+    for r in carregar_todas(raiz):
+        prefixos = [c.prefixo_stop_id for c in r.concelhos if c.prefixo_stop_id]
+        assert len(prefixos) == len(set(prefixos)), f"{r.id}: um prefixo em dois concelhos"
+        for c in r.concelhos:
+            if c.prefixo_stop_id:
+                vistos += 1
+                assert r.concelho_por_prefixo(c.prefixo_stop_id).id == c.id, r.id
+        assert r.concelho_por_prefixo("xxx-que-ninguem-tem") is None, r.id
+    assert vistos, "nenhuma região declara prefixos — o teste deixou de afirmar"
 
 
 def test_o_nome_abre_a_frase_com_maiuscula(raiz):

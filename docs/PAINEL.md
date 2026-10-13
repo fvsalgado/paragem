@@ -214,10 +214,12 @@ quem tem várias tem um seletor de região no cabeçalho.
 **O dono não muda de chave.** A palavra-passe do ambiente
 (`ADMIN_PASSWORD_HASH`) continua a ser a dele, e a porta dele não passa por
 tabela nenhuma da 0009 — é isso que garante que ninguém fica trancado fora no
-dia em que as contas chegam a produção. Com `ADMIN_EMAIL` definido, entra com
-esse email; sem ele, com qualquer email e a palavra-passe dele, como entrava
-antes. **Define-o**: é o que tira o dono do caminho de quem escreve outro
-email.
+dia em que as contas chegam a produção. Entra com o email de `ADMIN_EMAIL`, e
+**sem `ADMIN_EMAIL` o painel não abre**: diz «Painel por configurar» e o nome
+da variável que falta. Foi opcional, e sem ela a palavra-passe do dono entrava
+com qualquer email — era só a palavra-passe a guardar a porta, e uma pessoa
+convidada que escrevesse outro email com ela entrava como dono
+(`web/src/lib/painel/configuracao.ts`).
 
 ### Convidar, ativar, recuperar
 
@@ -274,9 +276,9 @@ quarto de hora e essa origem — ou esse email, venha de onde vier — espera um
 quarto de hora, e a entrada diz a hora a que volta a abrir; uma entrada certa
 limpa a contagem. Nem o endereço nem o email se guardam, só hashes com sal.
 
-**O público degrada, a segurança fecha.** Sem `ADMIN_PASSWORD_HASH` ou
-`ADMIN_SESSION_SECRET` o painel não abre — mostra «Painel por configurar» e
-mais nada. Sem `SUPABASE_SERVICE_ROLE_KEY` abre só ao dono e não lê: diz que
+**O público degrada, a segurança fecha.** Sem `ADMIN_PASSWORD_HASH`,
+`ADMIN_SESSION_SECRET` ou `ADMIN_EMAIL` o painel não abre — mostra «Painel por
+configurar» e os nomes das variáveis que faltam, nunca os valores. Sem `SUPABASE_SERVICE_ROLE_KEY` abre só ao dono e não lê: diz que
 falta a chave em vez de mostrar uma lista vazia a fingir que não há regiões.
 Uma leitura que falha cai num ecrã que diz «não consegui ler», nunca em «não há
 nada» (`app/admin/error.tsx`).
@@ -285,7 +287,7 @@ nada» (`app/admin/error.tsx`).
 
 O sítio vai para o ar antes de a 0009 ser aplicada à base de produção, e
 funciona assim: as tabelas das pessoas não existem, e o painel abre **ao dono,
-como hoje** — com a palavra-passe de sempre e qualquer email —, sem erro
+como hoje** — com a palavra-passe de sempre e o email de `ADMIN_EMAIL` —, sem erro
 nenhum. «Pessoas» diz que a instalação ainda não tem contas; o limite de
 tentativas conta como contava (todas, por origem) até as funções novas
 existirem. Aplicada a 0009, tudo isto muda sozinho, sem deploy. A 0009 aplica-se
@@ -305,7 +307,7 @@ printf '%s' 'a-palavra-passe' | node scripts/senha.mjs   # dá o ADMIN_PASSWORD_
 | `ADMIN_SESSION_SECRET`      | 32 caracteres ou mais, ao acaso. Trocar invalida as sessões abertas                                      |
 | `SUPABASE_SERVICE_ROLE_KEY` | uma chave **secreta** do projeto Supabase, criada só para o painel («painel»). Nunca `NEXT_PUBLIC_`     |
 | `IP_HASH_SALT`              | 16 caracteres ou mais: o sal dos hashes de origem. Sem ele vale um sal escrito no código — que é público |
-| `ADMIN_EMAIL`               | opcional, e recomendada: o email do dono. Com ela, a palavra-passe do ambiente só entra com este email   |
+| `ADMIN_EMAIL`               | **obrigatória**: o email do dono. A palavra-passe do ambiente só entra com ele; sem ela, o painel não abre |
 
 Vivem no ambiente do servidor ([`ALOJAMENTO.md`](ALOJAMENTO.md)); nenhuma
 chega ao navegador. No CI o painel testa-se com uma palavra-passe gerada por

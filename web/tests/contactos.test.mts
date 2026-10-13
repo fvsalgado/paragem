@@ -1,16 +1,19 @@
 /**
  * Os contactos da declaração de acessibilidade e da privacidade (P4-024): o
- * que a página diz de quem responde pelos dados, com o artigo certo — e
- * «Por preencher» quando não se sabe, sem inventar.
+ * que a página diz de quem responde pelos dados, com o artigo certo — e, quando
+ * a autoridade ainda não indicou, quem faz o produto, pelo contacto do produto.
+ * Nunca um contacto inventado.
  */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  DO_PRODUTO,
   lerContactos,
   responsavelNaFrase,
   telefoneParaMarcar,
   type Contactos,
 } from '../src/lib/contactos.ts';
+import { CONTACTO, CONTACTO_PUBLICADO } from '../src/lib/produto.ts';
 
 const AUTORIDADE = 'a Comunidade Intermunicipal da Serra da Pedra Alta';
 
@@ -40,7 +43,7 @@ test('outra entidade leva o artigo escolhido, e sem ele vai sozinha', () => {
   );
 });
 
-test('sem declaração, não há frase — e a página diz «Por preencher»', () => {
+test('sem declaração, não há frase da autoridade — e a página usa a do produto', () => {
   assert.equal(responsavelNaFrase(null, AUTORIDADE), null);
   assert.equal(
     responsavelNaFrase(
@@ -90,4 +93,13 @@ test('lê com a chave pública; sem base, sem tabela ou sem linha, não sabe', a
   );
   assert.equal(await lerContactos('prova', responde(200, [linha]), undefined, 'k'), null);
   assert.equal(await lerContactos('../x', responde(200, [linha]), 'http://base', 'k'), null);
+});
+
+test('quem responde enquanto a autoridade não indicar é quem faz o produto, pelo contacto dele', () => {
+  // Os mesmos do `AUTORIA.md`: nada aqui é inventado. Era «Por preencher», e
+  // quem precisava de reclamar ficava sem para onde escrever.
+  // O endereço é o do produto: o publicado, ou o que a instalação declarar.
+  assert.equal(DO_PRODUTO.responsavel, 'Fábio Salgado, que faz o Paragem.pt');
+  assert.equal(DO_PRODUTO.email, CONTACTO);
+  assert.equal(CONTACTO_PUBLICADO, 'correio@paragem.pt');
 });

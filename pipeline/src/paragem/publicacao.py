@@ -76,7 +76,7 @@ class ErroDePublicacao(RuntimeError):
 class Ficheiro:
     """Um ficheiro a publicar: onde está aqui, e como se chama lá."""
 
-    caminho: str  # dentro do balde: «<regiao>/partidas/tomar.json»
+    caminho: str  # dentro do balde: «<regiao>/partidas/<concelho>.json»
     origem: Path
     bytes: int
     md5: str

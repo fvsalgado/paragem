@@ -16,7 +16,7 @@ import {
   url,
   NOME_DOS_MODOS,
 } from '@/lib/dados';
-import type { Ponto } from '@/lib/formato';
+import { dataDosHorarios, type Ponto } from '@/lib/formato';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { disponibilidadeDaRegiao, motorDaRegiao } from '@/lib/enderecos';
 import { metadadosDaRegiao } from '@/lib/metadados';
@@ -189,6 +189,7 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
         motorDaRegiao={motorDaRegiao(rid, r.demonstracao)}
         disponibilidadeDaRegiao={disponibilidadeDaRegiao(rid, r.demonstracao)}
         servicosSemDatas={servicosSemDatas(await lacunas(rid))}
+        dadosDe={dataDosHorarios(r)}
         avisos={avisos}
       />
     </>

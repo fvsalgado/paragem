@@ -48,7 +48,7 @@ def test_o_nome_escreve_se_como_se_lê():
     assert titulo("SOUDOS-VILA NOVA") == "Soudos-Vila Nova"
     # Um nome que já vem em caixa mista fica como está: quem o escreveu sabia.
     assert titulo("Casal dos Bernardos") == "Casal dos Bernardos"
-    assert limpo("Tomar\r\n  (Terminal)") == "Tomar (Terminal)"
+    assert limpo("Pedra Alta\r\n  (Terminal)") == "Pedra Alta (Terminal)"
 
 
 # --- universo --------------------------------------------------------------
@@ -94,7 +94,10 @@ def test_um_ponto_marcado_a_mao_serve_o_par_que_o_marcou_e_mais_nenhum():
 
 
 def test_o_emparelhamento_nao_troca_a_ordem():
-    pares = emparelhar(["Abrantes", "Tomar", "Fátima"], ["Fátima", "Abrantes", "Tomar"])
+    pares = emparelhar(
+        ["Pedra Alta", "Vale Escuro", "Ribeira Branca"],
+        ["Ribeira Branca", "Pedra Alta", "Vale Escuro"],
+    )
     indices_a = [i for i, _, _ in pares]
     indices_b = [j for _, j, _ in pares]
     assert indices_a == sorted(indices_a)
@@ -125,11 +128,11 @@ def _sequencia(viagem: str, linha: str, pontos: list[tuple[str, str]], sentido: 
     }
 
 
-NOMES = {"g19:1": "ABRANTES TERMINAL", "g19:2": "ALFERRAREDE", "g19:3": "MACAO"}
+NOMES = {"g19:1": "PEDRA ALTA TERMINAL", "g19:2": "RIBEIRA BRANCA", "g19:3": "CACARAO"}
 
 
 def test_uma_viagem_alinha_com_a_sequencia_da_mesma_linha():
-    viagens = [_viagem("8", [("Abrantes (Terminal)", "08:00:00"), ("Mação", "09:00:00")])]
+    viagens = [_viagem("8", [("Pedra Alta (Terminal)", "08:00:00"), ("Caçarão", "09:00:00")])]
     sequencias = [
         _sequencia("v1", "8", [("g19:1", "08:00:00"), ("g19:2", "08:30:00"), ("g19:3", "09:00:00")])
     ]
@@ -141,7 +144,9 @@ def test_uma_viagem_alinha_com_a_sequencia_da_mesma_linha():
 def test_o_sentido_contrario_afasta():
     """A mesma linha ao contrário tem os mesmos nomes pela ordem inversa."""
     viagens = [
-        _viagem("8", [("Abrantes (Terminal)", "08:00:00"), ("Mação", "09:00:00")], sentido="ida")
+        _viagem(
+            "8", [("Pedra Alta (Terminal)", "08:00:00"), ("Caçarão", "09:00:00")], sentido="ida"
+        )
     ]
     ida = _sequencia("ida", "8", [("g19:1", "08:00:00"), ("g19:3", "09:00:00")], sentido="0")
     volta = _sequencia("volta", "8", [("g19:1", "08:01:00"), ("g19:3", "09:01:00")], sentido="1")
@@ -159,13 +164,13 @@ def test_uma_viagem_sem_correspondencia_fica_sem_alinhamento():
 
 
 def test_o_alinhamento_decide_mesmo_com_o_nome_diferente():
-    viagens = [_viagem("8", [("Abrantes (Terminal)", "08:00:00")])]
+    viagens = [_viagem("8", [("Pedra Alta (Terminal)", "08:00:00")])]
     alinhamentos = [
         Alinhamento(indice=0, linha="8", viagem="v1", pontuacao=0.9, pares=[(0, "g19:1", 0.8)])
     ]
-    u = _universo(Paragem("g19:1", "ABRANTES TERMINAL", 39.46, -8.2, "geoportal-19"))
+    u = _universo(Paragem("g19:1", "PEDRA ALTA TERMINAL", 39.46, -8.2, "geoportal-19"))
     r = resolver(viagens, alinhamentos, u)
-    d = r.de("8", "Abrantes (Terminal)")
+    d = r.de("8", "Pedra Alta (Terminal)")
     assert (d.metodo, d.id) == ("alinhamento", "g19:1")
 
 
@@ -205,24 +210,24 @@ def test_uma_homonima_do_outro_lado_do_distrito_nao_entra():
     Sem ela, uma «Fonte Nova» a oitenta quilómetros entrava numa linha que
     nunca lá vai, e o percurso passava a atravessar o distrito e a voltar.
     """
-    viagens = [_viagem("8", [("Abrantes (Terminal)", "08:00:00"), ("Fonte Nova", "08:10:00")])]
+    viagens = [_viagem("8", [("Pedra Alta (Terminal)", "08:00:00"), ("Fonte Nova", "08:10:00")])]
     alinhamentos = [
         Alinhamento(indice=0, linha="8", viagem="v1", pontuacao=0.9, pares=[(0, "g19:1", 0.9)])
     ]
     u = _universo(
-        Paragem("g19:1", "ABRANTES TERMINAL", 39.46, -8.20, "geoportal-19"),
+        Paragem("g19:1", "PEDRA ALTA TERMINAL", 39.46, -8.20, "geoportal-19"),
         Paragem("g19:9", "FONTE NOVA", 39.46, -9.15, "geoportal-19"),  # a ~82 km
     )
     assert resolver(viagens, alinhamentos, u).de("8", "Fonte Nova").id is None
 
 
 def test_dois_candidatos_igualmente_parecidos_em_sitios_diferentes_nao_se_decidem():
-    viagens = [_viagem("8", [("Abrantes (Terminal)", "08:00:00"), ("Casal", "08:10:00")])]
+    viagens = [_viagem("8", [("Pedra Alta (Terminal)", "08:00:00"), ("Casal", "08:10:00")])]
     alinhamentos = [
         Alinhamento(indice=0, linha="8", viagem="v1", pontuacao=0.9, pares=[(0, "g19:1", 0.9)])
     ]
     u = _universo(
-        Paragem("g19:1", "ABRANTES TERMINAL", 39.460, -8.200, "geoportal-19"),
+        Paragem("g19:1", "PEDRA ALTA TERMINAL", 39.460, -8.200, "geoportal-19"),
         Paragem("g19:2", "CASAL DO RIO", 39.470, -8.210, "geoportal-19"),
         Paragem("g19:3", "CASAL DA SERRA", 39.465, -8.210, "geoportal-19"),
     )
@@ -284,12 +289,12 @@ def test_uma_decisao_que_aponta_para_uma_paragem_que_saiu_rebenta():
 
 def test_os_limiares_vêm_da_receita():
     """Um limiar é um número medido, não uma constante escondida no código."""
-    viagens = [_viagem("8", [("Abrantes (Terminal)", "08:00:00"), ("Fonte Nova", "08:10:00")])]
+    viagens = [_viagem("8", [("Pedra Alta (Terminal)", "08:00:00"), ("Fonte Nova", "08:10:00")])]
     alinhamentos = [
         Alinhamento(indice=0, linha="8", viagem="v1", pontuacao=0.9, pares=[(0, "g19:1", 0.9)])
     ]
     u = _universo(
-        Paragem("g19:1", "ABRANTES TERMINAL", 39.46, -8.20, "geoportal-19"),
+        Paragem("g19:1", "PEDRA ALTA TERMINAL", 39.46, -8.20, "geoportal-19"),
         Paragem("g19:9", "FONTE NOVA", 39.46, -9.15, "geoportal-19"),
     )
     largo = Parametros(guarda_da_linha_m=200_000)
@@ -308,7 +313,7 @@ def _zip_de_camadas(tmp_path):
                 "geometry": {"type": "Point", "coordinates": [-8.2, 39.46]},
                 "properties": {
                     "stop_id": 1070.0,  # vem como número, e não pode ficar «1070.0»
-                    "stop_name": "ABRANTES TERMINAL",
+                    "stop_name": "PEDRA ALTA TERMINAL",
                     "stop_code": "None",  # o portal escreve os vazios assim
                     "trip_id": "v1",
                     "stop_sequence": 1,
@@ -323,7 +328,7 @@ def _zip_de_camadas(tmp_path):
                 "geometry": {"type": "Point", "coordinates": [-8.1, 39.50]},
                 "properties": {
                     "stop_id": 1071,
-                    "stop_name": "ALFERRAREDE",
+                    "stop_name": "RIBEIRA BRANCA",
                     "stop_code": "5215",
                     "trip_id": "v1",
                     "stop_sequence": 2,
@@ -402,11 +407,11 @@ def test_as_intermedias_entram_sem_hora_e_com_a_estimativa_por_dentro():
     from paragem.alinhamento import Alinhamento
     from paragem.intermedias import preencher
 
-    viagens = [_viagem("8", [("Abrantes (Terminal)", "08:00:00"), ("Mação", "09:00:00")])]
+    viagens = [_viagem("8", [("Pedra Alta (Terminal)", "08:00:00"), ("Caçarão", "09:00:00")])]
     u = _universo(
-        Paragem("g19:1", "ABRANTES TERMINAL", 39.46, -8.20, "geoportal-19"),
-        Paragem("g19:2", "ALFERRAREDE", 39.50, -8.15, "geoportal-19"),
-        Paragem("g19:3", "MACAO", 39.55, -8.00, "geoportal-19"),
+        Paragem("g19:1", "PEDRA ALTA TERMINAL", 39.46, -8.20, "geoportal-19"),
+        Paragem("g19:2", "RIBEIRA BRANCA", 39.50, -8.15, "geoportal-19"),
+        Paragem("g19:3", "CACARAO", 39.55, -8.00, "geoportal-19"),
     )
     alinhamentos = [
         Alinhamento(
@@ -437,11 +442,11 @@ def test_um_segmento_com_tempos_incoerentes_nao_herda_nada():
     from paragem.alinhamento import Alinhamento
     from paragem.intermedias import preencher
 
-    viagens = [_viagem("8", [("Abrantes (Terminal)", "08:00:00"), ("Mação", "08:10:00")])]
+    viagens = [_viagem("8", [("Pedra Alta (Terminal)", "08:00:00"), ("Caçarão", "08:10:00")])]
     u = _universo(
-        Paragem("g19:1", "ABRANTES TERMINAL", 39.46, -8.20, "geoportal-19"),
-        Paragem("g19:2", "ALFERRAREDE", 39.50, -8.15, "geoportal-19"),
-        Paragem("g19:3", "MACAO", 39.55, -8.00, "geoportal-19"),
+        Paragem("g19:1", "PEDRA ALTA TERMINAL", 39.46, -8.20, "geoportal-19"),
+        Paragem("g19:2", "RIBEIRA BRANCA", 39.50, -8.15, "geoportal-19"),
+        Paragem("g19:3", "CACARAO", 39.55, -8.00, "geoportal-19"),
     )
     alinhamentos = [
         Alinhamento(
@@ -467,12 +472,12 @@ def test_uma_intermedia_em_cima_de_uma_paragem_do_papel_nao_se_repete():
     from paragem.alinhamento import Alinhamento
     from paragem.intermedias import preencher
 
-    viagens = [_viagem("8", [("Abrantes (Terminal)", "08:00:00"), ("Mação", "09:00:00")])]
+    viagens = [_viagem("8", [("Pedra Alta (Terminal)", "08:00:00"), ("Caçarão", "09:00:00")])]
     u = _universo(
-        Paragem("g19:1", "ABRANTES TERMINAL", 39.46, -8.20, "geoportal-19"),
+        Paragem("g19:1", "PEDRA ALTA TERMINAL", 39.46, -8.20, "geoportal-19"),
         # a 30 m da primeira: é a mesma paragem com outro nome
         Paragem("g19:2", "TERMINAL RODOVIARIO", 39.46027, -8.20, "geoportal-19"),
-        Paragem("g19:3", "MACAO", 39.55, -8.00, "geoportal-19"),
+        Paragem("g19:3", "CACARAO", 39.55, -8.00, "geoportal-19"),
     )
     alinhamentos = [
         Alinhamento(

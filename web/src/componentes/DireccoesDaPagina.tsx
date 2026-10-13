@@ -45,6 +45,7 @@ export default function DireccoesDaPagina({
   modosDesligados = [],
   motorDaRegiao = '',
   servicosSemDatas = 0,
+  dadosDe = null,
   temAPedido = false,
 }: {
   regiao: string;
@@ -55,6 +56,8 @@ export default function DireccoesDaPagina({
   modosDesligados?: string[];
   motorDaRegiao?: string;
   servicosSemDatas?: number;
+  /** De quando são os horários — ver `Direccoes`. */
+  dadosDe?: string | null;
   temAPedido?: boolean;
 }) {
   const [inicial, setInicial] = useState<{
@@ -115,6 +118,7 @@ export default function DireccoesDaPagina({
       modosDesligados={modosDesligados}
       motorDaRegiao={motorDaRegiao}
       servicosSemDatas={servicosSemDatas}
+      dadosDe={dadosDe}
       temAPedido={temAPedido}
       aoMudar={(v) => {
         if (!lido.current) return;

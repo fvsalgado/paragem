@@ -59,7 +59,7 @@ class Contexto:
     def caminho_de_dados(self, relativo: str) -> Path:
         """Um ficheiro que a RECEITA DA REGIÃO nomeia, resolvido onde a região vive.
 
-        A receita escreve `data/manual/<regiao>/tap/constancia.yaml` e não sabe
+        A receita escreve `data/manual/<regiao>/tap/<circuito>.yaml` e não sabe
         contra o quê isso se resolve — nem deve. Quando a região vive neste
         repositório, é a mesma coisa que `ctx.raiz`; quando vive noutro, é lá
         que estão os PDF, e resolver aqui dava «falta a transcrição» para um

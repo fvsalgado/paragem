@@ -1,10 +1,10 @@
 /**
  * Que uma folha foi transcrita à mão, e quando.
  *
- * Há brochuras que nenhum leitor automático lê sem risco: a de Constância
- * escreve traços que não assentam nas colunas, a das Praias Fluviais empilha
- * três circuitos na mesma grelha sem cabeçalho entre eles, e o folheto do
- * LINK não é sequer um horário de paragens. Essas são transcritas à mão.
+ * Há brochuras que nenhum leitor automático lê sem risco: uma escreve traços
+ * que não assentam nas colunas, outra empilha três circuitos na mesma grelha
+ * sem cabeçalho entre eles, e um folheto de ligações entre concelhos não é
+ * sequer um horário de paragens. Essas são transcritas à mão.
  *
  * **O que a construção prova, e o que não prova.** Cada hora e cada nome
  * transcritos têm de aparecer no PDF de origem — a verificação corre em todas

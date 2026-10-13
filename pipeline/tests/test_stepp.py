@@ -86,11 +86,11 @@ def _conhecidas(*pontos) -> Conhecidas:
 
 
 def test_a_mesma_paragem_com_o_mesmo_nome_funde_se():
-    c = _conhecidas(("orm_357", "Fátima (Terminal)", 39.63115, -8.68067))
+    c = _conhecidas(("rs_357", "Sável (Terminal)", 39.63115, -8.68067))
     # 30 m a norte, escrita sem acentos e em maiúsculas, como o regulador faz.
-    achada = c.mesma(Paragem("1835_34", "FATIMA (TERMINAL)", 39.63142, -8.68067), RAIO)
+    achada = c.mesma(Paragem("1835_34", "SAVEL (TERMINAL)", 39.63142, -8.68067), RAIO)
     assert achada is not None
-    assert achada[0] == "orm_357"
+    assert achada[0] == "rs_357"
 
 
 def test_perto_mas_com_outro_nome_NAO_funde():
@@ -102,8 +102,8 @@ def test_perto_mas_com_outro_nome_NAO_funde():
     que deixar de bater é o dia em que a exportação mudou de forma, e aí a
     regra recusa em vez de adivinhar.
     """
-    c = _conhecidas(("tnv_010", "Torres Novas (Terminal)", 39.48000, -8.53500))
-    assert c.mesma(Paragem("9_1", "Torres Novas (Hospital)", 39.48027, -8.53500), RAIO) is None
+    c = _conhecidas(("pa_010", "Pedra Alta (Terminal)", 39.48000, -8.53500))
+    assert c.mesma(Paragem("9_1", "Pedra Alta (Hospital)", 39.48027, -8.53500), RAIO) is None
 
 
 def test_o_mesmo_nome_mas_longe_NAO_funde():
@@ -122,8 +122,8 @@ def test_escolhe_a_mais_perto_quando_ha_duas_com_o_mesmo_nome():
 
 
 def test_o_nome_compara_se_sem_acentos_nem_pontuacao():
-    assert _chave("FÁTIMA (Cova da Iria)") == _chave("fatima cova da iria")
-    assert _chave("Vila Nova da Barquinha") != _chave("Vila Nova de Barquinha")
+    assert _chave("SÁVEL (Cova do Vento)") == _chave("savel cova do vento")
+    assert _chave("Vila Nova da Serra") != _chave("Vila Nova de Serra")
 
 
 # --- a região que o usa, se estiver nesta raiz -----------------------------

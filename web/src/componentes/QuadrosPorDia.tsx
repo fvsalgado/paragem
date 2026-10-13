@@ -55,7 +55,7 @@ export default function QuadrosPorDia({
     };
   }, [regiao]);
 
-  // O dia de quem lê — e o dia vira à meia-noite com a página aberta.
+  // O dia de hoje NA REGIÃO — e o dia vira à meia-noite de lá com a página aberta.
   const [hoje, setHoje] = useState<string | null>(null);
   useEffect(() => {
     const ver = () => setHoje(chaveDoDia(new Date()));

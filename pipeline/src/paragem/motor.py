@@ -1,6 +1,6 @@
 """O motor de viagens: OpenTripPlanner 2, construído a partir do que a Fase 1 produz.
 
-Não há nada aqui que saiba o que é o Médio Tejo. A região declara o que entra no
+Não há nada aqui que saiba que região é. A região declara o que entra no
 grafo e as viagens que exige saber responder (`motor:` na receita), e este
 módulo lê isso — é a mesma regra dos leitores, pela mesma razão: uma região nova
 tem de poder ter motor sem que alguém escreva Python.
@@ -416,8 +416,8 @@ class Servidor:
 
 # A JANELA DE PROCURA É EXPLÍCITA, e é a decisão mais importante deste ficheiro.
 #
-# Por omissão o OTP calcula-a sozinho. Medido para Torres Novas (Terminal) →
-# Entroncamento (Estação) às 09:00, DUAS VEZES — e a segunda corrige a
+# Por omissão o OTP calcula-a sozinho. Medido do terminal de uma cidade para a
+# estação da cidade vizinha às 09:00, DUAS VEZES — e a segunda corrige a
 # primeira, por isso ficam as duas:
 #
 #     janela                    antes do calendário   com o calendário

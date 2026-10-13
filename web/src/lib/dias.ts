@@ -17,6 +17,7 @@
  * estava certa.
  */
 import { enderecoDosDados } from './dados-do-navegador.ts';
+import { FUSO, relogioNoFuso } from './fuso.ts';
 
 /** `servicos.json`: os serviços, e os dias (`AAAAMMDD`) em que cada um anda. */
 export type DatasDosServicos = { servicos: string[]; datas: Record<string, number[]> };
@@ -174,32 +175,44 @@ export function calendarioDe(regiao: string): Promise<Calendario | null> {
   return p;
 }
 
-/** `AAAAMMDD` no fuso de quem lê. É a chave que a tabela usa. */
-export function chaveDoDia(d: Date): string {
-  return (
-    `${d.getFullYear()}` +
-    `${String(d.getMonth() + 1).padStart(2, '0')}` +
-    `${String(d.getDate()).padStart(2, '0')}`
-  );
+/**
+ * `AAAAMMDD` NO FUSO DA REGIÃO, e não no do telemóvel. É a chave que a tabela
+ * usa.
+ *
+ * Era o fuso de quem lê (`getDate()`), e o dia virava à meia-noite DELE: um
+ * telemóvel na hora de Espanha passava para amanhã às 23h de Lisboa, e a
+ * folha da paragem mostrava as partidas do dia seguinte com uma hora de
+ * serviço ainda por passar. Os dias dos serviços são os da região, e o dia de
+ * hoje também tem de ser (`lib/fuso.ts`, `relogioNoFuso`).
+ */
+export function chaveDoDia(d: Date, fuso: string = FUSO): string {
+  return relogioNoFuso(d, fuso).chave;
 }
 
 /**
- * `AAAA-MM-DD` no fuso de quem lê — a forma de um `<input type="date">`.
+ * `AAAA-MM-DD` no fuso da região — a forma de um `<input type="date">`.
  *
  * Existe porque o `toISOString()` é o dia em UTC, e o «Partir agora» usava-o
  * ao lado de uma hora local: entre a meia-noite e a uma da manhã, no verão,
  * o dia era o de ONTEM e a hora era a de hoje. A pergunta ia para a véspera,
  * e o planeador respondia com as carreiras de quinta a quem perguntava na
- * madrugada de sexta. Um relógio só, para o dia e para a hora.
+ * madrugada de sexta. Um relógio só, para o dia e para a hora — e é o da
+ * região, como o do horário.
  */
-export function dataDoCampo(d: Date): string {
-  const c = chaveDoDia(d);
+export function dataDoCampo(d: Date, fuso: string = FUSO): string {
+  const c = chaveDoDia(d, fuso);
   return `${c.slice(0, 4)}-${c.slice(4, 6)}-${c.slice(6, 8)}`;
 }
 
-/** `HH:MM` no fuso de quem lê. */
-export function horaDoRelogio(d: Date): string {
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+/**
+ * `HH:MM` no fuso da região.
+ *
+ * Era a hora do aparelho (`getHours()`): com o telemóvel na hora de Espanha, o
+ * «Partir agora» pedia ao planeador as partidas de uma hora mais tarde, e a
+ * folha da paragem dava por passado o autocarro que ainda não tinha passado.
+ */
+export function horaDoRelogio(d: Date, fuso: string = FUSO): string {
+  return relogioNoFuso(d, fuso).hora;
 }
 
 /** O dia `n` dias depois de uma chave. Em UTC, para a mudança da hora não comer um dia. */
@@ -328,7 +341,8 @@ const andaEm =
  *    próximo dia em que alguma anda aqui, com os serviços desse dia;
  * 3. **quantas?** — cinco, que é o que cabe na folha sem a fazer rolar.
  *
- * `hoje` é o dia de quem pergunta e `agora` a hora dele, no mesmo relógio.
+ * `hoje` é o instante em que se pergunta e `agora` a hora dele, as duas no
+ * relógio da região (`horaDoRelogio`): o dia de `hoje` lê-se no mesmo fuso.
  */
 export function proximas<T extends { hora: string; servico_id?: string }>(
   partidas: T[],

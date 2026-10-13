@@ -322,9 +322,9 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
               {d.circuitos.map((c) => (
                 <li key={c.nome}>
                   {/* A LIGAÇÃO É PARA O HORÁRIO, e não para o nome do quadro:
-                    quem procura «Constância Sul» não sabe nem tem de saber
-                    que na folha ele se chama «Constância – Constância-Sul e
-                    Santa Margarida da Coutada». Chega lá à mesma. */}
+                    quem procura o circuito pelo nome curto do catálogo não
+                    sabe nem tem de saber que na folha ele tem um nome comprido,
+                    com as duas freguesias que serve. Chega lá à mesma. */}
                   {c.horario ? (
                     <Link
                       href={url(

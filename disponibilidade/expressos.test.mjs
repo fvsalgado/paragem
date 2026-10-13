@@ -14,17 +14,22 @@ import {
   consultar,
   criarCache,
   dataDaFonte,
+  desligada,
   endereco,
   faltaNaConfiguracao,
   hoje,
   normalizar,
   pedidoInvalido,
 } from './expressos.mjs';
+import { LEITURAS_AUTORIZADAS } from './autorizacao.mjs';
 
 const RESPOSTA = JSON.parse(
   readFileSync(fileURLToPath(new URL('./fixtures/expressos.json', import.meta.url)), 'utf-8'),
 );
-const CFG = configuracao({ PARAGEM_EXPRESSOS_URL: 'https://exemplo.invalido/pesquisa' });
+// COMO SE HOUVESSE ACORDO: a consulta está desligada em código
+// (`autorizacao.mjs`), e o segundo argumento liga-a só aqui, para se testar o
+// que ela faz no dia em que for autorizada.
+const CFG = configuracao({ PARAGEM_EXPRESSOS_URL: 'https://exemplo.invalido/pesquisa' }, true);
 const A = '11111111-2222-3333-4444-555555555555';
 const B = '66666666-7777-8888-9999-aaaaaaaaaaaa';
 const PEDIDO = { de: A, para: B, data: '2099-07-02' };
@@ -39,6 +44,23 @@ function fonteFalsa(corpo = RESPOSTA, ok = true) {
   };
   return { buscar, estado };
 }
+
+test('o interruptor é o código, e nenhuma variável de ambiente o mexe', () => {
+  const env = { PARAGEM_EXPRESSOS_URL: 'x', PARAGEM_AUTORIZADA: '1', LEITURAS_AUTORIZADAS: 'true' };
+  assert.equal(configuracao(env).autorizada, LEITURAS_AUTORIZADAS.expressos);
+});
+
+test('desligada, a consulta nem pergunta ao operador', async () => {
+  const cfg = configuracao({ PARAGEM_EXPRESSOS_URL: 'https://exemplo.invalido/pesquisa' }, false);
+  assert.equal(cfg.autorizada, false);
+  assert.match(desligada(cfg), /sem acordo escrito/);
+  const { buscar, estado } = fonteFalsa();
+  const r = await consultar(cfg, PEDIDO, buscar);
+  assert.equal(estado.vezes, 0, 'o operador não foi perguntado');
+  assert.equal(r.falhou, true);
+  assert.deepEqual(r.viagens, []);
+  assert.equal(desligada(CFG), null);
+});
 
 test('sem endereço configurado, diz o que falta em vez de fingir', () => {
   assert.deepEqual(faltaNaConfiguracao(configuracao({})).length, 1);

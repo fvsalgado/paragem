@@ -145,7 +145,7 @@ def regioes(raiz: Path, *, exigir_construcao: bool = True) -> Resultado:
     1. **uma região nova nasce sem código** — a de prova usa só leitores
        genéricos;
     2. **nem um byte de uma região dentro da outra** — as saídas da prova são
-       varridas à procura dos nomes do Médio Tejo, e vice-versa.
+       varridas à procura dos nomes das outras regiões, e vice-versa.
     """
     raiz = Path(raiz)
     r = Resultado("Regiões")

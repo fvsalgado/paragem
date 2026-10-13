@@ -71,7 +71,8 @@ test('os contactos escrevem-se na ficha e aparecem na declaração e na privacid
   );
   await expect(publico.locator('main')).toContainText('dados@exemplo.pt');
 
-  // E VOLTA AO QUE ESTAVA: em branco, e a declaração diz «Por preencher».
+  // E VOLTA AO QUE ESTAVA: em branco, e a declaração diz quem responde enquanto a
+  // autoridade não indicar — quem faz o produto, com o contacto do produto.
   await page.goto(FICHA);
   await email.fill('');
   await telefone.fill('');
@@ -81,6 +82,6 @@ test('os contactos escrevem-se na ficha e aparecem na declaração e na privacid
   await expect(secao.locator('[role="status"]')).toContainText('Contactos guardados');
   await expect(async () => {
     await publico.goto(`${PROVA}/acessibilidade/`);
-    await expect(publico.locator('main')).toContainText('Por preencher');
+    await expect(publico.locator('main')).toContainText('que faz o Paragem.pt');
   }).toPass({ timeout: 20_000 });
 });

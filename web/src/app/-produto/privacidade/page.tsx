@@ -18,9 +18,14 @@ export const metadata = metadadosDoProduto({
  * quem faz o produto. Uma página para as duas confundia as duas coisas.
  *
  * O que se mede é o mesmo código (`lib/medicao.ts`), e por isso diz-se o
- * mesmo dele: sem cookies, sem identificador, sem IP. E diz-se se se mede de
- * todo — sem chave configurada, o sítio não mede nada, e afirmar o contrário
- * era descrever um tratamento que não acontece.
+ * mesmo dele — e o que se diz é o que o código faz: sem cookies e sem
+ * identificador guardado, mas com o que a biblioteca de medição junta a cada
+ * evento, e com o endereço IP a chegar a quem serve e a quem mede, como em
+ * qualquer sítio. Dizia «o sítio não regista o seu endereço IP», que é uma
+ * definição do projeto de medição e não uma garantia do código (ver a
+ * privacidade de cada região). E diz-se se se mede de todo — sem chave
+ * configurada, o sítio não mede nada, e afirmar o contrário era descrever um
+ * tratamento que não acontece.
  */
 export default function PrivacidadeDoProduto() {
   const identificada = process.env.NEXT_PUBLIC_PARAGEM_MEDICAO_IDENTIFICADA === '1';
@@ -50,30 +55,50 @@ export default function PrivacidadeDoProduto() {
             Este sítio só guarda uma coisa no seu dispositivo, e só se a escolher: o tema claro ou
             escuro.
           </strong>{' '}
-          Fica no seu navegador, não é enviada a ninguém, e escolher «Como o aparelho» apaga-a. O
-          sítio não regista o seu endereço IP. Não há cookies, não há identificador, não há forma de
-          ligar duas visitas à mesma pessoa.
+          Fica no seu navegador, não é enviada a ninguém, e escolher «Como o aparelho» apaga-a. Não
+          há cookies nem identificador guardado no seu dispositivo, e por isso duas visitas não se
+          ligam à mesma pessoa.
         </p>
       )}
 
-      <h2>O que se mede</h2>
+      <h2>O que se regista</h2>
       {mede ? (
         <p>
-          Que páginas são vistas, e mais nada: mede-se o que se lê, não quem lê. As medições são
-          processadas pelo PostHog, em servidores na União Europeia.
+          Que páginas são vistas, e quando se sai delas: mede-se o que se lê, não quem lê. A
+          biblioteca de medição junta a cada registo o endereço da página, a página de onde veio, o
+          navegador e o sistema (com a identificação que o navegador envia), o tamanho do ecrã e da
+          janela, a língua e o fuso horário do navegador, e um identificador ao acaso que{' '}
+          {identificada
+            ? 'fica no seu dispositivo e liga as suas visitas.'
+            : 'liga as páginas de uma mesma visita e vive só na memória da página.'}{' '}
+          As medições são processadas pelo PostHog, em servidores na União Europeia.
         </p>
       ) : (
         <p>Nada. Este sítio não tem a medição ligada.</p>
       )}
 
-      <h2>O que não se mede</h2>
+      <h2>O seu endereço IP</h2>
+      <p>
+        {identificada
+          ? 'Neste modo, o endereço IP vai com as medições. '
+          : 'O código deste sítio não o guarda, nem o envia como dado. '}
+        {mede
+          ? 'Chega, como em qualquer sítio, a quem o aloja e ao serviço de medição, com cada pedido. '
+          : 'Chega, como em qualquer sítio, a quem o aloja, com cada pedido. '}
+        {mede && !identificada
+          ? 'O projeto de medição deste sítio está configurado para o descartar — é uma definição desse serviço, e não uma garantia do código. '
+          : ''}
+        A plataforma que aloja o sítio pode mantê-lo nos seus registos técnicos, nos termos dela.
+      </p>
+
+      <h2>O que não se regista</h2>
       <ul>
         <li>o seu nome, o seu email, o seu telefone — nunca são pedidos;</li>
         <li>a sua localização, que este sítio não pede;</li>
         <li>
           {identificada
             ? 'nada mais do que o acima.'
-            : 'o seu endereço IP, e nada que permita reconhecê-lo numa visita seguinte.'}
+            : 'nada que permita reconhecê-lo numa visita seguinte.'}
         </li>
       </ul>
 

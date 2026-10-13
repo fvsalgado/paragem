@@ -294,7 +294,7 @@ def _cruzar(
         """As nossas viagens do circuito que TAMBÉM se chama isto.
 
         Os dois lados não usam o mesmo nome, e não é descuido de ninguém: o
-        sistema de reservas escreve «Intermunicipal Sertã (Moita)» onde a
+        sistema de reservas escreve «Intermunicipal <vila> (Moita)» onde a
         brochura escreve «Circuito de Moita», e «Assentis e Paço v/ Paço» onde
         ela escreve «Assentis v/ Paço». A comparação por igualdade ou por
         conter dava seis circuitos «que ninguém mostra» — e os seis estavam

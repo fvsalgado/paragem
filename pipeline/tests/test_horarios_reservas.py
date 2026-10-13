@@ -238,19 +238,19 @@ def _casa(a: str, b: str) -> bool:
 @pytest.mark.parametrize(
     "a,b",
     [
-        ("Intermunicipal Sertã (Moita)", "Circuito de Moita"),
-        ("Intermunicipal Sertã (Fundada)", "Circuito de Fundada"),
-        ("Intermunicipal Sertã (B. Ribeira)", "Circuito de B. da Ribeira"),
-        ("Intermunicipal Sertã (S. J. Peso)", "Circuito de S. J. do Peso"),
-        ("Assentis e Paço v/ Paço", "Assentis v/ Paço"),
-        ("Assentis e Paço v/ Casais da Igreja", "Assentis v/ Casais da Igreja"),
+        ("Intermunicipal Sável (Lontras)", "Circuito de Lontras"),
+        ("Intermunicipal Sável (Covas)", "Circuito de Covas"),
+        ("Intermunicipal Sável (B. Serra)", "Circuito de B. da Serra"),
+        ("Intermunicipal Sável (S. J. Vento)", "Circuito de S. J. do Vento"),
+        ("Corvalinho e Paço v/ Paço", "Corvalinho v/ Paço"),
+        ("Corvalinho e Paço v/ Casais da Igreja", "Corvalinho v/ Casais da Igreja"),
     ],
 )
 def test_reconhece_o_mesmo_circuito_com_outro_nome(a, b):
     """Os dois lados não usam o mesmo nome, e nenhum deles está errado.
 
-    O sistema de reservas escreve «Intermunicipal Sertã (Moita)»; a brochura
-    escreve «Circuito de Moita». A comparação por igualdade dava seis circuitos
+    O sistema de reservas escreve «Intermunicipal <vila> (<lugar>)»; a brochura
+    escreve «Circuito de <lugar>». A comparação por igualdade dava seis circuitos
     «que ninguém mostra» — e os seis estavam mostrados.
     """
     assert _casa(a, b)
@@ -263,7 +263,7 @@ def test_reconhece_o_mesmo_circuito_com_outro_nome(a, b):
         # conta era pelo conjunto menor, e punha as horas do «Circuito Azul»
         # como divergentes das da praia fluvial. Pelo maior, dá 25 %.
         ("Circuito Azul", "Praia Fluvial do Lago Azul"),
-        ("Vales de Cardigos", "Vale do Rio"),
+        ("Vales de Lontras", "Vale do Rio"),
         ("Circuito Verde", "Circuito Vermelho"),
     ],
 )

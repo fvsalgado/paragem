@@ -11,6 +11,7 @@
  * silêncio, e não finge que não há caminho: dizer «não há viagem» quando o que
  * há é um motor desligado é mentir a quem está à espera do autocarro.
  */
+import { FUSO, relogioNoFuso } from './fuso.ts';
 
 /**
  * DOZE HORAS, e é a decisão que mais pesa nesta página.
@@ -182,12 +183,20 @@ export function minutos(segundos: number): number {
   return Math.round(segundos / 60);
 }
 
-export function horaDe(epochMs: number): string {
-  return new Date(epochMs).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+/**
+ * «08:05», NO FUSO DA REGIÃO.
+ *
+ * Era o `toLocaleTimeString` sem fuso, que é o do aparelho: num telemóvel com
+ * a hora de Espanha, o autocarro das 08:05 aparecia às 09:05, e num com a dos
+ * Açores às 07:05. O instante estava certo; a hora escrita é que não era a do
+ * horário afixado na paragem.
+ */
+export function horaDe(epochMs: number, fuso: string = FUSO): string {
+  return Number.isFinite(epochMs) ? relogioNoFuso(epochMs, fuso).hora : '';
 }
 
 /**
- * Em que dia é isto, visto de quem perguntou — e vazio quando é hoje.
+ * Em que dia é isto, no calendário da região — e vazio quando é o dia perguntado.
  *
  * **Sem isto o planeador tinha de deitar fora o dia seguinte**, e deitava: o
  * corte da janela em `viagens.ts` existia porque «a interface mostra a hora e
@@ -199,16 +208,24 @@ export function horaDe(epochMs: number): string {
  * Compara-se o DIA CIVIL e não a diferença em horas: das 23h de hoje às 2h de
  * amanhã vão três horas, e são dois dias. É o dia que se escreve.
  */
-export function diaDe(epochMs: number, referenciaMs: number): string {
+export function diaDe(epochMs: number, referenciaMs: number, fuso: string = FUSO): string {
+  // O DIA CIVIL DA REGIÃO, e não o do aparelho: o «amanhã» vira à meia-noite
+  // de lá. Com o dia do telemóvel, um aparelho na hora de Espanha escrevia
+  // «amanhã» na partida das 23h30 de hoje.
+  if (!Number.isFinite(epochMs) || !Number.isFinite(referenciaMs)) return '';
   const civil = (ms: number) => {
-    const d = new Date(ms);
-    return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+    const c = relogioNoFuso(ms, fuso).chave;
+    return Date.UTC(+c.slice(0, 4), +c.slice(4, 6) - 1, +c.slice(6, 8));
   };
   const dias = Math.round((civil(epochMs) - civil(referenciaMs)) / 86400000);
   if (dias === 0) return '';
   if (dias === 1) return 'amanhã';
   if (dias === -1) return 'ontem';
-  return new Date(epochMs).toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric' });
+  return new Date(epochMs).toLocaleDateString('pt-PT', {
+    weekday: 'long',
+    day: 'numeric',
+    timeZone: fuso,
+  });
 }
 
 export const NOME_DO_MODO: Record<string, string> = {

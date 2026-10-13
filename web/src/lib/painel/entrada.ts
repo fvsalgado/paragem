@@ -2,6 +2,7 @@ import 'server-only';
 import { randomBytes } from 'node:crypto';
 import { temChaveDeServico } from './base';
 import { actorDoDono, emailDoDono } from './autenticacao';
+import { abrePortaDoDono } from './configuracao';
 import { actorDe, pessoaPorEmail } from './pessoas';
 import { DONO } from './sessao';
 import { codificarSenha, verificarSenha } from './senha';
@@ -12,10 +13,11 @@ import { codificarSenha, verificarSenha } from './senha';
  * A ORDEM É A DO DESENHO COMUM AOS DOIS PAINÉIS (`CONTAS.md`):
  *
  *   1. a palavra-passe do AMBIENTE (`ADMIN_PASSWORD_HASH`) é a do dono, como
- *      sempre foi. Com `ADMIN_EMAIL` declarado, tem de vir com esse email
- *      (sem olhar a maiúsculas); sem ele, com qualquer um — que é como o dono
- *      entrava antes de haver emails. Esta porta não passa pela base: é por
- *      isso que ninguém fica trancado fora no dia em que as contas chegam;
+ *      sempre foi, e tem de vir com o email de `ADMIN_EMAIL` (sem olhar a
+ *      maiúsculas). Sem `ADMIN_EMAIL` esta porta NÃO abre — entrava com
+ *      qualquer email, e era só a palavra-passe a guardá-la (`configuracao.ts`).
+ *      Não passa pela base: é por isso que ninguém fica trancado fora no dia
+ *      em que as contas chegam;
  *   2. senão, a pessoa com esse email, se estiver ativa e com palavra-passe.
  *
  * O TEMPO NÃO DIZ NADA. Faz-se sempre o mesmo trabalho — a palavra-passe do
@@ -50,7 +52,7 @@ export async function conferirCredenciais(email: string, senha: string): Promise
 
   // Sempre, e antes de tudo: é o que mantém o tempo igual nos dois caminhos.
   const senhaDoDono = verificarSenha(senha, hashDoDono);
-  if (senhaDoDono && (!declarado || declarado === doEmail)) {
+  if (abrePortaDoDono(senhaDoDono, doEmail, declarado)) {
     return { sub: DONO, actor: actorDoDono(), senhaHash: hashDoDono, pessoaId: null };
   }
 

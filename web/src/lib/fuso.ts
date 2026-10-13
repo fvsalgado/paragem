@@ -92,6 +92,23 @@ export function doCampoLocal(valor: string, fuso: string = FUSO): string | null 
   return d.toISOString();
 }
 
+/**
+ * O instante de um dia (`AAAA-MM-DD`) e de uma hora (`HH:MM`) de parede na
+ * região — o que o planeador pergunta. `NaN` quando os dois não se leem (um
+ * campo apagado a meio de se escrever), e quem chama decide o que fazer.
+ *
+ * `new Date('2026-10-13T23:30')` lê-os no fuso do aparelho, e nos Açores isso
+ * é a 00h30 do dia seguinte em Lisboa.
+ */
+export function instanteNaRegiao(data: string, hora: string, fuso: string = FUSO): number {
+  try {
+    const iso = doCampoLocal(`${data}T${hora}`, fuso);
+    return iso ? Date.parse(iso) : Number.NaN;
+  } catch {
+    return Number.NaN;
+  }
+}
+
 /** O instante → o que um `datetime-local` precisa de receber. */
 export function paraCampoLocal(iso: string | null | undefined, fuso: string = FUSO): string {
   if (!iso) return '';
@@ -136,6 +153,48 @@ export function horaNoFuso(iso: string | null | undefined, fuso: string = FUSO):
       .map((x) => [x.type, x.value]),
   ) as Record<string, string>;
   return p.hour && p.minute ? `${p.hour}h${p.minute}` : '';
+}
+
+/**
+ * O RELÓGIO DA REGIÃO, e não o do telemóvel: o dia (`AAAAMMDD`) e a hora
+ * (`HH:MM`) de um instante, no fuso declarado.
+ *
+ * O planeador e as folhas de partidas liam o dia e a hora com `getHours()` e
+ * `getDate()`, que são os do aparelho. Um telemóvel na hora de Espanha punha
+ * o autocarro das 08:05 às 09:05, e pedia ao planeador as partidas de uma
+ * hora mais tarde; um nos Açores fazia o contrário; e perto da meia-noite o
+ * «amanhã» saía trocado. Os horários são da região — escritos no fuso dela
+ * pelo GTFS —, e é nesse fuso que se leem, esteja quem estiver onde estiver.
+ *
+ * Um formatador por fuso, criado uma vez: o `Intl.DateTimeFormat` custa a
+ * montar, e isto corre a cada renderização das folhas de partidas.
+ */
+const RELOGIOS = new Map<string, Intl.DateTimeFormat>();
+
+export function relogioNoFuso(
+  instante: Date | number,
+  fuso: string = FUSO,
+): { chave: string; hora: string } {
+  let f = RELOGIOS.get(fuso);
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-US', {
+      timeZone: fuso,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    RELOGIOS.set(fuso, f);
+  }
+  const p: Record<string, string> = {};
+  for (const x of f.formatToParts(typeof instante === 'number' ? new Date(instante) : instante)) {
+    p[x.type] = x.value;
+  }
+  // `h23` já não devia dar 24 à meia-noite; há motores que dão na mesma.
+  const hora = String(Number(p.hour) % 24).padStart(2, '0');
+  return { chave: `${p.year}${p.month}${p.day}`, hora: `${hora}:${p.minute}` };
 }
 
 /**

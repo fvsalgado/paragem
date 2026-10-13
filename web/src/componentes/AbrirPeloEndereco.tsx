@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 
 /**
- * Abre o quadro que o endereço aponta: `…/a-pedido/ourem/#q-alburitel`.
+ * Abre o quadro que o endereço aponta: `…/a-pedido/<concelho>/#q-<circuito>`.
  *
  * Os quadros de horário estão fechados (`<details>`), e uma ligação para um
  * quadro fechado levava ao resumo dele e deixava as horas escondidas — a

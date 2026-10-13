@@ -9,13 +9,27 @@ from pathlib import Path
 
 import pytest
 
-from conftest import regiao_ou_salta
+from conftest import RAIZ, construcao_de, regiao_ou_salta
+from paragem.regiao import carregar_todas
 from paragem.sitio import _a_pedido
 
 
 @pytest.fixture
 def raiz() -> Path:
     return Path(__file__).resolve().parents[2]
+
+
+def _com_a_pedido():
+    """As regiões que declaram transporte a pedido — todas as que esta raiz vê.
+
+    Pela PROPRIEDADE e não pelo nome (`conftest.regiao_que`): estes testes
+    valem para qualquer região com zonas, e correm na demonstração, que as tem
+    de propósito. Sem nenhuma, saltam e dizem porquê.
+    """
+    regioes = [r for r in carregar_todas(RAIZ) if (r.a_pedido or {}).get("zonas")]
+    if not regioes:
+        pytest.skip("nenhuma região desta raiz declara zonas de transporte a pedido")
+    return regioes
 
 
 def test_as_zonas_batem_certo_com_os_concelhos_da_regiao(raiz):
@@ -25,50 +39,58 @@ def test_as_zonas_batem_certo_com_os_concelhos_da_regiao(raiz):
     silenciosa: quem mora lá procura e não encontra, sem saber se o serviço não
     existe ou se nós é que não o pusemos.
     """
-    r = regiao_ou_salta("medio-tejo")
-    ids = {c.id for c in r.concelhos}
-    zonas = r.a_pedido["zonas"]
+    for r in _com_a_pedido():
+        ids = {c.id for c in r.concelhos}
+        zonas = r.a_pedido["zonas"]
 
-    com_zona = {z["concelho"] for z in zonas if z.get("concelho")}
-    sem_zona = set(r.a_pedido["concelhos_sem_zona"])
+        com_zona = {z["concelho"] for z in zonas if z.get("concelho")}
+        sem_zona = set(r.a_pedido.get("concelhos_sem_zona") or [])
 
-    assert not (com_zona - ids), "zona num concelho que a região não declara"
-    assert not (sem_zona - ids), "concelho sem zona que a região não declara"
-    assert com_zona | sem_zona == ids, "todos os concelhos têm de estar de um lado ou do outro"
+        assert not (com_zona - ids), f"{r.id}: zona num concelho que a região não declara"
+        assert not (sem_zona - ids), f"{r.id}: concelho sem zona que a região não declara"
+        assert com_zona | sem_zona == ids, (
+            f"{r.id}: todos os concelhos têm de estar de um lado ou do outro"
+        )
 
 
-def test_o_link_nao_e_de_um_concelho(raiz):
-    """O LINK atravessa fronteiras, e são três zonas e não uma.
+def test_uma_zona_que_atravessa_a_fronteira_nao_e_de_um_concelho(raiz):
+    """Uma ligação entre concelhos é de todos eles, e não de um.
 
-    O catálogo do sistema de reservas tem «LINK Cidades», «LINK Mação -
-    Abrantes - Vila de Rei» e «LINK Sertã - Tomar». Nenhuma é de um concelho:
-    atribuí-las a um fazia-as aparecer só numa das pontas, e quem as procurasse
-    da outra não as encontrava. A da Sertã atravessa até a fronteira entre duas
-    CIM (CLAUDE.md §2).
+    Medido numa região real: três zonas de ligação entre cidades, uma delas a
+    atravessar até a fronteira entre duas comunidades intermunicipais (CLAUDE.md
+    §2). Atribuí-las a um concelho fazia-as aparecer só numa das pontas, e quem
+    as procurasse da outra não as encontrava. Por isso uma zona que diz `entre`
+    não tem concelho, e as pontas são concelhos que a região tem.
     """
-    r = regiao_ou_salta("medio-tejo")
-    links = [z for z in r.a_pedido["zonas"] if z["id"].startswith("link")]
-    assert len(links) == 3
-    assert all(z["concelho"] is None for z in links)
+    vistas = 0
+    for r in _com_a_pedido():
+        ids = {c.id for c in r.concelhos}
+        for z in r.a_pedido["zonas"]:
+            if not z.get("entre"):
+                continue
+            vistas += 1
+            assert z.get("concelho") is None, f"{r.id}/{z['id']}: é de mais de um concelho"
+            assert len(set(z["entre"])) >= 2, f"{r.id}/{z['id']}: uma ligação tem duas pontas"
+            assert set(z["entre"]) <= ids, f"{r.id}/{z['id']}: uma ponta que a região não tem"
+    if not vistas:
+        pytest.skip("nenhuma zona de transporte a pedido atravessa a fronteira de um concelho")
 
-    serta_tomar = next(z for z in links if z["id"] == "link-serta-tomar")
-    assert set(serta_tomar["entre"]) == {"serta", "tomar"}
 
+def test_o_numero_do_sistema_de_reservas_vai_em_todas_ou_em_nenhuma(raiz):
+    """O número do sistema é o que liga uma zona ao horário dela.
 
-def test_o_catalogo_tem_as_27_zonas_e_os_75_circuitos(raiz):
-    """São os números do instantâneo do sistema de reservas, não estimativas.
-
-    O CLAUDE.md §5 dizia «27 zonas e cerca de 90 circuitos». As zonas batem
-    certo; os circuitos são 75. Se algum destes números mudar sem o instantâneo
-    mudar, alguém transcreveu mal.
+    Sem ele, ficava a casar nomes. Uma região que o transcreveu tem de o ter
+    em todas as zonas e em todos os circuitos do catálogo — um que falte é um
+    que se casou pelo nome sem ninguém dar por isso.
     """
-    r = regiao_ou_salta("medio-tejo")
-    assert len(r.a_pedido["zonas"]) == 27
-    assert len(r.a_pedido["circuitos"]) == 75
-    # O número do sistema é o que liga uma zona ao horário dela no dia em que
-    # a autorização existir. Sem ele, ficava a casar nomes.
-    assert all(z.get("id_no_sistema") for z in r.a_pedido["zonas"])
-    assert all(c.get("id_no_sistema") for c in r.a_pedido["circuitos"])
+    com_numeros = [
+        r for r in _com_a_pedido() if any(z.get("id_no_sistema") for z in r.a_pedido["zonas"])
+    ]
+    if not com_numeros:
+        pytest.skip("nenhuma região desta raiz transcreveu os números do sistema de reservas")
+    for r in com_numeros:
+        assert all(z.get("id_no_sistema") for z in r.a_pedido["zonas"]), r.id
+        assert all(c.get("id_no_sistema") for c in r.a_pedido.get("circuitos") or []), r.id
 
 
 def test_os_circuitos_nao_sao_atribuidos_a_zonas_por_deducao(raiz):
@@ -77,9 +99,9 @@ def test_os_circuitos_nao_sao_atribuidos_a_zonas_por_deducao(raiz):
     Deduzi-la pelos nomes acertava em muitos e errava nalguns — e um circuito
     atribuído ao concelho errado manda alguém reservar onde não deve.
 
-    Este teste já cravou o estado do dia em que foi escrito («só Ferreira do
-    Zêzere tem circuitos»), e isso partiu-o no dia em que a ligação apareceu:
-    o instantâneo de 21/09/2026, gravado com os resultados abertos, traz os
+    Este teste já cravou o estado do dia em que foi escrito («só um concelho
+    tem circuitos»), e isso partiu-o no dia em que a ligação apareceu: o
+    instantâneo de 21/09/2026, gravado com os resultados abertos, traz os
     dois números do sistema no identificador de cada painel. Cravar um estado
     faz um teste que se opõe ao progresso em vez de o guardar.
 
@@ -93,24 +115,24 @@ def test_os_circuitos_nao_sao_atribuidos_a_zonas_por_deducao(raiz):
     - nenhum circuito pode estar em duas zonas, que é como uma dedução por
       semelhança de nome se denuncia.
     """
-    r = regiao_ou_salta("medio-tejo")
-    catalogo = {_ch(c["nome"]) for c in (r.a_pedido.get("circuitos") or [])}
-    assert catalogo, "sem catálogo não há com que comparar"
+    for r in _com_a_pedido():
+        catalogo = {_ch(c["nome"]) for c in (r.a_pedido.get("circuitos") or [])}
+        assert catalogo, f"{r.id}: sem catálogo não há com que comparar"
 
-    onde = {}
-    for z in r.a_pedido["zonas"]:
-        for c in z.get("circuitos") or []:
-            k = _ch(c["nome"])
-            assert k in catalogo or c.get("fonte"), (
-                f"{z['id']}: «{c['nome']}» não está no catálogo do sistema de reservas "
-                "e não diz de onde veio"
-            )
-            assert k not in onde, (
-                f"«{c['nome']}» está em duas zonas ({onde[k]} e {z['id']}) — "
-                "é assim que uma dedução por semelhança de nome se denuncia"
-            )
-            onde[k] = z["id"]
-    assert onde, "nenhuma zona tem circuitos — a ligação desapareceu"
+        onde = {}
+        for z in r.a_pedido["zonas"]:
+            for c in z.get("circuitos") or []:
+                k = _ch(c["nome"])
+                assert k in catalogo or c.get("fonte"), (
+                    f"{r.id}/{z['id']}: «{c['nome']}» não está no catálogo do sistema de "
+                    "reservas e não diz de onde veio"
+                )
+                assert k not in onde, (
+                    f"{r.id}: «{c['nome']}» está em duas zonas ({onde[k]} e {z['id']}) — "
+                    "é assim que uma dedução por semelhança de nome se denuncia"
+                )
+                onde[k] = z["id"]
+        assert onde, f"{r.id}: nenhuma zona tem circuitos — a ligação desapareceu"
 
 
 def _ch(x: str) -> str:
@@ -127,14 +149,21 @@ def test_a_regra_de_reserva_vai_junto_das_zonas(raiz):
 
     Uma zona sem a regra de reserva é uma promessa de serviço que não diz como
     se usa, e é assim que alguém fica à espera de um autocarro que ninguém
-    chamou.
+    chamou. Numa região a sério há também um telefone: a demonstração não
+    tem, de propósito, para não mandar ninguém ligar para um número que não
+    atende.
     """
-    d = _a_pedido(regiao_ou_salta("medio-tejo"))
-    assert d["reservas"]["telefone"], "sem telefone, a página não serve para nada"
-    assert d["reservas"]["prazo"], "sem prazo, ninguém sabe até quando pode reservar"
-    # A reserva online NÃO cobre tudo, e dizer que cobre manda alguém a um
-    # sítio onde não encontra o que procura.
-    assert d["reservas"]["com_reserva_online"], "que serviços têm reserva online"
+    for r in _com_a_pedido():
+        d = _a_pedido(r)
+        declarada = ((r.tarifas or {}).get("reservas") or {}).get("transporte_a_pedido") or {}
+        assert d["reservas"] == declarada, f"{r.id}: a regra não chegou à página"
+        assert d["reservas"].get("prazo"), (
+            f"{r.id}: sem prazo, ninguém sabe até quando pode reservar"
+        )
+        if not r.demonstracao:
+            assert d["reservas"].get("telefone"), (
+                f"{r.id}: sem telefone, a página não serve para nada"
+            )
 
 
 def test_conta_as_zonas_por_levantar_em_vez_de_as_esconder(raiz):
@@ -143,10 +172,10 @@ def test_conta_as_zonas_por_levantar_em_vez_de_as_esconder(raiz):
     Uma lista curta a fingir-se de completa é pior do que uma lista curta que
     se declara incompleta.
     """
-    d = _a_pedido(regiao_ou_salta("medio-tejo"))
-    com = [z for z in d["zonas"] if z["circuitos"]]
-    assert d["zonas_sem_circuitos"] == len(d["zonas"]) - len(com)
-    assert d["zonas_sem_circuitos"] > 0, "se isto for zero, o número tem de sair da interface"
+    for r in _com_a_pedido():
+        d = _a_pedido(r)
+        com = [z for z in d["zonas"] if z["circuitos"]]
+        assert d["zonas_sem_circuitos"] == len(d["zonas"]) - len(com), r.id
 
 
 def test_uma_regiao_sem_a_pedido_nao_gera_pagina(raiz):
@@ -182,8 +211,7 @@ def test_a_volta_inverte_se_e_a_ida_nao():
 def test_uma_hora_sem_zero_a_frente_nao_inverte_a_viagem():
     """«9:50» é antes de «10:30», e comparadas como texto não era.
 
-    As folhas de Ferreira do Zêzere escrevem a coluna de sábado sem o zero à
-    frente. Como `«9» > «1»`, a comparação em texto dava a primeira hora como
+    Há folhas que escrevem a coluna de sábado sem o zero à frente. Como `«9» > «1»`, a comparação em texto dava a primeira hora como
     maior do que a última e mandava inverter — a ida do sábado saía a chegar às
     10:30 e a partir às 9:50, uma viagem que acaba antes de começar.
 
@@ -209,10 +237,10 @@ def test_o_horario_de_um_circuito_aponta_para_um_quadro_que_existe(raiz):
     """Um `horario_em` que não resolve é pior do que não existir.
 
     A ligação catálogo→brochura foi decidida a olho, e é esse o ponto: as duas
-    listas não batiam pelo nome — «Constância Sul» está na brochura como
-    «Constância – Constância-Sul e Santa Margarida da Coutada», e «Serra de
-    Santo António» como «Serra de S.to António». Decidir pelo nome errava; o
-    que decidiu foram as HORAS e as PARAGENS.
+    listas não batiam pelo nome — o nome curto de uma zona no catálogo é, na
+    brochura, o nome da vila seguido das freguesias que o circuito serve, e
+    «Santo António» lá é «S.to António». Decidir pelo nome errava; o que
+    decidiu foram as HORAS e as PARAGENS.
 
     Uma decisão dessas escreve-se uma vez e depois vive. O que a pode partir
     sem ninguém dar por isso é a OUTRA ponta mudar: uma brochura retranscrita
@@ -227,28 +255,29 @@ def test_o_horario_de_um_circuito_aponta_para_um_quadro_que_existe(raiz):
     """
     import json
 
-    r = regiao_ou_salta("medio-tejo")
-    construcao = raiz / "build" / "medio-tejo"
-    if not construcao.is_dir():
-        pytest.skip("sem construção feita, não há quadros contra que verificar")
+    vistas = 0
+    for r in _com_a_pedido():
+        com = [c for c in r.a_pedido.get("circuitos") or [] if c.get("horario_em")]
+        construcao = construcao_de(r)
+        if not com or not construcao.is_dir():
+            continue
+        vistas += 1
+        quadros: dict[str, set[str]] = {}
+        for f in sorted((construcao / "tap").glob("*.json")):
+            d = json.loads(f.read_text(encoding="utf-8"))
+            quadros[f"tap/{f.name}"] = {q.get("nome", "") for q in d.get("quadros") or []}
 
-    quadros: dict[str, set[str]] = {}
-    for f in sorted((construcao / "tap").glob("*.json")):
-        d = json.loads(f.read_text(encoding="utf-8"))
-        quadros[f"tap/{f.name}"] = {q.get("nome", "") for q in d.get("quadros") or []}
-
-    com = [c for c in r.a_pedido["circuitos"] if c.get("horario_em")]
-    assert com, "nenhum circuito tem horário — a ligação desapareceu"
-
-    for c in com:
-        h = c["horario_em"]
-        assert h["saida"] in quadros, (
-            f"«{c['nome']}» aponta para {h['saida']}, que a construção não produz"
-        )
-        assert h["quadro"] in quadros[h["saida"]], (
-            f"«{c['nome']}» aponta para o quadro «{h['quadro']}» de {h['saida']}, "
-            f"que lá não está. Os que lá estão: {sorted(quadros[h['saida']])}"
-        )
+        for c in com:
+            h = c["horario_em"]
+            assert h["saida"] in quadros, (
+                f"{r.id}: «{c['nome']}» aponta para {h['saida']}, que a construção não produz"
+            )
+            assert h["quadro"] in quadros[h["saida"]], (
+                f"{r.id}: «{c['nome']}» aponta para o quadro «{h['quadro']}» de {h['saida']}, "
+                f"que lá não está. Os que lá estão: {sorted(quadros[h['saida']])}"
+            )
+    if not vistas:
+        pytest.skip("nenhuma região com horários no catálogo do a pedido está construída")
 
 
 def test_onde_o_nome_nao_bate_fica_escrito_porque_e_que_se_decidiu_assim(raiz):
@@ -267,14 +296,15 @@ def test_onde_o_nome_nao_bate_fica_escrito_porque_e_que_se_decidiu_assim(raiz):
         y = "".join(c for c in y if unicodedata.category(c) != "Mn").lower()
         return re.sub(r"[^a-z0-9]+", "", y)
 
-    r = regiao_ou_salta("medio-tejo")
-    sem_razao = [
-        c["nome"]
-        for c in r.a_pedido["circuitos"]
-        if c.get("horario_em")
-        and ch(c["nome"]) != ch(c["horario_em"]["quadro"])
-        and not str(c.get("prova") or "").strip()
-    ]
-    assert not sem_razao, (
-        f"estes circuitos apontam para um quadro com OUTRO nome e não dizem porquê: {sem_razao}"
-    )
+    for r in _com_a_pedido():
+        sem_razao = [
+            c["nome"]
+            for c in r.a_pedido.get("circuitos") or []
+            if c.get("horario_em")
+            and ch(c["nome"]) != ch(c["horario_em"]["quadro"])
+            and not str(c.get("prova") or "").strip()
+        ]
+        assert not sem_razao, (
+            f"{r.id}: estes circuitos apontam para um quadro com OUTRO nome e não dizem "
+            f"porquê: {sem_razao}"
+        )

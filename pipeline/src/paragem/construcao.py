@@ -712,7 +712,7 @@ def _lacunas_de_declaracao(ctx: Contexto) -> None:
                 "NÃO é preciso autorização nenhuma para isto: uma gravação da página "
                 "feita com os resultados abertos TRAZ a ligação, nos identificadores dos "
                 "painéis. A de 21/09/2026 resolveu doze zonas assim. As que faltam não "
-                "circulam à segunda-feira — a brochura de Vila de Rei di-lo por extenso, "
+                "circulam à segunda-feira — uma das brochuras di-lo por extenso, "
                 "«cada destino num dia da semana» —, e resolvem-se com outra gravação "
                 "noutro dia da semana, guardada na mesma pasta."
             ),
@@ -741,9 +741,9 @@ def _lacunas_de_declaracao(ctx: Contexto) -> None:
             ),
             o_que_fazer=(
                 "São dois grupos, e cada um resolve-se de maneira diferente. Os circuitos "
-                "de Tomar não têm brochura publicada — nenhum dos treze separadores da "
-                "página pública é de Tomar —, e vêm de uma gravação da página de reservas "
-                "feita no dia da semana em que circulam. Os LINK têm horário na página "
+                "de um concelho sem separador próprio na página pública não têm brochura "
+                "publicada, e vêm de uma gravação da página de reservas feita no dia da "
+                "semana em que circulam. As ligações entre cidades têm horário na página "
                 "pública em forma de partidas por cidade, que não é um percurso paragem a "
                 "paragem; o percurso vem da mesma gravação."
             ),

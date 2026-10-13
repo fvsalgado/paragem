@@ -16,7 +16,7 @@ version = 1
 [[annotations]]
 path = "**"
 precedence = "aggregate"
-SPDX-FileCopyrightText = "2026 Fábio Salgado <fvsalgado@gmail.com>"
+SPDX-FileCopyrightText = "2026 Fábio Salgado <correio@paragem.pt>"
 SPDX-License-Identifier = "AGPL-3.0-only"
 
 # --- O que é de terceiros --------------------------------------------------
@@ -44,7 +44,7 @@ path = [
   "data/manual/demo/**",
 ]
 precedence = "override"
-SPDX-FileCopyrightText = "2026 Fábio Salgado <fvsalgado@gmail.com>"
+SPDX-FileCopyrightText = "2026 Fábio Salgado <correio@paragem.pt>"
 SPDX-License-Identifier = "AGPL-3.0-only"
 
 # Fixtures de teste capturadas de ficheiros de terceiros (excertos de GTFS, de
@@ -64,7 +64,7 @@ SPDX-License-Identifier = "LicenseRef-capturado-de-terceiro"
 [[annotations]]
 path = "disponibilidade/fixtures/**"
 precedence = "override"
-SPDX-FileCopyrightText = "2026 Fábio Salgado <fvsalgado@gmail.com>"
+SPDX-FileCopyrightText = "2026 Fábio Salgado <correio@paragem.pt>"
 SPDX-License-Identifier = "AGPL-3.0-only"
 
 # A letra do sítio, Atkinson Hyperlegible, em dois sítios: cortada em glifos
@@ -94,5 +94,5 @@ path = [
   "web/public/produto/partilha.png",
 ]
 precedence = "override"
-SPDX-FileCopyrightText = "2026 Fábio Salgado <fvsalgado@gmail.com>"
+SPDX-FileCopyrightText = "2026 Fábio Salgado <correio@paragem.pt>"
 SPDX-License-Identifier = "LicenseRef-marca-paragem"

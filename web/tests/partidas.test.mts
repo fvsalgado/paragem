@@ -8,6 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { compactar, esperaLegivel, expandir, textoSobre } from '../src/lib/formato.ts';
+import { instanteNaRegiao } from '../src/lib/fuso.ts';
 import {
   calendarioDasDatas,
   calendarioDasMascaras,
@@ -77,7 +78,18 @@ const CAL_EM_MASCARAS = calendarioDasMascaras({
 const U = (hora: string, linha = '1') => ({ hora, linha, servico_id: 'rede:U' });
 const S = (hora: string, linha = '1') => ({ hora, linha, servico_id: 'rede:S' });
 const TERMINAL = [U('06:45'), S('08:00'), U('10:30'), S('12:00'), U('20:00')];
-const dia = (d: number, h = 10, m = 30) => new Date(2026, 9, d, h, m);
+/**
+ * Um instante de outubro de 2026 NO RELÓGIO DA REGIÃO. Era `new Date(2026, 9,
+ * d, h, m)`, que é a hora do processo: o dia e a hora das folhas são os da
+ * região, e as 23h50 de uma máquina em UTC já são a 00h50 de Lisboa.
+ */
+const dia = (d: number, h = 10, m = 30) =>
+  new Date(
+    instanteNaRegiao(
+      `2026-10-${String(d).padStart(2, '0')}`,
+      `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+    ),
+  );
 
 test('um dia que falta DENTRO do período é um dia sem serviço; fora dele, não se sabe', () => {
   assert.deepEqual(
@@ -257,11 +269,15 @@ test('à meia-noite e meia, o dia do campo é o de hoje e não o de ontem em UTC
   // 00:30 de sexta 2/10 em Lisboa, no verão, são 23:30 de quinta em UTC. O
   // «Partir agora» usava o `toISOString()` para o dia e a hora local para as
   // horas — e perguntava pelas carreiras de quinta.
+  //
+  // O fuso do processo fica nos Açores, onde ainda é quinta: o dia e a hora
+  // são os da região, e não os do aparelho (`fuso-do-navegador.test.mts`).
   const antes = process.env.TZ;
-  process.env.TZ = 'Europe/Lisbon';
+  process.env.TZ = 'Atlantic/Azores';
   try {
     const d = new Date('2026-10-01T23:30:00Z');
     assert.equal(d.toISOString().slice(0, 10), '2026-10-01', 'em UTC ainda é quinta');
+    assert.equal(d.getDate(), 1, 'e nos Açores também');
     assert.equal(dataDoCampo(d), '2026-10-02');
     assert.equal(horaDoRelogio(d), '00:30');
   } finally {

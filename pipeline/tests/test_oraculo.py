@@ -9,9 +9,9 @@ logo um erro a sério: as horas dos expressos vêm em UTC e estavam a ser lidas
 como se fossem de Lisboa, 103 minutos adiantadas.
 
 Mas apanhou também um falso alarme, e é isso que este ficheiro existe para
-resolver. Uma viagem Lisboa→Aveiro passa em Fátima às 10:25 e em Pombal às
-11:00; está no ficheiro, corre nesse dia, vai naquele sentido — e o motor não a
-devolve nem pedindo-lhe vinte itinerários. **Comparar com outro programa herda
+resolver. Uma viagem de expresso passa por duas paragens de uma região às
+10:25 e às 11:00; está no ficheiro, corre nesse dia, vai naquele sentido — e o
+motor não a devolve nem pedindo-lhe vinte itinerários. **Comparar com outro programa herda
 os buracos desse programa.**
 
 Por isso este teste não compara com nada: pega em cada perna que o planeador
@@ -29,7 +29,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from conftest import regiao_ou_salta
+from conftest import construcao_de, regiao_que
 from paragem.grelha import _datas_de_servico, segundos
 from paragem.gtfs import Gtfs
 from paragem.sitio import com_nomes_da_regiao
@@ -46,27 +46,39 @@ def raiz() -> Path:
 
 
 @pytest.fixture(scope="module")
-def saida(raiz):
-    f = raiz / "build" / "medio-tejo" / "oraculo-saida.json"
-    if not f.exists():
-        pytest.skip("sem saída do oráculo — corre `node web/tests/oraculo.mts` primeiro")
+def regiao(raiz):
+    """A região com a saída do oráculo construída — pela propriedade, não pelo nome.
+
+    O oráculo corre nas regiões com rede viária no motor (`sitio.yml`), e é a
+    saída dele que este teste confere. Numa raiz sem nenhuma, salta.
+    """
+    return regiao_que(
+        lambda r: (r.motor or {}).get("osm") and (construcao_de(r) / "oraculo-saida.json").exists(),
+        "tem rede viária no motor e a saída do oráculo construída — corre "
+        "`node web/tests/oraculo.mts` primeiro",
+    )
+
+
+@pytest.fixture(scope="module")
+def saida(regiao):
+    f = construcao_de(regiao) / "oraculo-saida.json"
     return json.loads(f.read_text(encoding="utf-8"))
 
 
 @pytest.fixture(scope="module")
-def feeds(raiz):
+def feeds(regiao):
     """Cada feed declarado, com o fuso de cada linha e as datas de cada serviço."""
-    r = regiao_ou_salta("medio-tejo")
+    r = regiao
     saida = []
     for caminho in (r.motor or {}).get("gtfs") or []:
-        f = raiz / "build" / "medio-tejo" / caminho
+        f = construcao_de(r) / caminho
         if not f.exists() or not zipfile.is_zipfile(f):
             continue
         # OS NOMES TÊM DE SER OS MESMOS DOS DOIS LADOS.
         #
         # A região corrige nomes de paragem em `nomes.yaml`, e o planeador vê
-        # os corrigidos: «Fátima (Terminal)» onde o feed pan-europeu escreve
-        # «Fatima (Bus Station)». Este teste lia o ficheiro em bruto e dizia
+        # os corrigidos: «<Cidade> (Terminal)» onde o feed pan-europeu escreve
+        # «<Cidade> (Bus Station)». Este teste lia o ficheiro em bruto e dizia
         # «nenhuma viagem bate certo» de três pernas de expresso que batiam —
         # o que não batia eram as duas grafias do mesmo cais.
         #

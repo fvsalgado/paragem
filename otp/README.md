@@ -29,8 +29,8 @@
 >    estimar o troço a pé até à primeira paragem. Medido, e não inventado.
 >
 > E apanhou-se uma coisa que o oráculo **não** podia resolver sozinho: há uma
-> viagem Lisboa→Aveiro que passa em Fátima às 10:25 e em Pombal às 11:00, está
-> no GTFS, corre nesse dia, e o OTP não a devolve nem pedindo-lhe vinte
+> viagem de expresso que passa por duas paragens da região às 10:25 e às 11:00,
+> está no GTFS, corre nesse dia, e o OTP não a devolve nem pedindo-lhe vinte
 > itinerários. Comparar só com outro programa herda os buracos desse programa
 > — por isso cada perna é também conferida contra o ficheiro em bruto, no
 > `pipeline/tests/test_oraculo.py`.
@@ -113,18 +113,21 @@ Num dia útil, com a janela de doze horas:
 
 | viagem (§9) | resposta |
 | --- | --- |
-| Fátima (Santuário) → Tomar | 61 min, linha 510, sem transbordo |
-| Torres Novas (Terminal) → Entroncamento (Estação) | 22 min, linha 684 |
-| Rossio ao Sul do Tejo (Estação) → Abrantes (Hospital) | 4 min, linha 6024 |
-| Ourém → Fátima | 21 min, linha 986 |
-| Sertã → Tomar | **sem caminho** — ver abaixo |
+| um santuário → uma sede de concelho | 61 min, uma linha, sem transbordo |
+| o terminal de uma cidade → a estação de outra | 22 min, uma linha |
+| uma estação → o hospital da cidade ao lado | 4 min, uma linha |
+| uma sede de concelho → outra, vizinha | 21 min, uma linha |
+| uma vila da serra → uma sede de concelho | **sem caminho** — ver abaixo |
+
+(As viagens de aceitação, com os nomes, estão na receita da região, na raiz
+dela — `motor.viagens_de_prova`.)
 
 O grafo: **98 MB, 102 segundos, pico de ~4,1 GB** com `-Xmx6G`.
 
 ### A janela de procura, que é a decisão que mais pesa
 
-Por omissão o OTP calcula a janela sozinho. Medido aqui, para Torres Novas →
-Entroncamento às 09:00 — uma ligação com **catorze viagens nesse dia**:
+Por omissão o OTP calcula a janela sozinho. Medido aqui, entre duas cidades
+vizinhas às 09:00 — uma ligação com **catorze viagens nesse dia**:
 
 ```
 sem janela declarada   searchWindowUsed = 3000 s (50 min)   0 itinerários

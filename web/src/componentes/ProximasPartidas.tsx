@@ -7,7 +7,8 @@ import { calendarioDe, horaDoRelogio, proximas, type Calendario } from '@/lib/di
 
 /**
  * O «A seguir» de um sítio qualquer — uma paragem, uma estação, a paragem à
- * porta de uma estação —, com o relógio de quem lê e a tabela dos dias.
+ * porta de uma estação —, com a hora de agora no fuso da região e a tabela dos
+ * dias.
  *
  * É o MESMO cálculo do cartão do mapa e da página da paragem (`proximas`), e a
  * mesma tabela (`calendarioDe`, pedida uma vez por página). Corre no
