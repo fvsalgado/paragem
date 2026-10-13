@@ -198,6 +198,13 @@ jobs:
     name: Segredos e dependências
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # O gitleaks pede à API a lista de commits do PR. Num repositório público
+    # chega o `contents: read`; num privado — um fork, ou no dia em que este o
+    # for — a API responde 403 sem `pull-requests: read`. Foi assim que falhou
+    # no Em Cada Esquina, e no Coreto antes dele.
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       # O histórico inteiro: o gitleaks varre os commits do PR, e precisa deles.
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
