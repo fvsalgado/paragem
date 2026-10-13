@@ -26,10 +26,18 @@
  */
 
 import { createServer } from 'node:http';
-import { configuracao, criarCache, descoberta, faltaNaConfiguracao, stationStatus } from './nucleo.mjs';
+import {
+  configuracao,
+  criarCache,
+  descoberta,
+  desligada,
+  faltaNaConfiguracao,
+  stationStatus,
+} from './nucleo.mjs';
 import {
   configuracao as configExpressos,
   criarCache as criarCacheExpressos,
+  desligada as expressosDesligados,
   faltaNaConfiguracao as faltaExpressos,
   pedidoInvalido,
 } from './expressos.mjs';
@@ -38,14 +46,16 @@ const cfg = configuracao(process.env);
 const cfgX = configExpressos(process.env);
 const PORTA = Number.parseInt(process.env.PARAGEM_PORTA || '8080', 10);
 
-const temBicicletas = faltaNaConfiguracao(cfg).length === 0;
-const temExpressos = faltaExpressos(cfgX).length === 0;
+// UMA CAPACIDADE DESLIGADA EM CÓDIGO NÃO SE LEVANTA, esteja ou não configurada
+// (`autorizacao.mjs`): as duas leem sistemas de terceiros sem acordo escrito.
+const temBicicletas = !desligada(cfg) && faltaNaConfiguracao(cfg).length === 0;
+const temExpressos = !expressosDesligados(cfgX) && faltaExpressos(cfgX).length === 0;
 
 if (!temBicicletas && !temExpressos) {
   process.stderr.write(
-    'falta configuração: nenhuma capacidade está declarada.\n' +
-      `  ${faltaNaConfiguracao(cfg).join('\n  ')}\n` +
-      `  ${faltaExpressos(cfgX).join('\n  ')}\n`,
+    'nada a servir: nenhuma capacidade está ligada e configurada.\n' +
+      `  bicicletas: ${desligada(cfg) ?? (faltaNaConfiguracao(cfg).join('; ') || 'pronta')}\n` +
+      `  expressos: ${expressosDesligados(cfgX) ?? (faltaExpressos(cfgX).join('; ') || 'pronta')}\n`,
   );
   process.exit(2);
 }
@@ -80,7 +90,10 @@ const servidor = createServer(async (req, res) => {
   // de tocar na fonte: isto é aberto a quem abre a página.
   if (caminho === '/expressos.json' || caminho === '/expressos') {
     if (!temExpressos) {
-      responder(res, 501, { erro: 'os expressos não estão configurados neste serviço' });
+      responder(res, 501, {
+        erro: 'os expressos não estão ligados neste serviço',
+        porque: expressosDesligados(cfgX) ?? faltaExpressos(cfgX).join('; '),
+      });
       return;
     }
     const q = new URL(req.url || '/', 'http://local').searchParams;
@@ -99,7 +112,10 @@ const servidor = createServer(async (req, res) => {
   }
 
   if (!temBicicletas) {
-    responder(res, 501, { erro: 'as bicicletas não estão configuradas neste serviço' });
+    responder(res, 501, {
+      erro: 'as bicicletas não estão ligadas neste serviço',
+      porque: desligada(cfg) ?? faltaNaConfiguracao(cfg).join('; '),
+    });
     return;
   }
 

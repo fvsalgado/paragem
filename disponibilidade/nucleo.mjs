@@ -13,6 +13,7 @@
  */
 
 import { analisar, chave } from './analisar.mjs';
+import { LEITURAS_AUTORIZADAS, RAZAO_DA_LEITURA_DESLIGADA } from './autorizacao.mjs';
 
 /** Quanto tempo esperamos pela página antes de desistir de uma leitura. */
 const ESPERA_MS = 15000;
@@ -23,8 +24,11 @@ const ESPERA_MS = 15000;
  * NADA AQUI DIZ A MARCA DE NENHUM SISTEMA (§11.1): o endereço da página é um
  * valor, não código.
  */
-export function configuracao(env = {}) {
+export function configuracao(env = {}, autorizada = LEITURAS_AUTORIZADAS.bicicletas) {
   return {
+    // O INTERRUPTOR NÃO VEM DO AMBIENTE: vem de `autorizacao.mjs`, que só um
+    // commit muda. O segundo argumento existe para os testes da leitura.
+    autorizada: autorizada === true,
     url: env.PARAGEM_PAINEL_URL || '',
     origem: env.PARAGEM_ORIGEM || '',
     cacheS: Number.parseInt(env.PARAGEM_CACHE_S || '60', 10),
@@ -53,6 +57,11 @@ export function faltaNaConfiguracao(cfg) {
   return falta;
 }
 
+/** Porque é que esta leitura não se faz — ou `null` quando está autorizada. */
+export function desligada(cfg) {
+  return cfg?.autorizada ? null : RAZAO_DA_LEITURA_DESLIGADA;
+}
+
 /**
  * Uma leitura da página: as estações com as contagens, e a hora em que se leu.
  *
@@ -60,6 +69,9 @@ export function faltaNaConfiguracao(cfg) {
  * honesta, e é a que o navegador mostra («há 40 s»).
  */
 export async function lerPainel(cfg, buscar = fetch) {
+  // A ÚLTIMA BARREIRA: desligada, a página do sistema nem chega a ser pedida.
+  const porque = desligada(cfg);
+  if (porque) throw new Error(porque);
   const resposta = await buscar(cfg.url, {
     headers: { 'user-agent': 'paragem-pt/1.0 (+disponibilidade)' },
     signal: AbortSignal.timeout(ESPERA_MS),

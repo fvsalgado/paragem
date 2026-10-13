@@ -15,6 +15,7 @@
 import {
   configuracao,
   criarCache,
+  desligada,
   faltaNaConfiguracao,
   pedidoInvalido,
 } from '../../../../../disponibilidade/expressos.mjs';
@@ -38,6 +39,17 @@ export async function OPTIONS() {
 }
 
 export async function GET(pedido) {
+  // DESLIGADA EM CÓDIGO, até haver acordo escrito com o operador
+  // (`disponibilidade/autorizacao.mjs`). Responde-se sem tocar na fonte, e o
+  // sítio nem chega a perguntar: os horários dos expressos continuam a vir do
+  // GTFS público, como sempre vieram.
+  const porque = desligada(cfg);
+  if (porque) {
+    return Response.json(
+      { erro: 'a consulta ao vivo dos expressos está desligada', porque },
+      { status: 501, headers: cabecalhos({ 'cache-control': 'no-store' }) },
+    );
+  }
   const falta = faltaNaConfiguracao(cfg);
   if (falta.length) {
     return Response.json(
