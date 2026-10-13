@@ -115,9 +115,9 @@ servir 404 é pior do que não o anunciar.
 
 ### O filtro de rotas é pelo operador, nunca pela rede
 
-`network=TUT` é dos urbanos de Torres Novas **e** dos de Torres Vedras, que
-ficam a 130 km. Um filtro por rede traz autocarros de outra terra para dentro da
-região, com nomes plausíveis, e ninguém dá por isso. A receita da região pode
+A mesma etiqueta `network=` foi medida a identificar os urbanos de duas cidades
+que ficam a 130 km uma da outra. Um filtro por rede traz autocarros de outra
+terra para dentro da região, com nomes plausíveis, e ninguém dá por isso. A receita da região pode
 declarar `nunca_filtrar_por: network`, e o leitor **recusa-se** a correr se o
 filtro o usar.
 

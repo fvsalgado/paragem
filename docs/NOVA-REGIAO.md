@@ -19,9 +19,9 @@ e o guia é que está errado.
 ## Antes de começar: o que é preciso ter
 
 - O **identificador**: um slug curto e permanente (`prova-municipio`,
-  `leziria-do-tejo`). Entra em caminhos e chaves — não muda depois.
-- O **artigo** do nome: «**o** Baixo Sável», «**a** Lezíria do Tejo», «**as**
-  Terras de Trás-os-Montes». A prosa inteira pendura das contrações e nenhuma
+  `vale-do-exemplo`). Entra em caminhos e chaves — não muda depois.
+- O **artigo** do nome: «**o** Baixo Sável», «**a** Serra da Pedra Alta», «**as**
+  Terras do Ameno». A prosa inteira pendura das contrações e nenhuma
   heurística acerta nos topónimos portugueses; por isso a região declara-o
   (`o`, `a`, `os` ou `as`) e o resto deriva.
 - A **autoridade de transportes** e o seu `tipo`: `cim`, `area-metropolitana`
@@ -56,7 +56,7 @@ Cria `regioes/<id>/` com cinco ficheiros. O caminho mais curto é copiar os da
 **prova**, que são deliberadamente mínimos, e trocar os valores:
 
 ```bash
-cp -r regioes/prova regioes/leziria-do-tejo
+cp -r regioes/prova regioes/vale-do-exemplo
 ```
 
 | ficheiro | o que declara |
@@ -118,8 +118,8 @@ de demonstração (`regioes/demo/`) usa os três, e é o exemplo a copiar.
 ## Passo 3 — construir
 
 ```bash
-uv run pipeline build --regiao leziria-do-tejo
-uv run pipeline report --regiao leziria-do-tejo
+uv run pipeline build --regiao vale-do-exemplo
+uv run pipeline report --regiao vale-do-exemplo
 ```
 
 O relatório diz o que saiu, o que falta e porquê. **Uma região acabada de nascer

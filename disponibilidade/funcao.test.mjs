@@ -15,6 +15,8 @@ import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
+import { LEITURAS_AUTORIZADAS } from "./autorizacao.mjs";
+
 const html = readFileSync(
   fileURLToPath(new URL("./fixtures/painel.html", import.meta.url)),
   "utf-8",
@@ -24,9 +26,21 @@ const ROTA = "../web/src/app/api/station_status/route.js";
 const ORIGEM = "https://sitio-de-teste.pt";
 let fonte;
 let rota;
+let pedidosAFonte = 0;
+
+// A LEITURA ESTÁ DESLIGADA EM CÓDIGO (`autorizacao.mjs`): a rota responde
+// que está desligada sem tocar na fonte, e é isso que se prova enquanto for
+// assim. Os testes do caminho com leitura ficam escritos e saltam com a razão
+// — voltam a correr sozinhos no commit que a ligar.
+const LIGADA = LEITURAS_AUTORIZADAS.bicicletas;
+const SO_LIGADA = LIGADA
+  ? {}
+  : { skip: "a leitura está desligada em código (autorizacao.mjs); volta a correr quando for ligada" };
+const SO_DESLIGADA = LIGADA ? { skip: "a leitura está ligada" } : {};
 
 before(async () => {
   fonte = createServer((_pedido, resposta) => {
+    pedidosAFonte += 1;
     resposta.writeHead(200, { "content-type": "text/html" });
     resposta.end(html);
   });
@@ -42,7 +56,16 @@ before(async () => {
 
 after(() => fonte?.close());
 
-test("um GET devolve o GBFS com as contagens", async () => {
+test("desligada, um GET diz porquê e não toca na página do sistema", SO_DESLIGADA, async () => {
+  const r = await rota.GET();
+  assert.equal(r.status, 501);
+  const corpo = await r.json();
+  assert.match(corpo.porque, /sem acordo escrito/);
+  assert.equal(r.headers.get("cache-control"), "no-store");
+  assert.equal(pedidosAFonte, 0, "a página do sistema não foi pedida");
+});
+
+test("um GET devolve o GBFS com as contagens", SO_LIGADA, async () => {
   const r = await rota.GET();
   assert.equal(r.status, 200);
   const corpo = await r.json();
@@ -63,7 +86,7 @@ test("o CORS fica preso à origem declarada, e nunca é `*`", async () => {
   assert.notEqual(r.headers.get("access-control-allow-origin"), "*");
 });
 
-test("sem origem declarada não vai cabeçalho nenhum — só a mesma origem lê", async () => {
+test("sem origem declarada não vai cabeçalho nenhum — só a mesma origem lê", SO_LIGADA, async () => {
   // É o caso normal: a rota é servida ao lado do sítio, na mesma origem, e o
   // navegador nem chega a perguntar. Não mandar cabeçalho é mais fechado do
   // que mandar um — e muito mais do que mandar `*`.
@@ -85,7 +108,7 @@ test("sem origem declarada não vai cabeçalho nenhum — só a mesma origem lê
   }
 });
 
-test("a resposta manda a rede guardá-la, para poupar a fonte", async () => {
+test("a resposta manda a rede guardá-la, para poupar a fonte", SO_LIGADA, async () => {
   // É isto que faz de cem visitantes no mesmo minuto UMA leitura da página do
   // operador. Numa função não há processo a viver entre pedidos: sem este
   // cabeçalho, a cache em memória não chegava.

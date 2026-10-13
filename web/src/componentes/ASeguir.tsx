@@ -27,9 +27,9 @@ export default function ASeguir({
   modo,
 }: {
   resultado: Proximas<PartidaLeve>;
-  /** O relógio de quem lê — o mesmo que deu `agora`. */
+  /** O instante de agora — o mesmo que deu `agora`. */
   instante: Date;
-  /** `HH:MM`, do mesmo relógio. */
+  /** `HH:MM` desse instante, no fuso da região (`horaDoRelogio`). */
   agora: string;
   /** A cor de cada linha, pelo identificador dela (`cores-das-linhas.json`). */
   cores: Record<string, string | null | undefined>;

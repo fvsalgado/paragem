@@ -1,6 +1,6 @@
 # Autoria e direitos
 
-Copyright © 2026 Fábio Salgado &lt;fvsalgado@gmail.com&gt;
+Copyright © 2026 Fábio Salgado &lt;correio@paragem.pt&gt;
 
 Este é o sítio canónico desta afirmação. Onde houver divergência entre este
 ficheiro e qualquer outro texto do repositório, vale este.

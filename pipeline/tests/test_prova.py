@@ -150,8 +150,8 @@ def test_sob_odbl_o_ficheiro_leva_o_openstreetmap(raiz, tmp_path, monkeypatch):
 def test_o_filtro_de_rotas_e_pelo_operador(raiz, tmp_path, monkeypatch):
     """Duas relações com a mesma rede, operadores diferentes. Só uma passa.
 
-    É a armadilha do TUT em miniatura: `network=TUT` também é dos urbanos de
-    Torres Vedras, a 130 km.
+    É a armadilha medida numa região real, em miniatura: a mesma etiqueta
+    `network=` era também a dos urbanos de outra cidade, a 130 km.
     """
     c = _construir(raiz, tmp_path, monkeypatch)
     d = json.loads((c.destino / "geojson" / "urbanos.geojson").read_text(encoding="utf-8"))
@@ -210,7 +210,7 @@ def test_uma_soma_diferente_nao_passa_em_silencio(raiz, tmp_path, monkeypatch):
 
     # A soma a estragar tem de ser a de uma fonte que ESTA região usa. A
     # primeira versão deste teste estragava a primeira que encontrava no
-    # ficheiro — que é do Médio Tejo — e passava por engano.
+    # ficheiro — que era de outra região — e passava por engano.
     _estragar_soma(tmp_path, "prova-osm", '"' + "f" * 64 + '"')
 
     c = construir(tmp_path, carregar(tmp_path, "prova"), descarregar=False)

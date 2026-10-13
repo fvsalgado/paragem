@@ -35,12 +35,13 @@ export const CORETO = 'https://coreto.org';
  *
  * É a OMISSÃO e não o contacto: quem aloja o produto põe o seu em
  * `NEXT_PUBLIC_PARAGEM_CONTACTO` (`docs/ALOJAMENTO.md`), e o domínio não se
- * crava no código (§4.7). Sem variável fica este, que já é público e que
- * recebe — um endereço inventado à espera de que alguém crie a caixa era um
- * contacto que ninguém lê, e quem escreve conclui que ninguém está a ouvir.
+ * crava no código (§4.7). Sem variável fica este, que é o endereço do produto
+ * e recebe correio desde 13/10/2026 — um endereço inventado à espera de que
+ * alguém crie a caixa era um contacto que ninguém lê. Era uma caixa pessoal,
+ * que saiu de todas as páginas e ficheiros do repositório.
  * O `tests/produto.test.mts` confere que continua a ser o do `AUTORIA.md`.
  */
-export const CONTACTO_PUBLICADO = 'fvsalgado@gmail.com';
+export const CONTACTO_PUBLICADO = 'correio@paragem.pt';
 
 /**
  * Um endereço de correio, e só isso: sem espaços, com uma arroba e um domínio

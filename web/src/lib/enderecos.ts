@@ -23,6 +23,7 @@
  */
 
 import 'server-only';
+import { LEITURAS_AUTORIZADAS } from '../../../disponibilidade/autorizacao.mjs';
 
 /** `serra-da-pedra-alta` → `SERRA_DA_PEDRA_ALTA`: um nome de variável. */
 export function sufixo(regiao: string): string {
@@ -72,7 +73,16 @@ export function enderecoDoServico(
 
 export const motorDaRegiao = (regiao: string, demonstracao = false): string =>
   enderecoDoServico('OTP', regiao, demonstracao);
+/**
+ * AS DUAS LEITURAS AO VIVO, SÓ COM AUTORIZAÇÃO. Leem sistemas de terceiros, e
+ * cada uma liga-se ou desliga-se em código, com a razão escrita ao lado
+ * (`disponibilidade/autorizacao.mjs`): desligada, não há endereço — e sem
+ * endereço o sítio não pergunta. Sem a leitura, a página das bicicletas
+ * mostra as estações sem a contagem, e a dos expressos os horários do GTFS sem
+ * o formulário dos preços: as duas como quando o serviço não está
+ * configurado. Uma variável de ambiente esquecida no alojamento não as liga.
+ */
 export const disponibilidadeDaRegiao = (regiao: string, demonstracao = false): string =>
-  enderecoDoServico('DISPONIBILIDADE', regiao, demonstracao);
+  LEITURAS_AUTORIZADAS.bicicletas ? enderecoDoServico('DISPONIBILIDADE', regiao, demonstracao) : '';
 export const expressosDaRegiao = (regiao: string, demonstracao = false): string =>
-  enderecoDoServico('EXPRESSOS', regiao, demonstracao);
+  LEITURAS_AUTORIZADAS.expressos ? enderecoDoServico('EXPRESSOS', regiao, demonstracao) : '';

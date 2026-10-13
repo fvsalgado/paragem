@@ -8,13 +8,14 @@ Duas coisas acontecem aqui, e é de propósito que acontecem juntas:
    alguém pergunte de onde veio, e nós vamos publicar horários que as pessoas
    usam para apanhar autocarros.
 
-2. **o `acesso` de cada fonte é executável.** O CLAUDE.md §4.3 diz que o
-   `mediotejo.pt` e o `meiomt.pt` bloqueiam acesso automático e que o site de
-   reservas do Transporte a Pedido só se automatiza com autorização escrita da
-   CIMT. Uma regra dessas escrita só em prosa quebra-se por distração, numa
-   refatoração, meses depois, por alguém que nunca leu a prosa. Aqui, tentar
-   descarregar uma fonte marcada `manual` ou `proibido-sem-autorizacao`
-   levanta uma exceção com a razão escrita.
+2. **o `acesso` de cada fonte é executável.** O CLAUDE.md §4.3 diz que há
+   sítios de autoridades de transportes e de operadoras que bloqueiam o acesso
+   automático, e sistemas de reserva do transporte a pedido que só se
+   automatizam com autorização escrita da autoridade. Uma regra dessas escrita
+   só em prosa quebra-se por distração, numa refatoração, meses depois, por
+   alguém que nunca leu a prosa. Aqui, tentar descarregar uma fonte marcada
+   `manual` ou `proibido-sem-autorizacao` levanta uma exceção com a razão
+   escrita.
 """
 
 from __future__ import annotations
@@ -147,6 +148,37 @@ class Registo:
                 f"a fonte {id_fonte!r} não está em data/sources.yaml. Nada entra no pipeline sem "
                 "proveniência — acrescenta-a lá, com o endereço, a data, a licença e a atribuição."
             ) from None
+
+    def data_de_obtencao(self, id_fonte: str) -> date | None:
+        """O dia em que os dados desta fonte foram obtidos — ou `None`, sem palpite.
+
+        É a data que o registo JÁ TRAZ: a `obtido_em` declarada no
+        `sources.yaml` (a de um ficheiro que entrou à mão, escrita por quem o
+        foi buscar) ou, numa fonte automática, a da última descarga, que o
+        `pipeline fetch` regista em `.cache/obtencoes.yaml`. Uma fonte sem
+        nenhuma das duas não tem data, e não se lhe inventa uma — nem a do dia
+        da construção, que diria «dados de hoje» de um PDF de março.
+        """
+        try:
+            fonte = self.obter(id_fonte)
+        except ErroDeFonte:
+            return None
+        if fonte.obtido_em:
+            return fonte.obtido_em
+        if fonte.acesso != ACESSO_AUTOMATICO:
+            return None
+        registo = self.raiz / ".cache" / "obtencoes.yaml"
+        if not registo.exists():
+            return None
+        with open(registo, encoding="utf-8") as f:
+            anteriores: dict[str, Any] = yaml.safe_load(f) or {}
+        entrada = anteriores.get(id_fonte)
+        if not isinstance(entrada, dict):
+            return None
+        try:
+            return _data(entrada.get("obtido_em"))
+        except ValueError:
+            return None
 
     @classmethod
     def carregar(cls, raiz: Path) -> Registo:

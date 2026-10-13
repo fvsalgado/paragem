@@ -2,7 +2,7 @@
 
 Os números não são decoração: são o critério de aceitação da Fase 1. Se o
 parser deixar de os produzir, é o parser que está errado até prova em
-contrário — e a prova está no PDF, que está no repositório.
+contrário — e a prova está no PDF, que está na raiz da região.
 
 Os testes que não precisam do PDF usam texto escrito à mão com a forma exata do
 documento, para correrem em milissegundos e falharem com a razão à vista.
@@ -13,16 +13,44 @@ from pathlib import Path
 
 import pytest
 
+from conftest import RAIZ
 from paragem.leitores import pdf_horarios as pdf
 
-PDF = Path("data/manual/medio-tejo/Oferta-RMTejo_Meio.pdf")
+
+def _pdf_da_operadora() -> Path | None:
+    """O caderno de horários da operadora, pela receita — e não pelo nome.
+
+    É o que a saída `horarios-pdf-operadora` de uma região lê (CLAUDE.md §5.1):
+    o ficheiro é de um cliente, e o caminho dele dizia de quem.
+    """
+    from paragem.fontes import ACESSO_AUTOMATICO, ErroDeFonte, Registo
+    from paragem.regiao import carregar_todas
+
+    registo = Registo.carregar(RAIZ)
+    for r in carregar_todas(RAIZ):
+        for s in r.saidas:
+            if s.leitor != "horarios-pdf-operadora":
+                continue
+            try:
+                # Um teste não vai à rede: só um ficheiro que já está à mão.
+                if registo.obter(s.fonte).acesso == ACESSO_AUTOMATICO:
+                    continue
+                caminho = registo.caminho(s.fonte, descarregar=False)
+            except ErroDeFonte:
+                continue
+            if caminho.exists():
+                return caminho
+    return None
 
 
 @pytest.fixture(scope="module")
 def texto(raiz):
-    caminho = raiz / PDF
-    if not caminho.exists():
-        pytest.skip(f"falta {PDF}")
+    caminho = _pdf_da_operadora()
+    if caminho is None:
+        pytest.skip(
+            "nenhuma região desta raiz tem o caderno de horários da operadora "
+            "(`horarios-pdf-operadora`) à mão"
+        )
     if not __import__("shutil").which("pdftotext"):
         pytest.skip("falta o pdftotext (poppler-utils)")
     r = subprocess.run(["pdftotext", "-layout", str(caminho), "-"], check=True, capture_output=True)
@@ -103,13 +131,13 @@ def test_o_rodape_diz_desde_quando(doc):
 # --- a forma do documento, sem precisar do PDF -----------------------------
 
 BLOCO = """\
-10 Abrantes - Tomar
+10 Pedra Alta - Vale Escuro
 
                IDA                                     E    FE     E
                OUTBOUND                                U     U     U
-               Abrantes (Terminal)                   13:45 16:30 17:00
-               Escola Secundária Manuel Fernandes    13:47   -   17:02
-               Abrantes (Hospital)                   13:51 16:33 17:06
+               Pedra Alta (Terminal)                 13:45 16:30 17:00
+               Escola Secundária da Serra            13:47   -   17:02
+               Pedra Alta (Hospital)                 13:51 16:33 17:06
 
                E-U | Escolar - Dias Úteis | School Days - Business Days
               Em vigor desde 5 de dezembro de 2025 | Valid from 5th December 2025
@@ -119,7 +147,7 @@ BLOCO = """\
 def test_le_um_bloco_simples():
     d = pdf.ler(BLOCO)
     assert list(d.linhas) == ["10"]
-    assert d.linhas["10"].nome == "Abrantes - Tomar"
+    assert d.linhas["10"].nome == "Pedra Alta - Vale Escuro"
     b = d.blocos[0]
     assert b.sentido == "ida"
     assert b.servicos == ["E-U", "FE-U", "E-U"]
@@ -130,7 +158,7 @@ def test_le_um_bloco_simples():
 def test_o_traco_quer_dizer_que_nao_para():
     v = pdf.viagens(pdf.ler(BLOCO))
     meio = [x for x in v if x.coluna == 1][0]
-    assert [p.nome for p in meio.paragens] == ["Abrantes (Terminal)", "Abrantes (Hospital)"]
+    assert [p.nome for p in meio.paragens] == ["Pedra Alta (Terminal)", "Pedra Alta (Hospital)"]
 
 
 def test_a_coluna_vem_da_posicao_e_nao_da_contagem():
@@ -141,8 +169,8 @@ def test_a_coluna_vem_da_posicao_e_nao_da_contagem():
     parece certo.
     """
     com_buraco = BLOCO.replace(
-        "               Abrantes (Hospital)                   13:51 16:33 17:06",
-        "               Abrantes (Hospital)                   13:51       17:06",
+        "               Pedra Alta (Hospital)                 13:51 16:33 17:06",
+        "               Pedra Alta (Hospital)                 13:51       17:06",
     )
     b = pdf.ler(com_buraco).blocos[0]
     assert b.pontos[2].horas == ["13:51", None, "17:06"]

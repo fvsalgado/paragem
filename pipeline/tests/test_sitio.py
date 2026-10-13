@@ -3,6 +3,7 @@
 import collections
 import json
 import shutil
+from pathlib import Path
 
 import pytest
 
@@ -13,7 +14,7 @@ def test_a_demonstracao_nao_sai_vazia(raiz, tmp_path):
     """A região de prova tem de produzir uma rede, não um sítio vazio.
 
     Este teste existe por um defeito que nada apanhou: o `sitio.py` pedia o
-    feed pelo NOME do ficheiro do Médio Tejo (`meio.zip`), e a região de prova
+    feed pelo NOME do ficheiro da rede de um cliente, e a região de prova
     — cujo feed se chama `rede-alta.zip` — construiu um sítio completo com zero
     paragens e zero linhas, sem um erro.
 
@@ -177,23 +178,29 @@ def test_um_horario_transcrito_a_mao_chega_ao_sitio(raiz, tmp_path):
     aparece; um que falte aqui falha.
     """
     from paragem.leitores import LEITORES_DE_HORARIO
+    from paragem.regiao import carregar_todas
     from paragem.sitio import construir
 
-    construcao = raiz / "build" / "medio-tejo"
-    if not (construcao / "tap" / "link.json").exists():
-        pytest.skip("sem build/medio-tejo — corre `uv run pipeline build --regiao medio-tejo`")
+    # A REGIÃO PELA PROPRIEDADE, e não pelo nome (CLAUDE.md §5.1): uma que
+    # tenha horários do a pedido lidos de folhas, e já construídos.
+    for r in carregar_todas(raiz):
+        catalogo = [
+            s
+            for s in r.saidas
+            if s.modo == "a-pedido" and s.papel == "catalogo-proprio" and s.saida
+        ]
+        construcao = raiz / "build" / r.id
+        if catalogo and all((construcao / s.saida).exists() for s in catalogo):
+            break
+    else:
+        pytest.skip("nenhuma região desta raiz tem horários do a pedido construídos")
 
-    r = regiao_ou_salta("medio-tejo")
     # O QUE SE MEDE É O CATÁLOGO, e não tudo o que é do modo a pedido: o feed
     # GTFS-Flex também é `modo: a-pedido` e não é um horário para a página —
     # é um ficheiro para máquinas, e vai pela página de dados abertos.
-    declarados = {
-        s.leitor
-        for s in r.saidas
-        if s.modo == "a-pedido" and s.papel == "catalogo-proprio" and s.leitor
-    }
+    declarados = {s.leitor for s in catalogo if s.leitor}
     assert declarados <= LEITORES_DE_HORARIO, (
-        "a região declara horários a pedido com um leitor que o sítio não lê"
+        f"{r.id} declara horários a pedido com um leitor que o sítio não lê"
     )
 
     # ESCREVE PARA UM SÍTIO SÓ SEU, e lê o resto por atalho.
@@ -209,30 +216,38 @@ def test_um_horario_transcrito_a_mao_chega_ao_sitio(raiz, tmp_path):
     construir(raiz, r, tmp_path)
     d = json.loads((tmp_path / "sitio" / "a-pedido.json").read_text(encoding="utf-8"))
     ids = {h["id"] for h in d["horarios"]}
-    assert {"constancia", "fzz-praias", "link"} <= ids, "faltam as transcritas à mão"
+    esperados = {Path(s.saida).stem for s in catalogo if s.saida}
+    assert esperados <= ids, f"{r.id}: faltam {sorted(esperados - ids)}"
 
     # E quem transcreveu fica no ficheiro: o guarda prova que a hora está no
     # PDF; que está na paragem certa mediu-o uma pessoa, uma vez.
-    manuais = [h for h in d["horarios"] if h["id"] in {"constancia", "fzz-praias", "link"}]
+    a_mao = {Path(s.saida).stem for s in catalogo if s.leitor == "horarios-manuais" and s.saida}
+    manuais = [h for h in d["horarios"] if h["id"] in a_mao]
     assert all(h["transcrito_por"] for h in manuais)
 
 
 def test_uma_tabela_de_partidas_nao_traz_viagens(raiz):
-    """O folheto do LINK é uma tabela de partidas, não um percurso.
+    """Um folheto de ligações entre cidades é uma tabela de partidas, não um percurso.
 
-    Lista, por cidade, as seis horas a que se parte dela. Lido como percurso
-    dava um autocarro que passa por catorze cidades seguidas, e não existe tal
+    Lista, por cidade, as horas a que se parte dela. Lido como percurso dava
+    um autocarro que passa por catorze cidades seguidas, e não existe tal
     autocarro. O quadro sai com `tipo: partidas`, zero viagens e a grelha em
     `horas` — e é a página que diz o que a tabela é.
     """
-    caminho = raiz / "build" / "medio-tejo" / "tap" / "link.json"
-    if not caminho.exists():
-        pytest.skip("sem build/medio-tejo")
-    d = json.loads(caminho.read_text(encoding="utf-8"))
-    q = d["quadros"][0]
-    assert q["tipo"] == "partidas"
-    assert q["viagens"] == []
-    assert len(q["horas"]) == len(q["paragens"]) == 14
+    from paragem.regiao import carregar_todas
+
+    vistos = 0
+    for r in carregar_todas(raiz):
+        for caminho in sorted((raiz / "build" / r.id / "tap").glob("*.json")):
+            d = json.loads(caminho.read_text(encoding="utf-8"))
+            for q in d.get("quadros") or []:
+                if q.get("tipo") != "partidas":
+                    continue
+                vistos += 1
+                assert q["viagens"] == [], f"{r.id}/{caminho.name}"
+                assert len(q["horas"]) == len(q["paragens"]) > 0, f"{r.id}/{caminho.name}"
+    if not vistos:
+        pytest.skip("nenhuma tabela de partidas construída nesta raiz")
 
 
 # --- duas concessões no mesmo cais -----------------------------------------
@@ -933,3 +948,54 @@ def test_os_sitios_levam_o_concelho_para_dois_homonimos_se_distinguirem(tmp_path
     # Sem quem atribua, o campo existe e fica vazio: não se adivinha.
     sem = _sitios(tmp_path, SimpleNamespace(id="ensaio"))
     assert {s[i] for s in sem["sitios"]} == {""}
+
+
+def test_a_data_dos_horarios_e_a_que_as_fontes_trazem_e_nenhuma_quando_falta(tmp_path, monkeypatch):
+    """«Horários planeados · dados de …» — e só quando todas as fontes do modo a têm.
+
+    A data é a de obtenção que o registo já traz: a declarada no
+    `sources.yaml` ou a da última descarga (`.cache/obtencoes.yaml`). Nunca a
+    do dia da construção, que diria «dados de hoje» de um ficheiro velho. Um
+    modo com uma fonte sem data fica sem data — não se mostra a de outra.
+    """
+    from paragem.regiao import RAIZES_EXTRA, Saida
+    from paragem.sitio import datas_dos_horarios
+
+    monkeypatch.delenv(RAIZES_EXTRA, raising=False)
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "sources.yaml").write_text(
+        """
+versao: 1
+fontes:
+  - {id: t-papel, nome: Caderno, formato: pdf, acesso: manual, obtido_em: 2026-09-03}
+  - {id: t-feed, nome: Feed, formato: gtfs, acesso: automatico, url: https://x.example.org/g.zip}
+  - {id: t-sem-data, nome: Outro, formato: gtfs, acesso: local}
+  - {id: t-osm, nome: OSM, formato: osm-xml, acesso: manual, obtido_em: 2020-01-01}
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / ".cache").mkdir()
+    (tmp_path / ".cache" / "obtencoes.yaml").write_text(
+        "t-feed: {obtido_em: '2026-10-05', endereco: https://x.example.org/g.zip}\n",
+        encoding="utf-8",
+    )
+
+    class Receita:
+        saidas = [
+            Saida("t-papel", "horarios-pdf-operadora", "gtfs/rede.zip", "autocarro"),
+            Saida("t-feed", "gtfs-filtrado", "gtfs/comboio.zip", "comboio"),
+            Saida("t-papel", "horarios-tabela", "tabelas/x/", "comboio"),
+            Saida("t-sem-data", "gtfs-arquivo", "gtfs/expressos.zip", "expresso"),
+            Saida("t-feed", "gtfs-arquivo", "gtfs/outro.zip", "expresso"),
+            # Um traçado do OpenStreetMap não é um horário, e a data dele não conta.
+            Saida("t-osm", "osm-bicicletas", "gbfs/x/", "bicicleta"),
+        ]
+
+    datas = datas_dos_horarios(tmp_path, Receita())  # type: ignore[arg-type]
+    assert datas == {
+        "autocarro": "2026-09-03",
+        # Dois horários no mesmo modo: vale o mais antigo.
+        "comboio": "2026-09-03",
+        # Um dos dois sem data: o modo fica sem data.
+        "expresso": None,
+    }

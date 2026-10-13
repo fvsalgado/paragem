@@ -29,7 +29,7 @@ import {
   precoDe,
   type RespostaDeExpressos,
 } from '@/lib/expressos';
-import { dataDoCampo } from '@/lib/dias';
+import { dataDoCampo, horaDoRelogio } from '@/lib/dias';
 
 export type Destino = { id: string; nome: string };
 
@@ -48,8 +48,8 @@ export default function PrecosDeExpresso({
   const [para, setPara] = useState('');
   // O DIA DA VIAGEM, e não só hoje. A consulta procurava sempre o dia de
   // hoje, e quem planeia a viagem de amanhã não via preço nenhum. O
-  // serviço já aceitava a data; faltava pedi-la. Começa em hoje, no relógio
-  // de quem lê — no servidor não se sabe que dia é para essa pessoa.
+  // serviço já aceitava a data; faltava pedi-la. Começa em hoje, no
+  // calendário da região — e não no do telemóvel, que pode estar noutro fuso.
   const [hoje, setHoje] = useState('');
   const [dia, setDia] = useState('');
   useEffect(() => {
@@ -77,10 +77,13 @@ export default function PrecosDeExpresso({
   const quando =
     !dia || dia === hoje
       ? 'de hoje'
-      : `de ${new Date(`${dia}T12:00:00`).toLocaleDateString('pt-PT', {
+      : `de ${new Date(`${dia}T12:00:00Z`).toLocaleDateString('pt-PT', {
           weekday: 'long',
           day: 'numeric',
           month: 'numeric',
+          // O dia escolhido é uma data, e não um instante: lê-se em UTC para
+          // nenhum fuso o empurrar para a véspera.
+          timeZone: 'UTC',
         })}`;
 
   return (
@@ -178,12 +181,8 @@ export default function PrecosDeExpresso({
               </tbody>
             </table>
             <p className="secundario">
-              Preços e lugares consultados ao operador em{' '}
-              {new Date(r.lido).toLocaleTimeString('pt-PT', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-              . Mudam ao longo do dia; a compra é no sítio dele.
+              Preços e lugares consultados ao operador em {horaDoRelogio(new Date(r.lido))}. Mudam
+              ao longo do dia; a compra é no sítio dele.
             </p>
           </>
         )}

@@ -3,8 +3,44 @@
 from copy import deepcopy
 from datetime import date, timedelta
 
-from conftest import regiao_ou_salta
+from conftest import ids_das_regioes, regiao_ou_salta, regiao_que
 from paragem.calendario import Calendario, pascoa
+
+# OS CALENDÁRIOS DE UMA REGIÃO REAL PEDEM-SE PELO QUE TÊM, e não pelo nome
+# (`conftest.regiao_que`): os códigos que o horário da operadora declara e o
+# ano letivo transcrito do despacho nacional. Onde nenhuma região os tem —
+# neste repositório, que só tem regiões inventadas —, o teste salta e diz
+# porquê.
+
+
+def _codigos(r) -> set[str]:
+    c = r.calendario.get("codigos") or {}
+    return set(c.get("periodo") or {}) | set(c.get("dias") or {})
+
+
+def _com_codigos(*codigos: str):
+    """O calendário de uma região que declara todos estes códigos."""
+    r = regiao_que(
+        lambda r: set(codigos) <= _codigos(r),
+        f"declara os códigos {', '.join(codigos)} no calendário",
+    )
+    return r.calendario
+
+
+def _com_ano_letivo_transcrito():
+    """O calendário de uma região com o ano letivo transcrito do despacho.
+
+    É o caso de uma região real: datas de um ano concreto (`periodos`), e não a
+    regra que se repete das regiões inventadas (`regra_anual`).
+    """
+    r = regiao_que(
+        lambda r: (
+            bool((r.calendario.get("ano_letivo") or {}).get("periodos"))
+            and {"E", "U"} <= _codigos(r)
+        ),
+        "tem o ano letivo transcrito do despacho, com os códigos E e U",
+    )
+    return r.calendario
 
 
 def test_pascoa():
@@ -49,7 +85,7 @@ def test_digitos_sao_dias_da_semana(raiz):
 def test_sem_periodos_nenhuns_nao_se_adivinha():
     """A garantia original, que continua a valer: sem datas, zero datas.
 
-    Deixou de se poder testar com o Médio Tejo — que agora TEM datas —, por
+    Deixou de se poder testar com a região real — que agora TEM datas —, por
     isso testa-se com uma declaração feita à mão. A garantia é sobre o gerador,
     não sobre o estado de uma região num dia.
     """
@@ -74,7 +110,15 @@ def test_datas_por_confirmar_produzem_datas_e_dizem_que_estao_por_confirmar(raiz
     nenhum por faltar um carimbo. Agora o serviço escolar projeta-se — e a
     resolução diz, em cima, que as datas vêm do despacho e não da operadora.
     """
-    cal = Calendario(regiao_ou_salta("medio-tejo").calendario)
+    r = regiao_que(
+        lambda r: (
+            (r.calendario.get("ano_letivo") or {}).get("periodos")
+            and not (r.calendario.get("ano_letivo") or {}).get("confirmado")
+            and {"E", "U"} <= _codigos(r)
+        ),
+        "tem um ano letivo transcrito e ainda por confirmar",
+    )
+    cal = Calendario(r.calendario)
     assert cal.ano_letivo_tem_datas
     assert not cal.ano_letivo_confirmado
 
@@ -91,7 +135,7 @@ def test_os_dias_que_o_despacho_deixa_em_aberto_ficam_de_fora(raiz):
     segura: dizer que um autocarro passa e ele não passar deixa alguém à
     espera.
     """
-    cal = Calendario(regiao_ou_salta("medio-tejo").calendario)
+    cal = Calendario(_com_ano_letivo_transcrito())
 
     # 11 e 14 de setembro de 2026: dentro da janela de arranque (11 a 15).
     setembro = cal.resolver("E-U", date(2026, 9, 1), date(2026, 9, 30)).datas
@@ -113,7 +157,7 @@ def test_ax5_corre_no_carnaval_e_na_pascoa(raiz):
     enquanto não houve calendário nenhum para o revelar — é o argumento a favor
     de preencher o ficheiro mesmo por confirmar.
     """
-    cal = Calendario(regiao_ou_salta("medio-tejo").calendario)
+    cal = Calendario(_com_codigos("AX5", "U"))
     ax5 = set(cal.resolver("AX5-U", date(2026, 12, 1), date(2027, 6, 4)).datas)
 
     assert date(2027, 2, 8) in ax5, "segunda-feira de Carnaval"
@@ -132,7 +176,7 @@ def test_o_v5_corre_do_fim_de_junho_ao_arranque_declarado(raiz):
     setembro de 2027 —, o V5 tem finalmente um fim. Foram estas 19 viagens que
     deram durante um dia os últimos 19 erros do validador.
     """
-    cal = Calendario(regiao_ou_salta("medio-tejo").calendario)
+    cal = Calendario(_com_codigos("V5", "U"))
     datas = cal.resolver("V5-U", date(2027, 6, 1), date(2027, 9, 30)).datas
     assert datas, "com o arranque declarado, o V5 tem de resolver"
 
@@ -163,7 +207,7 @@ def test_o_inicio_do_ano_letivo_tem_de_ser_declarado(raiz):
     O ficheiro real já tem o arranque; aqui tira-se, para o guarda continuar a
     ser testado depois de a lacuna que o revelou estar fechada.
     """
-    d = deepcopy(regiao_ou_salta("medio-tejo").calendario)
+    d = deepcopy(_com_codigos("V5", "U"))
     for p in d["ano_letivo"]["periodos"]:
         if p.get("arranque") and str(p["inicio"]).startswith("2027"):
             del p["arranque"]
@@ -178,7 +222,8 @@ def test_codigo_desconhecido_nao_se_adivinha(raiz):
     É o comportamento que impede um serviço de ser projetado para o dia errado,
     que é pior do que um serviço em falta.
     """
-    cal = Calendario(regiao_ou_salta("medio-tejo").calendario)
+    # Qualquer calendário serve: o código não é de nenhum.
+    cal = Calendario(regiao_ou_salta("prova").calendario)
     r = cal.resolver("A-ZZZ", date(2026, 1, 1), date(2026, 12, 31))
     assert r.datas == []
     assert "código de dias 'ZZZ'" in r.por_confirmar
@@ -199,7 +244,7 @@ def test_os_codigos_da_legenda_do_pdf(raiz):
 
     É por isto que a regra de não adivinhar não é escrúpulo: era 1 em 3.
     """
-    cal = Calendario(regiao_ou_salta("medio-tejo").calendario)
+    cal = Calendario(_com_codigos("A", "DFXN", "SFXD", "TD", "DF"))
     i, f = date(2026, 1, 1), date(2026, 12, 31)
 
     dfxn = set(cal.resolver("A-DFXN", i, f).datas)
@@ -229,65 +274,77 @@ def test_a_prova_nao_tem_feriados_municipais_e_isso_conta(raiz):
     assert cal.feriados_municipais(2026) == {}
 
 
-def test_os_treze_feriados_municipais_tem_regra(raiz):
-    cal = Calendario(regiao_ou_salta("medio-tejo").calendario)
-    assert cal.feriados_municipais_sem_regra() == []
-    assert len(cal.feriados_municipais(2026)) == 13
+# OS FERIADOS MUNICIPAIS: a conta prova-se com uma declaração feita à mão, que
+# tem os três casos que uma região real tem — o feriado da Ascensão e o da
+# Segunda-feira de Páscoa, que andam com a Páscoa, e o de data fixa —, e a
+# declaração de cada região confere-se pelo que tem de ser verdade nela.
+
+FERIADOS = {
+    "feriados_municipais": [
+        {"concelho": "vila-da-ascensao", "deslocamento_pascoa": 39, "confirmado": True},
+        {"concelho": "vila-da-pascoa", "deslocamento_pascoa": 1, "confirmado": False},
+        {"concelho": "vila-de-marco", "data": {"mes": 3, "dia": 1}, "confirmado": False},
+        {"concelho": "vila-sem-regra", "data": None, "confirmado": False},
+    ]
+}
 
 
-def test_os_feriados_moveis_caem_sempre_no_dia_certo(raiz):
-    """Quatro dos treze andam com a Páscoa. É a razão de não serem datas fixas.
+def test_os_feriados_moveis_caem_sempre_no_dia_certo():
+    """Andam com a Páscoa. É a razão de não serem datas fixas.
 
     Uma data fixa escrita para um destes fica errada já no ano seguinte — e
     ninguém dá por isso, porque o ficheiro continua preenchido.
     """
-    cal = Calendario(regiao_ou_salta("medio-tejo").calendario)
+    cal = Calendario(FERIADOS)
     for ano in (2025, 2026, 2027, 2030):
         f = cal.feriados_municipais(ano)
         # Quinta-feira da Ascensão: 39 dias depois da Páscoa, sempre quinta.
-        assert f["alcanena"].isoweekday() == 4, ano
-        assert f["torres-novas"] == f["alcanena"]
+        assert f["vila-da-ascensao"].isoweekday() == 4, ano
+        assert f["vila-da-ascensao"] == pascoa(ano) + timedelta(days=39)
         # Segunda-feira de Páscoa: o dia a seguir, sempre segunda.
-        assert f["constancia"].isoweekday() == 1, ano
-        assert f["macao"] == f["constancia"]
-        assert f["constancia"] == pascoa(ano) + timedelta(days=1)
+        assert f["vila-da-pascoa"].isoweekday() == 1, ano
+        assert f["vila-da-pascoa"] == pascoa(ano) + timedelta(days=1)
+        # A data fixa é a mesma todos os anos.
+        assert f["vila-de-marco"] == date(ano, 3, 1)
+        # E o que não tem regra não tem data — não se lhe inventa uma.
+        assert "vila-sem-regra" not in f
 
 
-def test_as_datas_de_2026_batem_com_as_fontes(raiz):
-    """Conferidas contra as datas que as próprias fontes dão para 2026."""
-    f = Calendario(regiao_ou_salta("medio-tejo").calendario).feriados_municipais(2026)
-    assert f["abrantes"] == date(2026, 6, 14)
-    assert f["alcanena"] == date(2026, 5, 14)
-    assert f["constancia"] == date(2026, 4, 6)
-    assert f["entroncamento"] == date(2026, 11, 24)
-    assert f["ferreira-do-zezere"] == date(2026, 6, 13)
-    assert f["macao"] == date(2026, 4, 6)
-    assert f["ourem"] == date(2026, 6, 20)
-    assert f["sardoal"] == date(2026, 9, 22)
-    assert f["serta"] == date(2026, 6, 24)
-    assert f["tomar"] == date(2026, 3, 1)
-    assert f["torres-novas"] == date(2026, 5, 14)
-    assert f["vila-de-rei"] == date(2026, 9, 19)
-    assert f["vila-nova-da-barquinha"] == date(2026, 6, 13)
+def test_o_que_falta_regra_e_o_que_falta_confirmar_contam_se_a_parte():
+    """«Duas fontes secundárias concordam» não é «a câmara diz».
+
+    Sem regra não há data nenhuma; por confirmar há data, e não se sabe se é a
+    certa. São duas lacunas diferentes, e o relatório conta-as à parte.
+    """
+    cal = Calendario(FERIADOS)
+    assert cal.feriados_municipais_sem_regra() == ["vila-sem-regra"]
+    assert set(cal.feriados_municipais_por_confirmar()) == {"vila-da-pascoa", "vila-de-marco"}
 
 
-def test_o_que_falta_confirmar_esta_contado(raiz):
-    """«Duas fontes secundárias concordam» não é «a câmara diz»."""
-    cal = Calendario(regiao_ou_salta("medio-tejo").calendario)
-    assert set(cal.feriados_municipais_por_confirmar()) == {
-        "abrantes",
-        "ferreira-do-zezere",
-        "tomar",
-        "torres-novas",
-        "vila-nova-da-barquinha",
-    }
+def test_um_feriado_municipal_nao_entra_nos_nacionais():
+    """Vale num concelho, não no território: misturá-los aplicava o de um aos outros."""
+    cal = Calendario({**regiao_ou_salta("prova").calendario, **FERIADOS})
+    nacionais = cal.feriados(2026)
+    assert date(2026, 3, 1) not in nacionais, "o de data fixa"
+    assert pascoa(2026) + timedelta(days=39) not in nacionais, "o da Ascensão"
 
 
-def test_um_feriado_municipal_nao_entra_nos_nacionais(raiz):
-    """Vale num concelho, não no território. Misturá-los aplicava o de Tomar a Abrantes."""
-    cal = Calendario(regiao_ou_salta("medio-tejo").calendario)
-    assert date(2026, 3, 1) not in cal.feriados(2026), "o de Tomar"
-    assert date(2026, 9, 19) not in cal.feriados(2026), "o de Vila de Rei"
+def test_em_cada_regiao_os_feriados_municipais_sao_so_de_um_concelho(raiz):
+    """O mesmo, conferido nas declarações de todas as regiões que esta raiz vê.
+
+    Um feriado municipal que coincida com um nacional é nacional na mesma; o
+    que não pode é um municipal aparecer nos nacionais por ter sido declarado.
+    """
+    for rid in ids_das_regioes():
+        cal = Calendario(regiao_ou_salta(rid).calendario)
+        for ano in (2026, 2027):
+            so_nacionais = Calendario(
+                {k: v for k, v in cal.d.items() if k != "feriados_municipais"}
+            ).feriados(ano)
+            assert cal.feriados(ano) == so_nacionais, f"{rid} {ano}"
+            assert set(cal.feriados_municipais(ano)) <= {
+                str(f.get("concelho")) for f in cal.d.get("feriados_municipais") or []
+            }, rid
 
 
 # --- o nome por extenso de um código ---------------------------------------

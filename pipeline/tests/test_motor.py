@@ -1,9 +1,11 @@
 """A Fase 2: o motor responde às viagens que a região exige.
 
-As cinco viagens do CLAUDE.md §9 não estão aqui — estão declaradas em
-`regioes/medio-tejo/fontes.yaml`, e estes testes leem-nas. É a mesma regra dos
+As viagens do CLAUDE.md §9 não estão aqui — estão declaradas na receita da
+região (`motor.viagens_de_prova`), e estes testes leem-nas. É a mesma regra dos
 leitores: uma região nova tem de poder exigir as suas viagens sem que alguém
-escreva Python.
+escreva Python. E a região procura-se pela PROPRIEDADE — uma rede viária no
+motor e viagens declaradas —, e não pelo nome (CLAUDE.md §5.1): as regiões
+inventadas desta raiz não têm ruas, e aqui os testes saltam e dizem porquê.
 
 **Não passam pelo Docker, de propósito.** O `otp/docker-compose.yml` existe
 para quem aloja, mas um teste tem de poder correr onde não há daemon de Docker
@@ -22,31 +24,71 @@ from pathlib import Path
 
 import pytest
 
-from conftest import regiao_ou_salta
+from conftest import construcao_de, regiao_que
 from paragem.gtfs import Gtfs
 from paragem.motor import Servidor, disponivel, viajar
-from paragem.regiao import carregar
+from paragem.regiao import carregar_todas
 
-GRAFO = Path("build/medio-tejo/otp/graph.obj")
-FEED = Path("build/medio-tejo/gtfs/meio.zip")
+
+def _com_ruas(r) -> bool:
+    """Uma rede viária no motor e viagens de prova: o que estes testes precisam."""
+    m = r.motor or {}
+    return bool(m.get("osm")) and bool(m.get("viagens_de_prova"))
+
+
+def _primeira_com_ruas(raiz: Path):
+    """A região que estes testes perguntam — sem levantar nada na recolha.
+
+    Aqui NÃO se usa o `regiao_que`: isto corre na recolha dos testes, e um
+    `pytest.skip` fora de um teste salta o módulo inteiro em vez de saltar o
+    que depende dele. Sem região assim, não há viagens para parametrizar, o
+    que é uma lista vazia e não um erro.
+    """
+    try:
+        return next((r for r in carregar_todas(raiz) if _com_ruas(r)), None)
+    except Exception:  # noqa: BLE001 — na recolha de testes, um erro aqui é «não há viagens»
+        return None
+
+
+def _feed(r) -> Path:
+    """O feed da própria rede da região, onde a construção o deixa."""
+    s = next(
+        (
+            s
+            for s in r.saidas
+            if s.papel in {"horarios", "feed-proprio"} and (s.saida or "").endswith(".zip")
+        ),
+        None,
+    )
+    return construcao_de(r) / s.saida if s and s.saida else construcao_de(r) / "sem-feed-proprio"
+
+
+def _grafo(r) -> Path:
+    return construcao_de(r) / "otp" / "graph.obj"
+
+
+RAIZ = Path(__file__).resolve().parents[2]
+_REGIAO = _primeira_com_ruas(RAIZ)
+VIAGENS = list((_REGIAO.motor.get("viagens_de_prova") or []) if _REGIAO else [])
 
 
 @pytest.fixture(scope="session")
 def regiao(raiz):
-    return regiao_ou_salta("medio-tejo")
+    return regiao_que(_com_ruas, "tem rede viária no motor e viagens de prova declaradas")
 
 
 @pytest.fixture(scope="session")
-def dia_com_servico(raiz) -> str:
+def dia_com_servico(regiao) -> str:
     """Um dia em que o feed tem mesmo viagens, escolhido pelos dados.
 
-    Não se crava uma data: 51 dos 68 serviços ainda não têm datas — falta o
-    calendário escolar — e uma data escolhida à sorte podia cair num dia sem
-    nada e fazer o teste falhar por uma razão que não é a do teste.
+    Não se crava uma data: houve um tempo em que a maior parte dos serviços
+    ainda não tinha datas — faltava o calendário escolar — e uma data escolhida
+    à sorte podia cair num dia sem nada e fazer o teste falhar por uma razão
+    que não é a do teste.
     """
-    if not (raiz / FEED).exists():
+    if not _feed(regiao).exists():
         pytest.skip("sem feed construído")
-    feed = Gtfs.ler(raiz / FEED)
+    feed = Gtfs.ler(_feed(regiao))
     por_servico = collections.Counter(t["service_id"] for t in feed.trips)
     por_dia: collections.Counter[str] = collections.Counter()
     for r in feed["calendar_dates.txt"]:
@@ -65,49 +107,37 @@ def dia_com_servico(raiz) -> str:
 
 
 @pytest.fixture(scope="session")
-def servidor(raiz):
+def servidor(raiz, regiao):
     razao = disponivel(raiz)
     if razao:
         pytest.skip(f"sem motor: {razao}")
-    if not (raiz / GRAFO).exists():
-        pytest.skip(f"sem grafo em {GRAFO} — corre `uv run pipeline grafo --regiao medio-tejo`")
-    with Servidor(raiz, raiz / GRAFO.parent) as s:
+    grafo = _grafo(regiao)
+    if not grafo.exists():
+        pytest.skip(f"sem grafo em {grafo} — corre `uv run pipeline grafo --regiao {regiao.id}`")
+    with Servidor(raiz, grafo.parent) as s:
         yield s
 
 
-def _viagens(raiz):
-    """As viagens declaradas, para o `parametrize` — sem levantar o servidor.
+def test_as_viagens_de_prova_estao_bem_declaradas(regiao):
+    """Cada viagem do §9 tem nome, partida e chegada com coordenadas.
 
-    Aqui NÃO se usa o `regiao_ou_salta`: isto corre na recolha dos testes, e um
-    `pytest.skip` fora de um teste salta o módulo inteiro em vez de saltar o
-    que depende dele. A região pode não estar nesta raiz — e nesse caso não há
-    viagens para parametrizar, o que é uma lista vazia e não um erro.
+    O número deixou de ser exatamente o do briefing porque acrescentar viagens
+    de prova é uma coisa que se quer que aconteça: cada lacuna que se fecha
+    deixa aqui a viagem que a provava, e é isso que impede que volte em
+    silêncio. Uma viagem mal declarada não pergunta nada ao motor.
     """
-    try:
-        return carregar(raiz, "medio-tejo").motor.get("viagens_de_prova") or []
-    except Exception:  # noqa: BLE001 — na recolha de testes, um erro aqui é «não há viagens»
-        return []
+    viagens = regiao.motor["viagens_de_prova"]
+    assert viagens, "a região deixou de declarar viagens de prova"
+    for v in viagens:
+        assert v.get("nome"), v
+        for lado in ("de", "para"):
+            p = v[lado]
+            assert p.get("nome"), f"{v['nome']} ({lado}) sem nome"
+            assert isinstance(p.get("lat"), int | float), f"{v['nome']} ({lado}) sem latitude"
+            assert isinstance(p.get("lon"), int | float), f"{v['nome']} ({lado}) sem longitude"
 
 
-RAIZ = Path(__file__).resolve().parents[2]
-VIAGENS = _viagens(RAIZ)
-
-
-def test_a_regiao_declara_as_cinco_viagens_do_briefing(regiao):
-    """O §9 nomeia cinco. Se alguém apagar uma, isto diz.
-
-    O número deixou de ser exatamente cinco porque acrescentar viagens de
-    prova é uma coisa que se quer que aconteça: cada lacuna que se fecha deixa
-    aqui a viagem que a provava, e é isso que impede que volte em silêncio. O
-    que não pode faltar são as cinco do briefing, e é isso que se verifica.
-    """
-    nomes = [v["nome"] for v in regiao.motor["viagens_de_prova"]]
-    assert len(nomes) >= 5
-    for pedaco in ("Fátima", "Torres Novas", "Rossio ao Sul do Tejo", "Sertã", "Ourém"):
-        assert any(pedaco in n for n in nomes), f"falta a viagem de {pedaco}"
-
-
-def test_as_coordenadas_das_viagens_sao_de_paragens_do_feed(raiz, regiao):
+def test_as_coordenadas_das_viagens_sao_de_paragens_do_feed(regiao):
     """Um ponto escrito de cabeça põe o motor a partir de onde não está escrito.
 
     Aconteceu na primeira versão deste ficheiro: três das dez coordenadas
@@ -115,7 +145,7 @@ def test_as_coordenadas_das_viagens_sao_de_paragens_do_feed(raiz, regiao):
     diziam ser. A 239 m, o motor parte de outra paragem e responde uma coisa
     sobre outra — sem dar erro nenhum.
     """
-    if not (raiz / FEED).exists():
+    if not _feed(regiao).exists():
         pytest.skip("sem feed construído")
     from paragem.geo import distancia_km
 
@@ -126,7 +156,7 @@ def test_as_coordenadas_das_viagens_sao_de_paragens_do_feed(raiz, regiao):
     # certo ensina a desligá-lo.
     paragens = []
     for caminho in (regiao.motor or {}).get("gtfs") or []:
-        f = raiz / "build" / "medio-tejo" / caminho
+        f = construcao_de(regiao) / caminho
         if f.exists():
             paragens += [
                 (float(s["stop_lat"]), float(s["stop_lon"]))
@@ -209,13 +239,13 @@ def _quando_a_ligacao_corre(feed, ligam, pa: set[str], a_partir_de: str):
 
     Existe por duas coisas que o calendário preenchido destapou de seguida.
 
-    A primeira: a ligação Sertã→Tomar tem UMA viagem, e ela corre em `FE-U` —
-    férias escolares. Enquanto nenhum serviço tinha datas isso era invisível;
+    A primeira: uma ligação entre uma vila da serra e uma cidade tem UMA
+    viagem, e ela corre em `FE-U` — férias escolares. Enquanto nenhum serviço tinha datas isso era invisível;
     com datas, o teste passou a perguntar numa sexta-feira de aulas, em que
     aquela viagem legitimamente não existe.
 
-    A segunda, depois de corrigida a primeira: essa viagem sai da Sertã às
-    07:20 e chega a Tomar às 08:55. O teste perguntava às 09:00 — cinco
+    A segunda, depois de corrigida a primeira: essa viagem sai da vila às
+    07:20 e chega à cidade às 08:55. O teste perguntava às 09:00 — cinco
     minutos DEPOIS de o único autocarro do dia ter chegado. Um motor que não
     encontra um autocarro que já passou está certo.
 
@@ -258,8 +288,9 @@ def _quando_a_ligacao_corre(feed, ligam, pa: set[str], a_partir_de: str):
 def _dia_em_que_a_ligacao_corre(feed, servicos: list[str], a_partir_de: str) -> str | None:
     """O primeiro dia, daqui a um ano, em que uma destas ligações circula.
 
-    Existe por uma coisa que o calendário destapou. A ligação Sertã→Tomar tem
-    UMA viagem, e ela corre em `FE-U` — férias escolares, dias úteis. Enquanto
+    Existe por uma coisa que o calendário destapou. Uma ligação entre uma vila
+    e uma cidade tem UMA viagem, e ela corre em `FE-U` — férias escolares, dias
+    úteis. Enquanto
     nenhum serviço tinha datas, isso era invisível; com datas, o teste passou a
     perguntar numa sexta-feira de período escolar, em que aquela viagem
     legitimamente não existe.
@@ -283,7 +314,7 @@ def _dia_em_que_a_ligacao_corre(feed, servicos: list[str], a_partir_de: str) -> 
 
 
 @pytest.mark.parametrize("viagem", VIAGENS, ids=[v["nome"] for v in VIAGENS])
-def test_a_viagem_devolve_itinerario_plausivel(raiz, servidor, dia_com_servico, viagem):
+def test_a_viagem_devolve_itinerario_plausivel(regiao, servidor, dia_com_servico, viagem):
     """Plausível, e não «existe»: um itinerário todo a pé também é um itinerário.
 
     O que se exige: que haja pelo menos um itinerário, que use transporte
@@ -295,13 +326,13 @@ def test_a_viagem_devolve_itinerario_plausivel(raiz, servidor, dia_com_servico, 
     # SEM CAMINHO NÃO É O MESMO QUE SEM SERVIÇO NESSE DIA.
     #
     # O dia partilhado é o de mais serviço da rede — um dia útil de período
-    # escolar. Nem todas as ligações correm nesse dia: a Sertã→Tomar tem UMA
+    # escolar. Nem todas as ligações correm nesse dia: há uma que tem UMA
     # viagem e ela é de FÉRIAS escolares. Perguntar-lhe numa sexta-feira de
     # aulas e chamar-lhe defeito era culpar o motor do horário.
     #
     # Tenta-se o dia partilhado primeiro, de propósito: quem já responde não
     # muda de dia, e só quem não responde é que ganha uma segunda pergunta.
-    feed = Gtfs.ler(raiz / FEED)
+    feed = Gtfs.ler(_feed(regiao))
     ligam, pa, pb = _depende_do_calendario(feed, viagem["de"], viagem["para"])
     if not itinerarios and ligam:
         outro, hora = _quando_a_ligacao_corre(feed, ligam, pa, dia.replace("-", ""))
@@ -335,11 +366,26 @@ def test_a_viagem_devolve_itinerario_plausivel(raiz, servidor, dia_com_servico, 
     )
 
 
-def test_a_janela_de_procura_cobre_um_dia_de_servico(raiz, servidor, dia_com_servico):
+def _mais_servida(servidor, dia: str):
+    """A viagem de prova com mais caminhos no dia inteiro — e esses caminhos.
+
+    A janela prova-se numa ligação com muitas viagens por dia: é aí que uma
+    janela curta esconde as que servem. Escolhe-se pelos dados, entre as que a
+    região declara, e não por duas coordenadas escritas aqui.
+    """
+    melhor, caminhos = None, []
+    for v in VIAGENS:
+        larga = viajar(servidor, v["de"], v["para"], dia, "09:00")
+        if len(larga) > len(caminhos):
+            melhor, caminhos = v, larga
+    return melhor, caminhos
+
+
+def test_a_janela_de_procura_cobre_um_dia_de_servico(servidor, dia_com_servico):
     """Numa rede rural, perguntar «há viagem já a seguir» é perguntar mal.
 
-    Torres Novas → Entroncamento, às 09:00. Medido duas vezes, e a segunda
-    medição corrige a primeira — vale a pena guardar as duas:
+    Medido entre duas cidades vizinhas, às 09:00, duas vezes — e a segunda
+    medição corrige a primeira, vale a pena guardar as duas:
 
         janela        antes do calendário     com o calendário
         50 min (OTP)        0 itinerários          1 itinerário
@@ -361,17 +407,15 @@ def test_a_janela_de_procura_cobre_um_dia_de_servico(raiz, servidor, dia_com_ser
 
     assert JANELA_SEGUNDOS >= 8 * 3600, "a janela tem de cobrir um dia de serviço"
 
-    tnv = {"lat": 39.477905, "lon": -8.536428}
-    ent = {"lat": 39.46171, "lon": -8.473885}
-
-    curta = viajar(servidor, tnv, ent, dia_com_servico, "09:00", janela=3000)
-    larga = viajar(servidor, tnv, ent, dia_com_servico, "09:00")
-
-    assert len(larga) >= 2, "com a janela do dia inteiro tem de haver mais do que um caminho"
+    v, larga = _mais_servida(servidor, dia_com_servico)
+    assert v is not None and len(larga) >= 2, (
+        "com a janela do dia inteiro, alguma das viagens de prova tem de ter mais do que um caminho"
+    )
+    curta = viajar(servidor, v["de"], v["para"], dia_com_servico, "09:00", janela=3000)
     assert len(larga) >= 2 * len(curta) or len(curta) == 0, (
-        f"a janela larga devolveu {len(larga)} e a do OTP {len(curta)}. Se a diferença "
-        "desaparecer, a janela de doze horas deixou de se justificar e o comentário que a "
-        "defende passou a mentir — vale a pena medir outra vez antes de a manter."
+        f"{v['nome']}: a janela larga devolveu {len(larga)} e a do OTP {len(curta)}. Se a "
+        "diferença desaparecer, a janela de doze horas deixou de se justificar e o comentário "
+        "que a defende passou a mentir — vale a pena medir outra vez antes de a manter."
     )
 
 
@@ -382,10 +426,13 @@ def test_a_hora_da_pergunta_nao_decide_a_resposta(servidor, dia_com_servico):
     próximo». A primeira é a pergunta de quem planeia; a segunda é a de quem
     está na paragem, e essa é uma funcionalidade do site, não do motor.
     """
-    tnv = {"lat": 39.477905, "lon": -8.536428}
-    ent = {"lat": 39.46171, "lon": -8.473885}
+    v, larga = _mais_servida(servidor, dia_com_servico)
+    if v is None or not larga:
+        pytest.skip("nenhuma viagem de prova tem caminho neste dia")
     for hora in ("06:00", "09:00", "15:00"):
-        assert viajar(servidor, tnv, ent, dia_com_servico, hora), f"sem caminho às {hora}"
+        assert viajar(servidor, v["de"], v["para"], dia_com_servico, hora), (
+            f"{v['nome']}: sem caminho às {hora}"
+        )
 
 
 def test_o_docker_compose_usa_a_versao_que_o_codigo_fixa(raiz):

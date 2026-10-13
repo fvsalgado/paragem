@@ -13,8 +13,25 @@ from pathlib import Path
 
 import pytest
 
+from conftest import RAIZ, construcao_de
 from paragem.grelha import construir, segundos
 from paragem.gtfs import Gtfs
+from paragem.regiao import carregar_todas
+
+
+def _grelhas():
+    """(região, grelha) de cada região desta raiz que já foi construída.
+
+    Todas, e nenhuma pelo nome (CLAUDE.md §5.1): a regra vale para qualquer uma.
+    """
+    achadas = []
+    for r in carregar_todas(RAIZ):
+        f = construcao_de(r) / "sitio" / "viagens.json"
+        if f.exists():
+            achadas.append((r, json.loads(f.read_text(encoding="utf-8"))))
+    if not achadas:
+        pytest.skip("sem grelha construída — corre `uv run pipeline sitio`")
+    return achadas
 
 
 @pytest.fixture(scope="module")
@@ -46,58 +63,71 @@ def test_os_servicos_sao_numerados_por_ordem_e_nao_por_acaso(raiz):
     Um ficheiro que muda sozinho estraga a cache do CI e torna qualquer
     diferença ilegível — a mudança a sério fica escondida no meio do ruído.
     """
-    f = raiz / "build" / "medio-tejo" / "sitio" / "viagens.json"
-    if not f.exists():
-        pytest.skip("sem grelha construída — corre `uv run pipeline sitio`")
-    servicos = json.loads(f.read_text(encoding="utf-8"))["servicos"]
-
-    # Os identificadores levam o nome do feed à frente. Dentro de cada feed,
-    # a ordem tem de ser a alfabética: é a única que não depende do acaso.
-    por_feed: dict[str, list[str]] = {}
-    for s in servicos:
-        feed = s.split(":", 1)[0]
-        por_feed.setdefault(feed, []).append(s)
-    for feed, lista in por_feed.items():
-        assert lista == sorted(lista), (
-            f"os serviços do feed {feed!r} não estão por ordem — "
-            "a numeração depende da ordem de iteração de um set"
-        )
+    for r, d in _grelhas():
+        # Os identificadores levam o nome do feed à frente. Dentro de cada
+        # feed, a ordem tem de ser a alfabética: é a única que não depende do
+        # acaso.
+        por_feed: dict[str, list[str]] = {}
+        for s in d["servicos"]:
+            feed = s.split(":", 1)[0]
+            por_feed.setdefault(feed, []).append(s)
+        for feed, lista in por_feed.items():
+            assert lista == sorted(lista), (
+                f"{r.id}: os serviços do feed {feed!r} não estão por ordem — "
+                "a numeração depende da ordem de iteração de um set"
+            )
 
 
 def test_um_feed_de_terceiro_entra_so_com_as_viagens_que_tocam_a_regiao(raiz):
-    """O feed da CP tem o país inteiro. Trazê-lo todo eram 200 kB por nada.
+    """O feed do operador ferroviário tem o país inteiro. Trazê-lo todo eram 200 kB por nada.
 
-    E a viagem que toca a região entra INTEIRA: quem apanha o comboio em Tomar
-    vai para Lisboa, e cortar a viagem na fronteira era esconder-lhe o destino.
+    E a viagem que toca a região entra INTEIRA: quem apanha o comboio numa
+    estação da região vai para Lisboa, e cortar a viagem na fronteira era
+    esconder-lhe o destino.
+
+    O feed procura-se pela propriedade — uma saída `feed-de-terceiro` de
+    comboio, já construída — e as estações «da região» são as que caem na
+    caixa dela, e não três nomes escritos aqui.
     """
-    cp = raiz / "build" / "medio-tejo" / "gtfs" / "cp.zip"
-    if not cp.exists():
-        pytest.skip("sem feed da CP construído")
-    feed = Gtfs.ler(cp)
-    todas = {t["trip_id"] for t in feed.trips}
-
-    # Três estações da região, e mais nada.
-    dentro = {
-        s["stop_id"]
-        for s in feed.stops
-        if (s.get("stop_name") or "") in {"Tomar", "Entroncamento", "Abrantes"}
-    }
-    assert dentro, "o feed deixou de ter estas estações"
-
-    g = construir({"cp": feed}, "Europe/Lisbon", {"cp": dentro})
-    assert 0 < len(g.viagens) < len(todas), (
-        f"{len(g.viagens)} viagens de {len(todas)} — ou não filtrou, ou filtrou tudo"
-    )
-    # Nenhuma viagem foi cortada: todas têm mais paragens do que as três.
-    nomes = {p[0]: p[3] for p in g.paragens}
-    fora = 0
-    for _, _, horas in g.viagens:
-        if any(
-            nomes[g.paragens[p][0]] not in {"Tomar", "Entroncamento", "Abrantes"}
-            for p in horas[0::3]
-        ):
-            fora += 1
-    assert fora, "todas as viagens foram cortadas à região — perdeu-se o destino"
+    vistos = 0
+    for r in carregar_todas(RAIZ):
+        for saida in r.saidas:
+            if saida.papel != "feed-de-terceiro" or saida.modo != "comboio" or not saida.saida:
+                continue
+            ficheiro = construcao_de(r) / saida.saida
+            if not ficheiro.exists():
+                continue
+            feed = Gtfs.ler(ficheiro)
+            c = r.caixa
+            dentro = {
+                st["stop_id"]
+                for st in feed.stops
+                if c.lat_min <= float(st["stop_lat"]) <= c.lat_max
+                and c.lon_min <= float(st["stop_lon"]) <= c.lon_max
+            }
+            if not dentro:
+                continue
+            vistos += 1
+            todas = {t["trip_id"] for t in feed.trips}
+            g = construir({"cp": feed}, "Europe/Lisbon", {"cp": dentro})
+            assert 0 < len(g.viagens) <= len(todas), (
+                f"{r.id}: {len(g.viagens)} viagens de {len(todas)} — ou não filtrou, ou filtrou tudo"
+            )
+            # Nenhuma viagem foi cortada: as que passam fora da caixa
+            # continuam a ter as paragens de fora.
+            com_paragens_de_fora = {
+                h["trip_id"] for h in feed.stop_times if h["stop_id"] not in dentro
+            } & {h["trip_id"] for h in feed.stop_times if h["stop_id"] in dentro}
+            if com_paragens_de_fora:
+                # As paragens da grelha levam o feed à frente («cp:…»).
+                fora = sum(
+                    1
+                    for _, _, horas in g.viagens
+                    if any(g.paragens[p][0].split(":", 1)[-1] not in dentro for p in horas[0::3])
+                )
+                assert fora, f"{r.id}: as viagens foram cortadas à região"
+    if not vistos:
+        pytest.skip("nenhum feed de comboio de terceiros construído com estações na região")
 
 
 def test_o_fuso_de_cada_linha_e_o_da_agencia_dela(raiz):
@@ -107,11 +137,10 @@ def test_o_fuso_de_cada_linha_e_o_da_agencia_dela(raiz):
     hora no verão — e um planeador adiantado manda alguém correr atrás de um
     autocarro que ainda não chegou.
     """
-    f = raiz / "build" / "medio-tejo" / "sitio" / "viagens.json"
-    if not f.exists():
-        pytest.skip("sem grelha construída")
-    d = json.loads(f.read_text(encoding="utf-8"))
-    assert "Europe/Lisbon" in d["fusos"], "o fuso da região tem de estar lá"
-    # Cada linha aponta para um fuso que existe.
-    for linha in d["linhas"]:
-        assert 0 <= linha[4] < len(d["fusos"]), f"linha com fuso inválido: {linha}"
+    for r, d in _grelhas():
+        fuso = (r.motor or {}).get("fuso")
+        if fuso:
+            assert fuso in d["fusos"], f"{r.id}: o fuso da região tem de estar lá"
+        # Cada linha aponta para um fuso que existe.
+        for linha in d["linhas"]:
+            assert 0 <= linha[4] < len(d["fusos"]), f"{r.id}: linha com fuso inválido: {linha}"

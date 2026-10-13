@@ -3,7 +3,9 @@
  *
  * Isto não é boa prática: para uma autoridade de transportes é o Decreto-Lei
  * n.º 83/2018, que transpõe a Diretiva (UE) 2016/2102. Uma violação grave
- * impede a publicação, e é por isso que corre no CI e não à mão.
+ * deixa o CI a vermelho, e é por isso que corre lá e não à mão. (Não trava
+ * sozinha a publicação — a plataforma constrói o que chega ao `main` —, e a
+ * declaração de acessibilidade di-lo.)
  *
  * **O axe apanha talvez metade do que interessa.** Não vê se a ordem dos
  * cabeçalhos faz sentido para quem ouve a página, nem se o texto de uma

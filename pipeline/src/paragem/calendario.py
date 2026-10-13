@@ -89,7 +89,7 @@ class Calendario:
 
         Os MUNICIPAIS ficam de fora daqui de propósito: valem num concelho e
         não no resto do território, e misturá-los com os nacionais era aplicar
-        o feriado de Tomar às linhas de Abrantes.
+        o feriado de um concelho às linhas do concelho vizinho.
         """
         if ano in self._cache_feriados:
             return self._cache_feriados[ano]
@@ -109,15 +109,15 @@ class Calendario:
     def feriados_municipais(self, ano: int) -> dict[str, date]:
         """O feriado de cada concelho nesse ano, para os que têm regra.
 
-        Quatro dos treze concelhos do Médio Tejo têm feriado MÓVEL — dois na
-        Segunda-feira de Páscoa e dois na Quinta-feira da Ascensão. Escrever
-        uma data fixa para esses fica errado já no ano seguinte, e ninguém dá
-        por isso porque o ficheiro continua preenchido. Daí o
-        `deslocamento_pascoa`.
+        Há concelhos com feriado MÓVEL — medido numa região real, quatro em
+        treze: dois na Segunda-feira de Páscoa e dois na Quinta-feira da
+        Ascensão. Escrever uma data fixa para esses fica errado já no ano
+        seguinte, e ninguém dá por isso porque o ficheiro continua preenchido.
+        Daí o `deslocamento_pascoa`.
 
         Ficam de fora daqui os NACIONAIS de propósito: um feriado municipal
         vale num concelho e não no resto do território, e misturá-los era
-        aplicar o feriado de Tomar às linhas de Abrantes.
+        aplicar o feriado de um concelho às linhas do concelho vizinho.
         """
         p = pascoa(ano)
         saida: dict[str, date] = {}

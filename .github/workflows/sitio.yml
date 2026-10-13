@@ -1,8 +1,8 @@
 # O sítio: constrói-se, e verifica-se que é acessível.
 #
 # A acessibilidade não é um extra que se vê no fim: para uma autoridade de
-# transportes é o Decreto-Lei n.º 83/2018, e uma violação grave impede a
-# publicação. Corre aqui, em cada alteração, e não à mão quando alguém se
+# transportes é o Decreto-Lei n.º 83/2018, e uma violação deixa esta corrida a
+# vermelho. Corre aqui, em cada alteração, e não à mão quando alguém se
 # lembra.
 name: Sítio
 
@@ -398,9 +398,10 @@ jobs:
 
       # UMA PALAVRA-PASSE SÓ PARA ESTA CORRIDA, para o painel se poder testar.
       #
-      # O painel (`/admin`) não abre sem `ADMIN_PASSWORD_HASH` e
-      # `ADMIN_SESSION_SECRET`, e é assim que deve ser. Aqui geram-se os dois
-      # ao acaso, de cada vez, e deitam-se fora no fim: nada disto é um
+      # O painel (`/admin`) não abre sem `ADMIN_PASSWORD_HASH`,
+      # `ADMIN_SESSION_SECRET` e `ADMIN_EMAIL`, e é assim que deve ser. Aqui
+      # geram-se os dois primeiros ao acaso, de cada vez, e deitam-se fora no
+      # fim; o terceiro é um email de exemplo. Nada disto é um
       # segredo de produção, e nada disto fica escrito num ficheiro. A senha
       # em claro vai para o Playwright (`PARAGEM_SENHA_DE_TESTE`); o servidor
       # só vê o hash. Não há base nos testes — o que se prova é o código.
@@ -413,10 +414,14 @@ jobs:
           echo "::add-mask::$segredo"
           hash="$(printf '%s' "$senha" | node scripts/senha.mjs 2>/dev/null | sed 's/^ADMIN_PASSWORD_HASH=//')"
           echo "::add-mask::$hash"
+          # O EMAIL DO DONO É O DOS TESTES, e não é segredo nenhum: sem
+          # `ADMIN_EMAIL` o painel não abre (`web/src/lib/painel/configuracao.ts`),
+          # e os testes entram com este.
           {
             echo "PARAGEM_SENHA_DE_TESTE=$senha"
             echo "ADMIN_PASSWORD_HASH=$hash"
             echo "ADMIN_SESSION_SECRET=$segredo"
+            echo "ADMIN_EMAIL=dono@exemplo.pt"
           } >> "$GITHUB_ENV"
 
       # O SÍTIO A CORRER, que é o que os testes visitam.
@@ -453,7 +458,9 @@ jobs:
         working-directory: web
         run: npx playwright install --with-deps chromium
 
-      # Uma violação grave do axe impede a publicação. Não há `continue-on-error`.
+      # Uma violação do axe deixa esta corrida a vermelho — não há
+      # `continue-on-error`. Não trava sozinha a publicação: a Vercel constrói
+      # o que chega ao `main`, e quem funde é que tem de ver o vermelho.
       # E o planeador é perguntado ao motor a sério: as viagens do §9, pedidas
       # pela interface e não pela API.
       - name: Acessibilidade (axe) e as direções

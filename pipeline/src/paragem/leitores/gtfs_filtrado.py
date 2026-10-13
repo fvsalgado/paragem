@@ -4,7 +4,7 @@
 queira usar sem arrastar o país inteiro.
 
 A regra que não é óbvia: **guarda-se a viagem inteira, não o troço.** Quem
-apanha o expresso em Tomar vai para o Porto, e cortar a viagem na fronteira da
+apanha o expresso numa cidade da região vai para o Porto, e cortar a viagem na fronteira da
 região esconde-lhe o destino. Filtra-se por «que viagens tocam esta região», e
 depois leva-se cada uma dessas viagens toda — com as paragens de fora
 incluídas, que são precisamente as que interessam a quem embarca cá.

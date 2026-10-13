@@ -36,6 +36,8 @@
  * manter — medido a 21/09/2026 com as quatro paragens da região.
  */
 
+import { LEITURAS_AUTORIZADAS, RAZAO_DA_LEITURA_DESLIGADA } from './autorizacao.mjs';
+
 /** Quanto tempo esperamos pela fonte antes de desistir. */
 const ESPERA_MS = 12000;
 
@@ -53,8 +55,11 @@ const DATA = /^\d{4}-\d{2}-\d{2}$/;
  * resposta — e isso está no `normalizar`, que é onde se vai quando a fonte
  * mudar.
  */
-export function configuracao(env = {}) {
+export function configuracao(env = {}, autorizada = LEITURAS_AUTORIZADAS.expressos) {
   return {
+    // O INTERRUPTOR NÃO VEM DO AMBIENTE: vem de `autorizacao.mjs`, que só um
+    // commit muda. O segundo argumento existe para os testes da consulta.
+    autorizada: autorizada === true,
     url: env.PARAGEM_EXPRESSOS_URL || '',
     origem: env.PARAGEM_ORIGEM || '',
     // Um preço não muda ao segundo, e a fonte agradece. Cinco minutos é curto
@@ -63,6 +68,11 @@ export function configuracao(env = {}) {
     cacheS: Number.parseInt(env.PARAGEM_EXPRESSOS_CACHE_S || '300', 10),
     moeda: env.PARAGEM_MOEDA || 'EUR',
   };
+}
+
+/** Porque é que esta consulta não se faz — ou `null` quando está autorizada. */
+export function desligada(cfg) {
+  return cfg?.autorizada ? null : RAZAO_DA_LEITURA_DESLIGADA;
 }
 
 export function faltaNaConfiguracao(cfg) {
@@ -155,6 +165,8 @@ export function normalizar(resposta) {
  */
 export async function consultar(cfg, pedido, buscar = fetch) {
   const data = pedido.data || hoje();
+  // A ÚLTIMA BARREIRA: desligada, a fonte nem chega a ser perguntada.
+  if (desligada(cfg)) return { data, viagens: [], lido: Date.now(), falhou: true };
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ESPERA_MS);
   try {

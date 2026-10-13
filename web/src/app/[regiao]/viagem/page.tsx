@@ -3,6 +3,7 @@ import { motorDaRegiao } from '@/lib/enderecos';
 import DireccoesDaPagina from '@/componentes/DireccoesDaPagina';
 import { aPedido, exigirRegiao, lacunas, servicosSemDatas, regiao } from '@/lib/dados';
 import { metadadosDaRegiao } from '@/lib/metadados';
+import { dataDosHorarios } from '@/lib/formato';
 
 export async function generateMetadata({
   params,
@@ -46,6 +47,7 @@ export default async function Viagem({ params }: { params: Promise<{ regiao: str
         modosDesligados={r.modos_desligados ?? []}
         motorDaRegiao={motorDaRegiao(rid, r.demonstracao)}
         servicosSemDatas={servicosSemDatas(l)}
+        dadosDe={dataDosHorarios(r)}
         temAPedido={r.modos.includes('a-pedido') && !!(await aPedido(rid))}
       />
     </>

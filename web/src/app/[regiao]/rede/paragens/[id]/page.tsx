@@ -239,7 +239,7 @@ export default async function Paragem({
         </Link>
         {noMapa && <a href={noMapa}>Ver no mapa</a>}
       </p>
-      <MarcaDeDados regiao={rid} />
+      <MarcaDeDados regiao={rid} modos={[...modosDaParagem]} />
       <AvisosDaPagina avisos={avisos} catalogo={catalogo} titulo="Avisos nesta paragem" />
 
       {partidas.length === 0 ? (

@@ -3,7 +3,7 @@
 No Google Maps ninguém procura uma paragem de autocarro. Procura o sítio onde
 quer ir — o hospital, a escola, o castelo, a aldeia — e o mapa é que descobre a
 paragem. Enquanto a caixa de procura só conhecia paragens e estações, a
-primeira coisa que alguém escrevia («Hospital de Tomar») não devolvia nada, e
+primeira coisa que alguém escrevia («Hospital de <cidade>») não devolvia nada, e
 uma caixa que não responde à primeira tentativa parece avariada.
 
 Isto sai do MESMO recorte que o mapa e o motor de viagens usam, sob ODbL com

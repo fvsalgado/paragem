@@ -17,8 +17,8 @@ ficheiro desses a dizer «© contribuidores do OpenStreetMap, ODbL» atribuía a
 quem não o fez, sob uma licença que não é a dele, ao lado de uma página de
 dados abertos que dizia outra coisa.
 
-**A armadilha do `network`.** No Médio Tejo, `network=TUT` é dos urbanos de
-Torres Novas E dos urbanos de Torres Vedras, que ficam a 130 km. Filtrar por
+**A armadilha do `network`.** A mesma etiqueta `network=` foi medida a
+identificar os urbanos de duas cidades que ficam a 130 km uma da outra. Filtrar por
 rede traz autocarros de outra terra para dentro da região, e ninguém dá por
 isso porque as linhas têm nomes plausíveis. Filtra-se pelo OPERADOR — e a
 receita da região pode dizer `nunca_filtrar_por: network` para que esta função
@@ -156,11 +156,11 @@ class _NosEtiquetados(osmium.SimpleHandler):
 # ISTO CUSTAVA DEZ DOS ONZE MINUTOS DA CONSTRUÇÃO. Medido, leitor a leitor:
 #
 #     20.3s  osm-recorte     →  osm/regiao.osm.pbf
-#    122.4s  osm-bicicletas  →  gbfs/meiob/
-#    123.3s  osm-bicicletas  →  gbfs/bue/
-#    122.6s  osm-bicicletas  →  gbfs/bute/
+#    122.4s  osm-bicicletas  →  gbfs/<sistema-1>/
+#    123.3s  osm-bicicletas  →  gbfs/<sistema-2>/
+#    122.6s  osm-bicicletas  →  gbfs/<sistema-3>/
 #    123.0s  osm-taxis       →  geojson/taxis.geojson
-#      4.5s  osm-rotas       →  geojson/tut.geojson
+#      4.5s  osm-rotas       →  geojson/urbanos.geojson
 #
 # Cinco varrimentos do mesmo ficheiro para tirar 68 estações, mais 10, mais 4,
 # mais 9 praças. O `osm-rotas` era rápido porque só olha para relações, que são
@@ -442,8 +442,8 @@ def rotas(ctx: Contexto, saida: Saida) -> Resultado:
     if proibido and proibido in filtro:
         raise ValueError(
             f"a receita de {ctx.regiao.id} filtra rotas por `{proibido}` e declara que nunca o "
-            f"deve fazer. No Médio Tejo, `network=TUT` também é dos urbanos de Torres Vedras: um "
-            f"filtro por rede traz autocarros de outra terra. Filtra por `operator`."
+            f"deve fazer. A mesma etiqueta `network=` pode ser a dos urbanos de outra cidade: "
+            f"um filtro por rede traz autocarros de outra terra. Filtra por `operator`."
         )
 
     hr = _Relacoes(filtro)

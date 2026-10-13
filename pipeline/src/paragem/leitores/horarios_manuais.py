@@ -3,15 +3,15 @@
 É o caminho que o CLAUDE.md §9 chama «introdução manual assistida», e existe
 porque há folhas que nenhum leitor automático lê sem risco:
 
-- a brochura de Constância escreve as horas com um traço nas paragens onde a
-  viagem não passa, e os traços não assentam nas colunas — a grelha parte-se
-  ao meio e uma viagem sai em dois pedaços;
-- a das Praias Fluviais tem TRÊS circuitos empilhados na mesma grelha, sem
-  cabeçalho entre eles: lida como uma, dá uma viagem que vai à praia, volta,
-  e vai a outra praia;
-- o folheto do LINK não é um horário de paragens: é uma tabela de PARTIDAS por
-  cidade, seis por dia, e forçá-la à forma de um percurso era dizer que um
-  autocarro passa por catorze cidades seguidas.
+- uma brochura escreve as horas com um traço nas paragens onde a viagem não
+  passa, e os traços não assentam nas colunas — a grelha parte-se ao meio e
+  uma viagem sai em dois pedaços;
+- outra tem TRÊS circuitos de praia empilhados na mesma grelha, sem cabeçalho
+  entre eles: lida como uma, dá uma viagem que vai à praia, volta, e vai a
+  outra praia;
+- um folheto de ligações entre concelhos não é um horário de paragens: é uma
+  tabela de PARTIDAS por cidade, seis por dia, e forçá-la à forma de um
+  percurso era dizer que um autocarro passa por catorze cidades seguidas.
 
 Nestes casos alguém lê o papel e escreve o que lá está. O que torna isto
 defensável — e não «o Claude escreveu umas horas» — é o GUARDA:
@@ -111,7 +111,7 @@ def _simples(s: str) -> str:
     """O texto reduzido ao que o guarda compara: letras, dígitos e dois-pontos.
 
     **NFKD e não NFD**, e a diferença custou uma transcrição correta recusada.
-    A brochura de Abrantes escreve «Saída Cruciﬁxo» com a LIGADURA tipográfica
+    Uma brochura escreve «Saída Cruciﬁxo» com a LIGADURA tipográfica
     `ﬁ` — um caractere só, que o PDF guarda como tal. Em NFD a ligadura não se
     desfaz, e «Crucifixo» escrito com as duas letras não aparecia no original.
 
@@ -130,7 +130,7 @@ def _simples(s: str) -> str:
 def _conferir(d: dict[str, Any], original: str) -> list[str]:
     """Tudo o que está na transcrição e não está no PDF.
 
-    Compara sem espaços nem acentos, de propósito: a brochura de Constância
+    Compara sem espaços nem acentos, de propósito: há uma brochura que
     escreve «1 7:19» e «Centro de Saú de», partidos a meio pelo PDF. O que se
     quer apanhar é um dígito trocado, não um espaço a mais.
     """
@@ -191,8 +191,8 @@ def _linha(saida: Saida, d: dict[str, Any]) -> dict[str, Any]:
             # última da volta. Invertida, a viagem fica na ordem em que se anda.
             #
             # **EM MINUTOS, E NÃO EM TEXTO.** Uma transcrição escreve a hora
-            # como o papel a escreve, e as folhas de Ferreira do Zêzere
-            # escrevem a coluna de sábado sem o zero à frente: «9:50», «10:00».
+            # como o papel a escreve, e há folhas que escrevem a coluna de
+            # sábado sem o zero à frente: «9:50», «10:00».
             # Comparadas como texto, «9:50» > «10:30» — porque «9» > «1» — e a
             # ida do sábado saía ao contrário, a chegar às 10:30 e a partir às
             # 9:50. Uma viagem que acaba antes de começar.

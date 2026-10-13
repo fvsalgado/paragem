@@ -30,8 +30,8 @@ async function semViolacoes(page: Page, titulo: RegExp): Promise<void> {
 }
 
 /**
- * O dono entra com a palavra-passe do ambiente e QUALQUER email — no CI não
- * há `ADMIN_EMAIL`, e é assim que ele entrava antes das contas (0009).
+ * O dono entra com a palavra-passe do ambiente e o email de `ADMIN_EMAIL`, que
+ * no CI é `dono@exemplo.pt` (`sitio.yml`). Sem ela, o painel não abre.
  */
 async function entrar(page: Page, senha: string, origem = PRODUTO): Promise<void> {
   await page.goto(`${origem}/admin/entrar/`);

@@ -485,7 +485,7 @@ def ler(ctx: Contexto, saida: Saida) -> Resultado:
         _conferir_frequencias(ctx, saida, traducao, ci, do_operador)
 
     # AS PARAGENS QUE JÁ SÃO NOSSAS, e é aqui que se decide se o terminal fica
-    # com uma ficha ou com duas. Sem isto, o mesmo cais de Fátima aparece duas
+    # com uma ficha ou com duas. Sem isto, o mesmo cais de um terminal aparece duas
     # vezes no mapa, cada um com metade dos autocarros — que é pior do que não
     # ter nenhum, porque parece completo.
     ref: Referencia | None = None

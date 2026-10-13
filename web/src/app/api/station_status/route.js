@@ -22,6 +22,7 @@
 import {
   configuracao,
   criarCache,
+  desligada,
   faltaNaConfiguracao,
   stationStatus,
 } from '../../../../../disponibilidade/nucleo.mjs';
@@ -46,6 +47,17 @@ export async function OPTIONS() {
 }
 
 export async function GET() {
+  // LIGADA OU DESLIGADA EM CÓDIGO, com a razão escrita ao lado
+  // (`disponibilidade/autorizacao.mjs`). Desligada, responde-se sem tocar na
+  // fonte, e o sítio nem chega a perguntar: sem leitura autorizada, não recebe
+  // endereço.
+  const porque = desligada(cfg);
+  if (porque) {
+    return Response.json(
+      { erro: 'a leitura ao vivo das bicicletas está desligada', porque },
+      { status: 501, headers: cabecalhos({ 'cache-control': 'no-store' }) },
+    );
+  }
   // Uma função mal configurada tem de o DIZER, e não devolver uma lista vazia
   // que o sítio mostraria como «não há bicicletas».
   const falta = faltaNaConfiguracao(cfg);

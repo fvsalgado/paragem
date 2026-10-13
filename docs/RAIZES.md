@@ -59,7 +59,7 @@ Sem ela, o pipeline vê só o que está aqui — e responde «não há região
    ficheiro e passou a ser a **soma** dos de todas as raízes. Declarar a mesma
    fonte em duas levanta erro, pela mesma razão.
 3. **Um caminho declarado numa receita resolve-se na raiz da região.** A
-   receita escreve `data/manual/<id>/tap/constancia.yaml` e não sabe contra o
+   receita escreve `data/manual/<id>/tap/<circuito>.yaml` e não sabe contra o
    quê isso se resolve. O pipeline resolve-o onde a região vive — e não aqui.
 4. **A documentação viaja com os dados.** Cada raiz tem o seu
    `docs/TERCEIROS.md`, o seu `REUSE.toml` e o seu `data/manual/<id>/LEIA.md`.

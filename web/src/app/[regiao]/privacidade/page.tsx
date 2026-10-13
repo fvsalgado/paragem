@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from '@/componentes/Ligacao';
 import { exigirRegiao, temMosaicos, url, regiao } from '@/lib/dados';
 import { aAutoridade } from '@/lib/prosa';
-import { lerContactos, responsavelNaFrase } from '@/lib/contactos';
+import { DO_PRODUTO, lerContactos, responsavelNaFrase } from '@/lib/contactos';
 import { motorDaRegiao } from '@/lib/enderecos';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
@@ -22,17 +22,26 @@ export async function generateMetadata({
 }
 
 /**
- * O que se mede e o que não se mede, dito a quem visita.
+ * O que se regista e o que não se regista, dito a quem visita.
  *
- * Esta página existe mesmo na configuração sem cookies — em que não há dado
- * pessoal e a lei não obrigaria a nada. Dizer o que se recolhe quando não se é
- * obrigado é o que distingue não recolher dados pessoais de dizer que não se
- * recolhem.
+ * DIZIA «NÃO HÁ DADO PESSOAL» E «O SÍTIO NÃO REGISTA O TEU ENDEREÇO IP», e o
+ * código não o prova. O endereço IP chega a quem serve o sítio e ao serviço de
+ * medição com cada pedido, como em qualquer sítio; as opções da biblioteca de
+ * medição que o deviam cortar não têm efeito na versão instalada, e quem o
+ * descarta é uma definição do projeto de medição (confirmada pelo dono a
+ * 4/10/2026, `docs/PLANO-CRUZADO.md`). E a biblioteca junta a cada evento o
+ * navegador, o sistema, o ecrã, a língua, o fuso e a página de onde se veio.
+ * A página passa a dizer isso, e a distinguir o que o código garante do que
+ * depende de uma definição que o repositório não mostra.
+ *
+ * E só diz que se mede quando se mede: sem a chave da medição configurada,
+ * nada sai do navegador para medir — como a privacidade do produto já dizia.
  */
 export default async function Privacidade({ params }: { params: Promise<{ regiao: string }> }) {
   const { regiao: rid } = await params;
   const r = await exigirRegiao(rid);
   const identificada = process.env.NEXT_PUBLIC_PARAGEM_MEDICAO_IDENTIFICADA === '1';
+  const mede = !!process.env.NEXT_PUBLIC_PARAGEM_POSTHOG;
   // Com motor de viagens, a partida vai-lhe no pedido; sem ele, o planeador
   // corre no navegador e a coordenada não sai de lá (`planeador.ts`).
   const comMotor = motorDaRegiao(rid, r.demonstracao) !== '';
@@ -40,8 +49,11 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
   const comMapa = await temMosaicos(rid);
   // Quem responde pelos dados e a quem se escreve: da autoridade, no painel (P4-024).
   const contactos = await lerContactos(rid);
-  const responsavel = responsavelNaFrase(contactos, aAutoridade(r, 'com_artigo'));
-  const emailDePrivacidade = contactos?.privacidade_email;
+  // ENQUANTO A AUTORIDADE NÃO INDICAR, responde quem faz o produto, pelo
+  // contacto do produto (`DO_PRODUTO`). Dizia «Por preencher».
+  const declarado = responsavelNaFrase(contactos, aAutoridade(r, 'com_artigo'));
+  const responsavel = declarado ?? DO_PRODUTO.responsavel;
+  const emailDePrivacidade = contactos?.privacidade_email || (declarado ? null : DO_PRODUTO.email);
 
   return (
     <>
@@ -62,29 +74,61 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
             Este sítio só guarda uma coisa no teu dispositivo, e só se a escolheres: o tema claro ou
             escuro.
           </strong>{' '}
-          Fica no teu navegador, não é enviada a ninguém, e escolher «Como o aparelho» apaga-a. O
-          sítio não regista o teu endereço IP. Não há cookies, não há identificador, não há forma de
-          ligar duas visitas à mesma pessoa.
+          Fica no teu navegador, não é enviada a ninguém, e escolher «Como o aparelho» apaga-a. Não
+          há cookies nem identificador guardado no teu dispositivo, e por isso duas visitas não se
+          ligam à mesma pessoa.
         </p>
       )}
 
-      <h2>O que se mede</h2>
-      <p>Mede-se o que se procura, não quem procura:</p>
-      <ul>
-        <li>que páginas são vistas — que paragens, que linhas, que concelhos;</li>
-        <li>
-          que viagens são procuradas, pelo <strong>nome</strong> da paragem de partida e o da
-          paragem de chegada, com o dia e a hora pedidos;
-        </li>
-        <li>
-          <strong>que viagens não tiveram resposta.</strong> É o dado mais útil que este sítio
-          produz: quem procura uma ligação que não existe está a dizer que precisa dela, e isso é
-          matéria de planeamento da rede;
-        </li>
-        <li>quando o motor de viagens está em baixo.</li>
-      </ul>
+      <h2>O que se regista</h2>
+      {mede ? (
+        <>
+          <p>Mede-se o que se procura, não quem procura:</p>
+          <ul>
+            <li>
+              que páginas são vistas — que paragens, que linhas, que concelhos —, e quando se sai;
+            </li>
+            <li>
+              que viagens são procuradas, pelo <strong>nome</strong> da paragem de partida e o da
+              paragem de chegada, com o dia e a hora pedidos, quantas opções houve, quanto dura a
+              melhor e por que linhas vai;
+            </li>
+            <li>
+              <strong>que viagens não tiveram resposta.</strong> É o dado mais útil que este sítio
+              produz: quem procura uma ligação que não existe está a dizer que precisa dela, e isso
+              é matéria de planeamento da rede;
+            </li>
+            <li>quando o motor de viagens está em baixo.</li>
+          </ul>
+          <p>
+            A biblioteca de medição junta a cada um destes registos o endereço da página, a página
+            de onde vieste, o navegador e o sistema (com a identificação que o navegador envia), o
+            tamanho do ecrã e da janela, a língua e o fuso horário do navegador, e um identificador
+            ao acaso.{' '}
+            {identificada
+              ? 'Neste modo esse identificador fica no teu dispositivo e liga as tuas visitas.'
+              : 'Esse identificador liga as páginas de uma mesma visita e vive só na memória da página: perde-se quando a fechas ou recarregas, e não fica no teu dispositivo.'}
+          </p>
+        </>
+      ) : (
+        <p>Nada: este sítio não tem a medição ligada.</p>
+      )}
 
-      <h2>O que não se mede</h2>
+      <h2>O teu endereço IP</h2>
+      <p>
+        {identificada
+          ? 'Neste modo, o endereço IP vai com as medições. '
+          : 'O código deste sítio não o guarda, nem o envia como dado. '}
+        {mede
+          ? 'Chega, como em qualquer sítio, a quem o aloja e ao serviço de medição, com cada pedido. '
+          : 'Chega, como em qualquer sítio, a quem o aloja, com cada pedido. '}
+        {mede && !identificada
+          ? 'O projeto de medição deste sítio está configurado para o descartar — é uma definição desse serviço, e não uma garantia do código. '
+          : ''}
+        A plataforma que aloja o sítio pode mantê-lo nos seus registos técnicos, nos termos dela.
+      </p>
+
+      <h2>O que não se regista</h2>
       <ul>
         <li>o teu nome, o teu email, o teu telefone — nunca são pedidos;</li>
         {/* DIZIA «O SÍTIO NÃO A PEDE AO NAVEGADOR», e pede: o botão da
@@ -107,46 +151,29 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
         <li>
           {identificada
             ? 'nada mais do que o acima.'
-            : 'o teu endereço IP, e nada que permita reconhecer-te numa visita seguinte.'}
+            : 'nada que permita reconhecer-te numa visita seguinte.'}
         </li>
       </ul>
 
       <h2>Quem processa</h2>
       <p>
-        As medições são processadas pelo PostHog, em servidores na União Europeia. Os dados de
-        transporte {r.de} são públicos e estão descritos em{' '}
+        {mede ? 'As medições são processadas pelo PostHog, em servidores na União Europeia. ' : ''}
+        Os dados de transporte {r.de} são públicos e estão descritos em{' '}
         <Link href={url(rid, '/dados-abertos/')}>Dados abertos</Link>.
       </p>
 
       <h2>Quem responde pelos dados</h2>
-      {responsavel ? (
-        <p>
-          O responsável pelo tratamento é {responsavel}.
-          {emailDePrivacidade ? (
-            <>
-              {' '}
-              Para questões de privacidade, escreve para{' '}
-              <a href={`mailto:${emailDePrivacidade}`}>{emailDePrivacidade}</a>.
-            </>
-          ) : null}
-        </p>
-      ) : (
-        <div className="faixa informacao">
-          <p>
-            <strong>Por preencher.</strong> Quem responde pelos dados deste sítio ainda não foi
-            indicado {aAutoridade(r, 'por')}.
-            {emailDePrivacidade ? (
-              <>
-                {' '}
-                Entretanto, as questões de privacidade vão para{' '}
-                <a href={`mailto:${emailDePrivacidade}`}>{emailDePrivacidade}</a>.
-              </>
-            ) : (
-              ' Um contacto inventado é pior do que nenhum.'
-            )}
-          </p>
-        </div>
-      )}
+      <p>
+        O responsável pelo tratamento é {responsavel}
+        {declarado ? '' : `, enquanto ${aAutoridade(r, 'com_artigo')} não indicar outro`}.
+        {emailDePrivacidade ? (
+          <>
+            {' '}
+            Para questões de privacidade, escreve para{' '}
+            <a href={`mailto:${emailDePrivacidade}`}>{emailDePrivacidade}</a>.
+          </>
+        ) : null}
+      </p>
 
       <h2>Se quiseres saber mais</h2>
       <p>

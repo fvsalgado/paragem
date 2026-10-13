@@ -91,7 +91,7 @@ def test_sem_regiao_construida_recusa_com_a_receita(tmp_path: Path) -> None:
 
 
 def test_tipos_de_conteudo() -> None:
-    assert tipo_de("x/partidas/tomar.json") == "application/json"
+    assert tipo_de("x/partidas/pedra-alta.json") == "application/json"
     assert tipo_de("regiao.pmtiles") == "application/vnd.pmtiles"
     assert tipo_de("qualquer.bin") == "application/octet-stream"
 

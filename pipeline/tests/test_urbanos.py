@@ -185,57 +185,78 @@ def test_localizar_deixa_as_paragens_sem_sitio_dentro_do_ficheiro(tmp_path: Path
 
 
 # QUANTAS PARAGENS TEM CADA LINHA vem do cartaz, que é um PDF arquivado: é um
-# número frozen, e crava-se. QUANTAS ESTÃO NO MAPA vem do OpenStreetMap, que
-# muda todos os dias — e cravar esse número deu numa publicação reprovada no
-# `main`, com a produção parada por causa de uma paragem que alguém mapeou (ou
-# desmapeou) entretanto.
+# número frozen, e crava-se — na RECEITA da região (`esperado_paragens`), e não
+# aqui. QUANTAS ESTÃO NO MAPA vem do OpenStreetMap, que muda todos os dias — e
+# cravar esse número deu numa publicação reprovada no `main`, com a produção
+# parada por causa de uma paragem que alguém mapeou (ou desmapeou) entretanto.
 #
 # A regra que fica: número exato onde a fonte está congelada, INVARIANTE onde
 # a fonte está viva.
-PARAGENS_DO_CARTAZ = {
-    "tut-linha-verde-express": 6,
-    "tut-linha-verde": 33,
-    "tut-linha-vermelha": 28,
-    "tut-linha-azul": 30,
-}
-
-# As duas linhas que têm relação de percurso no OpenStreetMap, e as duas que
-# não têm. É esta diferença — e não um número — que este módulo existe para
-# provar: onde alguém mapeou a carreira, as paragens aparecem; onde não, não.
-COM_PERCURSO = ("tut-linha-verde-express", "tut-linha-verde")
-SEM_PERCURSO = ("tut-linha-vermelha", "tut-linha-azul")
+#
+# As linhas procuram-se pela PROPRIEDADE — as saídas de urbanos municipais que
+# vêm de um cartaz e já estão construídas —, e não pelo nome da rede nem da
+# região (CLAUDE.md §5.1). Numa raiz sem nenhuma, os testes saltam.
 
 
-def _localizadas(ficheiro: str) -> tuple[int, int]:
-    caminho = RAIZ / "build" / "medio-tejo" / "urbanos" / f"{ficheiro}.json"
-    if not caminho.exists():  # pragma: no cover — só sem construção feita
-        pytest.skip(f"falta {caminho}: correr `pipeline build`")
-    d = json.loads(caminho.read_text(encoding="utf-8"))
-    if "coordenadas" not in d:  # pragma: no cover — construção anterior a este passo
-        pytest.skip("a construção é anterior à localização das paragens")
+def _linhas_construidas(so_de_cartaz: bool = True):
+    """(região, saída, conteúdo) de cada linha de urbano construída."""
+    from conftest import construcao_de
+    from paragem.regiao import carregar_todas
+
+    achadas = []
+    for r in carregar_todas(RAIZ):
+        for s in r.saidas:
+            if s.modo != "urbano-municipal" or not (s.saida or "").endswith(".json"):
+                continue
+            if so_de_cartaz and s.leitor != "horarios-pdf-cartaz":
+                continue
+            f = construcao_de(r) / s.saida
+            if not f.exists():
+                continue
+            d = json.loads(f.read_text(encoding="utf-8"))
+            if "coordenadas" in d:
+                achadas.append((r, s, d))
+    if not achadas:  # pragma: no cover — só sem construção feita
+        pytest.skip("nenhuma linha de urbano lida de um cartaz está construída nesta raiz")
+    return achadas
+
+
+def _contagem(d: dict) -> tuple[int, int]:
     return len(d["coordenadas"]), len(d["coordenadas"]) + len(d["sem_coordenada"])
 
 
-@pytest.mark.parametrize(("ficheiro", "quantas"), sorted(PARAGENS_DO_CARTAZ.items()))
-def test_as_paragens_do_cartaz_sao_as_que_o_cartaz_tem(ficheiro: str, quantas: int):
+def test_as_paragens_do_cartaz_sao_as_que_a_receita_conta():
     """O cartaz é um PDF arquivado: o número de paragens não muda sozinho."""
-    _, todas = _localizadas(ficheiro)
-    assert todas == quantas
+    contadas = 0
+    for r, s, d in _linhas_construidas():
+        esperado = s.params.get("esperado_paragens")
+        if esperado is None:
+            continue
+        contadas += 1
+        assert _contagem(d)[1] == esperado, f"{r.id}/{s.saida}"
+    if not contadas:
+        pytest.skip("nenhuma receita declara as paragens de um cartaz (`esperado_paragens`)")
 
 
 def test_as_linhas_mapeadas_no_openstreetmap_resolvem_se_muito_melhor():
     """A diferença que este módulo existe para provar, sem cravar contagens.
 
-    Medido a 21/09/2026: Verde Express 6/6 e Verde 25/33, contra Vermelha 7/28
-    e Azul 5/30. Os números vão mudar — o OpenStreetMap é vivo — mas a razão
-    não: uma relação de percurso É a lista das paragens da carreira, e onde
-    ela existe quase tudo casa.
+    Medido a 21/09/2026 numa rede urbana real: as duas linhas com relação de
+    percurso, 6/6 e 25/33, contra as duas sem ela, 7/28 e 5/30. Os números vão
+    mudar — o OpenStreetMap é vivo — mas a razão não: uma relação de percurso
+    É a lista das paragens da carreira, e onde ela existe quase tudo casa.
 
-    Se um dia isto falhar sem ninguém ter mexido no leitor, é boa notícia
-    disfarçada: quer dizer que alguém mapeou as outras duas linhas.
+    Uma linha «com percurso» é a que tem alguma paragem posta pela relação
+    (`osm-percurso`); as outras não têm nenhuma. Se um dia isto falhar sem
+    ninguém ter mexido no leitor, é boa notícia disfarçada: quer dizer que
+    alguém mapeou as outras linhas.
     """
-    com = [_localizadas(f) for f in COM_PERCURSO]
-    sem = [_localizadas(f) for f in SEM_PERCURSO]
+    com, sem = [], []
+    for _, _, d in _linhas_construidas():
+        fontes = {c.get("fonte") for c in d["coordenadas"].values()}
+        (com if "osm-percurso" in fontes else sem).append(_contagem(d))
+    if not com or not sem:
+        pytest.skip("é preciso uma linha com percurso mapeado e uma sem, na mesma raiz")
     fracao = lambda ps: sum(p for p, _ in ps) / sum(t for _, t in ps)  # noqa: E731
     assert fracao(com) > 0.5, "as linhas com percurso mapeado deviam resolver-se quase todas"
     assert fracao(com) > fracao(sem) * 2, "a diferença entre mapeado e não mapeado desapareceu"
@@ -243,28 +264,23 @@ def test_as_linhas_mapeadas_no_openstreetmap_resolvem_se_muito_melhor():
 
 def test_nao_se_localiza_mais_do_que_existe():
     """O guarda mais simples, e o que apanha uma contagem a delirar."""
-    for ficheiro in PARAGENS_DO_CARTAZ:
-        postas, todas = _localizadas(ficheiro)
-        assert 0 <= postas <= todas
+    for r, s, d in _linhas_construidas(so_de_cartaz=False):
+        postas, todas = _contagem(d)
+        assert 0 <= postas <= todas, f"{r.id}/{s.saida}"
 
 
-def test_nenhuma_coordenada_cai_fora_do_concelho_da_linha():
-    """A caixa de Torres Novas, medida nos limites da CAOP, com folga.
+def test_nenhuma_coordenada_cai_fora_da_regiao():
+    """O que trava a avaria maior: «Centro de Saúde» resolver-se noutra cidade.
 
-    É o que trava a avaria maior: «Centro de Saúde» resolver-se em Coimbra,
-    que este recorte de OSM também contém — com 2 358 paragens do SMTUC lá
-    dentro.
+    Medido numa região real: o recorte de OSM tinha lá dentro 2 358 paragens
+    da rede urbana de outra cidade. A procura fecha-se no concelho da linha;
+    isto confere, pelo menos, que nenhuma coordenada sai da caixa da região.
     """
-    pasta = RAIZ / "build" / "medio-tejo" / "urbanos"
-    ficheiros = sorted(pasta.glob("tut-*.json")) if pasta.exists() else []
-    if not ficheiros:  # pragma: no cover — só sem construção feita
-        pytest.skip("falta a construção")
     vistos = 0
-    for caminho in ficheiros:
-        for nome, p in (
-            json.loads(caminho.read_text(encoding="utf-8")).get("coordenadas") or {}
-        ).items():
-            assert 39.40 <= p["lat"] <= 39.56, f"{nome} em {caminho.name}"
-            assert -8.63 <= p["lon"] <= -8.44, f"{nome} em {caminho.name}"
+    for r, s, d in _linhas_construidas(so_de_cartaz=False):
+        c = r.caixa_de_recorte
+        for nome, p in (d.get("coordenadas") or {}).items():
+            assert c.lat_min <= p["lat"] <= c.lat_max, f"{r.id}: {nome} em {s.saida}"
+            assert c.lon_min <= p["lon"] <= c.lon_max, f"{r.id}: {nome} em {s.saida}"
             vistos += 1
     assert vistos > 0

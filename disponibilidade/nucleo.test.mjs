@@ -8,7 +8,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { configuracao, criarCache, faltaNaConfiguracao, lerPainel, stationStatus } from './nucleo.mjs';
+import {
+  configuracao,
+  criarCache,
+  desligada,
+  faltaNaConfiguracao,
+  lerPainel,
+  stationStatus,
+} from './nucleo.mjs';
+import { LEITURAS_AUTORIZADAS } from './autorizacao.mjs';
 
 const html = readFileSync(
   fileURLToPath(new URL('./fixtures/painel.html', import.meta.url)),
@@ -25,9 +33,30 @@ function fonteFalsa(corpo = html, ok = true) {
   return { buscar, estado };
 }
 
-const CFG = configuracao({
-  PARAGEM_PAINEL_URL: 'http://exemplo/painel',
-  PARAGEM_ORIGEM: 'https://sitio.pt',
+// COMO SE HOUVESSE ACORDO: a leitura está desligada em código
+// (`autorizacao.mjs`), e o segundo argumento liga-a só aqui, para se testar o
+// que ela faz no dia em que for autorizada.
+const CFG = configuracao(
+  {
+    PARAGEM_PAINEL_URL: 'http://exemplo/painel',
+    PARAGEM_ORIGEM: 'https://sitio.pt',
+  },
+  true,
+);
+
+test('o interruptor é o código, e nenhuma variável de ambiente o mexe', () => {
+  const env = { PARAGEM_PAINEL_URL: 'x', PARAGEM_AUTORIZADA: '1', LEITURAS_AUTORIZADAS: 'true' };
+  assert.equal(configuracao(env).autorizada, LEITURAS_AUTORIZADAS.bicicletas);
+});
+
+test('desligada, a leitura nem pede a página', async () => {
+  const cfg = configuracao({ PARAGEM_PAINEL_URL: 'http://exemplo/painel' }, false);
+  assert.equal(cfg.autorizada, false);
+  assert.match(desligada(cfg), /sem acordo escrito/);
+  const { buscar, estado } = fonteFalsa();
+  await assert.rejects(() => lerPainel(cfg, buscar), /desligada/);
+  assert.equal(estado.vezes, 0, 'a página do sistema não foi pedida');
+  assert.equal(desligada(CFG), null);
 });
 
 test('só o endereço da página é obrigatório', () => {
@@ -54,7 +83,10 @@ test('uma leitura traz as estações e a hora', async () => {
 
 test('o filtro deixa de fora o sistema que não se quer', async () => {
   const { buscar } = fonteFalsa();
-  const cfg = configuracao({ ...CFG, PARAGEM_PAINEL_URL: 'x', PARAGEM_ORIGEM: 'y', PARAGEM_EXCLUIR: 'BUTe' });
+  const cfg = configuracao(
+    { ...CFG, PARAGEM_PAINEL_URL: 'x', PARAGEM_ORIGEM: 'y', PARAGEM_EXCLUIR: 'BUTe' },
+    true,
+  );
   const d = await lerPainel(cfg, buscar);
   assert.equal(d.estacoes.length, 2);
   assert.ok(!d.estacoes.some((e) => e.nome.startsWith('BUTe')));
@@ -89,7 +121,7 @@ test('a cache poupa a fonte: muitos pedidos, uma leitura', async () => {
 
 test('a fonte em baixo não derruba o serviço: serve-se a última leitura boa', async () => {
   const boa = fonteFalsa();
-  const cache = criarCache(configuracao({ ...CFG, PARAGEM_CACHE_S: '0' }), async (...a) => {
+  const cache = criarCache(configuracao({ ...CFG, PARAGEM_CACHE_S: '0' }, true), async (...a) => {
     if (boa.estado.vezes === 0) return boa.buscar(...a);
     throw new Error('a fonte caiu');
   });

@@ -249,7 +249,7 @@ export default async function Linha({
           </>
         )}
       </p>
-      <MarcaDeDados regiao={rid} />
+      <MarcaDeDados regiao={rid} modos={[l.modo]} />
       <AvisosDaPagina avisos={avisos} catalogo={catalogo} titulo="Avisos nesta linha" />
 
       {/* Com dois sentidos, a página é comprida: o segundo começa depois do

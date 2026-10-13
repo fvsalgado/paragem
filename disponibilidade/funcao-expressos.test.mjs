@@ -14,6 +14,8 @@ import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
+import { LEITURAS_AUTORIZADAS } from "./autorizacao.mjs";
+
 const RESPOSTA = readFileSync(
   fileURLToPath(new URL("./fixtures/expressos.json", import.meta.url)),
   "utf-8",
@@ -28,6 +30,16 @@ let fonte;
 let rota;
 let pedidos = 0;
 let devolver = 200;
+
+// A LEITURA ESTÁ DESLIGADA EM CÓDIGO (`autorizacao.mjs`): a rota responde
+// que está desligada sem tocar na fonte, e é isso que se prova enquanto for
+// assim. Os testes do caminho com leitura ficam escritos e saltam com a razão
+// — voltam a correr sozinhos no commit que a ligar.
+const LIGADA = LEITURAS_AUTORIZADAS.expressos;
+const SO_LIGADA = LIGADA
+  ? {}
+  : { skip: "a leitura está desligada em código (autorizacao.mjs); volta a correr quando for ligada" };
+const SO_DESLIGADA = LIGADA ? { skip: "a leitura está ligada" } : {};
 
 before(async () => {
   fonte = createServer((_pedido, resposta) => {
@@ -55,7 +67,16 @@ const pedir = async (consulta) => {
   return { codigo: r.status, cabecalhos: r.headers, corpo: await r.json() };
 };
 
-test("um GET com um par válido devolve as viagens", async () => {
+test("desligada, um GET diz porquê e não pergunta nada ao operador", SO_DESLIGADA, async () => {
+  const antes = pedidos;
+  const { codigo, corpo, cabecalhos } = await pedir({ de: A, para: B, data: "2099-07-02" });
+  assert.equal(codigo, 501);
+  assert.match(corpo.porque, /sem acordo escrito/);
+  assert.equal(cabecalhos.get("cache-control"), "no-store");
+  assert.equal(pedidos, antes, "o operador não foi perguntado");
+});
+
+test("um GET com um par válido devolve as viagens", SO_LIGADA, async () => {
   const { codigo, corpo } = await pedir({ de: A, para: B, data: "2099-07-02" });
   assert.equal(codigo, 200);
   assert.equal(corpo.falhou, false);
@@ -64,7 +85,7 @@ test("um GET com um par válido devolve as viagens", async () => {
   assert.ok(corpo.lido > 0, "e diz a que horas foi lido");
 });
 
-test("um par inválido nem chega à fonte", async () => {
+test("um par inválido nem chega à fonte", SO_LIGADA, async () => {
   const antes = pedidos;
   const { codigo, corpo } = await pedir({ de: "lisboa", para: B });
   assert.equal(codigo, 400);
@@ -72,14 +93,14 @@ test("um par inválido nem chega à fonte", async () => {
   assert.equal(pedidos, antes, "a fonte não foi tocada");
 });
 
-test("a mesma pergunta duas vezes toca na fonte uma vez", async () => {
+test("a mesma pergunta duas vezes toca na fonte uma vez", SO_LIGADA, async () => {
   const antes = pedidos;
   await pedir({ de: A, para: B, data: "2099-08-01" });
   await pedir({ de: A, para: B, data: "2099-08-01" });
   assert.equal(pedidos, antes + 1);
 });
 
-test("a fonte em baixo dá 200 com lista vazia, e não um 503", async () => {
+test("a fonte em baixo dá 200 com lista vazia, e não um 503", SO_LIGADA, async () => {
   devolver = 500;
   const { codigo, corpo, cabecalhos } = await pedir({
     de: A,

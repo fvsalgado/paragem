@@ -18,7 +18,7 @@ Como o `pdf_horarios.py`, **isto lê o papel e não sabe nada de GTFS**.
 
 ## Três armadilhas, e as três apareceram nos cinco cartazes desta região
 
-**Há quadros lado a lado na mesma folha.** A Linha Vermelha dos TUT tem o
+**Há quadros lado a lado na mesma folha.** A Linha Vermelha de uma rede urbana tem o
 horário normal à esquerda e o de terça-feira — dia de mercado, com oferta
 diferente — à direita, na mesma linha de texto. Quem ler a linha inteira como
 um só quadro junta dois horários num e inventa viagens que não existem. A
@@ -32,7 +32,7 @@ todo a partir do primeiro buraco — e um horário desalinhado é um horário
 errado que parece certo. Cada célula vai para a coluna cujo centro lhe fica
 mais perto.
 
-**Um nome pode ficar separado das horas dele.** Na Linha Azul dos TUT o
+**Um nome pode ficar separado das horas dele.** Na Linha Azul da mesma rede o
 título «linha azul», desenhado por cima do quadro, empurra o nome de uma
 paragem para outra altura da página: fica uma linha com 26 horas e sem nome, e
 uma linha com nome e sem horas. Juntam-se — mas SÓ quando há exatamente uma de
@@ -164,9 +164,9 @@ def _palavras_de(xml: str) -> list[Palavra]:
 
     **O `unescape` não é uma formalidade.** Isto lê XML com uma expressão
     regular — de propósito, porque só interessam as posições e o texto —, e
-    uma expressão regular não desfaz entidades. Sem isto, a paragem «Escola
-    EB 2/3 Dr. Ruy d'Andrade» do Entroncamento chega ao sítio escrita
-    «Ruy d&apos;Andrade», e a «Rua Elias Garcia &quot;Altinho&quot;» com as
+    uma expressão regular não desfaz entidades. Sem isto, uma paragem «Escola
+    EB 2/3 Dr. Fulano d'Andrade» chega ao sítio escrita
+    «Fulano d&apos;Andrade», e uma «Rua Fulano &quot;Altinho&quot;» com as
     aspas por extenso.
 
     Passou despercebido enquanto nenhum cartaz teve apóstrofo nem aspas no
@@ -188,7 +188,7 @@ COLADAS = 2.0
 def _juntar_horas_partidas(ps: list[Palavra]) -> list[Palavra]:
     """«1 7:19» é «17:19».
 
-    A brochura de Constância tem horas partidas a meio — o PDF escreve o
+    Há uma brochura com horas partidas a meio — o PDF escreve o
     primeiro dígito como uma palavra e o resto como outra, encostados. Cada
     pedaço sozinho não é hora nenhuma, e a linha ficava com uma coluna a
     menos: o horário todo desalinhado a partir dali.
@@ -227,8 +227,8 @@ def linhas(xml: str) -> list[list[Palavra]]:
 
     **E as páginas empilham-se.** Numa brochura de oito páginas, a linha a 473
     pontos da página 2 e a linha a 473 pontos da página 3 são linhas
-    diferentes — e sem isto juntavam-se numa só. O livro do Transporte a
-    Pedido de Abrantes saía com paragens chamadas «às às às»: eram palavras de
+    diferentes — e sem isto juntavam-se numa só. Um livro de circuitos do
+    transporte a pedido saía com paragens chamadas «às às às»: eram palavras de
     oito páginas sobrepostas. Cada página desce a altura das anteriores, e o
     problema desaparece.
     """
@@ -393,8 +393,8 @@ class Quadro:
     # cartazes de uma grelha só, que não têm cabeçalho nenhum.
     #
     # Sem isto, as cinco carreiras do TURE saíam como seis grelhas sem nome
-    # debaixo de um título «TURE», e quem procurasse a Linha Verde do
-    # Entroncamento tinha de as abrir uma a uma para a encontrar.
+    # debaixo de um título «TURE», e quem procurasse a Linha Verde da
+    # cidade tinha de as abrir uma a uma para a encontrar.
     titulo: str = ""
 
     @property
@@ -462,8 +462,8 @@ LIMITE_DO_NOME = 60
 # duas viagens —, mas não define as colunas de um.
 #
 # Três, por omissão, porque numa folha cheia de números dois podem ser
-# coincidência. Mas há horários que têm MESMO duas colunas: os circuitos do
-# Transporte a Pedido de Abrantes são uma ida e uma volta por dia, e com o
+# coincidência. Mas há horários que têm MESMO duas colunas: há circuitos do
+# transporte a pedido que são uma ida e uma volta por dia, e com o
 # mínimo em três nenhum deles chegava a abrir grelha. Por isso é parâmetro.
 MINIMO_PARA_ABRIR_QUADRO = 3
 
@@ -516,8 +516,8 @@ def ler(
     pagina_anterior = -1
     for n, fila in enumerate(filas):
         texto = texto_da_linha(fila)
-        # PÁGINA NOVA, QUADRO NOVO. Num livro de circuitos — o de Abrantes tem
-        # oito páginas, o de Ourém nove — cada página é um circuito, com a sua
+        # PÁGINA NOVA, QUADRO NOVO. Num livro de circuitos — medidos, um com
+        # oito páginas e outro com nove — cada página é um circuito, com a sua
         # lista de paragens. Continuar a grelha de uma página na seguinte dava
         # uma viagem que passa por paragens de dois circuitos.
         if fila and fila[0].pagina != pagina_anterior:
@@ -550,10 +550,10 @@ def ler(
                     cabecalhos.append((n, troço[0].x0, _titulo(texto_da_linha(troço))))
         # LINHAS QUE NÃO SÃO DESTA GRELHA, declaradas pela região.
         #
-        # A brochura de Vila de Rei repete em TODAS as páginas um painel de
-        # ligações intermunicipais — «▶ Tomar 09:25 12:35 Quarta-feira
+        # Há uma brochura que repete em TODAS as páginas um painel de
+        # ligações intermunicipais — «▶ <cidade> 09:25 12:35 Quarta-feira
         # 10,50€» — desenhado nas mesmas colunas do circuito. Somadas à
-        # grelha, davam uma viagem que passa por Tomar a meio de um percurso
+        # grelha, davam uma viagem que passa pela cidade a meio de um percurso
         # dentro do concelho, e com a hora a recuar.
         #
         # O que as distingue é o conteúdo, não a posição, e o conteúdo é de
@@ -758,7 +758,7 @@ def _depurar(q: Quadro) -> None:
     É a regra do §6.1 — nenhuma hora recua — aplicada coluna a coluna, porque
     numa coluna de VOLTA recuar é o normal e SUBIR é que é o defeito.
 
-    No cartaz da Linha Azul dos TUT há uma paragem, «R. de Santo António»,
+    No cartaz de uma Linha Azul urbana há uma paragem, «R. de Santo António»,
     impressa com o horário PRÓPRIO dela: de 15 em 15 minutos, numa linha que
     corre de 30 em 30. As colunas assentam — são 26, com o mesmo passo — mas
     os valores não são os daquelas viagens: na segunda coluna a paragem
@@ -864,14 +864,14 @@ def _notas(filas: list[list[Palavra]], quebra: re.Pattern[str] | None = None) ->
     venda à direita, e daí saíam «regras de serviço» destas:
 
         preencher um formulário SERVIÇOS SOCIAIS 3.ª Feira a Sábado
-        a partir dos 30 anos de 1h para transbordo. cm-entroncamento.pt …
+        a partir dos 30 anos de 1h para transbordo. cm-<concelho>.pt …
 
     Nenhuma delas é uma frase que alguém tenha escrito. São pedaços de duas
     caixas diferentes, e foram parar a uma página pública.
 
     Agora cada linha parte-se nos VÃOS: um intervalo grande entre duas
     palavras é o espaço entre duas caixas do desenho, e cada troço é julgado
-    por si. Os cartazes onde isto já funcionava — os dos TUT, com a regra
+    por si. Os cartazes onde isto já funcionava — os da rede urbana, com a regra
     sozinha no rodapé — não mudam: uma linha sem vãos dá um troço só.
 
     E um CABEÇALHO DE QUADRO não é uma regra, por mais que diga «DIAS ÚTEIS»
