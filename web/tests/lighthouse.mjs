@@ -204,14 +204,24 @@ try {
  * 290, e a paragem a 207,5 de 210. Sobem esses dois totais, 5 KiB cada; os
  * outros ainda cabem, a um ou dois KiB do teto — o próximo a passar sabe que
  * está lá.
+ *
+ * A 13/10/2026, O RELÓGIO DA REGIÃO (`lib/fuso.ts`) passou-o de propósito. O
+ * dia e a hora das folhas de partidas e do «Partir agora» passaram a ler-se no
+ * fuso da região, e não no do telemóvel, e a frase dos horários diz de quando
+ * são os dados (`fraseDosHorarios`). O Next tirou esse código do JavaScript
+ * de cada página e pô-lo em dois pedaços partilhados, que somam mais (medido
+ * numa construção local: a página da rede passa de 3,4 a 0,2 KiB, e entram
+ * 2,6 e 1,6). Custou 2,1 KiB à rede e ao tarifário, e 1,3 à paragem e à
+ * linha, medidos no CI contra o `main`. A rede e o tarifário ficaram a 210,7 e 210,9 de 210, e
+ * sobem 5 KiB; a linha está a 199,7 de 200 e é a próxima.
  */
 const ORCAMENTO = {
   início: { htmlEJs: 520, total: 680 },
-  'a rede': { htmlEJs: 170, total: 210 },
+  'a rede': { htmlEJs: 170, total: 215 },
   'como chegar': { htmlEJs: 180, total: 295 },
   paragem: { htmlEJs: 170, total: 215 },
   linha: { htmlEJs: 155, total: 200 },
-  tarifário: { htmlEJs: 170, total: 210 },
+  tarifário: { htmlEJs: 170, total: 215 },
 };
 
 const daDemonstracao = (r) => {
