@@ -38,6 +38,8 @@
  * `next/cache`: a memória é do módulo, com prazo.
  */
 
+import { semAMarcaDePre } from './pre-visualizacao.ts';
+
 /** Quanto tempo o mapa domínio→região vale antes de se voltar a perguntar. */
 export const VALIDADE_DO_MAPA_MS = 5 * 60 * 1000;
 /** Depois de uma falha, volta-se a tentar depressa — sem martelar. */
@@ -292,6 +294,9 @@ export const FICHEIROS_DE_CADA_ANFITRIAO = [
  * vai para dentro dela, e num anfitrião desconhecido não está nesta lista.
  */
 export const PAGINAS_DO_PRODUTO = ['/', '/contacto/', '/privacidade/', '/acessibilidade/'] as const;
+
+/** O caminho que a RFC 9116 dá ao contacto de segurança. */
+export const CAMINHO_DO_SECURITY_TXT = '/.well-known/security.txt';
 export const SEGMENTO_DO_PRODUTO = '/-produto';
 
 /**
@@ -323,10 +328,17 @@ export function decidir(
   hostHeader: string | null | undefined,
   pathname: string,
   mapa: Mapa,
+  preVisualizacao = false,
 ): Decisao {
   // Da API nada é de uma região: o sinal, as contagens, os expressos servem
   // todas. E os ficheiros a sério saem de `public/` tal como estão.
   if (pathname.startsWith('/api/')) return { tipo: 'passar' };
+  // O `security.txt` é o mesmo em todos os anfitriões, e é do produto: quem
+  // corrige o software é quem o escreve (`app/-produto/security.txt`). O App
+  // Router não aceita pastas começadas por ponto, e por isso o nome dá-se aqui.
+  if (pathname === CAMINHO_DO_SECURITY_TXT) {
+    return { tipo: 'reescrever', para: `${SEGMENTO_DO_PRODUTO}/security.txt` };
+  }
   if (
     FICHEIROS_DE_RAIZ.includes(pathname as (typeof FICHEIROS_DE_RAIZ)[number]) ||
     CAMINHOS_DE_FICHEIROS.some((prefixo) => pathname.startsWith(prefixo))
@@ -334,11 +346,23 @@ export function decidir(
     return { tipo: 'passar' };
   }
 
-  const host = normalizarHost(hostHeader);
+  const pedido = normalizarHost(hostHeader);
+  let host = pedido;
 
-  // Um alias não serve: redireciona para o canónico, caminho intacto (308).
-  const canonico = host ? mapa.redirecionamentos[host] : undefined;
-  if (canonico) return { tipo: 'redirecionar', host: canonico };
+  // NA PRÉ-VISUALIZAÇÃO, um endereço com a marca vale o de produção que ele
+  // representa (`pre-visualizacao.ts`): `demo.pre.…` mostra a região de
+  // `demo.…`. Um alias serve em vez de redirecionar — o 308 mandava para o
+  // domínio de produção, para fora da pré-visualização. Fora dela a marca não
+  // quer dizer nada: um `pre.…` em produção é um anfitrião como outro
+  // qualquer, desconhecido, e vê a montra.
+  const naPre = preVisualizacao && pedido ? semAMarcaDePre(pedido) : null;
+  if (naPre !== null) {
+    host = mapa.redirecionamentos[naPre] ?? naPre;
+  } else {
+    // Um alias não serve: redireciona para o canónico, caminho intacto (308).
+    const canonico = host ? mapa.redirecionamentos[host] : undefined;
+    if (canonico) return { tipo: 'redirecionar', host: canonico };
+  }
 
   const regiao = host ? (mapa.dominios[host] ?? null) : null;
   if (regiao === null) {

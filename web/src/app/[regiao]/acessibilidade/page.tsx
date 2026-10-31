@@ -4,6 +4,7 @@ import { aAutoridade } from '@/lib/prosa';
 import { DO_PRODUTO, lerContactos, telefoneParaMarcar } from '@/lib/contactos';
 import VerificacoesDeAcessibilidade from '@/componentes/VerificacoesDeAcessibilidade';
 import { metadadosDaRegiao } from '@/lib/metadados';
+import QueixasDeAcessibilidade from '@/componentes/QueixasDeAcessibilidade';
 
 export async function generateMetadata({
   params,
@@ -124,11 +125,7 @@ export default async function Acessibilidade({ params }: { params: Promise<{ reg
           <a href={reclamar}>{new URL(reclamar).hostname}</a>.
         </p>
       ) : null}
-      <p>
-        Uma pessoa com deficiência tratada de forma menos favorável do que outra em situação
-        comparável pode apresentar queixa nos termos do n.º 1 do artigo 13.º do Decreto-Lei n.º
-        83/2018.
-      </p>
+      <QueixasDeAcessibilidade voz="tu" />
     </>
   );
 }

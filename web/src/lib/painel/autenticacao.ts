@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { temChaveDeServico } from './base';
 import { SEGREDO_MINIMO, emailDeclarado, faltaNoPainel } from './configuracao';
+import { emPreVisualizacao } from '../pre-visualizacao';
 import { CAMINHO_DA_ENTRADA } from './guarda';
 import { pode, type Acesso, type Papel } from './papeis';
 import { actorDe, papeisDe, pessoaPorId, type Pessoa } from './pessoas';
@@ -39,7 +40,9 @@ export interface Dentro extends Acesso {
   actor: string;
 }
 
-export type Portao = Dentro | { ok: false; razao: 'por-configurar' | 'sem-sessao' };
+export type Portao =
+  | Dentro
+  | { ok: false; razao: 'por-configurar' | 'sem-sessao' | 'pre-visualizacao' };
 
 /**
  * O segredo, ou nada. Um segredo curto vale o mesmo que nenhum: o middleware
@@ -58,7 +61,7 @@ export function segredoDaSessao(): string | null {
  * (`configuracao.ts`). Sem qualquer um dos três, o painel não abre.
  */
 export function painelConfigurado(): boolean {
-  return faltaNoPainel().length === 0;
+  return !emPreVisualizacao() && faltaNoPainel().length === 0;
 }
 
 /**
@@ -83,6 +86,9 @@ const SEM_SESSAO = { ok: false, razao: 'sem-sessao' } as const;
  * layout, a página e a ação perguntam todos, e é uma ida à base e não três.
  */
 export const sessaoAtual = cache(async (): Promise<Portao> => {
+  // Na pré-visualização o painel não abre, configurado ou não: escreveria nos
+  // dados reais (`pre-visualizacao.ts`).
+  if (emPreVisualizacao()) return { ok: false, razao: 'pre-visualizacao' };
   const segredo = segredoDaSessao();
   if (!painelConfigurado() || !segredo) return { ok: false, razao: 'por-configurar' };
   const jarra = await cookies();

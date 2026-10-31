@@ -21,13 +21,52 @@ export type Chamar = <T>(funcao: string, argumentos: Record<string, unknown>) =>
  * sítio novo ir para o ar antes da migração.
  *
  * Sem chave de serviço deixa passar: em desenvolvimento e no CI é o que se
- * quer, e em produção a chave existe sempre. Um limitador em baixo também
- * deixa passar — regista-se e segue —, porque a alternativa é uma falha de
- * infraestrutura virar uma negação de serviço feita por nós.
+ * quer, e em produção a chave existe sempre.
+ *
+ * COM O LIMITADOR EM BAIXO, CONTA EM MEMÓRIA, como o Coreto
+ * (`apps/web/src/lib/admin/limite-da-entrada.ts`). Deixava passar — «uma falha
+ * de infraestrutura não pode virar uma negação de serviço feita por nós» —, e
+ * isso queria dizer que a base em baixo era a porta do painel sem limite
+ * nenhum. Fechar toda a gente seria a negação de serviço; contar na memória
+ * de cada instância é o meio-termo: o limite fica mais largo (cada instância
+ * conta as suas), mas existe, e ninguém que acerte na palavra-passe fica de
+ * fora.
  */
 
-/** Como se está a contar: só as falhadas (0009), todas (antes dela), ou nada. */
-export type ModoDoLimite = 'falhadas' | 'todas' | 'sem-limite';
+/**
+ * Como se está a contar: só as falhadas (0009), todas (antes dela), na
+ * memória da instância (com a base em baixo), ou nada.
+ */
+export type ModoDoLimite = 'falhadas' | 'todas' | 'memoria' | 'sem-limite';
+
+/** As falhadas de cada balde, por janela, nesta instância. */
+const MEMORIA = new Map<string, { janela: number; falhas: number }>();
+
+/** Só para os testes: o processo de testes partilha a memória entre casos. */
+export function esquecerMemoriaDoLimite(): void {
+  MEMORIA.clear();
+}
+
+const janelaDe = (agora: number, janelaSegundos: number) =>
+  Math.floor(agora / (janelaSegundos * 1000));
+
+function falhasNaMemoria(balde: string, janelaSegundos: number, agora: number): number {
+  const contagem = MEMORIA.get(balde);
+  return contagem && contagem.janela === janelaDe(agora, janelaSegundos) ? contagem.falhas : 0;
+}
+
+function naMemoria(
+  baldes: string[],
+  janelaSegundos: number,
+  limite: number,
+  agora: number,
+): Limite {
+  const cheio = baldes.some((b) => falhasNaMemoria(b, janelaSegundos, agora) >= limite);
+  const repoe = new Date(
+    (janelaDe(agora, janelaSegundos) + 1) * janelaSegundos * 1000,
+  ).toISOString();
+  return { permitido: !cheio, modo: 'memoria', repoeEm: cheio ? repoe : null };
+}
 
 export interface Limite {
   permitido: boolean;
@@ -64,6 +103,7 @@ export async function verificarEntrada(
   baldes: string[],
   janelaSegundos: number,
   limite: number,
+  agora: number = Date.now(),
 ): Promise<Limite> {
   if (!chamar || baldes.length === 0) return { permitido: true, modo: 'sem-limite', repoeEm: null };
   try {
@@ -85,7 +125,7 @@ export async function verificarEntrada(
   } catch (erro) {
     if (!ehEsquemaPorAplicar(erro)) {
       console.error('rate_limit_check', erro);
-      return { permitido: true, modo: 'sem-limite', repoeEm: null };
+      return naMemoria(baldes, janelaSegundos, limite, agora);
     }
   }
   // A 0009 ainda não está na base: o limite de antes, que conta tudo.
@@ -100,7 +140,7 @@ export async function verificarEntrada(
     return { permitido, modo: 'todas', repoeEm: permitido ? null : (linha?.reset_at ?? null) };
   } catch (erro) {
     console.error('rate_limit_hit', erro);
-    return { permitido: true, modo: 'sem-limite', repoeEm: null };
+    return naMemoria(baldes, janelaSegundos, limite, agora);
   }
 }
 
@@ -111,7 +151,19 @@ export async function contarFalhada(
   modo: ModoDoLimite,
   janelaSegundos: number,
   limite: number,
+  agora: number = Date.now(),
 ): Promise<void> {
+  if (modo === 'memoria') {
+    const janela = janelaDe(agora, janelaSegundos);
+    for (const b of baldes) {
+      const contagem = MEMORIA.get(b);
+      MEMORIA.set(b, {
+        janela,
+        falhas: contagem && contagem.janela === janela ? contagem.falhas + 1 : 1,
+      });
+    }
+    return;
+  }
   if (!chamar || modo !== 'falhadas') return;
   try {
     await Promise.all(
@@ -134,6 +186,10 @@ export async function limparDepoisDeEntrar(
   baldes: string[],
   modo: ModoDoLimite,
 ): Promise<void> {
+  if (modo === 'memoria') {
+    for (const b of baldes) MEMORIA.delete(b);
+    return;
+  }
   if (!chamar || modo !== 'falhadas') return;
   try {
     await Promise.all(baldes.map((b) => chamar('rate_limit_clear', { p_bucket: b })));

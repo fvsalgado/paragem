@@ -1,0 +1,39 @@
+name: Alguma coisa não funciona
+description: Uma página que não abre, um botão que não faz nada, um resultado errado.
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por avisares. **Uma falha de segurança não é para aqui** — vai por email, como o `SECURITY.md` diz.
+  - type: input
+    id: endereco
+    attributes:
+      label: Em que endereço
+      description: A página onde aconteceu, por extenso.
+      placeholder: https://…
+    validations:
+      required: true
+  - type: textarea
+    id: o-que
+    attributes:
+      label: O que aconteceu, e o que esperavas
+      description: Os passos até lá, se os souberes. Um relato imperfeito é melhor do que nenhum.
+    validations:
+      required: true
+  - type: input
+    id: aparelho
+    attributes:
+      label: Aparelho e navegador
+      placeholder: Android 15, Chrome · iPhone, Safari · …
+  - type: dropdown
+    id: tecnologia-de-apoio
+    attributes:
+      label: Estavas a usar uma tecnologia de apoio?
+      description: Um leitor de ecrã, só o teclado, ampliação — ajuda a reproduzir.
+      options:
+        - Não
+        - Leitor de ecrã
+        - Só o teclado
+        - Ampliação ou contraste alto
+        - Outra

@@ -205,6 +205,15 @@ test('«Feito com Paragem.pt» discreto, no fim, a levar ao produto', async ({ p
   await expect(feito.getByRole('link', { name: 'Paragem.pt' })).toHaveAttribute('href', PRODUTO);
 });
 
+test('o rodapé de uma região diz para onde se escreve', async ({ page }) => {
+  // O da autoridade, se o indicou no painel; senão o do produto. Aqui não se
+  // diz qual: diz-se que há um, e que abre o correio.
+  await page.goto('/rede/');
+  const correio = page.getByRole('contentinfo').getByRole('link', { name: /@/ });
+  await expect(correio).toHaveCount(1);
+  await expect(correio).toHaveAttribute('href', /^mailto:[^@\s]+@[^@\s]+$/);
+});
+
 test('a marca da região está no primeiro ecrã do mapa, e no menu', async ({ page }) => {
   test.skip(!temMosaicos(), 'a região em teste não tem mapa');
   await page.setViewportSize({ width: 390, height: 844 });

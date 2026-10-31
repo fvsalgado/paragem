@@ -57,6 +57,8 @@ test('cada anfitrião tem o seu manifesto, e os ícones dele existem', async ({ 
     expect(r.headers()['content-type']).toContain('application/manifest+json');
     const m = await r.json();
     expect(m.start_url).toBe('/');
+    // A identidade da aplicação instalada: a mesma raiz, dita por extenso.
+    expect(m.id).toBe('/');
     expect(m.display).toBe('standalone');
     expect(m.lang).toBe('pt-PT');
     expect(m.theme_color.toLowerCase(), host ?? 'produto').toBe(corDoTema(host));

@@ -54,6 +54,22 @@ export default async function Entrar({ searchParams }: Props) {
 
   const params = await searchParams;
 
+  if (portao.razao === 'pre-visualizacao') {
+    // O PAINEL DA PRÉ-VISUALIZAÇÃO ESTÁ FECHADO, e diz porquê: a base é a de
+    // produção, e o que aqui se gravasse ia para o sítio público sem passar
+    // pela revisão que a pré-visualização existe para fazer.
+    return (
+      <>
+        <h1>Painel fechado na pré-visualização</h1>
+        <p>
+          Esta é a versão de pré-visualização do sítio, que mostra os dados reais mas não os pode
+          mudar: o que aqui se gravasse ia direto para o sítio público. Para mudar alguma coisa,
+          entre no painel do sítio público.
+        </p>
+      </>
+    );
+  }
+
   if (portao.razao === 'por-configurar') {
     // OS NOMES DO QUE FALTA, e nunca os valores: quem gere a instalação
     // precisa de saber qual pôr, e mais ninguém precisa de saber mais nada.

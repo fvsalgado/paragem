@@ -1,0 +1,92 @@
+name: Vigilância do sítio
+
+# O sítio caía em silêncio: nada perguntava, de fora, se ele respondia. De seis
+# em seis horas, um pedido como quem visita — à página do produto, a cada região
+# desta raiz no seu domínio e aos dados dela (`scripts/vigiar-sitio.sh`). Um só
+# issue enquanto durar, comentado a cada corrida que continuar mal, e fechado
+# sozinho quando tudo voltar. O desenho é o do Coreto.
+on:
+  schedule:
+    # De seis em seis horas, como no Coreto: o que isto vigia — um certificado a
+    # caducar, um armazém em baixo — leva horas a doer, e um cron de hora a hora
+    # só repetia o mesmo aviso. Aos :17 e não aos :00, que a fila do GitHub está
+    # mais vazia fora da hora certa.
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vigilancia
+  cancel-in-progress: false
+
+jobs:
+  vigiar:
+    name: Perguntar de fora
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+      # Para abrir, comentar e fechar o aviso.
+      issues: write
+
+    env:
+      # O domínio do produto é de quem licencia e não se fixa no código: é uma
+      # variável do repositório. Sem ela, a página do produto não se pergunta.
+      PARAGEM_PRODUTO_URL: ${{ vars.PARAGEM_PRODUTO_URL }}
+      TITULO: "O sítio não responde"
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Perguntar
+        run: ./scripts/vigiar-sitio.sh
+
+      - name: Abrir ou atualizar o aviso
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXECUCAO: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          {
+            echo "Às $(date --utc --iso-8601=minutes) o sítio não respondeu como devia:"
+            echo
+            cat relatorio.md 2>/dev/null || echo '- (a vigilância nem chegou a perguntar)'
+            echo
+            echo "- Execução: ${EXECUCAO}"
+          } > aviso.md
+
+          NUMERO=$(gh issue list --state open --limit 50 --json number,title \
+            --jq "[.[] | select(.title == \"${TITULO}\")] | .[0].number // empty")
+
+          if [ -n "${NUMERO}" ]; then
+            gh issue comment "${NUMERO}" --body-file aviso.md
+          else
+            gh issue create --title "${TITULO}" --body-file aviso.md
+          fi
+
+      # O issue guarda o histórico; isto é o que acorda alguém. Sem `NTFY_URL`
+      # nos secrets, um aviso urgente falha a dizê-lo (`scripts/avisar.sh`).
+      - name: Tocar a campainha
+        if: failure()
+        env:
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+        run: ./scripts/avisar.sh 'Paragem.pt — o sítio não responde' urgent relatorio.md
+
+      # Um aviso que fica aberto depois de o sítio voltar é um aviso que se
+      # aprende a ignorar.
+      - name: Fechar o aviso quando voltar
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NUMERO=$(gh issue list --state open --limit 50 --json number,title \
+            --jq "[.[] | select(.title == \"${TITULO}\")] | .[0].number // empty")
+
+          if [ -n "${NUMERO}" ]; then
+            gh issue comment "${NUMERO}" --body "Voltou a responder às $(date --utc --iso-8601=minutes)."
+            gh issue close "${NUMERO}" --reason completed
+          fi

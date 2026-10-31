@@ -1,0 +1,11 @@
+# Uma falha de segurança não se conta num issue público: vai por email, como
+# o SECURITY.md diz. Por isso os issues em branco ficam fechados, e a primeira
+# coisa que se vê é para onde ir.
+blank_issues_enabled: false
+contact_links:
+  - name: Uma falha de segurança
+    url: https://github.com/fvsalgado/paragem/blob/main/SECURITY.md
+    about: Não abras um issue público. Escreve para correio@paragem.pt — os prazos estão no SECURITY.md.
+  - name: Um horário ou uma paragem errados numa região
+    url: https://github.com/fvsalgado/paragem/blob/main/CONTRIBUTING.md
+    about: Os dados de uma região são da autoridade de transportes dela. Diz-nos qual, com a fonte, e vemos de onde veio o erro.

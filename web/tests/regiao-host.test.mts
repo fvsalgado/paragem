@@ -249,3 +249,70 @@ test('as caixas para os sítios das câmaras saem sem o invólucro da região (P
     para: `${NAO_E_ENDERECO}/widget/viagem/`,
   });
 });
+
+// --- a pré-visualização ------------------------------------------------------
+
+test('na pré-visualização, o endereço com a marca mostra a região que representa', () => {
+  assert.deepEqual(decidir('prova.pre.exemplo.pt', '/rede/', MAPA, true), {
+    tipo: 'reescrever',
+    para: '/prova/rede/',
+  });
+  assert.deepEqual(decidir('prova-municipio.pre.exemplo.pt', '/', MAPA, true), {
+    tipo: 'reescrever',
+    para: '/prova-municipio/',
+  });
+});
+
+test('na pré-visualização, um alias com a marca serve a região em vez de redirecionar', () => {
+  // O 308 mandava para o domínio de produção, para fora da pré-visualização.
+  assert.deepEqual(decidir('www.prova-municipio.pre.exemplo.pt', '/', MAPA, true), {
+    tipo: 'reescrever',
+    para: '/prova-municipio/',
+  });
+});
+
+test('na pré-visualização, o produto com a marca é o produto, e um desconhecido também', () => {
+  assert.deepEqual(decidir('pre.exemplo.pt', '/', MAPA, true), {
+    tipo: 'reescrever',
+    para: `${SEGMENTO_DO_PRODUTO}/`,
+  });
+  assert.deepEqual(decidir('outra.pre.exemplo.pt', '/rede/', MAPA, true), {
+    tipo: 'reescrever',
+    para: `${NAO_E_ENDERECO}/rede/`,
+  });
+});
+
+test('na pré-visualização, um endereço sem a marca segue as regras de sempre', () => {
+  assert.deepEqual(decidir('prova.exemplo.pt', '/', MAPA, true), {
+    tipo: 'reescrever',
+    para: '/prova/',
+  });
+  assert.deepEqual(decidir('www.prova-municipio.exemplo.pt', '/', MAPA, true), {
+    tipo: 'redirecionar',
+    host: 'prova-municipio.exemplo.pt',
+  });
+});
+
+test('fora da pré-visualização, a marca não quer dizer nada: é um anfitrião desconhecido', () => {
+  assert.deepEqual(decidir('prova.pre.exemplo.pt', '/rede/', MAPA), {
+    tipo: 'reescrever',
+    para: `${NAO_E_ENDERECO}/rede/`,
+  });
+  assert.deepEqual(decidir('www.prova-municipio.pre.exemplo.pt', '/', MAPA, false), {
+    tipo: 'reescrever',
+    para: `${SEGMENTO_DO_PRODUTO}/`,
+  });
+});
+
+test('o security.txt é o do produto em todos os anfitriões', () => {
+  for (const host of [
+    'prova.exemplo.pt',
+    'desconhecido.exemplo.pt',
+    'www.prova-municipio.exemplo.pt',
+  ]) {
+    assert.deepEqual(decidir(host, '/.well-known/security.txt', MAPA), {
+      tipo: 'reescrever',
+      para: `${SEGMENTO_DO_PRODUTO}/security.txt`,
+    });
+  }
+});
