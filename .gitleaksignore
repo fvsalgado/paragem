@@ -1,0 +1,7 @@
+# Os achados do gitleaks que se viram, um a um, e não são segredos. Cada linha
+# é a impressão digital que ele dá (commit:ficheiro:regra:linha); a linha de
+# hoje leva `gitleaks:allow`, e esta fica pelo commit antigo, que não muda.
+#
+# O JWT de brincar do teste das chaves: `{"alg":"HS256"}.{"role":"service_role"}`
+# com a assinatura «assinatura».
+9c4e2c466a79d231ebbde1ec3c043a01ceaed6ff:web/tests/contas.test.mts:jwt:177

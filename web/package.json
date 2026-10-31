@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "Paragem.pt — o sítio. Uma região por domínio; o que muda são os dados, não o código.",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dados": "node scripts/servir-dados.mjs ../build 4322",
     "dev": "node scripts/copiar-maplibre.mjs && next dev",
@@ -35,11 +38,13 @@
     "gtfs-realtime-bindings": "^2.2.0",
     "lighthouse": "^13.5.0",
     "prettier": "3.6.2",
-    "serve": "^14.2.6",
     "typescript": "5.7.2",
     "wait-on": "^9.1.0"
   },
   "overrides": {
-    "dompurify": "^3.4.17"
+    "dompurify": "^3.4.17",
+    "next": {
+      "postcss": "8.5.30"
+    }
   }
 }

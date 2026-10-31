@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from '@/componentes/Ligacao';
+import DireitosDePrivacidade from '@/componentes/DireitosDePrivacidade';
 import { exigirRegiao, temMosaicos, url, regiao } from '@/lib/dados';
 import { aAutoridade } from '@/lib/prosa';
 import { DO_PRODUTO, lerContactos, responsavelNaFrase } from '@/lib/contactos';
@@ -174,6 +175,13 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
           </>
         ) : null}
       </p>
+
+      <DireitosDePrivacidade
+        voz="tu"
+        mede={mede}
+        identificada={identificada}
+        email={emailDePrivacidade}
+      />
 
       <h2>Se quiseres saber mais</h2>
       <p>

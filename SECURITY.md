@@ -9,8 +9,23 @@ Diz o que conseguires: o que viste, como se reproduz, e o que achas que é
 possível fazer com isso. Um relato imperfeito é melhor do que nenhum, e não é
 preciso trazer uma exploração pronta.
 
-Respondo em dias, não em semanas. Se não tiver resposta em uma semana, insiste
-— não foi por falta de interesse.
+O mesmo contacto está em `/.well-known/security.txt` de todos os anfitriões do
+sítio (RFC 9116).
+
+| Momento  | O que acontece                                                     |
+| -------- | ------------------------------------------------------------------ |
+| 72 horas | Acuso a receção e digo se consigo reproduzir.                      |
+| 30 dias  | Falha confirmada corrigida, ou uma data com fundamento para o ser. |
+| Depois   | Publico o que se passou, e o teu nome se o quiseres.               |
+
+Se não tiver resposta em 72 horas, insiste — não foi por falta de interesse. É
+um projeto pequeno, sem programa de recompensas: os prazos são um compromisso
+honesto, não um contrato comercial.
+
+## Que versão
+
+Só a que está publicada, que sai do ramo `main`. Não há versões antigas
+mantidas.
 
 ## O que este projeto tem, e não tem
 

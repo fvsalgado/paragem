@@ -1,0 +1,57 @@
+# A análise de código do GitHub, como no Coreto (fvsalgado/coreto).
+#
+# Este repositório é público, e por isso o «code scanning» tem onde entregar os
+# resultados sem licença nenhuma. A análise semanal apanha as vulnerabilidades
+# que passaram a ser conhecidas depois de o código ter sido escrito — que são
+# a maioria delas.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main, pre]
+  schedule:
+    - cron: "40 4 * * 1"
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analise:
+    name: Análise (${{ matrix.linguagem }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Só onde o «code scanning» pode receber os resultados: num fork privado, ou
+    # se o repositório voltar a privado, a análise terminava em erro de
+    # configuração — um vermelho permanente que não diz nada sobre o código.
+    if: github.event.repository.visibility == 'public'
+
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # O sítio, o serviço de disponibilidade e as funções (JavaScript e
+        # TypeScript), o pipeline (Python) e os próprios workflows: um workflow
+        # com permissões a mais é uma porta tão aberta como qualquer outra.
+        linguagem: [javascript-typescript, python, actions]
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          languages: ${{ matrix.linguagem }}
+          queries: security-and-quality
+
+      - uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          category: "/language:${{ matrix.linguagem }}"

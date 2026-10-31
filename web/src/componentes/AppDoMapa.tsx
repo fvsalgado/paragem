@@ -255,12 +255,13 @@ export default function AppDoMapa({
   const pontos = Array.isArray(osPontos) ? osPontos : SEM_PONTOS;
 
   // O MAPA OCUPA O ECRÃ TODO, e a faixa do sítio sai da frente — pelo CSS,
-  // com `body:has(.app-mapa)`, e já no HTML que vem do servidor. Era uma
-  // classe posta num efeito: o cabeçalho chegava, aparecia, e desaparecia na
-  // hidratação, e a aplicação inteira subia por baixo do dedo de quem ia
-  // tocar na procura (P3-023). A navegação não desapareceu: mudou-se para o
-  // menu, a um toque do canto — e continua em texto no HTML de todas as
-  // outras páginas, que são as que os motores de busca leem.
+  // pela marca que a página põe no `<head>` (`[regiao]/page.tsx`), e já no
+  // HTML que vem do servidor. Era uma classe posta num efeito: o cabeçalho
+  // chegava, aparecia, e desaparecia na hidratação, e a aplicação inteira
+  // subia por baixo do dedo de quem ia tocar na procura (P3-023). A navegação
+  // não desapareceu: mudou-se para o menu, a um toque do canto — e continua
+  // em texto no HTML de todas as outras páginas, que são as que os motores de
+  // busca leem.
   const [escolhido, setEscolhido] = useState<Marca | null>(null);
 
   // AS CAMADAS COMEÇAM TODAS LIGADAS, e derivam do que há nos dados: uma
@@ -1209,6 +1210,10 @@ export default function AppDoMapa({
                 </li>
               ))}
             </ul>
+            {/* O ÚLTIMO FILHO DA FOLHA, e tem de continuar a sê-lo: o CSS só
+                pinta a folha quando ele já chegou (`global.css`, «A FOLHA SÓ SE
+                PINTA INTEIRA») — presa ao fundo, uma folha a meio subia ao
+                crescer. */}
             <p className="secundario abertura-nota">
               <Link href="/rede/">
                 <Lista tamanho={18} />

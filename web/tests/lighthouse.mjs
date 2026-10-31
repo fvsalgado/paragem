@@ -214,13 +214,23 @@ try {
  * 2,6 e 1,6). Custou 2,1 KiB à rede e ao tarifário, e 1,3 à paragem e à
  * linha, medidos no CI contra o `main`. A rede e o tarifário ficaram a 210,7 e 210,9 de 210, e
  * sobem 5 KiB; a linha está a 199,7 de 200 e é a próxima.
+ *
+ * A 13/10/2026, OS CABEÇALHOS DE SEGURANÇA (`next.config.mjs`) passaram-no de
+ * propósito. A primeira versão punha a política de conteúdo e os outros em
+ * cada resposta — 1,1 KiB em cada pedaço de JavaScript, letra e ícone — e
+ * custava 16 a 20 KiB por página; os ficheiros passaram a levar só o
+ * `nosniff`, e as imagens uma política curta. O que fica custa 2,4 a 2,9 KiB,
+ * medidos na mesma máquina contra o `pre` de antes deles: os cabeçalhos do
+ * documento e o `nosniff` em cada ficheiro. A linha passou a 202,4 de 200, e a
+ * paragem ficou a 214,5 de 215: sobem 5 KiB cada. A rede e o tarifário ainda
+ * cabem, a 1,8 e 1,3 do teto.
  */
 const ORCAMENTO = {
   início: { htmlEJs: 520, total: 680 },
   'a rede': { htmlEJs: 170, total: 215 },
   'como chegar': { htmlEJs: 180, total: 295 },
-  paragem: { htmlEJs: 170, total: 215 },
-  linha: { htmlEJs: 155, total: 200 },
+  paragem: { htmlEJs: 170, total: 220 },
+  linha: { htmlEJs: 155, total: 205 },
   tarifário: { htmlEJs: 170, total: 215 },
 };
 
