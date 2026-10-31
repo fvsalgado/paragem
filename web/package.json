@@ -21,7 +21,7 @@
     "ligacoes": "node tests/ligacoes.mjs"
   },
   "dependencies": {
-    "maplibre-gl": "6.11.2",
+    "maplibre-gl": "6.16.0",
     "next": "15.5.28",
     "pmtiles": "4.4.0",
     "posthog-js": "^1.434.2",
