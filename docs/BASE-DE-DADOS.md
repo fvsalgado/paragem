@@ -168,18 +168,15 @@ O que já está feito:
   publicado é). O que falta é repetir a leitura contra o projeto: `avisos` com
   RLS ligada, uma policy, e as três funções. **Confirmar antes de contar com
   isto.**
-- **A 0009 (as pessoas) NÃO está aplicada** — escrita a 02/10/2026, provada
-  no CI e na base local, à espera do dono. O sítio novo funciona antes dela:
-  sem as tabelas, o painel abre ao dono como hoje, e «Pessoas» diz que a
-  instalação ainda não tem contas ([`PAINEL.md`](PAINEL.md), «A transição»).
-  Aplicada, o PostgREST do projeto relê o esquema sozinho; numa base local com
-  um PostgREST à parte, é preciso `notify pgrst, 'reload schema'`. E, como na
-  0007, o ficheiro passa a ter o carimbo da hora a que correu.
-- **A 0010 (os contactos) NÃO está aplicada** — escrita a 02/10/2026,
-  provada no CI e na base local. Só acrescenta: o sítio de hoje nunca pergunta
-  pela tabela, e o novo, sem ela, diz «Por preencher» — o mesmo que diz sem
-  linha — e a ficha diz que a instalação ainda não guarda contactos. Aplica-se
-  depois da 0009, pela ordem dos ficheiros.
+- **A 0009 (as pessoas) e a 0010 (os contactos) estão aplicadas.** Este
+  ponto dizia que não; o registo de migrações do projeto tem as duas, com o
+  carimbo dos ficheiros (confirmado a 31/10/2026).
+- **A 0011 (a chave pública só lê) está aplicada** — a 31/10/2026, com o sim
+  do dono, pelo MCP do Supabase, e por isso o ficheiro tem o carimbo da hora a
+  que correu. Tirou ao `anon` as escritas que o Supabase dá por omissão às
+  tabelas novas (a RLS já as recusava, mas o `TRUNCATE` não passa por ela) e
+  reservou os identificadores `api` e `admin`. A asserção em
+  `scripts/schema-checks.sql` é a mesma no CI e no projeto.
 - **A palavra-passe da base não ficou guardada em lado nenhum.** Foi gerada ao
   acaso na criação e deitada fora: o sítio vai falar com a base pelas chaves
   de API, não por `psql`. Para uma ligação direta, redefine-se no painel do
