@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -11,16 +12,20 @@ import httpx
 import pytest
 
 from paragem import publicacao
+from paragem.construcao import construir
 from paragem.publicacao import (
+    ESTADO,
     INVENTARIO,
     ArmazemSupabase,
     ErroDePublicacao,
     Ficheiro,
+    estado,
     inventariar,
     planear,
     publicar,
     tipo_de,
 )
+from paragem.regiao import carregar
 
 
 def _construcao(tmp_path: Path, com_mosaicos: bool = True) -> Path:
@@ -106,6 +111,7 @@ def test_o_plano_envia_o_que_mudou_e_apaga_o_que_sobra(tmp_path: Path) -> None:
         "prova/regiao.pmtiles": None,  # sem etiqueta: vai, na dúvida
         "prova/linhas/999.json": "f" * 32,  # já não existe cá: apaga-se
         "prova/" + INVENTARIO: None,  # o inventário reescreve-se, não se apaga
+        "prova/" + ESTADO: None,  # e o estado também
     }
     plano = planear(locais, remotos)
     assert [f.caminho for f in plano.iguais] == ["prova/regiao.json"]
@@ -133,10 +139,14 @@ def test_publica_por_esta_ordem_e_o_inventario_vai_no_fim(tmp_path: Path) -> Non
     assert r.avisado is True
     assert avisadas == ["prova"]
     # Envia, apaga, e SÓ DEPOIS o inventário — é o sinal de que está completo.
+    # O estado vem no fim de tudo: diz que a publicação se fez.
     assert armazem.gestos[0] == ("listar", "prova")
     assert ("apagar", "prova/linhas/999.json") in armazem.gestos
-    assert armazem.gestos[-1] == ("enviar", "prova/" + INVENTARIO)
-    assert armazem.gestos.index(("apagar", "prova/linhas/999.json")) < len(armazem.gestos) - 1
+    assert armazem.gestos[-2:] == [
+        ("enviar", "prova/" + INVENTARIO),
+        ("enviar", "prova/" + ESTADO),
+    ]
+    assert armazem.gestos.index(("apagar", "prova/linhas/999.json")) < len(armazem.gestos) - 2
 
     inv = json.loads(armazem.conteudos["prova/" + INVENTARIO])
     assert inv["regiao"] == "prova"
@@ -149,9 +159,212 @@ def test_publica_por_esta_ordem_e_o_inventario_vai_no_fim(tmp_path: Path) -> Non
     }
     assert inv["ficheiros"]["regiao.pmtiles"]["bytes"] == 72
 
-    # Segunda publicação sem mudanças: nada se envia, o inventário reescreve-se.
+    # Segunda publicação sem mudanças: nada se envia, o inventário e o estado
+    # reescrevem-se — e o estado da primeira não conta como «apagado».
     r2 = publicar(raiz, "prova", armazem, None, agora=agora)
     assert (r2.enviados, r2.iguais, r2.apagados, r2.avisado) == (0, 4, 0, None)
+    assert ("apagar", "prova/" + ESTADO) not in armazem.gestos
+
+
+def test_o_estado_sobe_depois_do_aviso(tmp_path: Path) -> None:
+    """Um painel por atualizar não atrasa as páginas de quem viaja."""
+    raiz = _construcao(tmp_path)
+    armazem = ArmazemEmMemoria()
+
+    def avisar(regiao: str) -> bool:
+        armazem.gestos.append(("avisar", regiao))
+        return False  # o sítio recusou: o estado escreve-se na mesma
+
+    publicar(raiz, "prova", armazem, avisar)
+    assert armazem.gestos[-3:] == [
+        ("enviar", "prova/" + INVENTARIO),
+        ("avisar", "prova"),
+        ("enviar", "prova/" + ESTADO),
+    ]
+
+
+def test_um_estado_json_no_disco_nao_se_publica_como_ficheiro_do_sitio(tmp_path: Path) -> None:
+    """Na raiz da região o nome é da publicação; numa subpasta é um ficheiro como outro."""
+    raiz = _construcao(tmp_path)
+    sitio = raiz / "build" / "prova" / "sitio"
+    (sitio / ESTADO).write_text('{"velho": true}\n', encoding="utf-8")
+    (sitio / "partidas" / ESTADO).write_text("{}\n", encoding="utf-8")
+    caminhos = {f.caminho for f in inventariar(raiz, "prova")}
+    assert "prova/" + ESTADO not in caminhos
+    assert "prova/partidas/" + ESTADO in caminhos
+
+
+# --- o estado.json ---------------------------------------------------------
+
+#: A lista fechada. Um campo que entre aqui sem entrar nesta lista parte o teste.
+CAMPOS_DO_ESTADO = {"ultima_publicacao", "ficheiros", "bloqueios", "lacunas", "descargas"}
+
+INSTANTE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$")
+
+
+def _so_contagens(e: dict) -> None:
+    """Contagens, a data, e mais nada — nenhum texto que possa trazer um nome."""
+    assert set(e) <= CAMPOS_DO_ESTADO, set(e) - CAMPOS_DO_ESTADO
+    assert INSTANTE.match(e["ultima_publicacao"]), e["ultima_publicacao"]
+    for k, v in e.items():
+        if k != "ultima_publicacao":
+            assert type(v) is int and v >= 0, f"{k}: {v!r} não é uma contagem"
+
+
+def _relatorio(raiz: Path, regiao: str, gravidades: list[str]) -> None:
+    pasta = raiz / "build" / "reports"
+    pasta.mkdir(parents=True, exist_ok=True)
+    lacunas = [
+        {"id": f"x.{i}", "gravidade": g, "o_que": "a Paragem do Largo não tem coordenadas"}
+        for i, g in enumerate(gravidades)
+    ]
+    (pasta / f"{regiao}.json").write_text(
+        json.dumps({"regiao": regiao, "lacunas": lacunas}), encoding="utf-8"
+    )
+
+
+def test_o_estado_conta_o_relatorio_e_as_descargas(tmp_path: Path) -> None:
+    raiz = _construcao(tmp_path)
+    _relatorio(raiz, "prova", ["bloqueia", "lacuna", "lacuna", "aviso", "aviso", "aviso"])
+    (raiz / "build" / "prova" / "sitio" / "dados-abertos.json").write_text(
+        json.dumps(
+            [
+                {"caminho": "gtfs/rede-alta.zip", "existe": True, "fonte": "Caderno da Rede"},
+                {"caminho": "relatorios/relatorio.md", "existe": True},
+                {"caminho": "gbfs/x.zip", "existe": False},
+            ]
+        ),
+        encoding="utf-8",
+    )
+    armazem = ArmazemEmMemoria()
+    agora = datetime(2026, 10, 26, 11, 32, 59, tzinfo=UTC)
+    r = publicar(raiz, "prova", armazem, None, agora=agora)
+
+    e = json.loads(armazem.conteudos["prova/" + ESTADO])
+    assert e == {
+        "ultima_publicacao": "2026-10-26T11:32:59+00:00",
+        # os quatro de `_construcao` mais o manifesto; nem o inventário nem o estado
+        "ficheiros": 5,
+        "bloqueios": 1,
+        "lacunas": 2,  # os avisos do relatório não são lacunas
+        "descargas": 2,  # a que não existe não se oferece
+    }
+    assert r.estado == e
+    _so_contagens(e)
+    inv = json.loads(armazem.conteudos["prova/" + INVENTARIO])
+    assert e["ultima_publicacao"] == inv["publicado_em"]
+    assert e["ficheiros"] == len(inv["ficheiros"])
+    texto = armazem.conteudos["prova/" + ESTADO].decode("utf-8")
+    assert "Largo" not in texto and "Caderno" not in texto
+
+
+def test_o_que_nao_se_leu_fica_de_fora_e_nao_vai_a_zero(tmp_path: Path) -> None:
+    raiz = _construcao(tmp_path)
+    agora = datetime(2026, 10, 26, tzinfo=UTC)
+    # Sem relatório nem manifesto: sabe-se quando e quantos ficheiros, e mais nada.
+    e = estado(raiz, "prova", inventariar(raiz, "prova"), agora)
+    assert set(e) == {"ultima_publicacao", "ficheiros"}
+
+    # Um relatório que não se lê não parte a publicação: fica de fora.
+    (raiz / "build" / "reports").mkdir(parents=True)
+    (raiz / "build" / "reports" / "prova.json").write_text("{ isto não é JSON", encoding="utf-8")
+    (raiz / "build" / "prova" / "sitio" / "dados-abertos.json").write_text("[]", encoding="utf-8")
+    e = estado(raiz, "prova", inventariar(raiz, "prova"), agora)
+    assert set(e) == {"ultima_publicacao", "ficheiros", "descargas"}
+    assert e["descargas"] == 0  # um manifesto vazio LÊ-SE: zero é o que lá está
+
+
+def test_os_avisos_e_os_contactos_nao_se_inventam(tmp_path: Path) -> None:
+    """Vivem na base do painel, e o pipeline não a lê: ficam de fora."""
+    raiz = _construcao(tmp_path)
+    _relatorio(raiz, "prova", [])
+    e = estado(raiz, "prova", inventariar(raiz, "prova"), datetime(2026, 10, 26, tzinfo=UTC))
+    assert "avisos_em_vigor" not in e
+    assert "contactos" not in e
+    assert (e["bloqueios"], e["lacunas"]) == (0, 0)
+
+
+# --- com as regiões de prova, construídas de raiz ---------------------------
+
+PROVAS = ("prova", "prova-municipio")
+
+
+@pytest.fixture(scope="module")
+def provas_construidas(raiz: Path, tmp_path_factory: pytest.TempPathFactory):
+    """As duas regiões de prova construídas numa raiz temporária, sem tocar em build/."""
+    import shutil
+
+    from paragem import sitio
+
+    tmp = tmp_path_factory.mktemp("raiz")
+    for p in ("regioes", "data", "pyproject.toml", "REUSE.toml", "docs"):
+        origem = raiz / p
+        if origem.is_dir():
+            shutil.copytree(origem, tmp / p)
+        else:
+            shutil.copy(origem, tmp / p)
+    construcoes = {}
+    for rid in PROVAS:
+        r = carregar(tmp, rid)
+        construcoes[rid] = (r, construir(tmp, r, descarregar=False))
+        sitio.construir(tmp, r, tmp / "build" / rid)
+    return tmp, construcoes
+
+
+@pytest.mark.parametrize("rid", PROVAS)
+def test_o_estado_de_uma_regiao_de_prova(provas_construidas, rid: str) -> None:
+    raiz, construcoes = provas_construidas
+    regiao, c = construcoes[rid]
+    armazem = ArmazemEmMemoria()
+    r = publicar(raiz, rid, armazem, None)
+
+    assert armazem.gestos[-1] == ("enviar", f"{rid}/{ESTADO}")
+    e = json.loads(armazem.conteudos[f"{rid}/{ESTADO}"])
+    assert set(e) == CAMPOS_DO_ESTADO
+    _so_contagens(e)
+    assert r.estado == e
+
+    inv = json.loads(armazem.conteudos[f"{rid}/{INVENTARIO}"])
+    assert e["ultima_publicacao"] == inv["publicado_em"]
+    assert e["ficheiros"] == len(inv["ficheiros"]) == r.enviados
+
+    cont = c.relatorio.contagem_por_gravidade()
+    assert (e["bloqueios"], e["lacunas"]) == (cont["bloqueia"], cont["lacuna"])
+    assert e["bloqueios"] == 0, "uma região de prova constrói-se sem bloqueios"
+
+    manifesto = json.loads(
+        (raiz / "build" / rid / "sitio" / "dados-abertos.json").read_text(encoding="utf-8")
+    )
+    assert e["descargas"] == len(manifesto) > 0
+
+    # Nem o nome da região, nem o da rede, nem o de uma paragem.
+    texto = armazem.conteudos[f"{rid}/{ESTADO}"].decode("utf-8")
+    paragens = json.loads(
+        (raiz / "build" / rid / "sitio" / "paragens.json").read_text(encoding="utf-8")
+    )
+    nomes = [regiao.nome, regiao.rede.get("nome"), *(p["nome"] for p in paragens)]
+    assert not [n for n in nomes if n and n in texto]
+
+
+def test_o_comando_publicar_diz_o_estado_no_registo(
+    provas_construidas, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """O `uv run pipeline publicar` escreve o estado e diz as contagens — sem rede."""
+    from paragem.cli import main
+
+    raiz, construcoes = provas_construidas
+    armazem = ArmazemEmMemoria()
+    monkeypatch.setenv("SUPABASE_URL", "https://x.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "sb_secret_de_brincar")
+    monkeypatch.setattr(publicacao, "ArmazemSupabase", lambda *a, **kw: armazem)
+
+    assert main(["--raiz", str(raiz), "publicar", "--regiao", "prova", "--sem-avisar"]) == 0
+    e = json.loads(armazem.conteudos["prova/" + ESTADO])
+    linha = next(x for x in capsys.readouterr().out.splitlines() if ESTADO in x)
+    assert linha.split(": ", 1)[1] == (
+        f"{e['ficheiros']} ficheiros · {e['bloqueios']} bloqueios · "
+        f"{e['lacunas']} lacunas · {e['descargas']} descargas"
+    )
 
 
 # --- o armazém a sério, contra uma API de brincar --------------------------

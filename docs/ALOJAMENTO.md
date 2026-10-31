@@ -133,7 +133,10 @@ Estão assim, e quem recriar o projeto tem de as pôr assim:
 1. **`Dados`** — à segunda-feira, à mão, ou num push a `main` que toque no
    pipeline ou nas regiões — constrói, valida, escreve o que o sítio lê, os
    mosaicos e os transbordos, e **publica**: `uv run pipeline publicar` para
-   cada região, que sobe o que mudou, escreve o inventário no fim e avisa.
+   cada região, que sobe o que mudou, escreve o inventário, avisa, e escreve
+   no fim o `<regiao>/estado.json` — a data e as contagens da publicação
+   (ficheiros, bloqueios, lacunas, descargas), só números, para quem vigia de
+   fora (`publicacao.estado`).
 2. **`Sítio`** — em cada push — constrói o sítio contra os dados da mesma
    corrida, servidos por `web/scripts/servir-dados.mjs` com a forma do balde,
    e prova: tipos, unidade, o rastreio de todas as ligações, o axe, o
