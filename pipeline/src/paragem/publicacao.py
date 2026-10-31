@@ -6,7 +6,7 @@ os leem do disco na construção: leem-nos, a pedido, de um armazém público �
 o Storage do projeto Supabase, num balde chamado ``sitio`` — e guardam a
 página rendida em cache até alguém lhes dizer que os dados mudaram.
 
-Este módulo é a metade de quem diz. Faz três coisas, por esta ordem, e a
+Este módulo é a metade de quem diz. Faz quatro coisas, por esta ordem, e a
 ordem é o que torna a publicação segura:
 
 1. **Envia o que mudou.** Compara o MD5 de cada ficheiro local com a etiqueta
@@ -14,13 +14,19 @@ ordem é o que torna a publicação segura:
    do mapa são 60 MB e mudam uma vez por semana, se tanto. Apaga o que
    sobra: a página de uma linha suprimida não pode continuar a existir só
    porque ninguém a foi apagar.
-2. **Escreve o inventário no fim.** ``<regiao>/inventario.json`` é a lista do
-   que foi publicado, com o tamanho e o MD5 de cada ficheiro. É o último a
-   subir, de propósito: é o sinal de que o resto está completo, e é por ele
-   que o sítio sabe, por exemplo, se a região tem mosaicos.
+2. **Escreve o inventário.** ``<regiao>/inventario.json`` é a lista do que
+   foi publicado, com o tamanho e o MD5 de cada ficheiro. De tudo o que o
+   sítio lê, é o último a subir, de propósito: é o sinal de que o resto está
+   completo, e é por ele que o sítio sabe, por exemplo, se a região tem
+   mosaicos.
 3. **Avisa o sítio.** ``POST /api/revalidate`` com a região, e o sítio deita
    fora as páginas dessa região. Sem aviso, as páginas continuam válidas até
    o prazo de uma hora passar — não é uma avaria, é só mais lento.
+4. **Escreve o estado.** ``<regiao>/estado.json`` é o que esta publicação
+   diz de si a quem a vigia de fora: quando foi, e umas contagens (``estado``).
+   Vai no fim, depois do aviso: diz que a publicação se fez, e só se diz
+   depois de feita — e um painel por atualizar não atrasa as páginas de
+   quem viaja.
 
 **O que isto NÃO garante.** Um pedido que chegue a meio do envio pode ler um
 ficheiro novo e outro velho. A janela é a duração do envio — segundos, tirando
@@ -36,16 +42,25 @@ import hashlib
 import json
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
 
 import httpx
 
+from .relatorio import BLOQUEIA, LACUNA
+
 BALDE = "sitio"
 INVENTARIO = "inventario.json"
+ESTADO = "estado.json"
 MOSAICOS = "regiao.pmtiles"
+
+#: O que a publicação escreve ela própria, e não vem de ``build/<id>/sitio/``.
+#: Não entra no inventário, e não se apaga do armazém por não estar no disco:
+#: reescreve-se. Sem isto, o estado da semana passada era apagado a meio de
+#: cada publicação — e contado nos «apagados» — para voltar a subir no fim.
+ESCRITOS_NA_PUBLICACAO = (INVENTARIO, ESTADO)
 
 #: Quanto tempo o navegador e a rede de distribuição podem guardar um ficheiro.
 #: Os dados mudam por semana; uma hora é o mesmo prazo das páginas no sítio.
@@ -124,7 +139,7 @@ def inventariar(raiz: Path, regiao_id: str) -> list[Ficheiro]:
     ficheiros = [
         _ficheiro(regiao_id, p.relative_to(base).as_posix(), p)
         for p in sorted(base.rglob("*"))
-        if p.is_file() and p.name != INVENTARIO
+        if p.is_file() and p.relative_to(base).as_posix() not in ESCRITOS_NA_PUBLICACAO
     ]
     mosaicos = raiz / "build" / regiao_id / "mosaicos" / MOSAICOS
     if mosaicos.exists():
@@ -166,7 +181,9 @@ def planear(locais: list[Ficheiro], remotos: dict[str, str | None]) -> Plano:
         else:
             enviar.append(f)
     nossos = {f.caminho for f in locais}
-    apagar = sorted(c for c in remotos if c not in nossos and not c.endswith("/" + INVENTARIO))
+    apagar = sorted(
+        c for c in remotos if c not in nossos and c.split("/", 1)[-1] not in ESCRITOS_NA_PUBLICACAO
+    )
     return Plano(enviar=enviar, iguais=iguais, apagar=apagar)
 
 
@@ -180,17 +197,83 @@ class Resultado:
     #: ``None`` quando não se avisou ninguém (sem endereço do sítio);
     #: senão, se o sítio aceitou o aviso.
     avisado: bool | None
+    #: O que foi para o ``estado.json``, para quem publica o ver no registo.
+    estado: dict[str, Any] = field(default_factory=dict)
+
+
+def _instante(agora: datetime) -> str:
+    return agora.astimezone(UTC).isoformat(timespec="seconds")
 
 
 def inventario(regiao_id: str, ficheiros: list[Ficheiro], agora: datetime) -> dict[str, Any]:
     return {
         "regiao": regiao_id,
-        "publicado_em": agora.astimezone(UTC).isoformat(timespec="seconds"),
+        "publicado_em": _instante(agora),
         "ficheiros": {
             f.caminho.removeprefix(regiao_id + "/"): {"bytes": f.bytes, "md5": f.md5}
             for f in ficheiros
         },
     }
+
+
+# --- o estado público de uma região ----------------------------------------
+#
+# QUEM O LÊ é quem vigia de fora — um painel que pergunta de hora a hora se os
+# dados desta região se publicam, e com que saúde —, pela porta pública do
+# balde, sem chave: ``<balde>/<regiao>/estado.json``.
+#
+# O QUE LEVA É UMA LISTA FECHADA: contagens, a data e mais nada. Nem nomes de
+# paragens, nem de linhas, nem de pessoas, nem de documentos — só o que a
+# autoridade de transportes aceitaria ver público, e uma contagem de lacunas
+# aceita-se onde a lista delas não se aceitaria. O estado diz quantas; quais
+# são, di-lo o relatório.
+#
+#   ultima_publicacao  o instante desta publicação — o mesmo do inventário
+#   ficheiros          quantos tem o sítio publicado da região: os do
+#                      inventário (o inventário e o estado não se contam)
+#   bloqueios          as contagens do relatório da construção, pela
+#   lacunas            gravidade; os avisos dele não entram
+#   descargas          quantos ficheiros a página de dados abertos oferece
+#
+# O QUE NÃO SE SABE FICA DE FORA, e não vai a zero: sem relatório não há
+# bloqueios nem lacunas, e zero diria que não há nenhum. Há dois que ficam
+# sempre de fora pela mesma razão: os AVISOS EM VIGOR e se a região tem
+# CONTACTOS. Vivem na base do painel (`public.avisos`, `region_contactos`) e
+# leem-se de lá em direto (`web/src/lib/avisos.ts`, `web/src/lib/contactos.ts`);
+# o pipeline não lê a base, e o `regiao.yaml` não declara contactos. Escrever
+# aqui um valor que não se leu era inventá-lo — e um `false` nos contactos
+# diria que a região não os tem quando só não se perguntou.
+
+
+def _ler_json(caminho: Path) -> Any:
+    """O JSON de um ficheiro, ou ``None`` se não existir ou não se ler."""
+    try:
+        return json.loads(caminho.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def estado(
+    raiz: Path, regiao_id: str, ficheiros: list[Ficheiro], agora: datetime
+) -> dict[str, Any]:
+    """O ``estado.json`` de uma região: a lista fechada lá de cima, e só ela."""
+    e: dict[str, Any] = {"ultima_publicacao": _instante(agora), "ficheiros": len(ficheiros)}
+
+    relatorio = _ler_json(raiz / "build" / "reports" / f"{regiao_id}.json")
+    if isinstance(relatorio, dict) and isinstance(relatorio.get("lacunas"), list):
+        gravidades = [x.get("gravidade") for x in relatorio["lacunas"] if isinstance(x, dict)]
+        e["bloqueios"] = gravidades.count(BLOQUEIA)
+        e["lacunas"] = gravidades.count(LACUNA)
+
+    # O MANIFESTO QUE SE PUBLICOU, e não o que estiver no disco: conta-se o que
+    # a página vai listar.
+    manifesto = next(
+        (f.origem for f in ficheiros if f.caminho == f"{regiao_id}/dados-abertos.json"), None
+    )
+    descargas = _ler_json(manifesto) if manifesto else None
+    if isinstance(descargas, list):
+        e["descargas"] = sum(1 for d in descargas if isinstance(d, dict) and d.get("existe", True))
+    return e
 
 
 def publicar(
@@ -201,7 +284,7 @@ def publicar(
     agora: datetime | None = None,
     trabalhadores: int = 8,
 ) -> Resultado:
-    """Envia, apaga, escreve o inventário e avisa — por esta ordem."""
+    """Envia, apaga, escreve o inventário, avisa e escreve o estado — por esta ordem."""
     locais = inventariar(raiz, regiao_id)
     plano = planear(locais, armazem.listar(regiao_id))
     # Em paralelo: são milhares de ficheiros pequenos — uma ficha por paragem —
@@ -211,13 +294,12 @@ def publicar(
             pass
     if plano.apagar:
         armazem.apagar(plano.apagar)
-    texto = json.dumps(
-        inventario(regiao_id, locais, agora or datetime.now(UTC)), ensure_ascii=False, indent=1
-    )
-    armazem.enviar_bytes(
-        f"{regiao_id}/{INVENTARIO}", (texto + "\n").encode("utf-8"), TIPOS[".json"]
-    )
+    # O MESMO INSTANTE NOS DOIS: o estado diz a hora que o inventário diz.
+    quando = agora or datetime.now(UTC)
+    _enviar_json(armazem, f"{regiao_id}/{INVENTARIO}", inventario(regiao_id, locais, quando))
     avisado = avisar(regiao_id) if avisar is not None else None
+    e = estado(raiz, regiao_id, locais, quando)
+    _enviar_json(armazem, f"{regiao_id}/{ESTADO}", e)
     return Resultado(
         regiao=regiao_id,
         enviados=len(plano.enviar),
@@ -225,7 +307,13 @@ def publicar(
         apagados=len(plano.apagar),
         bytes_enviados=sum(f.bytes for f in plano.enviar),
         avisado=avisado,
+        estado=e,
     )
+
+
+def _enviar_json(armazem: Armazem, caminho: str, dados: dict[str, Any]) -> None:
+    texto = json.dumps(dados, ensure_ascii=False, indent=1)
+    armazem.enviar_bytes(caminho, (texto + "\n").encode("utf-8"), TIPOS[".json"])
 
 
 # ---------------------------------------------------------------------------

@@ -88,11 +88,15 @@ const PERMISSOES = [
 ].join(', ');
 
 /**
- * Dois anos, subdomínios incluídos, e sem `preload`: a lista de preload dos
- * navegadores aceita qualquer domínio que sirva a palavra, sem verificar de
- * quem é, e sair dela demora meses. É uma decisão do dono, não de um técnico.
+ * Um dia, sem subdomínios e sem `preload`, para começar (decisão do dono a
+ * 31/10/2026). Um HSTS servido fica no navegador de quem visitou até acabar o
+ * prazo, e não se retira: começa curto enquanto se confirma que a região do
+ * cliente vive bem com os cabeçalhos novos, e sobe depois para os dois anos
+ * com subdomínios (63072000; includeSubDomains) num PR à parte. Nunca
+ * `preload`: a lista dos navegadores aceita qualquer domínio que sirva a
+ * palavra, sem verificar de quem é, e sair dela demora meses.
  */
-const HSTS = 'max-age=63072000; includeSubDomains';
+const HSTS = 'max-age=86400';
 
 export const CABECALHOS_DE_SEGURANCA = [
   { key: 'Content-Security-Policy', value: CSP },
