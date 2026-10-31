@@ -235,6 +235,39 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
+-- A CHAVE PÚBLICA SÓ LÊ, E HÁ NOMES QUE NENHUMA REGIÃO PODE TER (0011).
+-- Aqui o `anon` nunca teve as escritas; na base real tinha-as por omissão do
+-- Supabase. A asserção é a mesma nas duas, e é ela que diz se a base cumpre.
+do $$
+declare
+  t text;
+  p text;
+  reservado text;
+begin
+  foreach t in array array[
+    'regions', 'region_domain_aliases', 'modulos', 'region_licenses',
+    'admin_actions', 'rate_limits'
+  ] loop
+    foreach p in array array['insert', 'update', 'delete', 'truncate', 'references', 'trigger'] loop
+      assert not has_table_privilege('anon', format('public.%I', t), p),
+        format('a chave pública não pode ter %s em %s', p, t);
+    end loop;
+  end loop;
+
+  -- `/api/` é a API e `/admin/` é o painel: uma região com um destes nomes
+  -- não abria, ou abria o painel no domínio dela.
+  foreach reservado in array array['api', 'admin'] loop
+    begin
+      insert into public.regions (id, name, article, domain)
+      values (reservado, 'Nome reservado', 'a', reservado || '.reservado.invalid');
+      raise exception 'entrou uma região chamada %', reservado;
+    exception when check_violation then
+      null;
+    end;
+  end loop;
+end $$;
+
+-- ---------------------------------------------------------------------------
 -- OS AVISOS (0007). O que se afirma é o que custa caro se falhar: um aviso
 -- nasce por publicar, publicar é idempotente, e a forma é a do GTFS-RT.
 do $$
