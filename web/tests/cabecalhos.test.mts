@@ -57,7 +57,7 @@ test('scripts, objetos, bases e formulários só do próprio sítio', () => {
 test('os cabeçalhos de sempre, e a localização só para o próprio sítio', () => {
   assert.equal(PAGINAS['X-Content-Type-Options'], 'nosniff');
   assert.equal(PAGINAS['Referrer-Policy'], 'strict-origin-when-cross-origin');
-  assert.equal(PAGINAS['Strict-Transport-Security'], 'max-age=63072000; includeSubDomains');
+  assert.equal(PAGINAS['Strict-Transport-Security'], 'max-age=86400');
   assert.equal(PAGINAS['Cross-Origin-Opener-Policy'], 'same-origin-allow-popups');
   assert.match(PAGINAS['Permissions-Policy'], /geolocation=\(self\)/);
   assert.match(PAGINAS['Permissions-Policy'], /camera=\(\)/);
@@ -65,7 +65,7 @@ test('os cabeçalhos de sempre, e a localização só para o próprio sítio', (
 
 test('as caixas também levam os cabeçalhos que não dependem da moldura', () => {
   assert.equal(CAIXAS['X-Content-Type-Options'], 'nosniff');
-  assert.equal(CAIXAS['Strict-Transport-Security'], 'max-age=63072000; includeSubDomains');
+  assert.equal(CAIXAS['Strict-Transport-Security'], 'max-age=86400');
 });
 
 test('os ficheiros só levam o nosniff, e as páginas não caem nessa regra', () => {
