@@ -346,6 +346,27 @@ def test_o_estado_de_uma_regiao_de_prova(provas_construidas, rid: str) -> None:
     assert not [n for n in nomes if n and n in texto]
 
 
+def test_o_comando_publicar_diz_o_estado_no_registo(
+    provas_construidas, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """O `uv run pipeline publicar` escreve o estado e diz as contagens — sem rede."""
+    from paragem.cli import main
+
+    raiz, construcoes = provas_construidas
+    armazem = ArmazemEmMemoria()
+    monkeypatch.setenv("SUPABASE_URL", "https://x.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "sb_secret_de_brincar")
+    monkeypatch.setattr(publicacao, "ArmazemSupabase", lambda *a, **kw: armazem)
+
+    assert main(["--raiz", str(raiz), "publicar", "--regiao", "prova", "--sem-avisar"]) == 0
+    e = json.loads(armazem.conteudos["prova/" + ESTADO])
+    linha = next(x for x in capsys.readouterr().out.splitlines() if ESTADO in x)
+    assert linha.split(": ", 1)[1] == (
+        f"{e['ficheiros']} ficheiros · {e['bloqueios']} bloqueios · "
+        f"{e['lacunas']} lacunas · {e['descargas']} descargas"
+    )
+
+
 # --- o armazém a sério, contra uma API de brincar --------------------------
 
 

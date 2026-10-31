@@ -385,6 +385,11 @@ def _cmd_publicar(args: argparse.Namespace) -> int:
         print(
             f"   {r.enviados} enviados ({mb:.1f} MB) · {r.iguais} já iguais · {r.apagados} apagados"
         )
+        contas = ("ficheiros", "bloqueios", "lacunas", "descargas")
+        print(
+            f"   {publicacao.ESTADO}: "
+            + " · ".join(f"{r.estado[k]} {k}" for k in contas if k in r.estado)
+        )
         if r.avisado is True:
             print("   o sítio foi avisado e vai refazer as páginas desta região")
         elif r.avisado is False:
