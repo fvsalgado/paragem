@@ -4,4 +4,4 @@
 #
 # O JWT de brincar do teste das chaves: `{"alg":"HS256"}.{"role":"service_role"}`
 # com a assinatura «assinatura».
-10673edd50dd77bff9a817a1f9987c805a4cf647:web/tests/contas.test.mts:jwt:177
+9c4e2c466a79d231ebbde1ec3c043a01ceaed6ff:web/tests/contas.test.mts:jwt:177
