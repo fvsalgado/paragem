@@ -23,7 +23,7 @@
   "dependencies": {
     "maplibre-gl": "6.11.2",
     "next": "15.5.28",
-    "pmtiles": "4.4.0",
+    "pmtiles": "4.5.0",
     "posthog-js": "^1.434.2",
     "react": "19.1.1",
     "react-dom": "19.1.1",
