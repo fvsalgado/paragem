@@ -3196,7 +3196,7 @@ main.pagina:has(.app-mapa) {
   padding: 0;
 }
 
-/* A ALTURA É A QUE SOBRA DO ECRÃ, pela coluna de `body:has(.app-mapa)` mais
+/* A ALTURA É A QUE SOBRA DO ECRÃ, pela coluna do «ECRÃ DE ABERTURA» mais
    abaixo — e não medida num efeito, que só corria depois da hidratação. O
    `calc` fica como rede para um navegador sem `:has()`. */
 .app-mapa {
@@ -3653,18 +3653,26 @@ a.botao:focus-visible {
  * PELO `:has()`, E NÃO POR UMA CLASSE POSTA NUM EFEITO (P3-023). A classe só
  * entrava depois da hidratação: o cabeçalho chegava no HTML, aparecia, e
  * desaparecia segundos depois em rede lenta — e a aplicação inteira subia
- * debaixo do dedo de quem ia tocar na procura. Assim vale desde o primeiro
- * pixel, sem JavaScript.
+ * debaixo do dedo de quem ia tocar na procura.
+ *
+ * E PELA MARCA NO `<head>`, E NÃO SÓ PELA `.app-mapa`. A `.app-mapa` vem no
+ * HTML depois do cabeçalho, e o navegador pode pintar a meio da leitura do
+ * HTML quando a CSS chega antes do fim dele. Num desses quadros o cabeçalho
+ * estava à vista; chegava a `.app-mapa` e a página subia 122 px (CLS 0,182,
+ * medido com o HTML partido antes dela e com o CPU travado). A marca
+ * (`[regiao]/page.tsx`) chega antes do corpo, e isto vale mesmo desde o
+ * primeiro pixel. A `.app-mapa` fica na lista para o caso de a página se
+ * desenhar um dia sem a marca.
  *
  * E A ALTURA É A QUE SOBRA, sem medir: uma coluna da altura do ecrã, a faixa
  * da demonstração (quando a há) com a dela, e o mapa com o resto. Com `100dvh`
  * cravado, a faixa empurrava o fundo da folha de abertura para baixo da dobra
  * — os nomes dos modos ficavam por ver. */
-body:has(.app-mapa) .cabecalho,
-body:has(.app-mapa) .rodape {
+:root:has(meta[name='paragem-ecra'][content='mapa'], .app-mapa) .cabecalho,
+:root:has(meta[name='paragem-ecra'][content='mapa'], .app-mapa) .rodape {
   display: none;
 }
-body:has(.app-mapa) main.pagina {
+:root:has(meta[name='paragem-ecra'][content='mapa'], .app-mapa) main.pagina {
   max-width: none;
   padding: 0;
   margin: 0;
@@ -3672,12 +3680,12 @@ body:has(.app-mapa) main.pagina {
   flex-direction: column;
   height: 100dvh;
 }
-body:has(.app-mapa) main.pagina > .marca-demonstracao {
+:root:has(meta[name='paragem-ecra'][content='mapa'], .app-mapa) main.pagina > .marca-demonstracao {
   flex: none;
   margin: 0;
   border-radius: 0;
 }
-body:has(.app-mapa) .app-mapa {
+:root:has(meta[name='paragem-ecra'][content='mapa'], .app-mapa) .app-mapa {
   flex: 1 1 auto;
   height: auto;
   min-height: 0;
@@ -3731,6 +3739,20 @@ button.botao-menu:focus-visible {
   border-radius: 1rem 1rem 0 0;
   box-shadow: 0 -2px 14px rgb(16 44 63 / 16%);
   padding: 0.9rem 0.5rem 1rem;
+}
+
+/* A FOLHA SÓ SE PINTA INTEIRA.
+ *
+ * Está presa ao fundo do ecrã e cresce para cima, e o navegador pode pintar a
+ * meio da leitura do HTML quando a CSS chega antes do fim dele. Num desses
+ * quadros só a primeira linha da folha tinha chegado — a marca da rede, no
+ * fundo do ecrã —, e quando chegava o resto a folha crescia e a linha subia
+ * 389 px: o salto de 0,273 que reprovou o Lighthouse do CI a 31/10/2026, e
+ * que se repete igual com o HTML partido a meio da folha ou o CPU travado. Escondida até ao último filho (a «Tudo em lista»), a
+ * folha aparece de uma vez, no sítio onde fica; o que não se pinta não salta.
+ * `visibility` e não `display`: o lugar dela já conta, e nada à volta mexe. */
+.folha-de-abertura:not(:has(> .abertura-nota)) {
+  visibility: hidden;
 }
 .folha-de-abertura h2 {
   margin: 0 0 0.75rem;
@@ -4836,7 +4858,7 @@ a[href^='mailto:'] {
 
 /* A FAIXA DA DEMONSTRAÇÃO NO ECRÃ DO MAPA, mais baixa: continua em todas as
    páginas, e aqui cada linha dela é uma linha de mapa a menos. */
-body:has(.app-mapa) .marca-demonstracao {
+:root:has(meta[name='paragem-ecra'][content='mapa'], .app-mapa) .marca-demonstracao {
   font-size: 0.85rem;
   padding: 0.35rem 0.75rem;
   line-height: 1.4;

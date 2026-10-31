@@ -166,6 +166,17 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
 
   return (
     <>
+      {/* O ECRÃ DO MAPA DIZ-SE NO `<head>`, antes de uma linha do corpo.
+          O CSS tira o cabeçalho e o rodapé e faz da página uma coluna da
+          altura do ecrã (`global.css`, «O ECRÃ DE ABERTURA»), e lia isso na
+          `.app-mapa` — que vem no HTML DEPOIS do cabeçalho. O navegador pode
+          pintar a meio da leitura do HTML quando a CSS chega antes do fim
+          dele, e num desses quadros o cabeçalho estava à vista e a página
+          ainda não era a coluna: chegava a `.app-mapa`, o cabeçalho saía e
+          tudo subia 122 px (CLS 0,182). O React leva esta marca para o
+          `<head>` como leva os `<link>` de baixo, e o CSS passa a saber que
+          é o mapa desde o primeiro quadro. */}
+      <meta name="paragem-ecra" content="mapa" />
       {/* O `preloadModule` do React não deixa dizer a prioridade; o `<link>`
           deixa, e o React leva-o para o `<head>` na mesma. */}
       {modulos.map((m) => (
