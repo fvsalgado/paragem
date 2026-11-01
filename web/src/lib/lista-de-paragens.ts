@@ -170,3 +170,28 @@ export function posicoesRelativas(ps: readonly { lat: number; lon: number }[]): 
   });
   return rotulos;
 }
+
+/**
+ * Os números das linhas pela ordem dos NÚMEROS, e não do texto: «8 · 905 ·
+ * 1001», e não «1001 · 8 · 905» (auditoria de 1/11/2026, #183).
+ */
+export function linhasPorOrdem(codigos: string[]): string[] {
+  return [...codigos].sort((a, b) => a.localeCompare(b, 'pt', { numeric: true }));
+}
+
+/**
+ * A cor de cada linha pelo NÚMERO — que é o que a lista das paragens guarda.
+ *
+ * Só os números que são de uma linha só: o mesmo número em dois operadores são
+ * duas linhas com duas cores, e pintar o distintivo com uma delas era dizer
+ * qual era sem saber. Esses ficam neutros.
+ */
+export function coresPorNumero(
+  linhas: { codigo: string; cor: string | null }[],
+): Record<string, string | null> {
+  const vezes = new Map<string, number>();
+  for (const l of linhas) vezes.set(l.codigo, (vezes.get(l.codigo) ?? 0) + 1);
+  return Object.fromEntries(
+    linhas.filter((l) => vezes.get(l.codigo) === 1).map((l) => [l.codigo, l.cor]),
+  );
+}

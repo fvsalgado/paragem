@@ -1947,6 +1947,36 @@ ul.localidades .localidade + .paragens-com-linhas {
 .filtro-das-linhas p {
   margin: var(--espaco-2) 0 0;
 }
+
+/* A procura nas paragens (#103): o campo e o botão na mesma linha, e a ajuda
+   por baixo. É um formulário que o servidor responde, sem JavaScript. */
+.procurar-paragem {
+  margin: 0.5rem 0 1.25rem;
+}
+.procurar-paragem .campo-e-botao {
+  display: flex;
+  gap: 0.5rem;
+}
+.procurar-paragem .campo-e-botao input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.procurar-paragem .campo-e-botao button {
+  flex: 0 0 auto;
+}
+.procurar-paragem > .secundario {
+  display: block;
+  margin-top: 0.3rem;
+}
+
+/* As linhas de uma paragem nas listas, por baixo do nome (#183). */
+.linhas-da-paragem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.3rem;
+}
 ul.terras-encontradas {
   list-style: none;
   margin: var(--espaco-3) 0 0;

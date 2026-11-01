@@ -5,6 +5,7 @@ import { letraDe, LETRAS, paraUrl } from '@/lib/letras';
 import { fraseDoIndiceDasParagens, numero, plural, maiuscula } from '@/lib/prosa';
 import { agruparParagens } from '@/lib/lista-de-paragens';
 import { metadadosDaRegiao } from '@/lib/metadados';
+import ProcurarParagem from '@/componentes/ProcurarParagem';
 
 export async function generateMetadata({
   params,
@@ -17,7 +18,7 @@ export async function generateMetadata({
   const n = (await paragens(rid)).length;
   return metadadosDaRegiao(r, {
     titulo: 'Paragens',
-    descricao: `${maiuscula(plural(n, 'paragem', 'paragens'))} ${r.em}, pela inicial e pelo concelho.`,
+    descricao: `${maiuscula(plural(n, 'paragem', 'paragens'))} ${r.em}, pelo nome, pela inicial e pelo concelho.`,
     caminho: '/rede/paragens/',
   });
 }
@@ -51,7 +52,12 @@ export default async function Paragens({ params }: { params: Promise<{ regiao: s
   return (
     <>
       <h1>Paragens</h1>
-      <p>{frase} Procure pela inicial, ou pelo concelho.</p>
+      <p>{frase} Procure pelo nome, pela inicial ou pelo concelho.</p>
+      {/* A PROCURA PELO NOME, À CABEÇA (#103). Só havia a inicial: para chegar
+          a um terminal era preciso abrir a letra e descer setenta nomes, e
+          numa letra grande eram seiscentos. Um formulário que o servidor
+          responde — sem JavaScript, como o resto desta lista. */}
+      <ProcurarParagem />
 
       <h2 id="por-inicial">Por inicial</h2>
       {/* UMA GRELHA DE BOTÕES, e não uma lista a toda a largura (#104): as 23
