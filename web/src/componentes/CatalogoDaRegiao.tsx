@@ -14,6 +14,7 @@ import {
   urlRede,
   modos as lerModos,
   caminhoDoModo,
+  numeros as lerNumeros,
 } from '@/lib/dados';
 import FaixaDeAvisos from '@/componentes/Avisos';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
@@ -24,7 +25,7 @@ import { avisosEmVigor } from '@/lib/avisos';
 import { catalogoDosAvisos } from '@/lib/avisos-do-sitio';
 import { motorDaRegiao } from '@/lib/enderecos';
 import { dataDosHorarios } from '@/lib/formato';
-import { lista, plural } from '@/lib/prosa';
+import { fraseDosOperadores, lista, plural } from '@/lib/prosa';
 
 /**
  * O CATÁLOGO: todas as paragens, linhas, estações e concelhos, em listas.
@@ -81,6 +82,9 @@ export default async function CatalogoDaRegiao({
 
   // O que a região tem, numa frase, para quem chega ao início sem mapa: as
   // listas estão mais abaixo, e esta é a resposta de relance a «o que há?».
+  // DE QUEM SÃO, quando não são todas da rede: as listas levam as dos outros
+  // operadores que param na região, e o número sozinho lia-se como um erro.
+  const dosOperadores = fraseDosOperadores(await lerNumeros(rid));
   const oQueHa = [
     ps.length ? plural(ps.length, 'paragem', 'paragens') : '',
     ls.length ? plural(ls.length, 'linha', 'linhas') : '',
@@ -96,6 +100,7 @@ export default async function CatalogoDaRegiao({
             {oQueHa.length ? `${lista(oQueHa)}, ` : ''}e os horários de cada uma. Escreve de onde
             partes e para onde vais, ou procura uma paragem.
           </p>
+          {dosOperadores && oQueHa.length > 0 && <p className="secundario">{dosOperadores}</p>}
           <MarcaDeDados regiao={rid} detalhe />
 
           <section aria-labelledby="procurar-ponto">

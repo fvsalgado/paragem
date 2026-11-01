@@ -315,6 +315,24 @@ export function fraseDosHorarios(data: string | null | undefined): string {
 }
 
 /**
+ * `numeros.json`: UM SÓ CONJUNTO DE NÚMEROS, cada um com o que conta
+ * (`sitio.py`, `numeros`). Ausente em dados de antes disto.
+ */
+export type Numero<T = number> = { valor: T; conta: string; por_feed?: Record<string, number> };
+export type Numeros = Partial<{
+  paragens: Numero;
+  paragens_da_rede: Numero;
+  paragens_nos_concelhos: Numero;
+  paragens_com_partidas: Numero;
+  paragens_na_procura: Numero;
+  linhas: Numero;
+  linhas_da_rede: Numero;
+  codigos_repetidos: Numero<string[]>;
+  estacoes: Numero;
+  estacoes_de_bicicletas: Numero<Record<string, number>>;
+}>;
+
+/**
  * O próximo feriado municipal de um concelho, como o pipeline o escreve
  * (`sitio.py`, `_proximos_feriados_municipais`). `nos_horarios` é o que ele faz
  * aos horários: `por-confirmar` enquanto a região não souber, e nesse caso os

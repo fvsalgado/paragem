@@ -1,8 +1,8 @@
 import Link from '@/componentes/Ligacao';
 import type { Metadata } from 'next';
-import { exigirModo, paragens, concelhos, urlRede, regiao } from '@/lib/dados';
+import { exigirModo, paragens, concelhos, numeros, urlRede, regiao } from '@/lib/dados';
 import { letraDe, LETRAS, paraUrl } from '@/lib/letras';
-import { plural, maiuscula } from '@/lib/prosa';
+import { fraseDasParagens, plural, maiuscula } from '@/lib/prosa';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
 export async function generateMetadata({
@@ -34,13 +34,19 @@ export default async function Paragens({ params }: { params: Promise<{ regiao: s
   await exigirModo(rid, 'autocarro');
   const ps = await paragens(rid);
   const cs = await concelhos(rid);
+  // O NÚMERO DIZ O QUE CONTA: a lista tem as paragens da rede e as dos outros
+  // operadores que param na região, dentro e fora dos concelhos dela.
+  const dasParagens = fraseDasParagens(await numeros(rid));
   const porLetra = new Map<string, number>();
   for (const p of ps) porLetra.set(letraDe(p.nome), (porLetra.get(letraDe(p.nome)) ?? 0) + 1);
 
   return (
     <>
       <h1>Paragens</h1>
-      <p>{plural(ps.length, 'paragem', 'paragens')}. Procura pela inicial, ou pelo concelho.</p>
+      <p>
+        {plural(ps.length, 'paragem', 'paragens')}. {dasParagens ? `${dasParagens} ` : ''}Procura
+        pela inicial, ou pelo concelho.
+      </p>
 
       <h2>Por inicial</h2>
       <ul className="lista">

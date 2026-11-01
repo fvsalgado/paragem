@@ -13,7 +13,7 @@
  * região não declara o artigo da autoridade ou do operador, as frases saem
  * noutra forma, que não precisa dele — e continuam certas.
  */
-import type { Regiao } from './formato.ts';
+import type { Numeros, Regiao } from './formato.ts';
 
 /**
  * «2 573» — com o separador de milhares da casa, também aos quatro algarismos.
@@ -172,4 +172,45 @@ export function fraseDaProposta(r: Pick<Regiao, 'autoridade'>): {
  */
 export function nomeDoSistema(nome: string): string {
   return nome.replace(/\s*_+\s*/g, ' — ').trim();
+}
+
+/**
+ * DE QUEM SÃO AS PARAGENS E AS LINHAS, quando não são todas da rede.
+ *
+ * As listas do sítio têm as paragens e as linhas da rede E as dos outros
+ * operadores que param na região — sem isso, a carreira de fora que partilha
+ * o cais ficava sem página. O número que sai delas é maior do que o da rede,
+ * e quem a conhece lia-o como um erro. A frase diz quantas são da rede; `null`
+ * quando são todas, ou quando os dados não trazem os números.
+ */
+export function fraseDosOperadores(n: Numeros | null | undefined): string | null {
+  const p = n?.paragens?.valor;
+  const pr = n?.paragens_da_rede?.valor;
+  const l = n?.linhas?.valor;
+  const lr = n?.linhas_da_rede?.valor;
+  if (p == null || pr == null || l == null || lr == null) return null;
+  if (p === pr && l === lr) return null;
+  return (
+    `Das paragens e linhas, ${plural(pr, 'paragem', 'paragens')} e ` +
+    `${plural(lr, 'linha', 'linhas')} são da rede da região; as outras são de operadores ` +
+    'que param nela.'
+  );
+}
+
+/**
+ * As paragens da lista, desdobradas: as da rede, as de outros operadores, e as
+ * que ficam nos concelhos da região — que é a soma das páginas de concelho.
+ */
+export function fraseDasParagens(n: Numeros | null | undefined): string | null {
+  const p = n?.paragens?.valor;
+  const pr = n?.paragens_da_rede?.valor;
+  const nc = n?.paragens_nos_concelhos?.valor;
+  if (p == null || pr == null) return null;
+  const partes: string[] = [];
+  if (pr < p)
+    partes.push(
+      `${numero(pr)} são da rede da região e ${numero(p - pr)} de outros operadores que param nela`,
+    );
+  if (nc != null && nc < p) partes.push(`${numero(nc)} ficam nos concelhos da região`);
+  return partes.length ? `${maiuscula(partes.join('; '))}.` : null;
 }

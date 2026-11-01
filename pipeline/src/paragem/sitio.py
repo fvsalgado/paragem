@@ -498,6 +498,102 @@ class Sitio:
             )
         return saida
 
+    # --- os números -------------------------------------------------------
+
+    def numeros(
+        self,
+        paragens: list[dict],
+        linhas: list[dict],
+        estacoes: list[dict],
+        procura: dict[str, Any],
+        modos: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """UM SÓ CONJUNTO DE NÚMEROS, cada um com o que conta.
+
+        Medido numa região real: a mesma rede tinha 1 931 paragens no feed,
+        1 949 na soma das páginas de concelho, 2 423 no mapa e 3 050 na lista
+        da rede — e 122 linhas num sítio e 145 no outro. Nenhum estava errado;
+        contavam coisas diferentes, e nenhum o dizia. Quem conhece a rede lia
+        quatro números para a mesma coisa, e com razão desconfiava de todos.
+
+        Saem daqui, das mesmas listas que as páginas usam, e cada um diz o que
+        conta. Os feeds vão pela ordem em que as páginas os juntam — o da rede
+        primeiro, e uma paragem partilhada é dele.
+        """
+        de_feed: dict[str, str] = {}
+        linhas_de: collections.Counter[str] = collections.Counter()
+        for ficheiro in [self.feed_proprio, *self.feeds_na_mesma_paragem]:
+            f = self._feed(ficheiro)
+            if f is None:
+                continue
+            nome = (ficheiro or "").removesuffix(".zip")
+            for st in f.stops:
+                de_feed.setdefault(str(st["stop_id"]), nome)
+            linhas_de[nome] += len(f.routes)
+        por_feed = collections.Counter(de_feed.get(p["id"], "") for p in paragens)
+        proprio = (self.feed_proprio or "").removesuffix(".zip")
+        tipo = procura["campos"].index("tipo")
+        repetidos = collections.Counter(str(x.get("codigo") or "") for x in linhas)
+        return {
+            "paragens": {
+                "valor": len(paragens),
+                "conta": "paragens de autocarro com página: as da rede e as dos outros "
+                "operadores que param na região, dentro e fora dos concelhos dela",
+                "por_feed": dict(sorted(por_feed.items())),
+            },
+            "paragens_da_rede": {
+                "valor": por_feed.get(proprio, 0),
+                "conta": "paragens do feed da rede da região",
+            },
+            "paragens_nos_concelhos": {
+                "valor": sum(1 for p in paragens if p.get("concelho")),
+                "conta": "das paragens com página, as que ficam nos concelhos da região — "
+                "é a soma das páginas de concelho",
+            },
+            "paragens_com_partidas": {
+                "valor": sum(1 for p in paragens if p.get("partidas")),
+                "conta": "das paragens com página, as que têm alguma partida",
+            },
+            "paragens_na_procura": {
+                "valor": sum(1 for x in procura["pontos"] if x[tipo] == "paragem"),
+                "conta": "nomes de paragem com partidas, um por nome (o lado mais servido): "
+                "é o que a procura e o mapa contam",
+            },
+            "linhas": {
+                "valor": len(linhas),
+                "conta": "linhas de autocarro com página: as da rede e as dos outros "
+                "operadores que param na região",
+                "por_feed": dict(sorted(linhas_de.items())),
+            },
+            "linhas_da_rede": {
+                "valor": linhas_de.get(proprio, 0),
+                "conta": "linhas do feed da rede da região",
+            },
+            "codigos_repetidos": {
+                "valor": sorted(c for c, n in repetidos.items() if c and n > 1),
+                "conta": "números de carreira usados por mais de um operador; a lista de "
+                "linhas mostra o operador ao lado",
+            },
+            "estacoes": {
+                "valor": len(estacoes),
+                "conta": "estações de comboio nos concelhos da região",
+            },
+            # As bicicletas contam-se por sistema, e pelo que se publica: onde
+            # há a lista de quem gere E o mapa, só as estações que as duas
+            # conhecem — uma estação que só uma delas tem fica de fora, e o
+            # relatório nomeia-a (`gbfs.<sistema>.divergencia`). Era o «67
+            # contra 68»: a página dizia um número e o mapa mostrava outro.
+            "estacoes_de_bicicletas": {
+                "valor": {
+                    str(x.get("id")): len(x.get("estacoes") or [])
+                    for x in ((modos or {}).get("bicicleta") or {}).get("sistemas") or []
+                },
+                "conta": "estações de cada sistema de bicicletas publicadas no sítio e no "
+                "GBFS; onde há a lista de quem gere e o mapa, só as que as duas fontes "
+                "conhecem — a diferença está no relatório de lacunas",
+            },
+        }
+
     # --- paragens -------------------------------------------------------
 
     def paragens(self, territorio) -> tuple[list[dict], dict[str, list[dict]]]:
@@ -1796,6 +1892,7 @@ def construir(raiz: Path, regiao: Regiao, destino: Path, territorio=None) -> Sit
     s._escrever("dados-abertos.json", _dados_abertos(raiz, regiao, destino, s.destino))
     indice = _procura(indice_paragens, estacoes, modos, ((regiao.nomes or {}).get("procura") or {}))
     s._escrever("procura.json", indice, len(indice["pontos"]))
+    s._escrever("numeros.json", s.numeros(indice_paragens, indice_linhas, estacoes, indice, modos))
 
     # OS SÍTIOS VÃO NUM FICHEIRO À PARTE, e é uma decisão de dados móveis.
     #

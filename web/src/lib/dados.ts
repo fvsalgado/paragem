@@ -224,6 +224,7 @@ import type {
   LinhaDetalhe,
   Modos,
   ModoDetalhe,
+  Numeros,
   Paragem,
   Partida,
   Regiao,
@@ -344,6 +345,11 @@ export async function temMosaicos(r: string): Promise<boolean> {
   const inv = await inventario(r);
   return !!inv && 'regiao.pmtiles' in inv.ficheiros;
 }
+
+/** `numeros.json` — o conjunto de números da região, cada um com o que conta. */
+export const numeros = cache(
+  async (r: string): Promise<Numeros | null> => await ler<Numeros | null>(r, 'numeros.json', null),
+);
 
 export const concelhos = cache(
   async (r: string): Promise<Concelho[]> => await ler<Concelho[]>(r, 'concelhos.json', []),
