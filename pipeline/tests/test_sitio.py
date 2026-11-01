@@ -1236,3 +1236,46 @@ def test_nenhum_nome_de_linha_sai_com_espacos_a_mais(raiz):
             assert x["nome"] == " ".join(x["nome"].split()), f"{r.id}: «{x['nome']}»"
     if not vistas:
         pytest.skip("nenhum sítio construído nesta raiz")
+
+
+def test_a_data_do_documento_e_a_que_ele_diz_e_nunca_a_de_obtencao(tmp_path, monkeypatch):
+    """Uma brochura de 2017 guardada em 2026 não é «de 2026».
+
+    O sítio leva de cada horário a data de conteúdo do registo — o dia em que
+    o documento diz que entra em vigor, ou o que ele diz sem dia —, e quando o
+    documento não diz nada leva os dois vazios, e não a data de obtenção.
+    """
+    from paragem.sitio import _conteudo_de
+
+    monkeypatch.delenv("PARAGEM_RAIZES", raising=False)
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "sources.yaml").write_text(
+        """\
+versao: 1
+fontes:
+  - id: com-dia
+    nome: brochura com dia
+    formato: pdf
+    obtido_em: 2026-09-20
+    em_vigor_desde: 2020-12-02
+  - id: sem-dia
+    nome: brochura sem dia
+    formato: pdf
+    obtido_em: 2026-09-20
+    data_do_conteudo: >-
+      novo circuito a partir
+      de maio de 2022
+  - id: sem-nada
+    nome: brochura sem data
+    formato: pdf
+    obtido_em: 2026-09-20
+""",
+        encoding="utf-8",
+    )
+    assert _conteudo_de(tmp_path, "com-dia") == {"em_vigor_desde": "2020-12-02", "texto": None}
+    assert _conteudo_de(tmp_path, "sem-dia") == {
+        "em_vigor_desde": None,
+        "texto": "novo circuito a partir de maio de 2022",
+    }
+    assert _conteudo_de(tmp_path, "sem-nada") == {"em_vigor_desde": None, "texto": None}
+    assert _conteudo_de(tmp_path, "nao-existe") == {"em_vigor_desde": None, "texto": None}

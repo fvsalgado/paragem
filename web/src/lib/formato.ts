@@ -766,7 +766,36 @@ export type HorarioAPedido = {
    */
   transcrito_por?: string;
   transcrito_em?: string;
+  /** De quando é o documento, pelo que ele diz (`ConteudoDe`). */
+  conteudo_de?: ConteudoDe;
 };
+
+/**
+ * DE QUANDO É O DOCUMENTO de onde saem os horários, pelo que ele próprio diz:
+ * o dia em que entra em vigor, ou o que diz sem dia («maio de 2022»). Os dois
+ * vazios quando o documento não diz nada — e nunca a data de obtenção no
+ * lugar deles (`sitio.py`, `_conteudo_de`).
+ */
+export type ConteudoDe = { em_vigor_desde: string | null; texto: string | null };
+
+/**
+ * «Em vigor desde 2/12/2020, diz a brochura.» — `documento` é como a página
+ * chama ao papel, com o artigo («a brochura», «o cartaz»).
+ */
+export function fraseDoConteudo(
+  c: ConteudoDe | null | undefined,
+  documento: string,
+): string | null {
+  if (!c) return null;
+  const Documento = documento.charAt(0).toUpperCase() + documento.slice(1);
+  const d = c.em_vigor_desde;
+  if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+    const [ano, mes, dia] = d.split('-').map(Number);
+    return `Em vigor desde ${dia}/${mes}/${ano}, diz ${documento}.`;
+  }
+  if (c.texto) return `${Documento} não diz o dia em que entra em vigor: ${c.texto}.`;
+  return `${Documento} não diz desde quando vale.`;
+}
 
 export type APedido = {
   zonas: ZonaAPedido[];
@@ -940,6 +969,8 @@ export type HorarioDeModo = {
   /** Quem transcreveu a folha à mão, e quando. Vazio nas que um leitor leu. */
   transcrito_por?: string;
   transcrito_em?: string;
+  /** De quando é o cartaz, pelo que ele diz (`ConteudoDe`). */
+  conteudo_de?: ConteudoDe;
   /**
    * Onde fica cada paragem, para as que se sabe. NUNCA é a lista toda, e
    * nunca se completa por estimativa: o cartaz dá o nome, e o nome só se

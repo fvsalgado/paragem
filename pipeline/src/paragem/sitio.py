@@ -1449,6 +1449,7 @@ class Sitio:
                     "quadros": quadros,
                     "transcrito_por": linha.get("transcrito_por", ""),
                     "transcrito_em": linha.get("transcrito_em", ""),
+                    "conteudo_de": _conteudo_de(self.raiz, decl.fonte),
                     "concelho": decl.params.get("concelho") or None,
                     "coordenadas": {
                         nome: {"lat": p["lat"], "lon": p["lon"], "fonte": p["fonte"]}
@@ -1821,7 +1822,7 @@ def construir(raiz: Path, regiao: Regiao, destino: Path, territorio=None) -> Sit
     )
     s._escrever("estacoes.json", estacoes)
     s._escrever("tarifas.json", _tarifas(regiao))
-    s._escrever("a-pedido.json", _a_pedido(regiao, s.destino.parent))
+    s._escrever("a-pedido.json", _a_pedido(regiao, s.destino.parent, raiz))
     modos = s.modos(territorio)
     s._escrever("modos.json", modos)
 
@@ -2445,6 +2446,31 @@ def _mapa(regiao: Regiao) -> dict[str, Any] | None:
 NOMES_DAS_LICENCAS = {"ODBL-1.0": "ODbL", "CC-BY-4.0": "CC BY 4.0", "CC-BY-3.0": "CC BY 3.0"}
 
 
+def _conteudo_de(raiz: Path | None, id_fonte: str | None) -> dict[str, str | None]:
+    """DE QUANDO É O DOCUMENTO de onde saem estes horários — o que ele próprio diz.
+
+    Uma brochura de 2017 guardada em 2026 não é «de 2026», e a página só tinha a
+    data em que alguém a transcreveu. Vai a data de conteúdo do registo: o dia
+    em que o documento diz que entra em vigor (`em_vigor_desde`), ou o que ele
+    diz sem dia («maio de 2022», `data_do_conteudo`). Quando o documento não
+    diz nada, vão os dois vazios — e a página diz isso, em vez de pôr no lugar
+    a data de obtenção.
+    """
+    from .fontes import ErroDeFonte, Registo
+
+    vazio: dict[str, str | None] = {"em_vigor_desde": None, "texto": None}
+    if not id_fonte or raiz is None:
+        return vazio
+    try:
+        f = Registo.carregar(raiz).obter(id_fonte)
+    except ErroDeFonte:
+        return vazio
+    return {
+        "em_vigor_desde": f.em_vigor_desde.isoformat() if f.em_vigor_desde else None,
+        "texto": f.data_do_conteudo or None,
+    }
+
+
 def datas_dos_horarios(raiz: Path, regiao: Regiao) -> dict[str, str | None]:
     """DE QUANDO SÃO OS HORÁRIOS de cada modo, para o sítio o dizer ao lado deles.
 
@@ -2525,7 +2551,9 @@ def _tarifas(regiao: Regiao) -> dict[str, Any]:
     }
 
 
-def _a_pedido(regiao: Regiao, construcao: Path | None = None) -> dict[str, Any]:
+def _a_pedido(
+    regiao: Regiao, construcao: Path | None = None, raiz: Path | None = None
+) -> dict[str, Any]:
     """O transporte a pedido, com a regra de reserva ao lado das zonas.
 
     As duas coisas vivem em ficheiros diferentes — as zonas em `a-pedido.yaml`,
@@ -2539,7 +2567,7 @@ def _a_pedido(regiao: Regiao, construcao: Path | None = None) -> dict[str, Any]:
     d = dict(regiao.a_pedido or {})
     if not d.get("zonas"):
         return {}
-    horarios = _horarios_a_pedido(construcao, regiao)
+    horarios = _horarios_a_pedido(construcao, regiao, raiz)
     reservas = (regiao.tarifas or {}).get("reservas") or {}
     nomes = {c.id: c.nome for c in regiao.concelhos}
     catalogo = _catalogo(d.get("circuitos") or [], horarios)
@@ -2638,7 +2666,9 @@ def _catalogo(circuitos: list[dict[str, Any]], horarios: list[dict[str, Any]]) -
     return saida
 
 
-def _horarios_a_pedido(construcao: Path | None, regiao: Regiao) -> list[dict[str, Any]]:
+def _horarios_a_pedido(
+    construcao: Path | None, regiao: Regiao, raiz: Path | None = None
+) -> list[dict[str, Any]]:
     """Os circuitos que já têm horário, lidos das brochuras.
 
     Agrupam-se por CONCELHO. A brochura diz de que concelho é; a zona, não —
@@ -2682,6 +2712,7 @@ def _horarios_a_pedido(construcao: Path | None, regiao: Regiao) -> list[dict[str
                 # Quem lê tem direito a saber qual dos dois é.
                 "transcrito_por": d.get("transcrito_por", ""),
                 "transcrito_em": d.get("transcrito_em", ""),
+                "conteudo_de": _conteudo_de(raiz, decl.fonte),
             }
         )
     saida.sort(key=lambda h: (_simples(h["concelho_nome"]), _simples(h["nome"])))

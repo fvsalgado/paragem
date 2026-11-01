@@ -94,6 +94,12 @@ class Fonte:
     #: esta: escreve-se como o próprio documento a escreve, e o leitor que o
     #: lê confere-a contra o texto quando o texto a traz.
     em_vigor_desde: date | None = None
+    #: O QUE O DOCUMENTO DIZ DE QUANDO É, quando não diz um dia: «maio de
+    #: 2022», ou só o ano do horário. É texto e não data de propósito — passar
+    #: «maio de 2022» a 1 de maio era inventar o dia. Quando nem isso o
+    #: documento diz, não se escreve: a data de obtenção é outra coisa, e uma
+    #: brochura de 2017 guardada em 2026 não é «de 2026».
+    data_do_conteudo: str | None = None
     notas: str | None = None
     # NACIONAL ou de uma região, e é o que decide se a declaração desta fonte
     # pode ir para um repositório público. `nacional` quer dizer que serve
@@ -243,6 +249,11 @@ class Registo:
                 verificado_em=_data(item.get("verificado_em")),
                 obtido_em=_data(item.get("obtido_em")),
                 em_vigor_desde=_data(item.get("em_vigor_desde")),
+                data_do_conteudo=(
+                    " ".join(str(item["data_do_conteudo"]).split())
+                    if item.get("data_do_conteudo")
+                    else None
+                ),
                 notas=item.get("notas"),
                 ambito=item.get("ambito"),
                 raiz=base,

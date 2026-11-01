@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import { nomeDoSistema } from '@/lib/prosa';
 import { aPedido, exigirRegiao, url, urlRede, NAO_ENCONTRADA, regiao } from '@/lib/dados';
 import QuadroDeHorario from '@/componentes/QuadroDeHorario';
-import Transcricao from '@/componentes/Transcricao';
+import Transcricao, { DataDoDocumento } from '@/componentes/Transcricao';
 import AbrirPeloEndereco from '@/componentes/AbrirPeloEndereco';
 import { caminhoDoHorario, idDoQuadro } from '@/lib/a-pedido';
 import { plural } from '@/lib/prosa';
@@ -112,6 +112,7 @@ export default async function HorarioAPedido({ params }: { params: Promise<Param
       {h.quadros.map((q, iq) => (
         <QuadroDeHorario key={iq} quadro={q} titulo={nomeDoSistema(h.nome)} id={ids[iq]} />
       ))}
+      <DataDoDocumento conteudo={h.conteudo_de} documento="o documento" />
       <Transcricao por={h.transcrito_por} em={h.transcrito_em} de="da brochura" />
 
       <p className="cartao-accoes">

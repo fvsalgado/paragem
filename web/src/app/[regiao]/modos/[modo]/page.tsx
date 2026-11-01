@@ -21,7 +21,7 @@ import AbrirPeloEndereco from '@/componentes/AbrirPeloEndereco';
 import { paragemMaisPerto } from '@/lib/onde';
 import { emPortugues, percursoEmPortugues, pontoTecnico } from '@/lib/expressos';
 import QuadroDeHorario from '@/componentes/QuadroDeHorario';
-import Transcricao from '@/componentes/Transcricao';
+import Transcricao, { DataDoDocumento } from '@/componentes/Transcricao';
 import DisponibilidadeBicicletas, {
   ContagemDaEstacao,
   ResumoDoSistema,
@@ -326,6 +326,7 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
           {h.quadros.map((q, iq) => (
             <QuadroDeHorario key={iq} quadro={q} titulo={h.nome} />
           ))}
+          <DataDoDocumento conteudo={h.conteudo_de} documento="o cartaz" />
           <Transcricao por={h.transcrito_por} em={h.transcrito_em} de="do cartaz" />
         </section>
       ))}
