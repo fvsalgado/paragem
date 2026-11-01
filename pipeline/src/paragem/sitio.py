@@ -1827,6 +1827,7 @@ def calendario_em_mascaras(servicos: list[str], datas: dict[str, list[int]]) -> 
             "servicos": servicos,
             "padroes": [],
             "padrao": [0] * len(servicos),
+            "fins": {},
         }
     chaves = sorted(datas)
     inicio = datetime.strptime(chaves[0], "%Y%m%d").date()
@@ -1839,6 +1840,16 @@ def calendario_em_mascaras(servicos: list[str], datas: dict[str, list[int]]) -> 
             mascaras[i][j >> 3] |= 1 << (j & 7)
     padroes: dict[bytes, int] = {}
     padrao = [padroes.setdefault(bytes(m), len(padroes)) for m in mascaras]
+    # O ÚLTIMO DIA DE CADA FEED, pelo prefixo dos serviços (`<feed>:<serviço>`).
+    # A tabela é uma só para todos, e o fim dela é o do feed que vai mais
+    # longe: sem isto, a folha de uma estação cujo feed acabou dizia «os
+    # horários carregados vão até» ao fim do feed de outra rede.
+    fins: dict[str, str] = {}
+    for chave, indices in datas.items():
+        for i in indices:
+            feed = servicos[i].split(":", 1)[0] if ":" in servicos[i] else ""
+            if feed and chave > fins.get(feed, ""):
+                fins[feed] = chave
     return {
         "formato": "mascaras/1",
         "inicio": chaves[0],
@@ -1846,6 +1857,7 @@ def calendario_em_mascaras(servicos: list[str], datas: dict[str, list[int]]) -> 
         "servicos": servicos,
         "padroes": [base64.b64encode(m).decode("ascii") for m in padroes],
         "padrao": padrao,
+        "fins": dict(sorted(fins.items())),
     }
 
 

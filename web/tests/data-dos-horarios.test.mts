@@ -79,6 +79,25 @@ test('a data de conteúdo diz-se com quem a publica, e não a de obtenção', as
   ]);
 });
 
+test('o feed que acaba antes dos outros diz até quando vai — sem adivinhar o artigo', async () => {
+  const { frasesDosFeeds } = await import('../src/lib/formato.ts');
+  assert.deepEqual(frasesDosFeeds({ feeds: FEEDS }, ['comboio']), [
+    'Horários do operador Comboios da Serra só até 12/12/2026.',
+  ]);
+  // A rede da casa primeiro, e o feed que vai mais longe não diz «só até».
+  assert.deepEqual(frasesDosFeeds({ feeds: FEEDS }, ['comboio', 'rede']), [
+    'Horários da Alta Transportes em vigor desde 5/12/2025.',
+    'Horários do operador Comboios da Serra só até 12/12/2026.',
+  ]);
+  // Um feed que acaba um dia antes dos outros não «acaba antes»: as janelas
+  // que andam com o relógio diferem de um ou dois dias, e isso é ruído.
+  const quaseIgual = { ...FEEDS, vizinho: { ...FEEDS.comboio, fim: '2027-10-30' } };
+  assert.deepEqual(frasesDosFeeds({ feeds: quaseIgual }, ['vizinho']), []);
+  // Dados de antes disto, ou um feed que não se conhece: nada.
+  assert.deepEqual(frasesDosFeeds({}, ['rede']), []);
+  assert.deepEqual(frasesDosFeeds({ feeds: FEEDS }, ['outro']), []);
+});
+
 test('os feeds de uma página saem das chaves dos serviços dela', async () => {
   const { feedsDosServicos } = await import('../src/lib/formato.ts');
   assert.deepEqual(feedsDosServicos(['rede:A-U', 'comboio:1', 'rede:E-U', undefined, 'sem']), [

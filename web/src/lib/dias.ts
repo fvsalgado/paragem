@@ -43,6 +43,12 @@ export type CalendarioEmMascaras = {
   padroes: string[];
   /** A máscara de cada serviço, pela ordem de `servicos`. */
   padrao: number[];
+  /**
+   * O último dia de cada feed (`AAAAMMDD`), pelo prefixo dos serviços
+   * (`<feed>:<serviço>`). Ausente em dados de antes disto — e aí vale o fim da
+   * tabela para todos, como antes.
+   */
+  fins?: Record<string, string>;
 };
 
 /**
@@ -57,6 +63,12 @@ export type Calendario = {
   servicos: string[];
   /** O primeiro e o último dia da tabela; `null` numa tabela sem dias. */
   periodo: { inicio: string; fim: string } | null;
+  /**
+   * O último dia de cada feed, pelo prefixo dos serviços. A tabela é uma só e
+   * o fim dela é o do feed que vai mais longe: um feed que acaba antes não
+   * fala dos dias que faltam até lá (`fimDasPartidas`).
+   */
+  fins: Record<string, string>;
   /** Os índices dos serviços que andam num dia (`AAAAMMDD`); vazio fora do período. */
   doDia: (chave: string) => readonly number[];
   /** Se o serviço `i` anda no dia — sem montar a lista do dia inteira. */
@@ -72,9 +84,18 @@ export function calendarioDasDatas(c: DatasDosServicos): Calendario {
     if (!fim || k > fim) fim = k;
   }
   const conjuntos = new Map<string, Set<number>>();
+  // O fim de cada feed, das próprias datas: a forma antiga não o traz escrito.
+  const fins: Record<string, string> = {};
+  for (const [k, indices] of Object.entries(c.datas)) {
+    for (const i of indices) {
+      const feed = feedDoServico(c.servicos[i]);
+      if (feed && (!fins[feed] || k > fins[feed])) fins[feed] = k;
+    }
+  }
   return {
     servicos: c.servicos,
     periodo: inicio ? { inicio, fim } : null,
+    fins,
     doDia: (chave) => c.datas[chave] ?? [],
     anda: (i, chave) => {
       let s = conjuntos.get(chave);
@@ -111,6 +132,7 @@ export function calendarioDasMascaras(c: CalendarioEmMascaras): Calendario {
   return {
     servicos: c.servicos,
     periodo,
+    fins: c.fins ?? {},
     doDia: (chave) => {
       let lista = dias.get(chave);
       if (!lista) {
@@ -224,6 +246,38 @@ export function chaveMais(chave: string, n: number): string {
     `${String(d.getUTCMonth() + 1).padStart(2, '0')}` +
     `${String(d.getUTCDate()).padStart(2, '0')}`
   );
+}
+
+/** O feed de um serviço, pelo prefixo da chave (`<feed>:<serviço>`); vazio sem prefixo. */
+export function feedDoServico(servico: string | undefined): string {
+  if (!servico) return '';
+  const i = servico.indexOf(':');
+  return i > 0 ? servico.slice(0, i) : '';
+}
+
+/**
+ * ATÉ QUANDO OS HORÁRIOS DESTAS PARTIDAS FALAM — o fim do feed delas que vai
+ * mais longe, e não o da tabela inteira.
+ *
+ * Numa estação cujo feed acabou a 12 de dezembro, a folha dizia «nos horários
+ * carregados, que vão até 26/10/2027, já não há partidas»: a data era a do
+ * feed da rede de autocarros, que não tem nada que ver com os comboios. Uma
+ * partida sem serviço declarado, ou de um feed de que a tabela não sabe o fim,
+ * fala até ao fim da tabela, como antes.
+ */
+export function fimDasPartidas(
+  partidas: readonly { servico_id?: string }[],
+  cal: Calendario,
+): string | null {
+  const p = cal.periodo;
+  if (!p) return null;
+  let fim = '';
+  for (const d of partidas) {
+    const doFeed = cal.fins[feedDoServico(d.servico_id)];
+    if (!doFeed) return p.fim;
+    if (doFeed > fim) fim = doFeed;
+  }
+  return fim || p.fim;
 }
 
 /**
@@ -365,11 +419,13 @@ export function proximas<T extends { hora: string; servico_id?: string }>(
 
   const periodo = periodoDe(cal);
   const chave = chaveDoDia(hoje);
-  if (!periodo || chave < periodo.inicio || chave > periodo.fim) {
+  // O FIM É O DESTAS PARTIDAS, e não o da tabela (`fimDasPartidas`).
+  const fim = fimDasPartidas(partidas, cal) ?? periodo?.fim ?? '';
+  if (!periodo || chave < periodo.inicio || chave > fim) {
     return {
       tipo: 'fora-do-periodo',
       inicio: periodo?.inicio ?? '',
-      fim: periodo?.fim ?? '',
+      fim,
     };
   }
 
@@ -416,7 +472,7 @@ export function proximas<T extends { hora: string; servico_id?: string }>(
     if (i !== undefined) daqui.add(i);
   }
   const andaAlgumaNo = (dia: string) => todosOsDias || [...daqui].some((i) => cal.anda(i, dia));
-  for (let n = 1, dia = chaveMais(chave, 1); dia <= periodo.fim; n++, dia = chaveMais(chave, n)) {
+  for (let n = 1, dia = chaveMais(chave, 1); dia <= fim; n++, dia = chaveMais(chave, n)) {
     const doDia = andaAlgumaNo(dia) ? partidasDo(dia) : [];
     if (doDia.length) {
       return {
@@ -428,7 +484,7 @@ export function proximas<T extends { hora: string; servico_id?: string }>(
       };
     }
   }
-  return { tipo: 'nenhuma', fim: periodo.fim };
+  return { tipo: 'nenhuma', fim };
 }
 
 // --- o dia por extenso -------------------------------------------------------

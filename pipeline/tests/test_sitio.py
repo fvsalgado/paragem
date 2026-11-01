@@ -1044,6 +1044,50 @@ def test_a_atribuicao_ao_lado_de_um_ficheiro_para_consulta_com_partes_do_mapa():
     assert _atribuicao_da_descarga(caderno, CONSULTA) == ("Operadora X", False)
 
 
+# --- cada feed com o seu fim -------------------------------------------------
+
+
+def test_o_calendario_diz_onde_acaba_cada_feed():
+    """A tabela é uma só, e o fim dela é o do feed que vai mais longe.
+
+    Uma estação cujo feed acabou dizia «os horários carregados vão até» ao fim
+    do feed de outra rede. O último dia de cada feed sai pelo prefixo dos
+    serviços, que é o mesmo das partidas.
+    """
+    from paragem.sitio import calendario_em_mascaras
+
+    servicos = ["rede:A-U", "comboio:S1", "comboio:S2", "sem-prefixo"]
+    datas = {
+        "20261210": [0, 1],
+        "20261212": [0, 2],
+        "20261213": [0],
+        "20271026": [0, 3],
+    }
+    c = calendario_em_mascaras(servicos, datas)
+    assert c["fins"] == {"comboio": "20261212", "rede": "20271026"}
+    assert calendario_em_mascaras(servicos, {})["fins"] == {}
+
+
+def test_o_regiao_json_traz_cada_feed_com_o_seu_fim(raiz, tmp_path):
+    from paragem.sitio import construir
+
+    gtfs = raiz / "build" / "prova" / "gtfs"
+    if not (gtfs / "rede-alta.zip").exists():
+        pytest.skip("sem build/prova — corre `uv run pipeline build --regiao prova`")
+    shutil.copytree(gtfs, tmp_path / "gtfs")
+    construir(raiz, regiao_ou_salta("prova"), tmp_path)
+    r = json.loads((tmp_path / "sitio" / "regiao.json").read_text(encoding="utf-8"))
+    cal = json.loads((tmp_path / "sitio" / "calendario.json").read_text(encoding="utf-8"))
+    assert r["feeds"], "a região tem feeds, e cada um diz até quando vai"
+    for nome, f in r["feeds"].items():
+        assert f["inicio"] <= f["fim"], nome
+        # O mesmo fim que a tabela dos dias dá a esse feed, em ISO.
+        if nome in cal["fins"]:
+            assert f["fim"].replace("-", "") == cal["fins"][nome], nome
+        # «da …» só com o artigo declarado; sem ele não se adivinha.
+        assert f["de"] is None or f["de"].split(" ", 1)[0] in {"da", "do", "das", "dos"}
+
+
 # --- desde quando vale o caderno ---------------------------------------------
 
 

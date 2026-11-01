@@ -143,6 +143,8 @@ def construir(
     _correspondencias(ctx, destino)
     print(f"   {_tempo.monotonic() - passo:6.1f}s  correspondências comboio–autocarro", flush=True)
 
+    _validade_dos_feeds_de_terceiros(ctx, destino)
+
     passo = _tempo.monotonic()
     _localizar_urbanos(ctx, destino, regiao)
     print(f"   {_tempo.monotonic() - passo:6.1f}s  onde ficam as paragens dos urbanos", flush=True)
@@ -551,6 +553,76 @@ LADOS_DA_CORRESPONDENCIA = ("comboio", "autocarro")
 #: Os papéis da rede da própria região — os mesmos que o `sitio.py` usa para
 #: escolher o «autocarro à porta» das páginas de estação.
 PAPEIS_DA_REDE_PROPRIA = ("horarios", "feed-proprio")
+
+
+#: Quantos dias antes do fim de um feed de outra entidade o relatório começa a
+#: dizer que ele acaba. Seis semanas dá para o ir buscar outra vez — ou para o
+#: operador publicar o novo — antes de as estações ficarem sem partidas. A
+#: receita pode mudá-lo por feed (`params.aviso_de_fim_dias`).
+AVISO_DE_FIM_DIAS = 45
+
+
+def fim_do_feed(feed: Any) -> date | None:
+    """O último dia em que algum serviço deste feed anda — ou `None`, sem nenhum."""
+    from .grelha import _datas_de_servico
+
+    dias = [d for d, sids in _datas_de_servico(feed).items() if sids]
+    if not dias:
+        return None
+    ultimo = max(dias)
+    return date(int(ultimo[:4]), int(ultimo[4:6]), int(ultimo[6:8]))
+
+
+def _validade_dos_feeds_de_terceiros(
+    ctx: Contexto, destino: Path, hoje: date | None = None
+) -> None:
+    """Os feeds de outras entidades que acabam daqui a pouco, ditos a tempo.
+
+    Os da casa constroem-se com uma janela que anda com o relógio; os de
+    terceiros acabam no dia que quem os publica escolheu, e depois desse dia
+    as estações deles ficam sem uma partida, o planeador deixa de os propor —
+    e nada mudou deste lado para alguém dar por isso. O sítio já diz «só até»
+    nas páginas desse operador; isto diz a quem constrói que é preciso ir
+    buscar o feed novo.
+    """
+    from .gtfs import Gtfs
+
+    hoje = hoje or date.today()
+    for s in ctx.regiao.saidas:
+        if s.papel != "feed-de-terceiro" or not s.saida or not s.saida.endswith(".zip"):
+            continue
+        caminho = destino / s.saida
+        if not caminho.exists():
+            continue
+        feed = Gtfs.ler(caminho)
+        fim = fim_do_feed(feed)
+        if fim is None:
+            continue
+        limite = int((s.params or {}).get("aviso_de_fim_dias") or AVISO_DE_FIM_DIAS)
+        faltam = (fim - hoje).days
+        nome = s.saida.split("/")[-1].removesuffix(".zip")
+        ctx.relatorio.contar(f"{nome}.dias_ate_ao_fim", faltam)
+        if faltam >= limite:
+            continue
+        agencias = [str(a.get("agency_name") or "").strip() for a in feed.obter("agency.txt")]
+        quem = next((a for a in agencias if a), nome)
+        quando = fim.strftime("%d/%m/%Y")
+        ctx.relatorio.lacuna(
+            id=f"{nome}.acaba-em-breve",
+            o_que=(
+                f"Os horários de {quem} acabam a {quando}"
+                + (f", daqui a {faltam} dias" if faltam >= 0 else f", há {-faltam} dias")
+            ),
+            onde=f"regioes/{ctx.regiao.id}/fontes.yaml → {s.fonte}",
+            porque_importa=(
+                "Depois desse dia, as paragens e as estações deste operador ficam sem partidas "
+                "e o planeador deixa de o propor — sem que nada mude deste lado. As páginas "
+                "dele já dizem «só até», mas quem constrói tem de ir buscar o feed novo."
+            ),
+            o_que_fazer=(
+                "Descarregar a edição nova quando o operador a publicar, e construir outra vez."
+            ),
+        )
 
 
 def _saidas_pela_receita(ctx: Contexto, lado: str) -> list[str]:

@@ -208,6 +208,14 @@ export type FeedDaRegiao = {
   fim: string | null;
 };
 
+/** Quantos dias de folga antes de um feed «acabar antes» dos outros (`frasesDosFeeds`). */
+const FOLGA_DO_FIM_DIAS = 30;
+
+/** Dias entre duas datas `AAAA-MM-DD`. */
+function diasAte(de: string, ate: string): number {
+  return Math.round((Date.parse(`${ate}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / 86_400_000);
+}
+
 /** «5/12/2025» de «2025-12-05» — como o resto do sítio escreve estas datas. */
 function dataDoFeed(iso: string): string {
   const [ano, mes, dia] = iso.split('-');
@@ -246,6 +254,10 @@ export function frasesDosFeeds(
   feeds: readonly string[],
 ): string[] {
   const todos = r?.feeds ?? {};
+  const fins = Object.values(todos)
+    .map((f) => f.fim)
+    .filter((f): f is string => !!f);
+  const maisLonge = fins.length ? fins.reduce((a, b) => (b > a ? b : a)) : '';
   const quais = feeds
     .filter((f) => todos[f])
     .sort((a, b) => Number(todos[a].terceiro) - Number(todos[b].terceiro));
@@ -256,6 +268,12 @@ export function frasesDosFeeds(
       f.de || (f.operador ? `do operador ${operadorCurto(f.operador)}` : 'deste operador');
     if (f.em_vigor_desde && /^\d{4}-\d{2}-\d{2}$/.test(f.em_vigor_desde)) {
       frases.push(`Horários ${quem} em vigor desde ${dataDoFeed(f.em_vigor_desde)}.`);
+    }
+    // «ACABA ANTES» É COM FOLGA: as janelas que andam com o relógio acabam
+    // com um ou dois dias de diferença umas das outras, e «só até» a um dia
+    // do fim do resto era ruído na paragem mais servida da região.
+    if (f.fim && maisLonge && diasAte(f.fim, maisLonge) > FOLGA_DO_FIM_DIAS) {
+      frases.push(`Horários ${quem} só até ${dataDoFeed(f.fim)}.`);
     }
   }
   return frases;
