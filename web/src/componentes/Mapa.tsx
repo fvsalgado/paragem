@@ -244,6 +244,7 @@ function camadaDosPontos(c: CamadaDePontos, tema: TemaDoMapa, placa: boolean): L
   }
   const P = CORES_DOS_PONTOS[tema];
   const paragem = c.tipo === 'paragem';
+  const escuro = tema === 'escuro';
   return {
     id,
     type: 'circle',
@@ -259,8 +260,17 @@ function camadaDosPontos(c: CamadaDePontos, tema: TemaDoMapa, placa: boolean): L
     filter: filtro,
     paint: {
       'circle-radius': pelosZooms(c.raios),
-      'circle-color': paragem ? P.miolo : c.anel ? '#ffffff' : c.cor,
-      'circle-stroke-color': paragem ? P.anel : c.anel ? c.cor : '#ffffff',
+      // O ANEL DE UM PRIVADO, no escuro, troca de papéis: miolo escuro e anel
+      // claro. Branco, era o disco mais claro do mapa — um farol em cima do
+      // terminal, a anunciar o expresso mais alto do que a rede.
+      'circle-color': paragem ? P.miolo : c.anel ? (escuro ? P.halo : '#ffffff') : c.cor,
+      'circle-stroke-color': paragem
+        ? P.anel
+        : c.anel
+          ? escuro
+            ? P.secundario
+            : c.cor
+          : '#ffffff',
       'circle-stroke-width': paragem
         ? pelosZooms([
             [11, 1.2],
@@ -464,7 +474,8 @@ function Esboco({
   // A MESMA REGRA DO MAPA: o que ainda não se separou do vizinho não aparece,
   // e o raio é o que o MapLibre vai interpolar a este zoom.
   const zmin = zoomDeAparecer(pontos);
-  const cores = CORES_DOS_PONTOS[temaDaPagina()];
+  const escuro = temaDaPagina() === 'escuro';
+  const cores = CORES_DOS_PONTOS[escuro ? 'escuro' : 'claro'];
   const visiveis = pontos.flatMap((p, i) => {
     const c = regra.get(p.tipo);
     if (!c || zoom < c.minzoom || Math.floor(zoom) < zmin[i]) return [];
@@ -493,13 +504,21 @@ function Esboco({
             c.tipo === 'paragem'
               ? cores.miolo
               : c.anel
-                ? '#ffffff'
+                ? escuro
+                  ? cores.halo
+                  : '#ffffff'
                 : c.forma === 'placa'
                   ? c.fundo
                   : c.cor
           }
           stroke={
-            c.tipo === 'paragem' ? cores.anel : c.anel || c.fundo === '#ffffff' ? c.cor : '#ffffff'
+            c.tipo === 'paragem'
+              ? cores.anel
+              : c.anel && escuro
+                ? cores.secundario
+                : c.anel || c.fundo === '#ffffff'
+                  ? c.cor
+                  : '#ffffff'
           }
           strokeWidth={c.tipo === 'paragem' ? 1.5 : c.anel ? 2.5 : 1.5}
         />
@@ -1045,7 +1064,10 @@ export default function Mapa({
   const camadasNossas = (tema: TemaDoMapa): LayerSpecification[] => [
     ...camadasDaRede(tema, esbatida),
     ...camadasDosNomesDosPontos(tema, 'paragens'),
-    ...camadasDe(tiposDasCamadas.current).map((c) => camadaDosPontos(c, tema, false)),
+    // As placas são imagens, e não mudam com o tema: só os círculos.
+    ...camadasDe(tiposDasCamadas.current)
+      .filter((c) => c.forma !== 'placa')
+      .map((c) => camadaDosPontos(c, tema, false)),
   ];
   const nossas = useRef(camadasNossas);
   nossas.current = camadasNossas;
