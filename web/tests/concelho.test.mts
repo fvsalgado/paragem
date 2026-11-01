@@ -4,8 +4,13 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { porLocalidade, saidasDoConcelho } from '../src/lib/concelho.ts';
-import type { LinhaDetalhe, Paragem } from '../src/lib/formato.ts';
+import {
+  paragemDeExemplo,
+  porLocalidade,
+  quantosNoConcelho,
+  saidasDoConcelho,
+} from '../src/lib/concelho.ts';
+import type { LinhaDetalhe, ModoDetalhe, Paragem } from '../src/lib/formato.ts';
 
 const paragem = (id: string, concelho: string | null, partidas = 1): Paragem => ({
   id,
@@ -137,4 +142,55 @@ test('as paragens juntam-se pela terra, e cada uma fica com o que a distingue', 
     g[2].paragens.map((x) => x.dentro),
     ['', 'Câmara Municipal', 'Terminal'],
   );
+});
+
+test('o urbano que a rede opera conta como urbano do concelho dele, e só dele', () => {
+  // A página de um concelho dizia «sem registo: urbano municipal» por cima
+  // das linhas do urbano da cidade, que a concessão opera.
+  const urbanos: ModoDetalhe = {
+    modo: 'urbano-municipal',
+    gerido_por: [],
+    sistemas: [],
+    pontos: [],
+    percursos: [{ nome: 'Volta da câmara', concelhos: ['baixo'] }] as ModoDetalhe['percursos'],
+    paragens: [],
+    horarios: [],
+    urbanos_da_rede: [
+      {
+        nome: 'Urbano de Cima',
+        concelho: 'cima',
+        linhas: ['11', '12'].map((codigo) => ({
+          id: `R${codigo}`,
+          codigo,
+          nome: `Linha ${codigo}`,
+          cor: null,
+          cor_texto: null,
+        })),
+      },
+    ],
+    incompleto: false,
+    notas: [],
+    fontes: [],
+    quantos: 3,
+  };
+  assert.equal(quantosNoConcelho(urbanos, 'cima'), 2, 'as duas linhas do urbano da rede');
+  assert.equal(quantosNoConcelho(urbanos, 'baixo'), 1, 'o urbano da câmara, que não é da rede');
+  assert.equal(quantosNoConcelho(urbanos, 'centro'), 0, 'e o concelho sem nenhum continua sem');
+  // Dados de antes disto não trazem a chave: conta-se como dantes.
+  const { urbanos_da_rede: _, ...antigo } = urbanos;
+  assert.equal(quantosNoConcelho(antigo, 'cima'), 0);
+});
+
+test('a paragem de exemplo é a que mais linhas junta, e entre essas a de mais partidas', () => {
+  // Só pelas partidas ganhava a paragem de uma avenida com um urbano de dez em
+  // dez minutos; o terminal junta mais linhas, e é o que se reconhece.
+  const com = (id: string, linhas: number, partidas: number): Paragem => ({
+    ...paragem(id, 'cima', partidas),
+    linhas: Array.from({ length: linhas }, (_, i) => String(i + 1)),
+  });
+  const avenida = com('avenida', 3, 280);
+  const terminal = com('terminal', 9, 180);
+  const outro = com('outro', 9, 120);
+  assert.equal(paragemDeExemplo([avenida, outro, terminal])?.id, 'terminal');
+  assert.equal(paragemDeExemplo([]), null);
 });

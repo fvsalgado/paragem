@@ -244,6 +244,111 @@ def test_uma_proposta_declara_se_e_por_omissao_nao_e(tmp_path):
     assert Regiao.carregar(_regiao_minima(tmp_path / "sem-nada")).proposta is False
 
 
+def test_a_faixa_da_proposta_declara_se_na_regiao_ou_fica_a_generica(tmp_path):
+    """A relação com a autoridade é da região: o produto não a escreve por ela."""
+    generica = Regiao.carregar(_regiao_minima(tmp_path / "generica", proposta=True))
+    assert generica.faixa_da_proposta is None
+
+    faixa = {"titulo": "Proposta à Comunidade X.", "texto": "Ainda não é um serviço oficial."}
+    declarada = Regiao.carregar(_regiao_minima(tmp_path / "declarada", proposta=faixa))
+    assert declarada.proposta is True
+    assert declarada.faixa_da_proposta == faixa
+
+
+def test_a_faixa_da_proposta_chega_ao_sitio_tal_e_qual(raiz, tmp_path):
+    """O sítio escreve-a como a região a declara; sem ela, `None` e a frase genérica."""
+    import dataclasses
+
+    from paragem.sitio import Sitio
+
+    prova = regiao_ou_salta("prova")
+    faixa = {"titulo": "Proposta à Comunidade X.", "texto": "Ainda não é um serviço oficial."}
+    proposta = dataclasses.replace(
+        prova, demonstracao=False, proposta=True, faixa_da_proposta=faixa
+    )
+    j = Sitio(raiz, proposta, tmp_path).regiao_json()
+    assert j["proposta"] is True
+    assert j["faixa_da_proposta"] == faixa
+    assert Sitio(raiz, prova, tmp_path).regiao_json()["faixa_da_proposta"] is None
+
+
+@pytest.mark.parametrize(
+    "faixa",
+    [
+        {"titulo": "Proposta à Comunidade X."},
+        {"texto": "Ainda não é um serviço oficial."},
+        {"titulo": "Proposta.", "texto": "  "},
+        # Uma chave mal escrita passava a frase genérica sem ninguém dar por isso.
+        {"title": "Proposta.", "texto": "Ainda não é um serviço oficial."},
+        {"titulo": "Proposta.", "texto": "Ainda não.", "ligacao": "/contacto/"},
+    ],
+)
+def test_a_faixa_da_proposta_a_meio_recusa_se(tmp_path, faixa):
+    pasta = _regiao_minima(tmp_path / "a-meio", proposta=faixa)
+    with pytest.raises(ErroDeRegiao, match="`titulo` e `texto`"):
+        Regiao.carregar(pasta)
+
+
+def _com_concelhos(pasta, **extra):
+    """Uma região mínima com um concelho e o modo dos urbanos, para os urbanos da rede."""
+    pasta = _regiao_minima(
+        pasta,
+        modos=["autocarro", "urbano-municipal"],
+        inclui={"concelhos": "concelhos.yaml"},
+        **extra,
+    )
+    (pasta / "concelhos.yaml").write_text(
+        yaml.safe_dump(
+            {"concelhos": [{"id": "vila", "nome": "Vila", "distrito": "D", "dico": "0001"}]}
+        ),
+        encoding="utf-8",
+    )
+    return pasta
+
+
+def test_os_urbanos_da_rede_declaram_se_e_saem_do_que_vai_tal_e_qual(tmp_path):
+    rede = {
+        "nome": "Rede X",
+        "urbanos": [{"nome": "Urbano da Vila", "concelho": "vila", "linhas": ["0101", "12"]}],
+    }
+    r = Regiao.carregar(_com_concelhos(tmp_path / "x", rede=rede))
+    assert [(u.nome, u.concelho, u.linhas) for u in r.urbanos_da_rede] == [
+        ("Urbano da Vila", "vila", ("0101", "12"))
+    ]
+    # O `rede` vai tal e qual para o sítio; os urbanos vão validados, à parte.
+    assert "urbanos" not in r.rede
+    assert Regiao.carregar(_regiao_minima(tmp_path / "sem")).urbanos_da_rede == []
+
+
+@pytest.mark.parametrize(
+    ("urbanos", "modos", "erro"),
+    [
+        ([{"nome": "U", "concelho": "outra", "linhas": ["1"]}], None, "concelhos que a região"),
+        ([{"nome": "U", "concelho": "vila", "linhas": []}], None, "pelo menos um"),
+        ([{"nome": "U", "concelho": "vila"}], None, "os três e mais nada"),
+        ([{"nome": "U", "concelho": "vila", "linhas": [101]}], None, "entre aspas"),
+        (
+            [
+                {"nome": "U", "concelho": "vila", "linhas": ["1"]},
+                {"nome": "V", "concelho": "vila", "linhas": ["1"]},
+            ],
+            None,
+            "a mesma linha",
+        ),
+        ([{"nome": "U", "concelho": "vila", "linhas": ["1"]}], ["autocarro"], "urbano-municipal"),
+    ],
+)
+def test_os_urbanos_da_rede_mal_declarados_recusam_se(tmp_path, urbanos, modos, erro):
+    extra = {"rede": {"nome": "Rede X", "urbanos": urbanos}}
+    pasta = _com_concelhos(tmp_path / "x", **extra)
+    if modos is not None:
+        d = yaml.safe_load((pasta / "regiao.yaml").read_text(encoding="utf-8"))
+        d["modos"] = modos
+        (pasta / "regiao.yaml").write_text(yaml.safe_dump(d), encoding="utf-8")
+    with pytest.raises(ErroDeRegiao, match=erro):
+        Regiao.carregar(pasta)
+
+
 def test_uma_demonstracao_nao_pode_ser_tambem_uma_proposta(tmp_path):
     pasta = _regiao_minima(tmp_path / "as-duas", proposta=True, demonstracao=True)
     with pytest.raises(ErroDeRegiao, match="ao mesmo tempo"):
@@ -255,3 +360,52 @@ def test_as_regioes_de_prova_nao_sao_propostas(raiz):
     for r in carregar_todas(raiz):
         if r.demonstracao:
             assert not r.proposta, r.id
+
+
+def _com_a_pedido(pasta, zonas_do_horario):
+    """Uma região com duas zonas a pedido e um horário que diz de que zonas é."""
+    pasta = _regiao_minima(
+        pasta,
+        modos=["a-pedido"],
+        inclui={"a_pedido": "a-pedido.yaml", "fontes": "fontes.yaml"},
+    )
+    (pasta / "a-pedido.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "zonas": [
+                    {"id": "norte", "nome": "Norte", "concelho": None, "reserva_online": True},
+                    {"id": "sul", "nome": "Sul", "concelho": None},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    (pasta / "fontes.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "saidas": [
+                    {
+                        "fonte": "x",
+                        "leitor": "horarios-manuais",
+                        "saida": "tap/ligacoes.json",
+                        "modo": "a-pedido",
+                        "params": {"id": "ligacoes", "zonas": zonas_do_horario},
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    return pasta
+
+
+def test_um_horario_a_pedido_pode_dizer_de_que_zonas_e(tmp_path):
+    """Um folheto de ligações não é de concelho nenhum: diz-se de que zonas é."""
+    r = Regiao.carregar(_com_a_pedido(tmp_path / "x", ["norte"]))
+    assert r.saidas[0].params["zonas"] == ["norte"]
+
+
+def test_um_horario_a_pedido_nao_pode_apontar_para_uma_zona_que_nao_ha(tmp_path):
+    """Um nome trocado tirava à página o botão de reservar, em silêncio."""
+    with pytest.raises(ErroDeRegiao, match="nordeste"):
+        Regiao.carregar(_com_a_pedido(tmp_path / "x", ["norte", "nordeste"]))

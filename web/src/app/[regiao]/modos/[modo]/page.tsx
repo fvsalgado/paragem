@@ -29,7 +29,8 @@ import DisponibilidadeBicicletas, {
 import type { HorarioDeModo, ModoDetalhe, PontoDeModo } from '@/lib/formato';
 import PrecosDeExpresso from '@/componentes/PrecosDeExpresso';
 import { disponibilidadeDaRegiao, expressosDaRegiao } from '@/lib/enderecos';
-import { lista, plural } from '@/lib/prosa';
+import Distintivo from '@/componentes/Distintivo';
+import { aRede, lista, nomeDaRede, plural } from '@/lib/prosa';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -55,8 +56,7 @@ const O_QUE_O_MODO_TEM: Record<string, (em: string) => string> = {
   bicicleta: (em) =>
     `As bicicletas partilhadas ${em}: onde estão as estações, e quem gere cada sistema.`,
   taxi: (em) => `As praças de táxi ${em}, concelho a concelho.`,
-  'urbano-municipal': (em) =>
-    `Os autocarros urbanos das câmaras ${em}: as linhas, os horários e quem os gere.`,
+  'urbano-municipal': (em) => `Os autocarros urbanos ${em}: as linhas, os horários e quem os gere.`,
   expresso: (em) => `Os expressos que param ${em}: onde param, para onde vão e quem os opera.`,
 };
 
@@ -120,6 +120,13 @@ function oQueHa(m: ModoDetalhe, em: string): string {
       ? plural(m.percursos.length, 'percurso conhecido', 'percursos conhecidos')
       : '',
     m.paragens.length ? plural(m.paragens.length, 'paragem', 'paragens') : '',
+    m.urbanos_da_rede?.length
+      ? plural(
+          m.urbanos_da_rede.reduce((n, u) => n + u.linhas.length, 0),
+          'linha urbana da rede',
+          'linhas urbanas da rede',
+        )
+      : '',
     m.pontos.length
       ? m.modo === 'taxi'
         ? plural(m.pontos.length, 'praça de táxis conhecida', 'praças de táxis conhecidas')
@@ -213,9 +220,13 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
   // osm-portugal.» — o identificador interno da fonte. O nome legível é o
   // que a página de dados abertos já mostra ao lado de cada ficheiro deste
   // modo; um modo sem ficheiros publicados fica só com a ligação para lá.
-  const fontes = [
-    ...new Set((await dadosAbertos(rid)).filter((x) => x.modo === mid).map((x) => x.fonte)),
-  ].filter(Boolean);
+  const descargas = await dadosAbertos(rid);
+  const fontes = [...new Set(descargas.filter((x) => x.modo === mid).map((x) => x.fonte))].filter(
+    Boolean,
+  );
+  // O QUE FALTA ESTÁ NO RELATÓRIO DA CONSTRUÇÃO, que se descarrega dos dados
+  // abertos — a página deixou de publicar a lista em bruto (1/11/2026).
+  const comRelatorio = descargas.some((x) => x.grupo === 'relatorios');
 
   return (
     <>
@@ -224,9 +235,10 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
           — «Câmara Municipal de Pedra Alta», a marca de um operador de
           expressos — e nenhum traz o artigo. «Gerido por Câmara Municipal» é o
           que se lia. */}
-      {m.gerido_por.length > 0 && (
+      {(m.gerido_por.length > 0 || oQueHa(m, r.em)) && (
         <p>
-          Quem gere: {lista(m.gerido_por)}. {oQueHa(m, r.em)}
+          {m.gerido_por.length > 0 && <>Quem gere: {lista(m.gerido_por)}. </>}
+          {oQueHa(m, r.em)}
         </p>
       )}
 
@@ -247,6 +259,44 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
           <a href="#sobre-estes-dados">{m.incompleto ? 'Saber porquê' : 'Sobre estes dados'}</a>.
         </p>
       )}
+
+      {/* --- OS URBANOS QUE A REDE OPERA, no topo ---
+
+          O urbano de uma cidade pode ser da concessão e não da câmara — com
+          número de linha no caderno, como as outras. Quem vem aqui à procura
+          do urbano da sua cidade não o encontrava, porque as linhas dele estão
+          no catálogo da rede. Diz-se quais são, de que concelho, e leva-se
+          para as linhas, que é onde têm as paragens e os horários. São os que
+          a região declara (`rede.urbanos`), e não adivinhados pelo nome. */}
+      {m.urbanos_da_rede?.length ? (
+        <section aria-labelledby="urbanos-da-rede">
+          <h2 id="urbanos-da-rede">Urbanos da {nomeDaRede(r)}</h2>
+          <p>
+            Fazem parte d{aRede(r)}, como as outras linhas: cada uma tem página própria, com as
+            paragens e os horários.
+          </p>
+          {m.urbanos_da_rede.map((u, i) => (
+            <section key={u.nome} aria-labelledby={`urbano-da-rede-${i}`}>
+              <h3 id={`urbano-da-rede-${i}`}>
+                {u.nome}
+                {nomes.has(u.concelho) && (
+                  <span className="secundario"> · {nomes.get(u.concelho)}</span>
+                )}
+              </h3>
+              <ul className="linhas-do-concelho">
+                {u.linhas.map((l) => (
+                  <li key={l.id}>
+                    <Link href={urlRede(rid, `linhas/${l.id}/`)}>
+                      <Distintivo codigo={l.codigo} cor={l.cor} tamanho="medio" />
+                      <span>{l.nome}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </section>
+      ) : null}
 
       {/* --- os sistemas, com as estações por concelho ---
 
@@ -471,8 +521,11 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
           <p>
             {fontes.length > 0 ? <>Fontes: {lista(fontes)}. </> : null}
             As licenças e os ficheiros estão em{' '}
-            <Link href={url(rid, 'dados-abertos/')}>dados abertos</Link>, e o que falta está no
-            relatório de lacunas da mesma página.
+            <Link href={url(rid, 'dados-abertos/')}>dados abertos</Link>
+            {comRelatorio
+              ? ', e o que falta, no relatório da última construção, que se descarrega de lá'
+              : ''}
+            .
           </p>
         </details>
         <p className="cartao-accoes">

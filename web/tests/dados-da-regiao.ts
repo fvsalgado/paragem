@@ -85,6 +85,8 @@ export type Modo = {
   percursos: { nome: string }[];
   pontos: { concelho: string | null }[];
   paragens: ParagemDeModo[];
+  /** Os urbanos que a rede própria opera (`rede.urbanos`); ausente onde não há. */
+  urbanos_da_rede?: { nome: string; concelho: string; linhas: { id: string; nome: string }[] }[];
 };
 
 /** As paragens de autocarro, como a página de paragens as lista. */
@@ -143,13 +145,16 @@ export type APedido = {
     nome: string;
     concelho: string;
     concelho_nome: string;
-    circuitos: unknown[];
+    reserva_online?: boolean;
+    circuitos: { nome: string; horario?: { grupo: string; quadro: string } }[];
   }[];
   sem_zona: { id: string; nome: string }[];
   horarios: {
     id: string;
     nome: string;
     concelho: string;
+    /** As zonas do grupo, quando a receita as declara. */
+    zonas?: string[];
     quadros: {
       nome?: string;
       paragens: string[];
@@ -408,6 +413,12 @@ export const tarifasPorConfirmar = (regiao = REGIAO): number =>
  * que esta região publica se pode reutilizar. O que NÃO é legítimo é a página
  * não dizer qual dos dois casos é — e é isso que o teste do §4.4 verifica.
  */
+/** O relatório da construção, quando a região o publica entre as descargas. */
+export const relatorioDaConstrucao = (regiao = REGIAO): string | null =>
+  (ler<{ grupo?: string; caminho?: string }[]>(regiao, 'dados-abertos.json') ?? []).find(
+    (d) => d.grupo === 'relatorios',
+  )?.caminho ?? null;
+
 export const descargasParaConsulta = (regiao = REGIAO): number =>
   (ler<{ termos?: string }[]>(regiao, 'dados-abertos.json') ?? []).filter(
     (d) => d.termos === 'consulta',

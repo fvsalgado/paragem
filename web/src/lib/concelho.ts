@@ -12,7 +12,7 @@
  * Funções puras, sem leituras: a página dá-lhes o que já leu, e os testes
  * dão-lhes o que inventarem.
  */
-import type { Linha, LinhaDetalhe, Paragem } from './formato';
+import type { Linha, LinhaDetalhe, ModoDetalhe, Paragem } from './formato';
 
 export type SaidaDoConcelho = {
   /** O concelho de destino, ou `fora:<nome da paragem>` para o que fica fora da região. */
@@ -37,6 +37,54 @@ type Acumulado = {
   viagens: number;
   porDia: Map<string, string[]>;
 };
+
+/**
+ * QUANTO HÁ DE UM MODO NUM CONCELHO — o número dos «Outros transportes».
+ *
+ * AS LINHAS CONTAM TAMBÉM: um urbano municipal é um traçado ou um horário, e
+ * não um ponto — e a página dizia «sem registo neste concelho» do urbano que
+ * corre de ponta a ponta da vila. E CONTAM AS DA REDE que a região declara
+ * como urbanas (`urbanos_da_rede`): o urbano da cidade que a concessão opera
+ * é o urbano dela, e a página dizia «sem registo: urbano municipal» por cima
+ * das linhas dele.
+ */
+export function quantosNoConcelho(d: ModoDetalhe, concelho: string): number {
+  return (
+    d.sistemas.reduce((n, s) => n + s.estacoes.filter((e) => e.concelho === concelho).length, 0) +
+    d.pontos.filter((x) => x.concelho === concelho).length +
+    d.paragens.filter((x) => x.concelho === concelho).length +
+    d.percursos.filter((x) => (x.concelhos ?? []).includes(concelho)).length +
+    (d.horarios ?? []).filter((x) => x.concelho === concelho).length +
+    (d.urbanos_da_rede ?? [])
+      .filter((u) => u.concelho === concelho)
+      .reduce((n, u) => n + u.linhas.length, 0)
+  );
+}
+
+/**
+ * UMA PARAGEM PARA MOSTRAR, ESCOLHIDA PELOS DADOS — a da caixa que se leva
+ * para o sítio de uma câmara, que abria vazia («Escolha a paragem, e a caixa
+ * aparece aqui»), com os botões de copiar desligados.
+ *
+ * A que mais linhas junta, e entre essas a de mais partidas: é o terminal,
+ * quase sempre, e é a que se reconhece. Só pelas partidas ganhava uma paragem
+ * de uma avenida com um urbano de dez em dez minutos — muito servida, e com um
+ * nome que fora da cidade não diz nada. Não se crava nenhuma: os horários
+ * mudam, e o exemplo muda com eles. `null` numa região sem paragens.
+ */
+export function paragemDeExemplo(paragens: Paragem[]): Paragem | null {
+  let melhor: Paragem | null = null;
+  for (const p of paragens) {
+    if (
+      !melhor ||
+      p.linhas.length > melhor.linhas.length ||
+      (p.linhas.length === melhor.linhas.length && p.partidas > melhor.partidas)
+    ) {
+      melhor = p;
+    }
+  }
+  return melhor;
+}
 
 /** A paragem com mais partidas de cada concelho — o «terminal», quase sempre. */
 export function paragemPrincipal(paragens: Paragem[]): Map<string, Paragem> {

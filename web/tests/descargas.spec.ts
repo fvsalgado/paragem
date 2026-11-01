@@ -6,6 +6,7 @@
  */
 import { test, expect } from '@playwright/test';
 import { PROVA } from './anfitrioes';
+import { relatorioDaConstrucao } from './dados-da-regiao';
 
 test('as descargas saem pelo domínio da região, e chegam ao ficheiro', async ({ page }) => {
   await page.goto(`${PROVA}/dados-abertos/`);
@@ -39,4 +40,37 @@ test('as descargas saem pelo domínio da região, e chegam ao ficheiro', async (
   );
   expect(fora[0]).toBe(404);
   expect([404, 0]).toContain(fora[1]);
+});
+
+test('os dados abertos abrem pelo que se usa, e não publicam o registo da construção', async ({
+  page,
+}) => {
+  // A página abria com catorze linhas sobre o que não se pode fazer com os
+  // ficheiros e fechava com o registo interno do pipeline em bruto —
+  // «esperava 28, obtive 26», códigos do validador, «1 viagens». O registo
+  // sai da página; quem o quiser descarrega o relatório da construção.
+  await page.goto('/dados-abertos/');
+  const principal = page.getByRole('main');
+  await expect(principal.getByRole('heading', { name: /Lacunas|O que falta/ })).toHaveCount(0);
+  await expect(principal).not.toContainText(/esperava \d+, obtive/);
+
+  // O primeiro parágrafo diz o que há para usar; os termos vêm depois, uma vez.
+  const abertura = principal.locator('h1 + p');
+  await expect(abertura).toContainText('para descarregar e usar');
+  await expect(abertura).not.toContainText(/licença/i);
+  await expect(
+    principal
+      .locator('strong')
+      .filter({ hasText: /^(Nem todos estes ficheiros|Estes ficheiros reutilizam-se)/ }),
+  ).toHaveCount(1);
+  const termos = principal.getByRole('heading', { name: 'Com que termos' });
+  const primeiraDescarga = principal.locator('ul.descargas').first();
+  expect((await termos.boundingBox())!.y).toBeGreaterThan(
+    (await primeiraDescarga.boundingBox())!.y,
+  );
+
+  const relatorio = relatorioDaConstrucao();
+  if (relatorio) {
+    await expect(principal.getByRole('link', { name: relatorio })).toBeVisible();
+  }
 });

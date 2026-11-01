@@ -2881,7 +2881,21 @@ button[disabled] {
      abaixo de 4,5:1 e deixa de se ler para quem já lê com dificuldade. */
   background: var(--desligado);
   border-color: var(--texto-secundario);
+  /* E A TINTA TAMBÉM: o fundo mudava e a cor do texto ficava a de cada
+     classe. Num botão secundário era a cor da marca sobre o ardósia — 1,1:1,
+     e parecia avariado (visto a 1/11/2026, em «Levar para o sítio»). */
+  color: #fff;
   cursor: not-allowed;
+}
+/* O SECUNDÁRIO DESLIGADO FICA CLARO, e não um bloco escuro onde o ligado era
+   um contorno: o texto secundário sobre a superfície suave (6,2:1 no claro,
+   6,9:1 no escuro) e o contorno tracejado, que diz «ainda não» sem parecer
+   outro botão. */
+button.secundario[disabled] {
+  background: var(--superficie-suave);
+  color: var(--texto-secundario);
+  border-color: var(--texto-secundario);
+  border-style: dashed;
 }
 
 /* A linha do tempo do §8: uma perna por linha, com a cor do modo à esquerda. */

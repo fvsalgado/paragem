@@ -44,6 +44,8 @@ const QUADRO = URBANOS ? umQuadroDe('urbano-municipal') : null;
 const LACUNAS_NAS_BICICLETAS = !!BICICLETA && (BICICLETA.incompleto || BICICLETA.notas.length > 0);
 const POR_SITUAR = URBANOS ? horarioComParagensPorSituar('urbano-municipal') : null;
 /** Os rótulos são do produto; o que varia é quais deles a região usa. */
+/** Um nome dos dados, tal e qual, como expressão: «(Terminal)» não é um grupo. */
+const literal = (t: string) => new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 const ROTULO: Record<string, RegExp> = {
   bicicleta: /Bicicleta/,
   taxi: /Táxi/,
@@ -202,6 +204,30 @@ test('a página do concelho conta os outros modos que há ali', async ({ page })
   // E o cartão leva à página do modo.
   await outros.getByRole('link', { name: ROTULO[onde!.modo] }).click();
   await expect(page).toHaveURL(new RegExp(`/modos/${onde!.modo}/?$`));
+});
+
+test('o urbano que a rede opera conta no concelho dele, e a página dos urbanos leva às linhas', async ({
+  page,
+}) => {
+  // A página de um concelho dizia «Sem registo neste concelho: Urbano
+  // municipal» e, logo abaixo, listava as linhas do urbano da cidade — que a
+  // concessão opera, com número no caderno como as outras. A região declara
+  // quais são (`rede.urbanos`); o produto não os adivinha pelo nome.
+  const u = URBANOS?.urbanos_da_rede?.[0];
+  test.skip(!u, `a região não declara urbanos na rede`);
+  await page.goto(`/rede/concelhos/${u!.concelho}/`);
+  const outros = page.getByRole('region', { name: 'Outros transportes' });
+  await expect(outros.getByRole('link', { name: /Urbano municipal/ })).toContainText(u!.nome);
+  await expect(outros).not.toContainText(/Sem registo neste concelho:[^.]*Urbano municipal/);
+
+  await page.goto('/modos/urbano-municipal/');
+  const bloco = page.getByRole('region', { name: /^Urbanos da / });
+  await expect(bloco.getByRole('heading', { name: literal(u!.nome) })).toBeVisible();
+  await bloco
+    .getByRole('link', { name: literal(u!.linhas[0].nome) })
+    .first()
+    .click();
+  await expect(page).toHaveURL(new RegExp(`/rede/linhas/${u!.linhas[0].id}/?$`));
 });
 
 test('a região de prova só ganha os modos que declara', async ({ page }) => {

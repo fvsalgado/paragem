@@ -45,6 +45,18 @@ Opcional ao nascer, sem bloquear nada:
   as páginas diz «gerida **pela** Comunidade Intermunicipal… e operada **pela**
   …»; sem eles, diz o mesmo sem contração nenhuma («gestão: …; operação: …»,
   «a autoridade de transportes (…)»). Não se adivinham, como o da região;
+- uma **proposta** (`proposta: true`) — a rede é real e o sítio ainda não é
+  da autoridade, e todas as páginas o dizem numa faixa, com a frase genérica
+  feita da autoridade. A relação com uma autoridade concreta é da região, e
+  ela pode escrevê-la: `proposta: {titulo, texto}`, os dois, que o produto
+  mostra tal e qual;
+- os **urbanos que a rede opera** (`rede.urbanos`: `nome`, `concelho` e os
+  números das `linhas`, entre aspas) — quando a concessão opera ela própria o
+  urbano de uma cidade, com número no caderno como as outras linhas. Contam
+  como urbano municipal desse concelho, ao lado das redes das câmaras, e a
+  página dos urbanos leva às linhas deles. Pede `urbano-municipal` nos modos.
+  Não se adivinham pelo nome da linha; sem a declaração, essas linhas são só
+  linhas da rede;
 - tarifário — sem ele, não se anuncia preço nenhum;
 - calendário escolar e feriados municipais — sem eles, o gerador projeta só o
   que consegue e o relatório conta o resto;

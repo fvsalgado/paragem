@@ -153,6 +153,8 @@ def construir(
     _localizar_urbanos(ctx, destino, regiao)
     print(f"   {_tempo.monotonic() - passo:6.1f}s  onde ficam as paragens dos urbanos", flush=True)
 
+    _urbanos_da_rede(ctx, destino)
+
     relatorio.escrever(raiz / "build" / "reports")
     return Construcao(regiao=regiao, relatorio=relatorio, destino=destino)
 
@@ -1242,6 +1244,50 @@ def _localizar_urbanos(ctx: Contexto, destino: Path, regiao: Regiao) -> None:
                 "Mapear estas paragens no OpenStreetMap — é o caminho que serve toda a gente e "
                 "não só este produto —, ou pedir à câmara a lista com coordenadas. A exportação "
                 "do STePP (§5) também as tem."
+            ),
+            quantos=len(faltam),
+            quais=faltam,
+        )
+
+
+def _urbanos_da_rede(ctx: Contexto, destino: Path) -> None:
+    """Cada linha que a região declara como urbana (`rede.urbanos`) existe no feed próprio.
+
+    A declaração aponta para números de linha, e o caderno de onde o feed sai
+    muda: uma linha renumerada, ou suprimida, deixava o urbano da cidade com
+    uma linha a menos na página do concelho, sem ninguém dar por isso. O sítio
+    mostra só as que existem; o que falta diz-se aqui.
+    """
+    if not ctx.regiao.urbanos_da_rede:
+        return
+    proprio = next(
+        (s for s in ctx.regiao.saidas if s.papel in {"horarios", "feed-proprio"} and s.saida),
+        None,
+    )
+    if proprio is None or not (destino / str(proprio.saida)).exists():
+        return
+    codigos = {
+        str(r.get("route_short_name") or "").strip()
+        for r in Gtfs.ler(destino / str(proprio.saida)).routes
+    }
+    faltam = [
+        f"{u.nome}: linha {x}"
+        for u in ctx.regiao.urbanos_da_rede
+        for x in u.linhas
+        if x not in codigos
+    ]
+    if faltam:
+        ctx.relatorio.lacuna(
+            id="urbanos-da-rede.linha-em-falta",
+            o_que="Linhas declaradas como urbanas que o feed da rede não tem",
+            onde=f"regioes/{ctx.regiao.id}/regiao.yaml → rede.urbanos",
+            porque_importa=(
+                "O urbano da cidade aparece com menos linhas do que tem, na página do concelho e "
+                "na dos urbanos — ou não aparece, se não sobrar nenhuma."
+            ),
+            o_que_fazer=(
+                "Ver no caderno de horários se a linha mudou de número ou deixou de existir, e "
+                "corrigir a declaração."
             ),
             quantos=len(faltam),
             quais=faltam,

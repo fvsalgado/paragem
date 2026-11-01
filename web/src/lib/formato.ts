@@ -88,6 +88,13 @@ export type Regiao = {
    * (`MarcaDeProposta`). Ausente em dados de antes disto.
    */
   proposta?: boolean;
+  /**
+   * O que a faixa da proposta diz, quando a região o declara no `regiao.yaml`
+   * (`proposta: {titulo, texto}`). A relação com a autoridade é da região, e o
+   * produto escreve-a tal e qual; ausente ou `null`, a frase genérica
+   * (`prosa.ts`, `fraseDaProposta`).
+   */
+  faixa_da_proposta?: { titulo: string; texto: string } | null;
   artigo: string;
   /** «a Serra da Pedra Alta», «o Baixo Sável» — escrito, não adivinhado. */
   nome_com_artigo: string;
@@ -753,6 +760,13 @@ export type HorarioAPedido = {
   concelho_nome: string;
   /** «Mouriscas», quando a brochura é de uma zona dentro do concelho. */
   circuito_de: string;
+  /**
+   * As zonas de que este grupo é, quando a receita o declara — um folheto de
+   * ligações entre cidades não é de concelho nenhum. Ausente em dados de antes
+   * disto, e onde se sabem pelo concelho e pelos circuitos ligados
+   * (`reservaOnlineDoHorario`).
+   */
+  zonas?: string[];
   regras: string[];
   paragens: string[];
   viagens: number;
@@ -983,6 +997,18 @@ export type HorarioDeModo = {
   concelho?: string | null;
 };
 
+/**
+ * Uma rede urbana que a REDE PRÓPRIA opera — o urbano de uma cidade com
+ * número de linha no caderno, como as outras linhas da rede. Declarada pela
+ * região (`rede.urbanos`), e não adivinhada pelo nome: conta como urbano do
+ * concelho, e as linhas levam para o catálogo, onde têm página e horário.
+ */
+export type UrbanoDaRede = {
+  nome: string;
+  concelho: string;
+  linhas: Pick<Linha, 'id' | 'codigo' | 'nome' | 'cor' | 'cor_texto'>[];
+};
+
 export type ModoDetalhe = {
   modo: string;
   gerido_por: string[];
@@ -991,6 +1017,8 @@ export type ModoDetalhe = {
   percursos: PercursoDeModo[];
   paragens: ParagemDeModo[];
   horarios?: HorarioDeModo[];
+  /** Ausente em dados de antes disto, e em regiões que não os declaram. */
+  urbanos_da_rede?: UrbanoDaRede[];
   operadores?: OperadorDeModo[];
   incompleto: boolean;
   notas: string[];

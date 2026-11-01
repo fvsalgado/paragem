@@ -6,8 +6,8 @@ import { aPedido, exigirRegiao, url, urlRede, NAO_ENCONTRADA, regiao } from '@/l
 import QuadroDeHorario from '@/componentes/QuadroDeHorario';
 import Transcricao, { DataDoDocumento } from '@/componentes/Transcricao';
 import AbrirPeloEndereco from '@/componentes/AbrirPeloEndereco';
-import { caminhoDoHorario, idDoQuadro } from '@/lib/a-pedido';
-import { plural } from '@/lib/prosa';
+import { caminhoDoHorario, idDoQuadro, reservaOnlineDoHorario } from '@/lib/a-pedido';
+import { lista, plural } from '@/lib/prosa';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
 /**
@@ -54,6 +54,11 @@ export default async function HorarioAPedido({ params }: { params: Promise<Param
   const h = d?.horarios.find((x) => x.id === id);
   if (!d || !h) notFound();
   const { reservas: v } = d;
+  // A RESERVA ONLINE SÓ ONDE ELA SERVE. Esta página mostrava a ligação sempre
+  // que a região tinha reserva online — e a página geral, na mesma região,
+  // dizia que ela só servia alguns serviços: quem a seguisse daqui não
+  // conseguia reservar. Onde não serve, fica o telefone com o horário dele.
+  const online = v.online ? reservaOnlineDoHorario(d, h) : null;
   // UM IDENTIFICADOR POR QUADRO, para as ligações da procura e das zonas
   // apontarem o circuito certo. Dois quadros com o mesmo nome na mesma folha
   // não podem ter o mesmo: o segundo leva o número de ordem.
@@ -91,13 +96,26 @@ export default async function HorarioAPedido({ params }: { params: Promise<Param
               Ligar {v.telefone_apresentado ?? v.telefone}
             </a>
           )}
-          {v.online && (
+          {v.online && online?.serve !== false && (
             <a href={v.online} rel="noreferrer">
               Reservar online
             </a>
           )}
         </p>
         {v.telefone_nota && <p className="secundario">{v.telefone_nota}</p>}
+        {online?.serve === false && v.telefone && (
+          <p>
+            {h.quadros.length === 1
+              ? 'Este circuito reserva-se pelo telefone: a reserva online não o serve.'
+              : 'Estes circuitos reservam-se pelo telefone: a reserva online não os serve.'}
+          </p>
+        )}
+        {online?.so.length ? (
+          <p>
+            A reserva online só serve {online.so.length === 1 ? 'a zona' : 'as zonas'}{' '}
+            {lista(online.so)}; nas outras zonas, reserva-se pelo telefone.
+          </p>
+        ) : null}
       </div>
 
       {h.regras.map((regra) => (

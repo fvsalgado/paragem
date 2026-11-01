@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import ConstrutorDaCaixa from '@/componentes/widget/ConstrutorDaCaixa';
-import { concelhos, exigirRegiao, origemDaRegiao, regiao } from '@/lib/dados';
+import { concelhos, exigirRegiao, origemDaRegiao, paragens, regiao } from '@/lib/dados';
+import { paragemDeExemplo } from '@/lib/concelho';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
 export async function generateMetadata({
@@ -31,6 +32,10 @@ export default async function ParaOSeuSitio({ params }: { params: Promise<{ regi
   const r = await exigirRegiao(rid);
   const [cs, origem] = await Promise.all([concelhos(rid), origemDaRegiao(rid)]);
   const comParagens = r.modos.includes('autocarro');
+  // A CAIXA ABRE JÁ MONTADA, com uma paragem que os dados escolhem: abria
+  // vazia, com a pré-visualização a pedir uma paragem e os botões de copiar
+  // desligados — e é a página que se mostra às câmaras. Quem quiser outra muda.
+  const exemplo = comParagens ? paragemDeExemplo(await paragens(rid)) : null;
 
   return (
     <>
@@ -50,6 +55,9 @@ export default async function ParaOSeuSitio({ params }: { params: Promise<{ regi
           concelhos={Object.fromEntries(cs.map((c) => [c.id, c.nome]))}
           modosDesligados={r.modos_desligados ?? []}
           comParagens={comParagens}
+          exemplo={
+            exemplo ? { id: exemplo.id, nome: exemplo.nome, concelho: exemplo.concelho } : null
+          }
         />
       </section>
 
