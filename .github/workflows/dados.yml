@@ -47,7 +47,7 @@ permissions:
 jobs:
   dados:
     name: As regiões desta raiz
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
       # Aqui em cima para que os `if:` dos passos o consigam ler — um `if` não
@@ -76,8 +76,13 @@ jobs:
           distribution: temurin
           java-version: "21"
 
+      # O POPPLER COM A VERSÃO CONFERIDA (`scripts/poppler.sh`): a saída de
+      # `pdftotext -layout` muda entre versões, e é contra ela que se contam
+      # as linhas e as viagens do caderno. O executor está fixado em
+      # `ubuntu-24.04` pela mesma razão — o `ubuntu-latest` muda de sistema
+      # por baixo dos pés, e o poppler com ele.
       - name: Dependências de sistema
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils osmium-tool
+        run: scripts/poppler.sh osmium-tool
 
       - name: A semana
         run: echo "SEMANA=$(date -u +%G-W%V)" >> "$GITHUB_ENV"

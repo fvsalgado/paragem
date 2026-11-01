@@ -320,6 +320,13 @@ Duas, e ambas por boas razões:
   fixada**: a saída de `pdftotext -layout` muda entre versões do poppler, e é
   contra ela que os números do §6 são verificados. Uma atualização silenciosa do
   poppler mudava as contagens sem que nada no repositório tivesse mudado.
+  Fixa-se em dois sítios que dizem o mesmo: o executor (`runs-on:
+  ubuntu-24.04`, e não `ubuntu-latest`) e o `POPPLER_ESPERADO` de
+  `scripts/poppler.sh` (24.02), que os fluxos usam para instalar e conferir. O
+  `apt` não fixa a versão do pacote — a revisão de segurança muda e a versão
+  exata deixa de existir no arquivo —; o que se confere é a do poppler. Nos
+  fluxos que constroem e publicam dados, outra versão reprova; na `Qualidade`
+  avisa, porque os testes do parser já reprovam se as contagens mudarem.
 - **`osmium-tool`** (`osmium extract`), para o recorte do OSM. Um recorte tem de
   ficar referencialmente completo — cada via com os seus nós, cada relação com
   os seus membros — e reimplementar isso em Python era reescrever uma ferramenta
