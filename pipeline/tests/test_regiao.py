@@ -166,7 +166,10 @@ def test_a_autoridade_e_o_operador_com_o_artigo_declarado(raiz):
         "de": "da Comunidade Intermunicipal da Serra da Pedra Alta",
         "por": "pela Comunidade Intermunicipal da Serra da Pedra Alta",
     }
-    assert prova.prosa_do_operador == {"operador_por": "pela Alta Transportes"}
+    assert prova.prosa_do_operador == {
+        "operador_por": "pela Alta Transportes",
+        "operador_de": "da Alta Transportes",
+    }
     # O município é «o»: é a outra metade do par, e a que apanha uma contração
     # cravada no feminino.
     municipio = regiao_ou_salta("prova-municipio")

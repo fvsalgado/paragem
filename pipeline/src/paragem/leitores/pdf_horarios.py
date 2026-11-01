@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from datetime import date
 
 # Os códigos, tal como a legenda do PDF os define.
 PERIODOS = {"E", "A", "FE", "V5", "VIE", "AX5"}
@@ -112,12 +113,60 @@ class Linha:
 class Documento:
     linhas: dict[str, Linha] = field(default_factory=dict)
     legendas: dict[str, str] = field(default_factory=dict)
+    #: O rodapé tal como o papel o escreve — «Em vigor desde 5 de dezembro de
+    #: 2025 | Valid from…». A data está em `data_em_vigor`.
     em_vigor_desde: str | None = None
     avisos: list[str] = field(default_factory=list)
 
     @property
     def blocos(self) -> list[Bloco]:
         return [b for lin in self.linhas.values() for b in lin.blocos]
+
+    @property
+    def data_em_vigor(self) -> date | None:
+        """A data do rodapé, lida do texto português — ou `None` sem ela."""
+        return data_por_extenso(self.em_vigor_desde or "")
+
+
+_MESES = {
+    m: i + 1
+    for i, m in enumerate(
+        (
+            "janeiro",
+            "fevereiro",
+            "março",
+            "abril",
+            "maio",
+            "junho",
+            "julho",
+            "agosto",
+            "setembro",
+            "outubro",
+            "novembro",
+            "dezembro",
+        )
+    )
+}
+_DATA_POR_EXTENSO = re.compile(r"(\d{1,2})\s+de\s+([a-zç]+)\s+de\s+(\d{4})", re.IGNORECASE)
+
+
+def data_por_extenso(texto: str) -> date | None:
+    """«5 de dezembro de 2025» → 2025-12-05. A primeira que o texto tiver.
+
+    Só português e só por extenso, que é como um caderno de horários a escreve.
+    Um mês que não se reconhece não vira data nenhuma: devolve `None`, e quem
+    pergunta decide o que fazer sem uma data inventada.
+    """
+    achado = _DATA_POR_EXTENSO.search(texto or "")
+    if not achado:
+        return None
+    mes = _MESES.get(achado.group(2).lower())
+    if not mes:
+        return None
+    try:
+        return date(int(achado.group(3)), mes, int(achado.group(1)))
+    except ValueError:
+        return None
 
 
 # ---------------------------------------------------------------------------

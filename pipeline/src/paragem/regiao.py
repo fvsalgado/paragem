@@ -33,6 +33,21 @@ _CONTRACOES: dict[str, dict[str, str]] = {
 }
 
 
+def prosa_de_operador(nome: Any, artigo: Any) -> dict[str, str]:
+    """«pela …» e «da …» de um operador, quando o artigo dele está declarado.
+
+    Serve a rede da região (`rede.operador_artigo`) e os feeds de outros
+    operadores, que o declaram na receita (`params.operador_artigo`). Sem
+    artigo, nada: «Horários de CP» é o que sai de adivinhar.
+    """
+    if artigo not in _CONTRACOES or not nome:
+        return {}
+    return {
+        "operador_por": f"{_CONTRACOES[artigo]['por']} {nome}",
+        "operador_de": f"{_CONTRACOES[artigo]['de']} {nome}",
+    }
+
+
 class ErroDeRegiao(Exception):
     """A declaração de uma região está errada ou incompleta."""
 
@@ -251,11 +266,9 @@ class Regiao:
 
     @property
     def prosa_do_operador(self) -> dict[str, str]:
-        """«pela Alta Transportes» — só quando a região declara o artigo do operador."""
+        """«pela Alta Transportes», «da Alta Transportes» — só com o artigo do operador."""
         artigo, nome = self.rede.get("operador_artigo"), self.rede.get("operador")
-        if artigo not in _CONTRACOES or not nome:
-            return {}
-        return {"operador_por": f"{_CONTRACOES[artigo]['por']} {nome}"}
+        return prosa_de_operador(nome, artigo)
 
     # --- território ------------------------------------------------------
 

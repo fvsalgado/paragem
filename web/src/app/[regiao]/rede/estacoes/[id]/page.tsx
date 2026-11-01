@@ -20,6 +20,7 @@ import {
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import ProximasPartidas from '@/componentes/ProximasPartidas';
 import { metadadosDaRegiao } from '@/lib/metadados';
+import { feedsDosServicos } from '@/lib/formato';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -112,7 +113,11 @@ export default async function Estacao({
         {/* Só onde há mapa: numa região sem mosaicos o início não tem mapa. */}
         {temMapa && <a href={url(rid, `/?ponto=${encodeURIComponent(e.id)}`)}>Ver no mapa</a>}
       </p>
-      <MarcaDeDados regiao={rid} modos={['comboio']} />
+      <MarcaDeDados
+        regiao={rid}
+        modos={['comboio']}
+        feeds={feedsDosServicos((ficha?.partidas ?? []).map((d) => d.servico_id))}
+      />
 
       {/* OS COMBOIOS QUE O SÍTIO JÁ TEM. A página dizia «os horários da CP não
           são publicados aqui», e o planeador do mesmo sítio propunha comboios

@@ -185,8 +185,81 @@ export type Regiao = {
    * disto. Nos dois casos não se mostra data nenhuma (`dataDosHorarios`).
    */
   dados_de?: Record<string, string | null>;
+  /**
+   * Cada feed, pelo nome do ficheiro — que é o prefixo dos serviços dele na
+   * tabela dos dias (`<feed>:<serviço>`): desde quando vale, até quando vai, e
+   * de quem é (`sitio.py`, `feeds_json`). Ausente em dados de antes disto.
+   */
+  feeds?: Record<string, FeedDaRegiao>;
   caixa: { lat_min: number; lat_max: number; lon_min: number; lon_max: number };
 };
+
+export type FeedDaRegiao = {
+  modo: string;
+  /** De outra entidade, filtrado ou inteiro. */
+  terceiro: boolean;
+  operador: string;
+  /** «da Alta Transportes», «do Comboio da Serra» — só com o artigo declarado; `null` sem ele. */
+  de: string | null;
+  /** A data de CONTEÚDO que o registo declara («em vigor desde»), `AAAA-MM-DD`. */
+  em_vigor_desde: string | null;
+  /** O primeiro e o último dia com serviço, `AAAA-MM-DD`. */
+  inicio: string | null;
+  fim: string | null;
+};
+
+/** «5/12/2025» de «2025-12-05» — como o resto do sítio escreve estas datas. */
+function dataDoFeed(iso: string): string {
+  const [ano, mes, dia] = iso.split('-');
+  return `${Number(dia)}/${Number(mes)}/${ano}`;
+}
+
+/**
+ * OS FEEDS DE UMA PÁGINA, pelas chaves dos serviços que ela mostra
+ * (`<feed>:<serviço>`), sem repetir e pela ordem em que aparecem.
+ */
+export function feedsDosServicos(servicos: readonly (string | null | undefined)[]): string[] {
+  const vistos: string[] = [];
+  for (const s of servicos) {
+    const i = s ? s.indexOf(':') : -1;
+    const feed = s && i > 0 ? s.slice(0, i) : '';
+    if (feed && !vistos.includes(feed)) vistos.push(feed);
+  }
+  return vistos;
+}
+
+/**
+ * O QUE SE DIZ DE CADA FEED AO LADO DAS HORAS DELE: desde quando valem, e até
+ * quando vão quando acabam antes dos outros.
+ *
+ * «Horários da Alta Transportes em vigor desde 5/12/2025.» — a data de CONTEÚDO que o
+ * próprio documento imprime, declarada no registo; nunca a de obtenção
+ * adivinhada. «Horários da CP só até 12/12/2026.» — o feed de outra entidade
+ * que acaba antes do resto: sem isto, a estação ficava sem comboios no dia 13
+ * sem ter avisado ninguém.
+ *
+ * Com o artigo do operador declarado, «da …»; sem ele, «do operador …», que
+ * não precisa de artigo nenhum. A rede da casa vem primeiro.
+ */
+export function frasesDosFeeds(
+  r: Pick<Regiao, 'feeds'> | null | undefined,
+  feeds: readonly string[],
+): string[] {
+  const todos = r?.feeds ?? {};
+  const quais = feeds
+    .filter((f) => todos[f])
+    .sort((a, b) => Number(todos[a].terceiro) - Number(todos[b].terceiro));
+  const frases: string[] = [];
+  for (const nome of quais) {
+    const f = todos[nome];
+    const quem =
+      f.de || (f.operador ? `do operador ${operadorCurto(f.operador)}` : 'deste operador');
+    if (f.em_vigor_desde && /^\d{4}-\d{2}-\d{2}$/.test(f.em_vigor_desde)) {
+      frases.push(`Horários ${quem} em vigor desde ${dataDoFeed(f.em_vigor_desde)}.`);
+    }
+  }
+  return frases;
+}
 
 /**
  * «3/9/2026»: de quando são os horários destes modos — o mais antigo deles —,

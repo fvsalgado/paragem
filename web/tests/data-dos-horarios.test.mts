@@ -48,3 +48,41 @@ test('dados de antes disto, ou uma data que não é data, não dão data nenhuma
   );
   assert.equal(fraseDosHorarios(null), 'Horários planeados, não em tempo real.');
 });
+
+// --- de cada feed: desde quando, e até quando -----------------------------------
+
+const FEEDS = {
+  rede: {
+    modo: 'autocarro',
+    terceiro: false,
+    operador: 'Alta Transportes',
+    de: 'da Alta Transportes',
+    em_vigor_desde: '2025-12-05',
+    inicio: '2026-11-01',
+    fim: '2027-10-31',
+  },
+  comboio: {
+    modo: 'comboio',
+    terceiro: true,
+    operador: 'Comboios da Serra, S.A.',
+    de: null,
+    em_vigor_desde: null,
+    inicio: '2026-10-25',
+    fim: '2026-12-12',
+  },
+};
+
+test('a data de conteúdo diz-se com quem a publica, e não a de obtenção', async () => {
+  const { frasesDosFeeds } = await import('../src/lib/formato.ts');
+  assert.deepEqual(frasesDosFeeds({ feeds: FEEDS }, ['rede']), [
+    'Horários da Alta Transportes em vigor desde 5/12/2025.',
+  ]);
+});
+
+test('os feeds de uma página saem das chaves dos serviços dela', async () => {
+  const { feedsDosServicos } = await import('../src/lib/formato.ts');
+  assert.deepEqual(feedsDosServicos(['rede:A-U', 'comboio:1', 'rede:E-U', undefined, 'sem']), [
+    'rede',
+    'comboio',
+  ]);
+});

@@ -35,6 +35,7 @@ from __future__ import annotations
 import collections
 import csv
 import json
+import re
 import subprocess
 from datetime import date, timedelta
 from pathlib import Path
@@ -68,6 +69,7 @@ def ler(ctx: Contexto, saida: Saida) -> Resultado:
     doc = pdf.ler(_pdftotext(caminho))
     viagens = pdf.viagens(doc)
     _conferir_legenda(ctx, doc)
+    _conferir_em_vigor(ctx, saida, doc)
 
     camadas = _ler_camadas(ctx, saida)
     universo = Universo.ler(ctx.destino / saida.params["universo"])
@@ -732,6 +734,59 @@ def _tarifario(ctx: Contexto, feed: Gtfs, rotas: list[dict[str, str]]) -> None:
     feed.definir("fare_leg_rules.txt", ["leg_group_id", "network_id", "fare_product_id"], regras)
 
 
+def _em_vigor(doc: pdf.Documento) -> str:
+    """« em vigor desde 2025-12-05», a partir do rodapé do papel.
+
+    O rodapé entrava tal e qual a seguir a «em vigor desde», e o feed dizia
+    «em vigor desde Em vigor desde 5 de dezembro de 2025 | Valid from 5th
+    December 2025». Lida a data, escreve-se a data; sem ela, o rodapé sem a
+    expressão repetida — e sem a tradução, que no `feed_version` não serve.
+    """
+    data = doc.data_em_vigor
+    if data:
+        return f" em vigor desde {data.isoformat()}"
+    bruto = (doc.em_vigor_desde or "").split("|")[0].strip()
+    bruto = re.sub(r"^em vigor desde\s*", "", bruto, flags=re.IGNORECASE)
+    return f" em vigor desde {bruto}" if bruto else ""
+
+
+def _conferir_em_vigor(ctx: Contexto, saida: Saida, doc: pdf.Documento) -> None:
+    """A data que o registo declara contra a que o papel imprime.
+
+    A do registo (`em_vigor_desde`, em `data/sources.yaml`) é a que o sítio
+    mostra ao lado dos horários. Se o papel disser outra, foi o documento que
+    mudou — uma edição nova com o mesmo nome de ficheiro — e a data mostrada
+    deixava de ser a dele.
+    """
+    try:
+        declarada = ctx.registo.obter(saida.fonte).em_vigor_desde
+    except Exception:  # noqa: BLE001 — a proveniência é verificada noutro sítio
+        return
+    impressa = doc.data_em_vigor
+    if impressa and not declarada:
+        ctx.relatorio.lacuna(
+            id=f"{saida.fonte}.em-vigor-por-declarar",
+            o_que="O caderno diz desde quando vale, e o registo não o declara",
+            onde=f"data/sources.yaml → {saida.fonte}",
+            porque_importa=(
+                f"O papel diz «em vigor desde {impressa.strftime('%d/%m/%Y')}», e o sítio "
+                "só o mostra ao lado dos horários se o registo o declarar."
+            ),
+            o_que_fazer=f"Escrever `em_vigor_desde: {impressa.isoformat()}` na fonte.",
+        )
+    elif impressa and declarada and impressa != declarada:
+        ctx.relatorio.aviso(
+            id=f"{saida.fonte}.em-vigor-diferente",
+            o_que="A data «em vigor desde» do registo não é a que o caderno imprime",
+            onde=f"data/sources.yaml → {saida.fonte}",
+            porque_importa=(
+                f"O registo diz {declarada.isoformat()} e o papel {impressa.isoformat()}: "
+                "o documento mudou, e a data que o sítio mostra deixou de ser a dele."
+            ),
+            o_que_fazer="Conferir o documento e corrigir `em_vigor_desde`.",
+        )
+
+
 def _quem_fez(ctx: Contexto, feed: Gtfs, doc: pdf.Documento, hoje: date, fim: date) -> None:
     autoridade = ctx.regiao.autoridade or {}
     feed.definir(
@@ -756,7 +811,7 @@ def _quem_fez(ctx: Contexto, feed: Gtfs, doc: pdf.Documento, hoje: date, fim: da
                 "feed_end_date": fim.strftime("%Y%m%d"),
                 "feed_version": (
                     f"{ctx.regiao.id}-{hoje.isoformat()} · horários: caderno da operadora"
-                    + (f" em vigor desde {doc.em_vigor_desde}" if doc.em_vigor_desde else "")
+                    + _em_vigor(doc)
                     + " · paragens e traçados: levantamentos públicos e OpenStreetMap"
                 ),
                 "feed_contact_url": "https://github.com/fvsalgado/paragem/issues",

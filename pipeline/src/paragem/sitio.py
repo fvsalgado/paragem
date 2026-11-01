@@ -365,6 +365,10 @@ class Sitio:
             # fontes trazem, ou `None` quando alguma não a tem — e aí o sítio
             # não mostra data nenhuma (`datas_dos_horarios`).
             "dados_de": datas_dos_horarios(self.raiz, r),
+            # E POR FEED: desde quando valem, até quando vão, e de quem são
+            # (`feeds_json`). Cada feed acaba no seu dia, e o sítio dizia a data
+            # de um ao lado das partidas de outro.
+            "feeds": self.feeds_json(),
             # SE O CONCELHO DE CADA PONTO VEIO DA CARTA. Sem ela, um ponto sem
             # concelho não está fora da região — está por atribuir —, e a
             # página das bicicletas punha a estação do terminal «Fora da
@@ -377,6 +381,70 @@ class Sitio:
                 "lon_max": r.caixa.lon_max,
             },
         }
+
+    def feeds_json(self) -> dict[str, dict[str, Any]]:
+        """DE CADA FEED, o que a página tem de dizer ao lado das horas dele.
+
+        O sítio usava um período só para todas as fontes — do primeiro ao
+        último dia da tabela inteira. O feed do operador ferroviário acaba a
+        meio de dezembro e o da rede da região um ano depois da construção, e
+        numa estação, dois dias depois do fim do primeiro, lia-se «nos
+        horários carregados, que vão até» à data do segundo: a data de um
+        feed ao lado das partidas do outro.
+
+        Por feed — pelo nome do ficheiro, que é o prefixo dos serviços na
+        tabela dos dias (`<feed>:<serviço>`):
+
+        - `inicio` e `fim`: o primeiro e o último dia com serviço;
+        - `em_vigor_desde`: a data de CONTEÚDO que o registo declara para a
+          fonte (`Fonte.em_vigor_desde`) — «em vigor desde» —, ou `None`;
+        - `operador` e `de`: quem o opera, e «da …» quando o artigo está
+          declarado — o da rede para o feed próprio (`rede.operador_artigo`), o
+          da receita para os outros (`params.operador_artigo`, e
+          `params.operador_nome` quando o nome do feed não é o que se escreve
+          numa frase). Sem artigo, `de` fica vazio e o sítio usa outra forma.
+        """
+        from .fontes import ErroDeFonte, Registo
+        from .grelha import _datas_de_servico
+        from .regiao import prosa_de_operador
+
+        if self._registo is None:
+            self._registo = Registo.carregar(self.raiz)
+        r = self.regiao
+        saida: dict[str, dict[str, Any]] = {}
+        for s in r.saidas:
+            if not s.saida or not s.saida.endswith(".zip") or not s.modo:
+                continue
+            nome = s.saida.split("/")[-1]
+            feed = self._feed(nome)
+            if feed is None:
+                continue
+            dias = sorted(d for d, sids in _datas_de_servico(feed).items() if sids)
+            params = s.params or {}
+            if s.papel in CATALOGO_PROPRIO and r.rede.get("operador"):
+                operador = str(r.rede["operador"])
+                de = r.prosa_do_operador.get("operador_de")
+            else:
+                operador = str(params.get("operador_nome") or self._operador_de(feed))
+                de = prosa_de_operador(operador, params.get("operador_artigo")).get("operador_de")
+            try:
+                vigor = self._registo.obter(s.fonte).em_vigor_desde
+            except ErroDeFonte:
+                vigor = None
+
+            def iso(chave: str) -> str:
+                return f"{chave[:4]}-{chave[4:6]}-{chave[6:8]}"
+
+            saida[nome.removesuffix(".zip")] = {
+                "modo": s.modo,
+                "terceiro": s.papel == "feed-de-terceiro",
+                "operador": operador,
+                "de": de,
+                "em_vigor_desde": vigor.isoformat() if vigor else None,
+                "inicio": iso(dias[0]) if dias else None,
+                "fim": iso(dias[-1]) if dias else None,
+            }
+        return saida
 
     def concelhos_json(self, paragens: list[dict]) -> list[dict[str, Any]]:
         por_concelho: collections.Counter[str] = collections.Counter()

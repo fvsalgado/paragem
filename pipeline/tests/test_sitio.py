@@ -1042,3 +1042,33 @@ def test_a_atribuicao_ao_lado_de_um_ficheiro_para_consulta_com_partes_do_mapa():
     assert obrigatoria is True
     # Sem partes do mapa, é só a da fonte, como era.
     assert _atribuicao_da_descarga(caderno, CONSULTA) == ("Operadora X", False)
+
+
+# --- desde quando vale o caderno ---------------------------------------------
+
+
+def test_a_data_do_rodape_le_se_por_extenso():
+    from datetime import date
+
+    from paragem.leitores.pdf_horarios import Documento, data_por_extenso
+
+    rodape = "Em vigor desde 5 de dezembro de 2025 | Valid from 5th December 2025"
+    assert data_por_extenso(rodape) == date(2025, 12, 5)
+    assert Documento(em_vigor_desde=rodape).data_em_vigor == date(2025, 12, 5)
+    assert data_por_extenso("Em vigor desde 1 de Março de 2026") == date(2026, 3, 1)
+    assert data_por_extenso("Em vigor desde o início do ano letivo") is None
+    assert data_por_extenso("31 de fevereiro de 2026") is None
+
+
+def test_o_feed_version_nao_repete_o_em_vigor_desde():
+    """Saía «em vigor desde Em vigor desde 5 de dezembro de 2025 | Valid from…»."""
+    from paragem.leitores.horarios_pdf_operadora import _em_vigor
+    from paragem.leitores.pdf_horarios import Documento
+
+    doc = Documento(em_vigor_desde="Em vigor desde 5 de dezembro de 2025 | Valid from 5th Dec")
+    assert _em_vigor(doc) == " em vigor desde 2025-12-05"
+    # Sem data legível, o rodapé sem a expressão repetida e sem a tradução.
+    assert _em_vigor(Documento(em_vigor_desde="Em vigor desde o Natal | Valid…")) == (
+        " em vigor desde o Natal"
+    )
+    assert _em_vigor(Documento()) == ""
