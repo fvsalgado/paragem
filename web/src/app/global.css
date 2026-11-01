@@ -6359,6 +6359,43 @@ details.meio-do-percurso + ol.percurso-da-linha {
 .lista.por-modo a.cartao > span:first-child {
   flex-shrink: 0;
 }
+/* «POR MODO» SEM RUÍDO (#186): cada modo era um cartão com borda, um traço de
+   cor que o raio dobrava em crescente, um filete da lista entre cartões, e
+   fundos diferentes — dois coloridos, cinco brancos. Fica o traço de cor, que
+   é o que distingue os modos, direito; o fundo é o mesmo em todos, e o
+   filete sai. Só aqui: os cartões dos modos noutras páginas são outra coisa. */
+.lista.por-modo > li {
+  border-bottom: 0;
+}
+.lista.por-modo .cartao {
+  background: var(--superficie);
+  border-radius: 0 var(--raio) var(--raio) 0;
+  margin: 0.4rem 0;
+}
+/* Os privados ficam sem cor (§6), mas com o traço da mesma largura: o nome
+   deles começava quatro píxeis à esquerda do dos outros. */
+.lista.por-modo .cartao:is(.modo-expresso, .modo-taxi) {
+  border-left: 4px solid var(--linhas);
+}
+
+/* «A REDE» NUM ECRÃ LARGO (#110): duas colunas iguais — o que se faz à
+   esquerda, por onde se procura à direita — e os concelhos em duas colunas por
+   baixo. Era uma coluna de 576 px com três ecrãs e meio de altura. */
+@media (min-width: 64rem) {
+  .em-colunas.catalogo-da-rede {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .em-colunas.catalogo-da-rede > * > section:first-child > h2 {
+    margin-top: 0;
+  }
+  body:has(.catalogo-da-rede) .lista.concelhos-da-rede {
+    columns: 2;
+    column-gap: 2.5rem;
+  }
+  body:has(.catalogo-da-rede) .lista.concelhos-da-rede > li {
+    break-inside: avoid;
+  }
+}
 
 /* --- a folha do mapa: o que junta, o a pedido, os preços (#90, #173) ------- */
 

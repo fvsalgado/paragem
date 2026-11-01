@@ -8,7 +8,6 @@ import {
   estacoes,
   lacunas,
   servicosSemDatas,
-  temMosaicos,
   NOME_DOS_MODOS,
   url,
   urlRede,
@@ -20,6 +19,7 @@ import FaixaDeAvisos from '@/componentes/Avisos';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import PertoDeTi from '@/componentes/PertoDeTi';
 import ProcurarNaRegiao from '@/componentes/ProcurarNaRegiao';
+import ProcurarParagem from '@/componentes/ProcurarParagem';
 import DireccoesDaPagina from '@/componentes/DireccoesDaPagina';
 import { avisosEmVigor } from '@/lib/avisos';
 import { catalogoDosAvisos } from '@/lib/avisos-do-sitio';
@@ -66,7 +66,6 @@ export default async function CatalogoDaRegiao({
   // o «Perto de ti» quando sabe onde se está, e o planeador ao abrir.
   const desligados = r.modos_desligados ?? [];
   const dosModos = await lerModos(rid);
-  const temMapa = await temMosaicos(rid);
   const temPagina = (m: string) => m in dosModos;
   const ondeVaiOModo = (r: string, m: string) => {
     const caminho = caminhoDoModo(m, temPagina);
@@ -105,83 +104,12 @@ export default async function CatalogoDaRegiao({
     es.length ? plural(es.length, 'estação de comboio', 'estações de comboio') : '',
   ].filter(Boolean);
 
-  return (
+  const blocoPedido = (
     <>
-      {inicio ? (
-        <>
-          <h1>Transportes {r.de}</h1>
-          <p>
-            {oQueHa.length ? `${lista(oQueHa)}, ` : ''}e os horários de cada uma. Escreva de onde
-            parte e para onde vai, ou procure uma paragem.
-          </p>
-          {dosOperadores && oQueHa.length > 0 && <p className="secundario">{dosOperadores}</p>}
-          <MarcaDeDados regiao={rid} detalhe />
-
-          <section aria-labelledby="procurar-ponto">
-            <h2 id="procurar-ponto">Procurar</h2>
-            <div className="procura-sem-mapa">
-              <ProcurarNaRegiao regiao={rid} modosDesligados={desligados} />
-            </div>
-          </section>
-
-          <section aria-labelledby="planear">
-            <h2 id="planear">Para onde quer ir?</h2>
-            <DireccoesDaPagina
-              regiao={rid}
-              caixa={r.caixa}
-              emDaRegiao={r.em}
-              modosDesligados={r.modos_desligados ?? []}
-              motorDaRegiao={motorDaRegiao(rid, r.demonstracao)}
-              servicosSemDatas={servicosSemDatas(await lacunas(rid))}
-              dadosDe={dataDosHorarios(r)}
-              temAPedido={r.modos.includes('a-pedido') && !!pedido}
-            />
-          </section>
-        </>
-      ) : (
-        <>
-          <h1>A rede {r.de}</h1>
-          {/* Para quem viaja, e não para quem o programou: «as páginas que
-              funcionam sem JavaScript» era a razão técnica, escrita no lugar da
-              razão de quem lê. */}
-          <p>
-            Todas as paragens, linhas, estações e concelhos, em listas — o caminho de quem não pode
-            ou não quer usar um mapa.{' '}
-            {temMapa ? (
-              <>
-                Para saber como chegar, o <Link href={url(rid)}>mapa</Link> é mais rápido.
-              </>
-            ) : (
-              <>
-                Para saber como chegar, o <Link href={url(rid)}>início</Link> tem o planeador à
-                cabeça.
-              </>
-            )}
-          </p>
-          <MarcaDeDados regiao={rid} detalhe />
-
-          {/* «PARA ONDE VAIS?» É A PERGUNTA, E «COMO CHEGAR» É O NOME (P2-042): a
-              mesma pergunta do botão da folha do mapa, e o mesmo nome do botão
-              das paragens e do título da página. Era «Planear uma viagem» — um
-              terceiro nome para a mesma página. */}
-          <section aria-labelledby="planear">
-            <h2 id="planear">Para onde quer ir?</h2>
-            <p>
-              <Link href={url(rid, '/viagem/')}>Como chegar</Link> — de uma paragem a outra, com
-              transbordos.
-            </p>
-          </section>
-        </>
-      )}
-
-      <FaixaDeAvisos avisos={as} catalogo={catalogo} />
-
-      <PertoDeTi regiao={rid} modosDesligados={desligados} dadosDe={dataDosHorarios(r)} />
-
       {/* O TELEFONE FICA AQUI, e não só na página própria. Quem chega a esta
-          página a procurar transporte numa freguesia sem carreira precisa do
-          número antes de precisar de qualquer outra coisa — obrigá-lo a
-          seguir uma ligação primeiro é pôr um passo entre ele e a viagem. */}
+        página a procurar transporte numa freguesia sem carreira precisa do
+        número antes de precisar de qualquer outra coisa — obrigá-lo a
+        seguir uma ligação primeiro é pôr um passo entre ele e a viagem. */}
       {pedido && (
         <section aria-labelledby="a-pedido">
           <h2 id="a-pedido">Transporte a pedido</h2>
@@ -204,13 +132,17 @@ export default async function CatalogoDaRegiao({
           </div>
         </section>
       )}
+    </>
+  );
 
+  const blocoModos = (
+    <>
       {/* A GRELHA TEM DE LEVAR A ALGUM LADO.
-          Eram sete cartões e quatro não levavam: bicicletas, táxis, urbanos
-          municipais e expressos eram rótulos pintados. Quem toca em
-          «Bicicleta partilhada» quer a estação mais perto de si.
-          Um modo sem destino continua a aparecer — a região declara-o, e
-          escondê-lo era dizer que não existe —, mas sem fingir ser botão. */}
+        Eram sete cartões e quatro não levavam: bicicletas, táxis, urbanos
+        municipais e expressos eram rótulos pintados. Quem toca em
+        «Bicicleta partilhada» quer a estação mais perto de si.
+        Um modo sem destino continua a aparecer — a região declara-o, e
+        escondê-lo era dizer que não existe —, mas sem fingir ser botão. */}
       <section aria-labelledby="modos">
         <h2 id="modos">Por modo</h2>
         <ul className="lista por-modo">
@@ -237,14 +169,18 @@ export default async function CatalogoDaRegiao({
           })}
         </ul>
       </section>
+    </>
+  );
 
-      <section aria-labelledby={inicio ? 'listas' : 'procurar'}>
-        <h2 id={inicio ? 'listas' : 'procurar'}>{inicio ? 'As listas' : 'Procurar'}</h2>
+  const blocoListas = (
+    <>
+      <section aria-labelledby="listas">
+        <h2 id="listas">As listas</h2>
         <ul className="lista">
           {/* OS MESMOS NÚMEROS DAS LISTAS, e com o separador de milhares da
-              casa (#16, #109): «3047» aqui e «3 047» na página seguinte. As
-              paragens contam-se as dos concelhos da região, que é o que a
-              lista abre a dizer; as de fora estão lá, mais abaixo. */}
+            casa (#16, #109): «3047» aqui e «3 047» na página seguinte. As
+            paragens contam-se as dos concelhos da região, que é o que a
+            lista abre a dizer; as de fora estão lá, mais abaixo. */}
           <li>
             <Link href={urlRede(rid, 'paragens/')}>
               <span>Paragens</span>
@@ -284,6 +220,109 @@ export default async function CatalogoDaRegiao({
           )}
         </ul>
       </section>
+    </>
+  );
+
+  return (
+    <>
+      {inicio ? (
+        <>
+          <h1>Transportes {r.de}</h1>
+          <p>
+            {oQueHa.length ? `${lista(oQueHa)}, ` : ''}e os horários de cada uma. Escreva de onde
+            parte e para onde vai, ou procure uma paragem.
+          </p>
+          {dosOperadores && oQueHa.length > 0 && <p className="secundario">{dosOperadores}</p>}
+          <MarcaDeDados regiao={rid} detalhe />
+
+          <section aria-labelledby="procurar-ponto">
+            <h2 id="procurar-ponto">Procurar</h2>
+            <div className="procura-sem-mapa">
+              <ProcurarNaRegiao regiao={rid} modosDesligados={desligados} />
+            </div>
+          </section>
+
+          <section aria-labelledby="planear">
+            <h2 id="planear">Para onde quer ir?</h2>
+            <DireccoesDaPagina
+              regiao={rid}
+              caixa={r.caixa}
+              emDaRegiao={r.em}
+              modosDesligados={r.modos_desligados ?? []}
+              motorDaRegiao={motorDaRegiao(rid, r.demonstracao)}
+              servicosSemDatas={servicosSemDatas(await lacunas(rid))}
+              dadosDe={dataDosHorarios(r)}
+              temAPedido={r.modos.includes('a-pedido') && !!pedido}
+            />
+          </section>
+        </>
+      ) : (
+        <>
+          <h1>A rede {r.de}</h1>
+          {/* O CATÁLOGO DA REDE, e não o plano B de quem não usa mapas (#185):
+              «o caminho de quem não pode ou não quer usar um mapa» apresentava
+              as listas como o recurso, e «para saber como chegar, o mapa é
+              mais rápido» mandava planear pelo mapa — quem planeia é o «Como
+              chegar». */}
+          <p>
+            Todas as paragens, linhas, estações e concelhos {daRede(r)}, em listas. Para planear uma
+            viagem, use <Link href={url(rid, '/viagem/')}>Como chegar</Link>.
+          </p>
+          <MarcaDeDados regiao={rid} detalhe />
+        </>
+      )}
+
+      <FaixaDeAvisos avisos={as} catalogo={catalogo} />
+
+      {inicio ? (
+        <>
+          <PertoDeTi regiao={rid} modosDesligados={desligados} dadosDe={dataDosHorarios(r)} />
+
+          {blocoPedido}
+
+          {blocoModos}
+
+          {blocoListas}
+        </>
+      ) : (
+        /* NUM ECRÃ LARGO, DUAS COLUNAS (#110). Era uma coluna de 576 px com três
+           ecrãs e meio de altura, a 1 440 px: projetada numa reunião, parecia um
+           documento e não o painel da rede. À esquerda o que se faz — planear,
+           o que há aqui perto, o a pedido —, à direita por onde se procura. No
+           telemóvel, uma a seguir à outra, pela mesma ordem. */
+        <div className="em-colunas catalogo-da-rede">
+          <div className="coluna-principal">
+            {/* «PARA ONDE VAIS?» É A PERGUNTA, E «COMO CHEGAR» É O NOME (P2-042): a
+                mesma pergunta do botão da folha do mapa, e o mesmo nome do botão
+                das paragens e do título da página. Era «Planear uma viagem» — um
+                terceiro nome para a mesma página. */}
+            <section aria-labelledby="planear">
+              <h2 id="planear">Para onde quer ir?</h2>
+              <p>
+                <Link href={url(rid, '/viagem/')}>Como chegar</Link> — de uma paragem a outra, com
+                transbordos.
+              </p>
+            </section>
+
+            <PertoDeTi regiao={rid} modosDesligados={desligados} dadosDe={dataDosHorarios(r)} />
+
+            {blocoPedido}
+          </div>
+          <div className="coluna-lateral">
+            {/* A PROCURA À CABEÇA DAS LISTAS (#103): o título «Procurar»
+                encabeçava três ligações, e não uma procura. */}
+            {ps.length > 0 && (
+              <section aria-labelledby="procurar">
+                <h2 id="procurar">Procurar</h2>
+                <ProcurarParagem etiqueta="Paragem ou linha" />
+              </section>
+            )}
+            {blocoModos}
+
+            {blocoListas}
+          </div>
+        </div>
+      )}
 
       <section aria-labelledby="concelhos">
         <h2 id="concelhos">Concelhos</h2>
@@ -303,7 +342,7 @@ export default async function CatalogoDaRegiao({
                   : ''
               }.`}
         </p>
-        <ul className="lista">
+        <ul className="lista concelhos-da-rede">
           {cs.map((c) => (
             <li key={c.id}>
               <Link href={urlRede(rid, `concelhos/${c.id}/`)}>

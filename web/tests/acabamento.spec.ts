@@ -150,3 +150,33 @@ test('o tema escuro vem do sistema, e o mapa muda com ele', async ({ page }) => 
   await page.emulateMedia({ colorScheme: 'light' });
   await expect.poll(fundo).toBe('#eef0eb');
 });
+
+test('«A rede» num ecrã largo é duas colunas, com a procura à direita, e diz que se planeia no «Como chegar»', async ({
+  page,
+}) => {
+  // Era uma coluna de 576 px com três ecrãs e meio de altura a 1 440 px
+  // (#110), «Procurar» encabeçava três ligações e nenhuma procura (#103), e a
+  // abertura mandava planear pelo mapa (#185).
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/rede/');
+  await expect(page.getByRole('main')).not.toContainText('mapa é mais rápido');
+  await expect(
+    page.getByRole('main').getByRole('link', { name: 'Como chegar' }).first(),
+  ).toBeVisible();
+  const esquerda = await page.locator('.catalogo-da-rede > .coluna-principal').boundingBox();
+  const direita = await page.locator('.catalogo-da-rede > .coluna-lateral').boundingBox();
+  expect(direita!.x).toBeGreaterThan(esquerda!.x + esquerda!.width);
+  expect(Math.abs(direita!.y - esquerda!.y)).toBeLessThan(5);
+  await expect(
+    page.locator('.coluna-lateral').getByRole('searchbox', { name: 'Paragem ou linha' }),
+  ).toBeVisible();
+  // «Por modo» sem filete entre cartões e com o mesmo fundo em todos (#186).
+  const fundos = await page
+    .locator('.lista.por-modo .cartao')
+    .evaluateAll((cs) => [...new Set(cs.map((c) => getComputedStyle(c).backgroundColor))]);
+  expect(fundos).toHaveLength(1);
+  await expect(page.locator('.lista.por-modo > li').first()).toHaveCSS(
+    'border-bottom-width',
+    '0px',
+  );
+});
