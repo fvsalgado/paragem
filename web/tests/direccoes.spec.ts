@@ -637,12 +637,12 @@ test.describe('a abertura de uma região', () => {
     await expect(page).toHaveURL(new RegExp(`/modos/${comPagina}/?$`));
   });
 
-  test('«Para onde vais?» abre as direções com o foco no destino', async ({ page }) => {
+  test('«Para onde quer ir?» abre as direções com o foco no destino', async ({ page }) => {
     // A primeira pergunta da página inicial (§6), onde o polegar chega. A
     // nota que lá estava mandava escrever primeiro DE ONDE se parte — o
     // contrário do que o cartão fazia (P2-001).
     await page.goto('/');
-    await page.getByRole('button', { name: 'Para onde vais?' }).click();
+    await page.getByRole('button', { name: 'Para onde quer ir?' }).click();
     await expect(page.getByRole('combobox', { name: 'Para', exact: true })).toBeFocused();
     // E a partida oferece logo «A minha localização», sem a pedir sozinha.
     const de = page.getByRole('combobox', { name: 'De', exact: true });
@@ -653,7 +653,7 @@ test.describe('a abertura de uma região', () => {
   });
 
   test('«Paragens perto de mim» diz no mapa o que passa ali perto', async ({ page, context }) => {
-    // O botão da localização só punha um ponto azul, e o «Perto de ti» vivia
+    // O botão da localização só punha um ponto azul, e o «Aqui perto» vivia
     // em «A rede» (P2-016). As duas portas dão agora ao mesmo sítio: a folha
     // diz que paragens estão perto e o que passa nelas, e tocar numa abre-a.
     await context.grantPermissions(['geolocation']);

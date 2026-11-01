@@ -1206,15 +1206,15 @@ export default function AppDoMapa({
               onClick={() => abrirDirecoes(null, null, 'para')}
             >
               <Chegada />
-              <span>Para onde vais?</span>
+              <span>Para onde quer ir?</span>
             </button>
 
             {/* PERTO DE TI, NO MAPA (P2-016). Vivia escondido em «A rede», e o
               botão da localização do mapa só punha um ponto azul. Agora as duas
               portas dão ao mesmo: o botão de texto, para quem não reconhece o
               ícone, e o do mapa — e a folha diz o que passa ali perto. */}
-            {/* A FAIXA DE AVISOS, onde o §6 a põe: logo a seguir a «Para onde
-              vais?». O aviso publicado no painel não aparecia no ecrã
+            {/* A FAIXA DE AVISOS, onde o §6 a põe: logo a seguir a «Para onde quer
+              ir?». O aviso publicado no painel não aparecia no ecrã
               principal (P4-019) — e é aqui que toda a gente começa. Dois à
               vista, os graves primeiro; o resto a uma ligação. */}
             {avisos.length > 0 && (

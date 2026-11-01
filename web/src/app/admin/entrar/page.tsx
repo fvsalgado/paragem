@@ -138,8 +138,8 @@ export default async function Entrar({ searchParams }: Props) {
         <button type="submit">Entrar</button>
       </form>
       <p className="secundario-texto">
-        Ainda não tens palavra-passe, ou esqueceste-a? Pede a quem gere o painel uma ligação para a
-        escolher: chega-te pelo meio que usarem, e vale sete dias.
+        Ainda não tem palavra-passe, ou esqueceu-a? Peça a quem gere o painel uma ligação para a
+        escolher: chega-lhe pelo meio que usarem, e vale sete dias.
       </p>
     </>
   );

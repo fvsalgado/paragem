@@ -69,7 +69,7 @@ export default function FiltroDasLinhas({ linhas }: { linhas: LinhaDaLista[] }) 
             {escrito
               ? visiveis.length
                 ? `${plural(visiveis.length, 'linha', 'linhas')} com «${escrito}».`
-                : `Nenhuma linha com «${escrito}». Tenta o número, ou outra palavra do nome.`
+                : `Nenhuma linha com «${escrito}». Tente o número, ou outra palavra do nome.`
               : ''}
           </p>
         </div>

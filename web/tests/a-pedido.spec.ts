@@ -232,7 +232,7 @@ test('escreve-se o nome da terra e a página diz que circuito lá passa', async 
   const quadro = COM_VIAGENS!.quadros.find((q) => q.viagens?.length && q.paragens.length)!;
   const terra = quadro.paragens[quadro.paragens.length - 1];
   await page.goto(`/a-pedido/`);
-  const campo = page.getByLabel('Escreve o nome da tua terra');
+  const campo = page.getByLabel('Escreva o nome da sua terra');
   await campo.fill(
     terra
       .normalize('NFD')
@@ -251,7 +251,7 @@ test('escreve-se o nome da terra e a página diz que circuito lá passa', async 
 test('uma terra que não está nos dados diz que não está, e dá o telefone', async ({ page }) => {
   test.skip(!TAP, SEM.aPedido);
   await page.goto(`/a-pedido/`);
-  await page.getByLabel('Escreve o nome da tua terra').fill('Terra Que Não Existe');
+  await page.getByLabel('Escreva o nome da sua terra').fill('Terra Que Não Existe');
   const resposta = page.getByText(/Não encontrámos «Terra Que Não Existe»/);
   await expect(resposta).toBeVisible();
   if (TELEFONE) await expect(resposta.getByRole('link')).toHaveAttribute('href', `tel:${TELEFONE}`);

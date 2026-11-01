@@ -37,9 +37,9 @@ export default async function ParaOSeuSitio({ params }: { params: Promise<{ regi
       <h1>Os transportes no seu sítio</h1>
       <p>
         Uma caixa pronta a colar no sítio da câmara, da junta, da escola ou da associação:{' '}
-        {comParagens ? 'as próximas partidas de uma paragem, ou ' : ''}o «Para onde vais?» que abre
-        o planeador {r.de}. Não é preciso conta, nem chave, nem pedir autorização — e não há nada
-        para instalar.
+        {comParagens ? 'as próximas partidas de uma paragem, ou ' : ''}o «Para onde quer ir?» que
+        abre o planeador {r.de}. Não é preciso conta, nem chave, nem pedir autorização — e não há
+        nada para instalar.
       </p>
 
       <section aria-labelledby="monte">
@@ -80,7 +80,8 @@ export default async function ParaOSeuSitio({ params }: { params: Promise<{ regi
                 <td>o identificador da paragem, o que está no fim do endereço da página dela</td>
                 <td>nenhuma</td>
                 <td>
-                  Mostra as próximas partidas dessa paragem. Sem ele, a caixa é o «Para onde vais?».
+                  Mostra as próximas partidas dessa paragem. Sem ele, a caixa é o «Para onde quer
+                  ir?».
                 </td>
               </tr>
               <tr>
@@ -96,7 +97,7 @@ export default async function ParaOSeuSitio({ params }: { params: Promise<{ regi
                   <code>data-titulo</code>
                 </td>
                 <td>texto</td>
-                <td>«Próximas partidas» ou «Para onde vais?»</td>
+                <td>«Próximas partidas» ou «Para onde quer ir?»</td>
                 <td>O nome que os leitores de ecrã anunciam ao encontrar a caixa.</td>
               </tr>
             </tbody>

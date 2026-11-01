@@ -8,14 +8,14 @@ import {
 } from './dados-da-regiao';
 
 /**
- * O «Perto de ti» — e sobretudo o que ele faz quando NÃO sabe onde estás.
+ * O «Aqui perto» — e sobretudo o que ele faz quando NÃO sabe onde estás.
  *
  * O estado interessante deste bloco não é o de sucesso: é o de quem recusa a
  * localização, que é muita gente e com razão. Se aí a página encolher os
  * ombros, o bloco fez mal a quem não o quis usar.
  */
 
-// O «Perto de ti» vive em `/rede/`, que é o caminho SEM MAPA — o equivalente
+// O «Aqui perto» vive em `/rede/`, que é o caminho SEM MAPA — o equivalente
 // acessível do ponto azul. Na aplicação do mapa a mesma coisa faz-se com o
 // botão de localização do MapLibre. A região é o anfitrião (`anfitrioes.ts`).
 const REDE = '/rede';
@@ -46,7 +46,7 @@ test('não pede a localização ao carregar a página', async ({ page }) => {
     };
   });
   await page.goto(`${REDE}/`);
-  await expect(page.getByRole('heading', { name: 'Perto de ti' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Aqui perto' })).toBeVisible();
   await expect(page.getByRole('button', { name: /paragens perto de mim/i })).toBeVisible();
 
   pediu = await page.evaluate(() => (window as unknown as { __pediu: boolean }).__pediu);
@@ -105,6 +105,6 @@ test('num navegador sem geolocalização, também', async ({ page }) => {
   await page.goto(`${REDE}/`);
   await page.getByRole('button', { name: /paragens perto de mim/i }).click();
   await expect(page.locator('section[aria-labelledby="perto"]')).toContainText(
-    /não sabe dizer onde estás/i,
+    /não sabe dar a localização/i,
   );
 });

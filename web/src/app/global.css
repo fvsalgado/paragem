@@ -981,7 +981,7 @@ details.lista-fechada[open] > summary::after {
 }
 
 /* OS AVISOS NO ECRÃ DO MAPA (P4-019): na folha de abertura, logo a seguir a
-   «Para onde vais?», que é onde o §6 põe a faixa; e no cartão da paragem
+   «Para onde quer ir?», que é onde o §6 põe a faixa; e no cartão da paragem
    afetada, antes das horas. Títulos que levam à página de avisos. */
 .avisos-na-abertura {
   margin: 0 0.6rem 0.6rem;
@@ -4764,9 +4764,9 @@ dialog.menu-do-mapa .lista .secundario {
 
 /* === O PLANEADOR E O MAPA ================================================ */
 
-/* --- a folha de abertura: «Para onde vais?» e o que há ------------------ */
+/* --- a folha de abertura: «Para onde quer ir?» e o que há ------------------ */
 
-/* A folha desliza por dentro quando cresce — com o «Perto de ti» aberto
+/* A folha desliza por dentro quando cresce — com o «Aqui perto» aberto
    passa da metade do ecrã, e o mapa não pode desaparecer por baixo dela. A
    altura é a das três (`--folha-agora`, mais acima). */
 .folha-de-abertura {
@@ -4831,7 +4831,7 @@ button.para-onde-vais svg {
   font-size: 0.9rem;
 }
 
-/* --- «Perto de ti» dentro da folha do mapa ------------------------------ */
+/* --- «Aqui perto» dentro da folha do mapa ------------------------------ */
 
 .perto-no-mapa {
   margin: 0 0.6rem 0.4rem;

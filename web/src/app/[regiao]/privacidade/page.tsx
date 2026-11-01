@@ -64,19 +64,19 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
         <div className="faixa alerta">
           <p>
             <strong>Este sítio está configurado para seguir a mesma pessoa entre visitas.</strong>{' '}
-            Nesse modo guarda-se um identificador no teu dispositivo, e isso exige o teu
-            consentimento e uma base legal declarada. O tema claro ou escuro, se o escolheres,
-            também fica guardado no teu navegador.
+            Nesse modo guarda-se um identificador no seu dispositivo, e isso exige o seu
+            consentimento e uma base legal declarada. O tema claro ou escuro, se o escolher, também
+            fica guardado no seu navegador.
           </p>
         </div>
       ) : (
         <p>
           <strong>
-            Este sítio só guarda uma coisa no teu dispositivo, e só se a escolheres: o tema claro ou
+            Este sítio só guarda uma coisa no seu dispositivo, e só se a escolher: o tema claro ou
             escuro.
           </strong>{' '}
-          Fica no teu navegador, não é enviada a ninguém, e escolher «Como o aparelho» apaga-a. Não
-          há cookies nem identificador guardado no teu dispositivo, e por isso duas visitas não se
+          Fica no seu navegador, não é enviada a ninguém, e escolher «Como o aparelho» apaga-a. Não
+          há cookies nem identificador guardado no seu dispositivo, e por isso duas visitas não se
           ligam à mesma pessoa.
         </p>
       )}
@@ -103,19 +103,19 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
           </ul>
           <p>
             A biblioteca de medição junta a cada um destes registos o endereço da página, a página
-            de onde vieste, o navegador e o sistema (com a identificação que o navegador envia), o
+            de onde se veio, o navegador e o sistema (com a identificação que o navegador envia), o
             tamanho do ecrã e da janela, a língua e o fuso horário do navegador, e um identificador
             ao acaso.{' '}
             {identificada
-              ? 'Neste modo esse identificador fica no teu dispositivo e liga as tuas visitas.'
-              : 'Esse identificador liga as páginas de uma mesma visita e vive só na memória da página: perde-se quando a fechas ou recarregas, e não fica no teu dispositivo.'}
+              ? 'Neste modo esse identificador fica no seu dispositivo e liga as suas visitas.'
+              : 'Esse identificador liga as páginas de uma mesma visita e vive só na memória da página: perde-se quando a página se fecha ou recarrega, e não fica no seu dispositivo.'}
           </p>
         </>
       ) : (
         <p>Nada: este sítio não tem a medição ligada.</p>
       )}
 
-      <h2>O teu endereço IP</h2>
+      <h2>O endereço IP</h2>
       <p>
         {identificada
           ? 'Neste modo, o endereço IP vai com as medições. '
@@ -131,28 +131,30 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
 
       <h2>O que não se regista</h2>
       <ul>
-        <li>o teu nome, o teu email, o teu telefone — nunca são pedidos;</li>
+        <li>o nome, o email, o telefone — nunca são pedidos;</li>
         {/* DIZIA «O SÍTIO NÃO A PEDE AO NAVEGADOR», e pede: o botão da
-            localização do mapa, o «Perto de ti» e o «A minha localização» das
+            localização do mapa, o «Aqui perto» e o «A minha localização» das
             direções perguntam-na, cada um quando se carrega nele. O que a
             página tem de dizer é para que serve e para onde vai. */}
         <li>
-          a tua localização. Só é pedida ao navegador quando carregas{' '}
-          {comMapa ? 'no botão da localização do mapa, em «Perto de ti»' : 'em «Perto de ti»'} ou em
-          «A minha localização», e serve para {comMapa ? 'te pôr no mapa, ' : ''}encontrar as
+          a localização. Só é pedida ao navegador quando se carrega{' '}
+          {comMapa
+            ? 'no botão da localização do mapa, em «Paragens perto de mim»'
+            : 'em «Paragens perto de mim»'}{' '}
+          ou em «A minha localização», e serve para {comMapa ? 'a pôr no mapa, ' : ''}encontrar as
           paragens mais perto ou partir dali.{' '}
           {comMotor
-            ? 'Para calcular uma viagem que parta de onde estás, a coordenada vai no pedido ao motor de viagens deste sítio; nas medições, essa partida conta só como «A minha localização»;'
-            : 'A coordenada fica no teu navegador, e nas medições essa partida conta só como «A minha localização»;'}
+            ? 'Para calcular uma viagem que parta de onde está, a coordenada vai no pedido ao motor de viagens deste sítio; nas medições, essa partida conta só como «A minha localização»;'
+            : 'A coordenada fica no seu navegador, e nas medições essa partida conta só como «A minha localização»;'}
         </li>
         <li>
-          o que escreves enquanto escreves — só a paragem que acabas por escolher, que é um nome
-          público do horário da operadora;
+          o que se escreve enquanto se escreve — só a paragem que se acaba por escolher, que é um
+          nome público do horário da operadora;
         </li>
         <li>
           {identificada
             ? 'nada mais do que o acima.'
-            : 'nada que permita reconhecer-te numa visita seguinte.'}
+            : 'nada que permita reconhecer alguém numa visita seguinte.'}
         </li>
       </ul>
 
@@ -170,20 +172,15 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
         {emailDePrivacidade ? (
           <>
             {' '}
-            Para questões de privacidade, escreve para{' '}
+            Para questões de privacidade, escreva para{' '}
             <a href={`mailto:${emailDePrivacidade}`}>{emailDePrivacidade}</a>.
           </>
         ) : null}
       </p>
 
-      <DireitosDePrivacidade
-        voz="tu"
-        mede={mede}
-        identificada={identificada}
-        email={emailDePrivacidade}
-      />
+      <DireitosDePrivacidade mede={mede} identificada={identificada} email={emailDePrivacidade} />
 
-      <h2>Se quiseres saber mais</h2>
+      <h2>Para saber mais</h2>
       <p>
         A declaração de acessibilidade está em{' '}
         <Link href={url(rid, '/acessibilidade/')}>Acessibilidade</Link>.

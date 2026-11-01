@@ -66,8 +66,9 @@ export default async function Pessoas({ searchParams }: Props) {
     <>
       <h1>Pessoas</h1>
       <p className="entrada">
-        Quem entra no painel, além de ti, com o seu email e a sua palavra-passe. Cada pessoa vê só
-        as regiões onde tem um papel, e a auditoria escreve o nome dela em tudo o que fizer.
+        Quem entra no painel, além de quem o gere, com o seu email e a sua palavra-passe. Cada
+        pessoa vê só as regiões onde tem um papel, e a auditoria escreve o nome dela em tudo o que
+        fizer.
       </p>
 
       <Aviso texto={aviso} />
@@ -80,7 +81,7 @@ export default async function Pessoas({ searchParams }: Props) {
       <section aria-labelledby="quem" className="cartao">
         <h2 id="quem">Quem já tem conta</h2>
         {pessoas.length === 0 ? (
-          <p className="secundario-texto">Ninguém, por enquanto: só tu entras.</p>
+          <p className="secundario-texto">Ninguém, por enquanto: só entra quem gere o painel.</p>
         ) : (
           <ul className="lista-simples pessoas">
             {pessoas.map((p) => {
@@ -155,7 +156,7 @@ export default async function Pessoas({ searchParams }: Props) {
                         <p>
                           {p.nome} deixa de poder entrar já no próximo clique, e as ligações por
                           usar deixam de servir. Não se apaga nada: o nome fica em tudo o que fez,
-                          na auditoria, e podes voltar a ativá-la.
+                          na auditoria, e pode voltar a ativá-la.
                         </p>
                         <form action={ativarOuDesativarPessoa}>
                           <input type="hidden" name="pessoa" value={p.id} />

@@ -130,7 +130,7 @@ export const sessaoAtual = cache(async (): Promise<Portao> => {
 
 /** O erro de quem não pode — a mesma frase em todas as ações. */
 export class SemPermissao extends Error {
-  constructor(mensagem = 'não tens permissão para isto') {
+  constructor(mensagem = 'não tem permissão para isto') {
     super(mensagem);
     this.name = 'SemPermissao';
   }
@@ -162,7 +162,7 @@ export async function exigirDono(): Promise<Dentro> {
 export async function exigirPapel(regiao: string, minimo: Papel): Promise<Dentro> {
   const dentro = await exigirSessao();
   if (!pode(dentro, regiao, minimo)) {
-    throw new SemPermissao('não tens permissão para isto nesta região');
+    throw new SemPermissao('não tem permissão para isto nesta região');
   }
   return dentro;
 }

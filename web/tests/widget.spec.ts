@@ -44,12 +44,12 @@ test('a caixa das partidas é só a caixa, acessível, e não guarda nada', asyn
   expect(await context.cookies()).toEqual([]);
 });
 
-test('«Para onde vais?» é um formulário que abre o planeador da região', async ({ page }) => {
+test('«Para onde quer ir?» é um formulário que abre o planeador da região', async ({ page }) => {
   await page.goto(`${PROVA}/widget/viagem/`);
   const formulario = page.locator('form.caixa-da-viagem');
   await expect(formulario).toHaveAttribute('action', '/viagem/');
   await expect(formulario).toHaveAttribute('target', '_blank');
-  await expect(page.getByRole('textbox', { name: 'Para onde vais?' })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Para onde quer ir?' })).toBeVisible();
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(axe.violations).toEqual([]);
 

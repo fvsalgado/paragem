@@ -140,7 +140,7 @@ export default async function Estacao({
             <p>
               {ficha
                 ? 'Nos horários carregados, nenhum comboio parte desta estação.'
-                : 'As horas dos comboios desta estação ainda não estão nesta página — o planeador já as usa: procura a viagem em «Como chegar».'}
+                : 'As horas dos comboios desta estação ainda não estão nesta página — o planeador já as usa: procure a viagem em «Como chegar».'}
             </p>
           </>
         )}

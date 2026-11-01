@@ -97,8 +97,7 @@ export default function ProximasPartidas({
               a frase que diz porquê. */}
           <style>{'.fantasma-das-partidas{display:none}'}</style>
           <p>
-            O que passa a seguir calcula-se com a hora do teu aparelho, e isso precisa de
-            JavaScript.
+            O que passa a seguir calcula-se com a hora do aparelho, e isso precisa de JavaScript.
           </p>
         </noscript>
       </div>

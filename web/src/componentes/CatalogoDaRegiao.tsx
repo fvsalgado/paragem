@@ -42,7 +42,7 @@ import { fraseDosOperadores, lista, plural } from '@/lib/prosa';
  * não tem mosaicos abria num ecrã de mapa sem mapa — uma caixa cinzenta a
  * dizer que faltava o recorte do OpenStreetMap, e era o primeiro ecrã das
  * demonstrações (P1-040, P2-041, P4-001). Sem mapa, o início é isto, com a
- * pergunta à cabeça: a procura, «Para onde vais?» com o planeador ali mesmo,
+ * pergunta à cabeça: a procura, «Para onde quer ir?» com o planeador ali mesmo,
  * e o «Perto de ti». No dia em que a região tiver mosaicos, o início volta a
  * ser o mapa sozinho — quem decide é o inventário do que se publicou.
  */
@@ -97,8 +97,8 @@ export default async function CatalogoDaRegiao({
         <>
           <h1>Transportes {r.de}</h1>
           <p>
-            {oQueHa.length ? `${lista(oQueHa)}, ` : ''}e os horários de cada uma. Escreve de onde
-            partes e para onde vais, ou procura uma paragem.
+            {oQueHa.length ? `${lista(oQueHa)}, ` : ''}e os horários de cada uma. Escreva de onde
+            parte e para onde vai, ou procure uma paragem.
           </p>
           {dosOperadores && oQueHa.length > 0 && <p className="secundario">{dosOperadores}</p>}
           <MarcaDeDados regiao={rid} detalhe />
@@ -111,7 +111,7 @@ export default async function CatalogoDaRegiao({
           </section>
 
           <section aria-labelledby="planear">
-            <h2 id="planear">Para onde vais?</h2>
+            <h2 id="planear">Para onde quer ir?</h2>
             <DireccoesDaPagina
               regiao={rid}
               caixa={r.caixa}
@@ -151,7 +151,7 @@ export default async function CatalogoDaRegiao({
               das paragens e do título da página. Era «Planear uma viagem» — um
               terceiro nome para a mesma página. */}
           <section aria-labelledby="planear">
-            <h2 id="planear">Para onde vais?</h2>
+            <h2 id="planear">Para onde quer ir?</h2>
             <p>
               <Link href={url(rid, '/viagem/')}>Como chegar</Link> — de uma paragem a outra, com
               transbordos.

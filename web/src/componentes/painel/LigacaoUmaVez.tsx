@@ -31,9 +31,9 @@ export default function LigacaoUmaVez({
   return (
     <div className="faixa ligacao-uma-vez" role="status">
       <p>
-        <strong>A ligação para {nome} está pronta.</strong> Envia-a para {email} pelo meio que
-        costumas usar com esta pessoa: serve uma vez, até {ate}. Depois de saíres desta página, não
-        a voltas a ver — se se perder, gera-se outra.
+        <strong>A ligação para {nome} está pronta.</strong> Envie-a para {email} pelo meio que
+        costuma usar com esta pessoa: serve uma vez, até {ate}. Depois de sair desta página, não a
+        volta a ver — se se perder, gera-se outra.
       </p>
       <label htmlFor={id}>A ligação</label>
       <div className="linha-de-campos">

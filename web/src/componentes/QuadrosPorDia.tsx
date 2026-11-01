@@ -117,8 +117,8 @@ export default function QuadrosPorDia({
       )}
       <p className="secundario">
         {quadros.length === 1
-          ? 'Toca no quadro para o abrir.'
-          : `Um quadro por tipo de dia${algumHoje ? '; os que valem hoje estão abertos e marcados' : ''}. Toca num para o abrir.`}
+          ? 'Toque no quadro para o abrir.'
+          : `Um quadro por tipo de dia${algumHoje ? '; os que valem hoje estão abertos e marcados' : ''}. Toque num para o abrir.`}
       </p>
       {quadros.map((q) => {
         const vale = valeHoje(q);

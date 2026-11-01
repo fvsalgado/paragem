@@ -6,8 +6,8 @@
  * de prova — o que se mostra a quem decide — e o de qualquer região real no
  * dia em que os mosaicos ainda não estão publicados.
  *
- * Agora abre no que serve sem mapa: a procura, «Para onde vais?» com o
- * planeador ali mesmo, e o «Perto de ti». A região escolhe-se pela
+ * Agora abre no que serve sem mapa: a procura, «Para onde quer ir?» com o
+ * planeador ali mesmo, e o «Aqui perto». A região escolhe-se pela
  * PROPRIEDADE — uma que esta corrida sirva sem mosaicos —, e não pelo nome.
  */
 import { test, expect } from '@playwright/test';
@@ -28,7 +28,7 @@ test('abre na procura e no planeador, e não numa caixa cinzenta', async ({ page
   await expect(page.getByRole('combobox', { name: 'Procurar' })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'De', exact: true })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Para', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Perto de ti' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Aqui perto' })).toBeVisible();
   // O que não pode voltar: a caixa vazia, e o jargão de quem constrói.
   await expect(page.locator('.mapa-caixa, canvas')).toHaveCount(0);
   await expect(page.getByText(/recorte do OpenStreetMap/)).toHaveCount(0);

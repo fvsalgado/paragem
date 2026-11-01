@@ -48,7 +48,7 @@ async function AsMinhasRegioes({ dentro, aviso }: { dentro: Dentro; aviso?: stri
       <Aviso texto={aviso} />
       {regioes.length === 0 ? (
         <p>
-          Ainda não tens nenhuma região atribuída. Quem gere o painel dá-te o papel numa região, e
+          Ainda não tem nenhuma região atribuída. Quem gere o painel dá-lhe o papel numa região, e
           ela aparece aqui no clique seguinte.
         </p>
       ) : (

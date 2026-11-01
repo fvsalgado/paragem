@@ -134,7 +134,7 @@ export default function PrecosDeExpresso({
         {r && !r.falhou && r.viagens.length === 0 && (
           <p className="secundario">
             O operador não mostra viagens {quando} entre {nomeDaParagem} e {nomeDoDestino}.
-            Experimenta outro dia.
+            Experimente outro dia.
           </p>
         )}
 

@@ -758,7 +758,7 @@ export default function Direccoes({
             // vazios, distinguidos só por um ponto e um alfinete — e o
             // alfinete não diz qual é a partida. A sugestão dá nome à caixa
             // sem lhe roubar altura, que é o que o cartão do mapa não tem.
-            sugestao="De onde partes"
+            sugestao="De onde parte"
             pontos={osPontos}
             aoTentarDeNovo={aoTentarOsPontos}
             valor={de}
@@ -779,7 +779,7 @@ export default function Direccoes({
             className="sem-rotulo"
             regiao={regiao}
             etiqueta="Para"
-            sugestao="Para onde vais"
+            sugestao="Para onde vai"
             pontos={osPontos}
             aoTentarDeNovo={aoTentarOsPontos}
             valor={para}
@@ -799,9 +799,9 @@ export default function Direccoes({
           <p className="secundario aviso-localizacao">
             {localizacao === 'a-perguntar' && 'A localizar…'}
             {localizacao === 'recusada' &&
-              'Sem acesso à localização. Escreve o sítio de onde partes — funciona na mesma.'}
+              'Sem acesso à localização. Escreva o sítio de onde parte — funciona na mesma.'}
             {localizacao === 'sem' &&
-              'Este navegador não dá a localização. Escreve o sítio de onde partes.'}
+              'Este navegador não dá a localização. Escreva o sítio de onde parte.'}
           </p>
         )}
       </div>
@@ -1008,7 +1008,7 @@ export default function Direccoes({
               uma em vez de serem despejadas todas de uma vez (P3-017). */}
           <div aria-live="polite" aria-busy={estado.tipo === 'a-procurar'}>
             {estado.tipo === 'parado' && !problema && (!de || !para) && (
-              <p className="secundario">Escolhe de onde partes e para onde vais.</p>
+              <p className="secundario">Escolha de onde parte e para onde vai.</p>
             )}
             {estado.tipo === 'a-procurar' && !problema && (
               <p className="a-procurar">A procurar viagens…</p>
@@ -1020,7 +1020,7 @@ export default function Direccoes({
               <div className="faixa alerta">
                 <h3>Não foi possível descarregar os horários</h3>
                 <p>
-                  Pode ser da ligação à Internet. Não quer dizer que não haja viagem: tenta de novo
+                  Pode ser da ligação à Internet. Não quer dizer que não haja viagem: tente de novo
                   daqui a pouco.
                 </p>
                 <p>
@@ -1034,7 +1034,7 @@ export default function Direccoes({
             {(problema === 'motor' || problema === 'outro') && (
               <div className="faixa alerta">
                 <h3>O planeador não respondeu</h3>
-                <p>Tenta daqui a pouco. Os horários de cada paragem continuam a funcionar.</p>
+                <p>Tente daqui a pouco. Os horários de cada paragem continuam a funcionar.</p>
                 <AsDuasParagens de={de} para={para} />
                 <p>
                   <button type="button" className="botao" onClick={tentarDeNovo}>
@@ -1052,7 +1052,7 @@ export default function Direccoes({
                   <h3>Não temos os horários desse dia</h3>
                   <p>
                     Os horários carregados vão de {dataCompleta(periodo!.inicio)} a{' '}
-                    {dataCompleta(periodo!.fim)}. Escolhe um dia nesse período.
+                    {dataCompleta(periodo!.fim)}. Escolha um dia nesse período.
                   </p>
                 </div>
               ) : estado.data < dataDoCampo(new Date()) ? (
@@ -1569,7 +1569,7 @@ function DiaPassado({
   return (
     <div className="faixa">
       <h3>Esse dia já passou</h3>
-      <p>Escolhe um dia a partir de hoje.</p>
+      <p>Escolha um dia a partir de hoje.</p>
       {(!fim || k <= fim) && (
         <p>
           <button type="button" className="botao" onClick={() => aoEscolher(comHifens(k))}>

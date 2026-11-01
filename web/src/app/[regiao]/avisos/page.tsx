@@ -60,8 +60,8 @@ export default async function Avisos({ params }: { params: Promise<{ regiao: str
         <div className="faixa alerta">
           <p>
             <strong>Não foi possível ler os avisos.</strong> Isto não quer dizer que não haja
-            nenhum: quer dizer que não conseguimos perguntar. Tenta daqui a pouco; entretanto,
-            confirma com a autoridade de transportes antes de contar com o serviço.
+            nenhum: quer dizer que não conseguimos perguntar. Tente daqui a pouco; entretanto,
+            confirme com a autoridade de transportes antes de contar com o serviço.
           </p>
         </div>
       ) : as.length === 0 ? (

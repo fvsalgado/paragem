@@ -2,10 +2,10 @@ import type { Metadata } from 'next';
 import { exigirRegiao } from '@/lib/dados';
 import { nomeDaRede } from '@/lib/prosa';
 
-export const metadata: Metadata = { title: 'Para onde vais?' };
+export const metadata: Metadata = { title: 'Para onde quer ir?' };
 
 /**
- * «Para onde vais?», numa caixa para o sítio de uma câmara (P4-007): um campo
+ * «Para onde quer ir?», numa caixa para o sítio de uma câmara (P4-007): um campo
  * e um botão, que abrem o planeador da região noutro separador com o destino
  * escrito.
  *
@@ -20,7 +20,7 @@ export default async function CaixaDaViagem({ params }: { params: Promise<{ regi
     <section className="caixa" aria-labelledby="caixa-titulo">
       <form action="/viagem/" method="get" target="_blank" className="caixa-da-viagem">
         <h1 id="caixa-titulo" className="titulo-da-caixa">
-          <label htmlFor="para">Para onde vais?</label>
+          <label htmlFor="para">Para onde quer ir?</label>
         </h1>
         <div className="campo-e-botao">
           <input

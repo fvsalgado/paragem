@@ -260,19 +260,19 @@ export default function PertoDeTi({
   return (
     <section
       aria-labelledby={noMapa && !comLista ? undefined : idDoTitulo}
-      aria-label={noMapa && !comLista ? 'Perto de ti' : undefined}
+      aria-label={noMapa && !comLista ? 'Aqui perto' : undefined}
       className={noMapa ? 'perto-no-mapa' : undefined}
     >
       {/* No mapa o título só aparece com a lista: antes dela, o bloco é um
           botão, e um título por cima de um botão só ocupava a folha. */}
-      {(!noMapa || comLista) && <h2 id={idDoTitulo}>Perto de ti</h2>}
+      {(!noMapa || comLista) && <h2 id={idDoTitulo}>Aqui perto</h2>}
 
       {estado.tipo === 'parado' && (
         <>
           {!noMapa && (
             <p>
-              As paragens mais próximas e o que passa nelas a seguir. Só se souber onde estás — e
-              isso és tu que decides.
+              As paragens mais próximas e o que passa nelas a seguir. Só com a sua localização, e só
+              se a quiser dar.
             </p>
           )}
           <button
@@ -287,23 +287,23 @@ export default function PertoDeTi({
 
       {/* A região viva diz o que aconteceu a quem não vê a lista aparecer. */}
       <div aria-live="polite" aria-busy={estado.tipo === 'a-perguntar'}>
-        {estado.tipo === 'a-perguntar' && <p>À espera da tua localização…</p>}
+        {estado.tipo === 'a-perguntar' && <p>À espera da localização…</p>}
 
         {estado.tipo === 'recusado' && (
           <p>
-            Sem a localização não dá para saber o que está perto — e está tudo bem. Procura pelo{' '}
+            Sem a localização não dá para saber o que está perto — e está tudo bem. Procure pelo{' '}
             nome da paragem ou pelo concelho, que dá ao mesmo sítio.
           </p>
         )}
 
         {estado.tipo === 'indisponivel' && (
-          <p>Este navegador não sabe dizer onde estás. Procura pelo nome da paragem.</p>
+          <p>Este navegador não sabe dar a localização. Procure pelo nome da paragem.</p>
         )}
 
         {estado.tipo === 'falhou' && (
           <p>
-            Não foi possível obter a tua localização ({estado.razao}). Tenta outra vez ou procura
-            pelo nome.
+            Não foi possível obter a localização ({estado.razao}). Tente outra vez ou procure pelo
+            nome.
           </p>
         )}
 

@@ -66,7 +66,7 @@ export default async function Tarifario({ params }: { params: Promise<{ regiao: 
                 : `${t.por_confirmar} destes preços ainda não foram confirmados`}{' '}
               na fonte.
             </strong>{' '}
-            Estão marcados abaixo. Confirma antes de contar com eles.
+            Estão marcados abaixo. Confirme antes de contar com eles.
           </p>
         </div>
       )}
@@ -90,7 +90,7 @@ export default async function Tarifario({ params }: { params: Promise<{ regiao: 
                 <dl className="qual-titulo">
                   {a.aCadaUso.length > 0 && (
                     <>
-                      <dt>Pagar só quando viajas</dt>
+                      <dt>Pagar só quando se viaja</dt>
                       {a.aCadaUso.map((x) => (
                         <dd key={x.id}>
                           <NomeEPreco t={x} /> <Nota t={x} />

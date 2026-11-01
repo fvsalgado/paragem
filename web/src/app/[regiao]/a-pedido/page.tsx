@@ -140,7 +140,7 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
           terra?». Escreve-se o nome da aldeia e a resposta diz qual circuito
           lá passa — em vez de 24 ecrãs de zonas com nomes de contrato. */}
       <section aria-labelledby="procurar">
-        <h2 id="procurar">Há na tua terra?</h2>
+        <h2 id="procurar">Há na sua terra?</h2>
         <ProcurarTerra
           indice={indiceDasTerras(d, (c) => url(rid, c))}
           telefone={v.telefone}
@@ -151,7 +151,7 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
       <section aria-labelledby="zonas">
         <h2 id="zonas">As zonas</h2>
         <p className="secundario">
-          Toca numa zona para ver os circuitos dela e o horário de cada um.
+          Toque numa zona para ver os circuitos dela e o horário de cada um.
         </p>
 
         {/* CADA ZONA FECHADA, com os circuitos no resumo. Abertas, eram 24

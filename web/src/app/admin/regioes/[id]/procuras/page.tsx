@@ -91,7 +91,7 @@ export default async function ProcurasSemResposta({ params }: Props) {
           <p>
             <strong>Não foi possível ler a medição agora</strong> ({relatorio.mensagem}). Isto não
             quer dizer que não haja procuras sem resposta: quer dizer que não se conseguiu
-            perguntar. Tenta daqui a pouco.
+            perguntar. Tente daqui a pouco.
           </p>
         </div>
       ) : (

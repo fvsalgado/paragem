@@ -67,7 +67,7 @@ export default function ConvidarPessoa({ regioes }: { regioes: { id: string; nom
         />
         <p id="convite-email-ajuda" className="secundario-texto">
           É com ele que a pessoa entra. Não sai correio nenhum daqui: a ligação para escolher a
-          palavra-passe aparece nesta página, e és tu que a envias.
+          palavra-passe aparece nesta página, e é daqui que se envia.
         </p>
         <fieldset>
           <legend>Papel em cada região</legend>

@@ -106,8 +106,8 @@ export default async function HorarioAPedido({ params }: { params: Promise<Param
 
       <h2>{h.quadros.length === 1 ? 'O horário' : 'Os circuitos'}</h2>
       <p className="secundario">
-        {h.quadros.length === 1 ? 'Toca no quadro' : 'Toca num circuito'} para ver as horas, paragem
-        a paragem.
+        {h.quadros.length === 1 ? 'Toque no quadro' : 'Toque num circuito'} para ver as horas,
+        paragem a paragem.
       </p>
       {h.quadros.map((q, iq) => (
         <QuadroDeHorario key={iq} quadro={q} titulo={nomeDoSistema(h.nome)} id={ids[iq]} />

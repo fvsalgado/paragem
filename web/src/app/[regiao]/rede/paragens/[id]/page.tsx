@@ -191,7 +191,7 @@ export default async function Paragem({
             <p>
               <strong>Não se sabe em que dias este serviço circula.</strong> O calendário de
               funcionamento da operadora ainda não foi transcrito, e sem ele estas horas existem mas
-              não têm dia. Confirma com a operadora antes de contar com elas.
+              não têm dia. Confirme com a operadora antes de contar com elas.
             </p>
           </div>
         )}
