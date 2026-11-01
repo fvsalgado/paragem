@@ -108,6 +108,10 @@ function quadrosDoSentido(s: Sentido, titulo: string): QuadroDoDia[] {
       .map((p, i) => ({ ...p, i }))
       .filter(({ i }) => viagens.some((v) => v.horas[i]));
     const comEstimadas = viagens.some((v) => v.estimadas.length > 0);
+    // ONDE A VIAGEM ESPERA, as duas horas (auditoria de 1/11/2026, #120): o
+    // quadro dizia só a partida, e o planeador, para a mesma viagem, dizia a
+    // chegada — dez minutos antes. As duas estavam certas.
+    const comChegadas = viagens.some((v) => Object.keys(v.chegadas ?? {}).length > 0);
     return {
       chave: dia,
       nome: dia,
@@ -152,12 +156,20 @@ function quadrosDoSentido(s: Sentido, titulo: string): QuadroDoDia[] {
                       }
                       const { texto, diaSeguinte } = horaLegivel(hora);
                       const estimada = v.estimadas.includes(i);
+                      const chegada = v.chegadas?.[String(i)];
                       return (
                         <td key={j} className={estimada ? 'estimada' : undefined}>
+                          {chegada && <span className="so-para-leitores">parte às </span>}
                           {estimada && <span className="so-para-leitores">cerca das </span>}
                           {texto}
                           {diaSeguinte && (
                             <span className="so-para-leitores"> do dia seguinte</span>
+                          )}
+                          {chegada && (
+                            <span className="chegada-no-quadro">
+                              <span className="so-para-leitores">, </span>chega{' '}
+                              {horaLegivel(chegada).texto}
+                            </span>
                           )}
                         </td>
                       );
@@ -170,6 +182,12 @@ function quadrosDoSentido(s: Sentido, titulo: string): QuadroDoDia[] {
           {comEstimadas && (
             <p className="nota-do-quadro">
               <em>Em itálico</em>: hora estimada por nós entre duas horas do horário publicado.
+            </p>
+          )}
+          {comChegadas && (
+            <p className="nota-do-quadro">
+              As horas são de partida. Onde o autocarro espera na paragem, a hora de chegada vem por
+              baixo, em pequeno.
             </p>
           )}
         </>

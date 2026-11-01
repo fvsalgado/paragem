@@ -1567,6 +1567,14 @@ nav.sentidos a {
 .quadro-da-linha td.nao-passa {
   color: var(--texto-secundario);
 }
+/* A chegada onde a viagem espera, por baixo da partida (#120). */
+.quadro-da-linha .chegada-no-quadro {
+  display: block;
+  font-size: 0.75rem;
+  font-style: normal;
+  color: var(--texto-secundario);
+  white-space: nowrap;
+}
 .nota-do-quadro {
   margin: var(--espaco-1) var(--espaco-3) 0;
   font-size: var(--letra-pequena);

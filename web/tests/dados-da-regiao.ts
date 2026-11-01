@@ -236,6 +236,33 @@ export function linhaComMaisViagens(regiao = REGIAO): Linha {
   return [...todas].sort((a, b) => b.viagens - a.viagens || a.id.localeCompare(b.id))[0];
 }
 
+/**
+ * Uma viagem que ESPERA numa paragem do quadro — chega a uma hora e parte a
+ * outra —, e as duas horas. É o caso em que a página da linha e o planeador
+ * pareciam desencontrar-se (#120). `null` quando nenhuma linha tem uma.
+ */
+export function umaViagemComEspera(
+  regiao = REGIAO,
+): { linha: string; partida: string; chegada: string } | null {
+  type Q = { viagens: { horas: string[]; chegadas?: Record<string, string> }[] };
+  for (const l of [...linhas(regiao)].sort((a, b) => a.id.localeCompare(b.id))) {
+    const detalhe = lerDe<{ sentidos?: { quadro?: Q }[] }>(
+      regiao,
+      'sitio',
+      'linhas',
+      `${l.id}.json`,
+    );
+    for (const s of detalhe?.sentidos ?? []) {
+      for (const v of s.quadro?.viagens ?? []) {
+        const [i, chegada] = Object.entries(v.chegadas ?? {})[0] ?? [];
+        if (i !== undefined && chegada)
+          return { linha: l.id, partida: v.horas[Number(i)], chegada };
+      }
+    }
+  }
+  return null;
+}
+
 /** O concelho com mais paragens. */
 export function concelhoComMaisParagens(regiao = REGIAO): Concelho {
   const todos = concelhos(regiao);

@@ -11,7 +11,7 @@ import { test, expect } from '@playwright/test';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { BUILD, REGIAO } from './anfitrioes';
-import { fusoDaRegiao, linhaComMaisViagens, linhas } from './dados-da-regiao';
+import { fusoDaRegiao, linhaComMaisViagens, linhas, umaViagemComEspera } from './dados-da-regiao';
 
 /** A linha com mais viagens entre as que têm dois sentidos, ou nenhuma. */
 function linhaDeDoisSentidos(): { id: string } | null {
@@ -59,6 +59,21 @@ test('o horário tem as horas de cada viagem, por tipo de dia', async ({ page })
   }
   const horas = primeiro.locator('tbody td');
   await expect(horas.filter({ hasText: /^(cerca das )?\d{2}:\d{2}/ }).first()).toBeVisible();
+});
+
+test('onde a viagem espera, o quadro diz a partida e, por baixo, a chegada', async ({ page }) => {
+  // A linha dizia só a partida, e o planeador, para a mesma viagem, a chegada
+  // dez minutos antes (#120). As duas certas; agora o quadro diz as duas.
+  const espera = umaViagemComEspera();
+  test.skip(!espera, 'nenhuma viagem desta região espera numa paragem do quadro');
+  await page.goto(`/rede/linhas/${espera!.linha}/`);
+  await page.evaluate(() => document.querySelectorAll('details').forEach((d) => (d.open = true)));
+  const celula = page.locator('td', { hasText: `chega ${espera!.chegada}` }).first();
+  await expect(celula).toBeAttached();
+  await expect(celula).toContainText(espera!.partida);
+  await expect(
+    page.locator('.nota-do-quadro', { hasText: 'As horas são de partida' }).first(),
+  ).toBeAttached();
 });
 
 test('o percurso liga a cada paragem, e as pontas destacam-se', async ({ page }) => {

@@ -902,6 +902,8 @@ class Sitio:
                     st["stop_id"],
                     (st.get("departure_time") or st.get("arrival_time") or "").strip()[:5],
                     st.get("timepoint", "1") != "0",
+                    # A chegada, quando a viagem espera aqui (`quadros.py`).
+                    chegada=(st.get("arrival_time") or "").strip()[:5],
                 )
                 for st in paradas
             ]

@@ -620,6 +620,12 @@ export type ViagemDoQuadro = {
   horas: string[];
   /** Os índices das horas estimadas por nós (`timepoint=0`). */
   estimadas: number[];
+  /**
+   * A hora de CHEGADA onde a viagem espera na paragem, pelo índice — as
+   * `horas` são as de partida (`quadros.py`). Ausente quando não espera em
+   * nenhuma, e em dados de antes disto.
+   */
+  chegadas?: Record<string, string>;
 };
 
 export type Sentido = {
