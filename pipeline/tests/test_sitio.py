@@ -1220,3 +1220,19 @@ def test_a_referencia_confere_os_numeros_do_sitio_e_salta_os_de_fonte_viva(tmp_p
     vazio = Resultado("Números")
     _numeros_do_sitio(vazio, tmp_path, "outra", {"paragens": {"valor": 1}})
     assert not vazio.passou and not vazio.falhou
+
+
+def test_nenhum_nome_de_linha_sai_com_espacos_a_mais(raiz):
+    """Um registo escrevia «Pedra Alta  - Ribeira», com dois espaços, e o título lia-se com um buraco."""
+    from paragem.regiao import carregar_todas
+
+    vistas = 0
+    for r in carregar_todas(raiz):
+        f = raiz / "build" / r.id / "sitio" / "linhas.json"
+        if not f.exists():
+            continue
+        for x in json.loads(f.read_text(encoding="utf-8")):
+            vistas += 1
+            assert x["nome"] == " ".join(x["nome"].split()), f"{r.id}: «{x['nome']}»"
+    if not vistas:
+        pytest.skip("nenhum sítio construído nesta raiz")

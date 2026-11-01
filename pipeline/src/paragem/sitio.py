@@ -956,7 +956,11 @@ class Sitio:
             entrada = {
                 "id": rid,
                 "codigo": codigo,
-                "nome": r.get("route_long_name") or "",
+                # Os espaços a mais saem: um registo de serviços escrevia o
+                # nome de uma carreira com dois espaços seguidos, e o título da
+                # linha lia-se com um buraco.
+                # Só os espaços — o nome fica o que o feed diz.
+                "nome": " ".join((r.get("route_long_name") or "").split()),
                 "ordem": _ordem_de_linha(codigo),
                 # A cor vem do feed, e o §8 manda garantir contraste. Quem
                 # desenha decide o que fazer com uma cor que não contraste —
