@@ -150,7 +150,7 @@ def _cmd_netex(args: argparse.Namespace) -> int:
             resumo = netex.escrever(
                 feed,
                 alvo,
-                netex.identidade_da_regiao(regiao, feed),
+                netex.identidade_da_regiao(regiao, feed, s),
                 hoje=netex.hoje_da_construcao(),
             )
             print(f"   {alvo.relative_to(raiz)} · {resumo.bytes_xml / 1e6:.1f} MB de XML")

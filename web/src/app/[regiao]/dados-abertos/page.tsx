@@ -43,7 +43,7 @@ const GRUPOS: { id: string; titulo: string; texto: string }[] = [
     id: 'netex',
     titulo: 'Horários em NeTEx',
     texto:
-      'A mesma rede no formato europeu que o regulamento indica para os Pontos de Acesso Nacionais, no perfil de informação ao passageiro (EPIP). Sai do GTFS de cima e diz o mesmo, sem os traçados.',
+      'Os mesmos horários no formato europeu que o regulamento indica para os Pontos de Acesso Nacionais, no perfil de informação ao passageiro (EPIP). Cada ficheiro sai do GTFS com o mesmo nome, ali em cima, e diz o mesmo, sem os traçados.',
   },
   {
     id: 'catalogos',

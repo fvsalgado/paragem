@@ -423,7 +423,7 @@ def _netex(ctx: Contexto, destino: Path, *, exigir: bool = False) -> None:
             resumo = netex.escrever(
                 feed,
                 alvo,
-                netex.identidade_da_regiao(ctx.regiao, feed),
+                netex.identidade_da_regiao(ctx.regiao, feed, s),
                 hoje=netex.hoje_da_construcao(),
             )
         except Exception as e:  # noqa: BLE001 — o NeTEx não pode parar o resto da construção

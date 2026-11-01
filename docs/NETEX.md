@@ -13,8 +13,9 @@ porquê de cada escolha. Esta página é o resumo, e o que falta.
 
 ## O que sai
 
-Para cada região com rede própria — a saída da receita com `papel: horarios` ou
-`papel: feed-proprio` —, o `pipeline build` escreve:
+Para cada rede que a região constrói — as saídas da receita com
+`papel: horarios`, `papel: feed-proprio` ou `papel: feed-proprio-flex` (o
+transporte a pedido) —, o `pipeline build` escreve:
 
 ```
 build/<regiao>/netex/<rede>.zip     um zip com um XML só, <rede>.xml
@@ -33,10 +34,10 @@ mesmas paragens, às mesmas horas, nos mesmos dias (`test_netex.py`).
 `pipeline/src/paragem/sitio.py`: obra da casa numa região de prova, «para
 consulta» na de uma autoridade de transportes. Um formato não muda o que se pode
 fazer com os dados. A atribuição que o GTFS leva no `attributions.txt` vai
-dentro do XML, no `Description` do `PublicationDelivery` — incluindo a do
-OpenStreetMap, quando lá está.
-
-**O transporte a pedido ainda não sai** (ver «O que falta»).
+dentro do XML, no `Description` do `PublicationDelivery`, e a nota da ODbL
+também, quando a receita declara que parte da saída vem do OpenStreetMap
+(`partes_odbl`): o zip leva um XML só, e a nota não fica num ficheiro ao lado
+que um Ponto de Acesso possa deitar fora.
 
 ## O perfil: EPIP
 
@@ -74,6 +75,35 @@ Três escolhas que vale a pena conhecer antes de abrir o ficheiro:
 
 A versão que o `PublicationDelivery` declara é a do esquema oficial contra o
 qual a construção valida (hoje `2.0`), e nenhuma outra.
+
+### O transporte a pedido
+
+O GTFS-Flex do transporte a pedido sai também em NeTEx, com o que o perfil tem
+para isso:
+
+- **cada circuito é uma `FlexibleLine`** do tipo `fixed` — as paragens e as
+  horas são as da brochura, e o que é flexível é só andar ou não —, e
+  `mixedFlexibleAndFixed` quando há paragens que não pedem reserva;
+- **a regra de reserva vai na linha**, em `BookingArrangements`: o telefone e o
+  endereço (`BookingContact`, `BookingUrl`), os métodos que eles permitem
+  (`callOffice`, `online`), até quando (`BookWhen` e `LatestBookingTime`, ou
+  `MinimumBookingPeriod` para as que se fazem no próprio dia) e a mensagem
+  inteira, por palavras, em `BookingNote`. O «dia **útil** anterior» não tem
+  onde ir no perfil, e fica na mensagem;
+- **cada viagem leva `FlexibleServiceProperties`** (`fixedPassingTimes`), que é
+  onde um leitor de NeTEx vê que ela não se faz se ninguém a reservar — e a
+  regra dela, se não for a da linha;
+- as paragens de um circuito **não** levam `RequestStop` uma a uma: a reserva é
+  da linha, e repeti-la em vinte paragens não dizia nada de novo.
+
+Num feed que misture linhas regulares e a pedido, as a pedido vão num segundo
+`ServiceFrame`: o perfil quer, em cada lista de linhas, só `Line` ou só
+`FlexibleLine`. Os nossos não misturam — são dois GTFS —, mas um importado pode.
+
+O que **não** sai é o a pedido por zonas — `locations.geojson`,
+`location_groups.txt`, janelas de recolha em vez de horas. O NeTEx tem onde o
+dizer (`FlexibleArea`), e está por escrever; até lá, essas viagens ficam de fora
+e o relatório conta-as.
 
 ## Como se valida
 
@@ -125,8 +155,9 @@ de um minuto a validar. Compila-se uma vez por processo.
 Além do que o CI confere em cada corrida, o mesmo ficheiro foi validado nas três
 versões do esquema oficial que interessam — **1.2.3, 1.3.2 e 2.0.0** — e no do
 perfil, para as duas regiões de prova, para a de demonstração e para uma região
-real (mais de cem linhas e perto de mil viagens: 17 MB de XML, um a dois MB em
-zip). Passou nas quatro, porque só usa o que as quatro têm em comum. Se o Ponto
+real — a rede regular (mais de cem linhas e perto de mil viagens: 17 MB de XML,
+0,6 MB em zip) e o transporte a pedido dela (seis dezenas de circuitos: 8 MB de
+XML). Passou nas quatro, porque só usa o que as quatro têm em comum. Se o Ponto
 de Acesso pedir uma 1.x, muda-se a constante `OFICIAL` e a versão declarada
 segue-a.
 
@@ -185,7 +216,7 @@ O ficheiro existe e valida. Entregá-lo é outra coisa, e quase tudo o que falta
    ficheiro sai «para consulta», porque é isso que ele é: publicá-lo com licença
    aberta depende de a autoridade autorizar a reutilização (Fase 5, §9). Sem
    isso não há o que declarar.
-4. **O transporte a pedido em NeTEx.** O GTFS-Flex já sai; o NeTEx dele —
-   `FlexibleLine` com as `BookingArrangements` (a regra de reserva, o telefone,
-   a reserva online) e as zonas — está por escrever. Até lá, o relatório diz que
-   o `booking_rules.txt` não vai no NeTEx.
+4. **O transporte a pedido por zonas.** O que tem paragens e horas já sai
+   (`FlexibleLine`); o que é por zonas — `FlexibleArea`, com janelas em vez de
+   horas — está por escrever. E vale a pena perguntar ao IMT se o Ponto quer o
+   transporte a pedido num ficheiro à parte, como sai hoje, ou junto da rede.

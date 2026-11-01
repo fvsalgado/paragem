@@ -3141,9 +3141,13 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
             modo=s.modo,
             papel=s.papel,
             descricao=(
-                "a mesma rede em NeTEx, no perfil europeu de informação ao passageiro (EPIP), o "
-                "formato dos Pontos de Acesso Nacionais; validado contra o esquema oficial, e "
-                "sem os traçados, que ficam no GTFS"
+                "o mesmo transporte a pedido em NeTEx, no perfil europeu de informação ao "
+                "passageiro (EPIP): cada circuito é uma FlexibleLine, com a regra de reserva "
+                "em BookingArrangements; validado contra o esquema oficial"
+                if s.papel == "feed-proprio-flex"
+                else "a mesma rede em NeTEx, no perfil europeu de informação ao passageiro "
+                "(EPIP), o formato dos Pontos de Acesso Nacionais; validado contra o esquema "
+                "oficial, e sem os traçados, que ficam no GTFS"
             ),
             licenca_da_saida=s.licenca,
             partes_odbl=s.partes_odbl,

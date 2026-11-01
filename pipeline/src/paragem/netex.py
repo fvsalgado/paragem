@@ -33,6 +33,12 @@ paragens, as mesmas viagens e as mesmas horas — e há um teste a dizê-lo.
 Tudo isto dentro de um CompositeFrame do tipo EU_PI_NETWORK_OFFER — a rede
 inteira num ficheiro —, que é o que o perfil chama à oferta de uma rede.
 
+**O TRANSPORTE A PEDIDO** sai pelo mesmo caminho, do seu GTFS-Flex: uma linha
+com passagens que apontam para uma regra de reserva (`booking_rules.txt`) é
+uma `FlexibleLine`, com a regra em `BookingArrangements`, e cada viagem dela
+leva `FlexibleServiceProperties`. Ver `_reserva` para o que se traduz e o que
+fica só na mensagem.
+
 **A HORA ESTIMADA CONTINUA ESTIMADA.** O caderno de horários de uma operadora
 marca cerca de um terço das paragens, e as outras levam no GTFS uma hora
 estimada com `timepoint=0`. Escrevê-las aqui como horas certas era inventar uma
@@ -139,12 +145,14 @@ FORA = {
     "rider_categories.txt": "as tarifas são de outro perfil (o europeu de tarifas)",
     "networks.txt": "as redes tarifárias são de outro perfil (o europeu de tarifas)",
     "route_networks.txt": "as redes tarifárias são de outro perfil (o europeu de tarifas)",
-    "booking_rules.txt": (
-        "a regra de reserva do transporte a pedido (FlexibleLine/BookingArrangements) ainda "
-        "não está escrita"
+    "location_groups.txt": (
+        "as zonas do transporte a pedido (FlexibleArea) ainda não estão escritas; as viagens "
+        "que as usam ficam de fora, contadas"
     ),
-    "location_groups.txt": "as zonas do transporte a pedido ainda não estão escritas",
-    "locations.geojson": "as zonas do transporte a pedido ainda não estão escritas",
+    "locations.geojson": (
+        "as zonas do transporte a pedido (FlexibleArea) ainda não estão escritas; as viagens "
+        "que as usam ficam de fora, contadas"
+    ),
 }
 
 
@@ -213,6 +221,8 @@ class Resumo:
     """O que o ficheiro leva, contado à saída — e o que deixou de fora."""
 
     linhas: int = 0
+    #: Das quais a pedido (`FlexibleLine`).
+    linhas_a_pedido: int = 0
     viagens: int = 0
     paragens: int = 0
     lugares: int = 0
@@ -247,10 +257,21 @@ class Identidade:
     autoridade: dict[str, Any]
     fuso: str = "Europe/Lisbon"
     lingua: str = "pt"
+    #: Se a receita declara que parte da saída de onde isto sai vem do
+    #: OpenStreetMap (`partes_odbl`). A nota da ODbL vai então dentro do XML —
+    #: e não só num `ATRIBUICAO.txt` ao lado dele no zip, que um Ponto de
+    #: Acesso que espera um XML só pode deitar fora.
+    com_openstreetmap: bool = False
 
 
-def identidade_da_regiao(regiao: Any, feed: Gtfs) -> Identidade:
-    """A identidade de uma região, tirada do que ela declara."""
+def identidade_da_regiao(regiao: Any, feed: Gtfs, saida: Any = None) -> Identidade:
+    """A identidade de uma região, tirada do que ela declara.
+
+    O transporte a pedido não é «a rede»: é outro serviço, muitas vezes de
+    outra entidade. O nome dele vem da agência do próprio feed, quando há uma
+    só, e não do `rede.nome` da região — que chamava ao transporte a pedido o
+    nome da concessão regular.
+    """
     rede = regiao.rede or {}
     url = f"https://{regiao.dominio}/" if regiao.dominio else (rede.get("url") or "")
     agencias = list(feed.obter("agency.txt"))
@@ -258,13 +279,19 @@ def identidade_da_regiao(regiao: Any, feed: Gtfs) -> Identidade:
         (regiao.motor or {}).get("fuso") or "Europe/Lisbon"
     )
     lingua = (agencias[0].get("agency_lang") if agencias else "") or "pt"
+    nome = rede.get("nome") or regiao.nome
+    if saida is not None and saida.papel == "feed-proprio-flex":
+        nome = (agencias[0].get("agency_name") if len(agencias) == 1 else "") or (
+            "Transporte a pedido"
+        )
     return Identidade(
         codigo=regiao.id,
         url=url,
-        nome_da_rede=rede.get("nome") or regiao.nome,
+        nome_da_rede=nome,
         autoridade=dict(regiao.autoridade or {}),
         fuso=fuso,
         lingua=lingua.lower(),
+        com_openstreetmap=bool(saida is not None and getattr(saida, "partes_odbl", None)),
     )
 
 
@@ -368,10 +395,54 @@ def construir_xml(
         if not dias_de.get(t.get("service_id", "")):
             r.viagens_de_fora["sem nenhum dia de serviço"] += 1
             continue
+        if any(
+            st.get("start_pickup_drop_off_window") or st.get("end_pickup_drop_off_window")
+            for st in horas_de[tid]
+        ):
+            # O GTFS-Flex por zonas: uma janela em vez de uma hora, e uma zona
+            # em vez de uma paragem. O NeTEx tem onde o dizer (FlexibleArea),
+            # e está por escrever; até lá, a viagem não entra com horas que
+            # não tem.
+            r.viagens_de_fora["com janelas de recolha (a pedido por zonas)"] += 1
+            continue
         if any(st.get("stop_id") not in paragens for st in horas_de[tid]):
             r.viagens_de_fora["com uma paragem que o stops.txt não tem"] += 1
             continue
         viagens.append(t)
+
+    # --- a pedido: as linhas que só andam com reserva -----------------------
+    #
+    # Uma linha é A PEDIDO quando alguma passagem dela aponta para uma regra de
+    # reserva (`booking_rules.txt`) — é o que o GTFS-Flex escreve, e é o que o
+    # leitor das brochuras escreve para o transporte a pedido. Em NeTEx passa
+    # a `FlexibleLine`, com a regra em `BookingArrangements`; e cada viagem
+    # leva `FlexibleServiceProperties`, que é onde um leitor de NeTEx vai ver
+    # que aquela viagem não se faz se ninguém a reservar. A hora da brochura
+    # continua a ser a hora a que passa — `fixedPassingTimes` —, se passar.
+    regras = {
+        b["booking_rule_id"]: b for b in feed.obter("booking_rules.txt") if b.get("booking_rule_id")
+    }
+    regras_da_viagem: dict[str, Counter[str]] = {}
+    juntas: dict[str, Counter[str]] = {}
+    toda_a_pedido: dict[str, bool] = {}
+    for t in viagens:
+        c: Counter[str] = Counter()
+        sem_reserva = False
+        for st in horas_de[t["trip_id"]]:
+            daqui = [
+                st[x]
+                for x in ("pickup_booking_rule_id", "drop_off_booking_rule_id")
+                if st.get(x) in regras
+            ]
+            c.update(daqui)
+            sem_reserva = sem_reserva or not daqui
+        regras_da_viagem[t["trip_id"]] = c
+        rid = t["route_id"]
+        if c:
+            juntas.setdefault(rid, Counter()).update(c)
+        toda_a_pedido[rid] = toda_a_pedido.get(rid, True) and not sem_reserva
+    # A regra da linha é a que as passagens dela mais usam.
+    regra_da_linha = {rid: c.most_common(1)[0][0] for rid, c in juntas.items()}
 
     servicos_usados = sorted({t["service_id"] for t in viagens})
     linhas_usadas = sorted({t["route_id"] for t in viagens}, key=_ordem_natural)
@@ -401,7 +472,11 @@ def construir_xml(
     estimadas = any(
         (st.get("timepoint") or "1") == "0" for t in viagens for st in horas_de[t["trip_id"]]
     )
-    _el(raiz, "Description", _descricao(feed, identidade, estimadas=estimadas))
+    _el(
+        raiz,
+        "Description",
+        _descricao(feed, identidade, estimadas=estimadas, a_pedido=bool(regra_da_linha)),
+    )
     objetos = _el(raiz, "dataObjects")
 
     composto = _objeto(objetos, "CompositeFrame", ident("CompositeFrame", "oferta"))
@@ -543,17 +618,38 @@ def construir_xml(
         if sentido in ("0", "1"):
             _el(rt, "DirectionType", "outbound" if sentido == "0" else "inbound")
 
+    # AS LINHAS A PEDIDO NUMA LISTA À PARTE quando há das duas. O perfil quer
+    # numa lista de linhas ou só `Line` ou só `FlexibleLine` — o NeTEx inteiro
+    # aceita-as juntas —, e por isso, num feed que misture, as a pedido vão
+    # num segundo ServiceFrame do mesmo tipo. As referências valem no
+    # documento inteiro, e a rede lista-as na mesma. Os nossos feeds não
+    # misturam (a rede regular e o transporte a pedido são dois GTFS); um feed
+    # de outra proveniência pode.
     el_linhas = _el(servico, "lines")
+    el_flexiveis = el_linhas
+    if regra_da_linha and len(regra_da_linha) < len(linhas_usadas):
+        outro = _objeto(quadros, "ServiceFrame", ident("ServiceFrame", "rede-a-pedido"))
+        _tipo(outro, "rede")
+        el_flexiveis = _el(outro, "lines")
     for rid in linhas_usadas:
         x = linhas[rid]
-        li = _objeto(el_linhas, "Line", ident("Line", rid))
+        a_pedido = rid in regra_da_linha
+        li = _objeto(
+            el_flexiveis if a_pedido else el_linhas,
+            "FlexibleLine" if a_pedido else "Line",
+            ident("Line", rid),
+        )
         _el(li, "Name", x.get("route_long_name") or x.get("route_short_name") or rid)
         if x.get("route_desc"):
             _el(li, "Description", x["route_desc"])
         _el(li, "TransportMode", modo_da_linha[rid])
         if x.get("route_url"):
             _el(li, "Url", x["route_url"])
-        _el(li, "PublicCode", x.get("route_short_name") or rid)
+        # O CÓDIGO PÚBLICO É O QUE O PÚBLICO CONHECE, e não o identificador
+        # interno: um circuito a pedido sem número na brochura não ganha um
+        # aqui. O `route_id` vai no código privado, que é para isso.
+        if x.get("route_short_name"):
+            _el(li, "PublicCode", x["route_short_name"])
         _el(li, "PrivateCode", rid)
         operador = operador_de.get(x.get("agency_id", "") or "") or unica
         if operador:
@@ -565,6 +661,13 @@ def construir_xml(
                 _el(apresentacao, "Colour", cor)
             if texto:
                 _el(apresentacao, "TextColour", texto)
+        if a_pedido:
+            # `fixed`: as paragens e as horas são as da brochura, e o que é
+            # flexível é só andar ou não. Uma linha com paragens que não pedem
+            # reserva é `mixedFlexibleAndFixed`.
+            _el(li, "FlexibleLineType", "fixed" if toda_a_pedido[rid] else "mixedFlexibleAndFixed")
+            _reserva(li, regras[regra_da_linha[rid]])
+            r.linhas_a_pedido += 1
         r.linhas += 1
 
     # Os destinos: um por texto distinto, e não um por viagem.
@@ -610,7 +713,10 @@ def construir_xml(
     contador: Counter[str] = Counter()
     el_padroes = _el(servico, "journeyPatterns")
     for t in sorted(viagens, key=lambda x: (_ordem_natural(x["route_id"]), x["trip_id"])):
-        pontos = tuple(_ponto_do_padrao(st) for st in horas_de[t["trip_id"]])
+        pontos = tuple(
+            _ponto_do_padrao(st, linha_a_pedido=t["route_id"] in regra_da_linha)
+            for st in horas_de[t["trip_id"]]
+        )
         do_padrao = (
             t["route_id"],
             t.get("direction_id") or "",
@@ -678,6 +784,7 @@ def construir_xml(
     horario = _objeto(quadros, "TimetableFrame", ident("TimetableFrame", "horario"))
     _tipo(horario, "horario")
     el_viagens = _el(horario, "vehicleJourneys")
+    flexiveis: list[tuple[Any, Linha]] = []
     for t in sorted(viagens, key=lambda x: (_ordem_natural(x["route_id"]), x["trip_id"])):
         tid = t["trip_id"]
         sj = _objeto(el_viagens, "ServiceJourney", ident("ServiceJourney", tid))
@@ -693,6 +800,10 @@ def construir_xml(
         if operador:
             _ref(sj, "OperatorRef", operador)
         passagens = _el(sj, "passingTimes")
+        if t["route_id"] in regra_da_linha:
+            # Vai depois das passagens, porque é aí que o perfil o põe; o
+            # esquema escreve-se depois de as escrever (`_flexivel`).
+            flexiveis.append((sj, t))
         for ordem, st in enumerate(horas_de[tid], start=1):
             # COM IDENTIFICADOR, que a 2.0 do esquema passou a exigir e a 1.x
             # aceitava sem ele — a viagem e a ordem, como o ponto do padrão.
@@ -717,7 +828,67 @@ def construir_xml(
             r.passagens += 1
         r.viagens += 1
 
+    for sj, t in flexiveis:
+        fsp = _objeto(
+            sj, "FlexibleServiceProperties", ident("FlexibleServiceProperties", t["trip_id"])
+        )
+        _el(fsp, "FlexibleServiceType", "fixedPassingTimes")
+        # A regra só se repete na viagem quando não é a da linha: o mesmo
+        # circuito pode ter viagens com reservas diferentes.
+        propria = regras_da_viagem[t["trip_id"]].most_common(1)
+        if propria and propria[0][0] != regra_da_linha[t["route_id"]]:
+            _reserva(fsp, regras[propria[0][0]])
+
     return raiz, r
+
+
+def _reserva(pai: etree._Element, regra: Linha) -> None:
+    """Uma regra de reserva do GTFS-Flex, em `BookingArrangements` do NeTEx.
+
+    O que se traduz e o que fica só no texto:
+
+    - `booking_type=0` (na hora) → `timeOfTravelOnly`;
+    - `booking_type=1` (no próprio dia, com antecedência) → `advanceAndDayOfTravel`,
+      com a antecedência em `MinimumBookingPeriod`;
+    - `booking_type=2` (até ao dia anterior) → `untilPreviousDay` com a hora-limite
+      em `LatestBookingTime`, quando é a véspera; `advanceOnly` quando são mais
+      dias, que o perfil não sabe contar;
+    - o telefone e o endereço, em `BookingContact` e `BookingUrl`, e os métodos
+      que eles permitem em `BookingMethods`.
+
+    O «dia ÚTIL anterior» (`prior_notice_service_id`) não tem onde ir no perfil:
+    fica na mensagem (`BookingNote`), que vai sempre e diz a regra inteira por
+    palavras — que é como quem viaja a lê.
+    """
+    telefone = (regra.get("phone_number") or "").strip()
+    endereco = (regra.get("booking_url") or "").strip()
+    informacao = (regra.get("info_url") or "").strip() or endereco
+    if telefone or informacao:
+        contacto = _el(pai, "BookingContact")
+        if telefone:
+            _el(contacto, "Phone", telefone)
+        if informacao:
+            _el(contacto, "Url", informacao)
+    metodos = [m for m, ha in (("callOffice", telefone), ("online", endereco)) if ha]
+    if metodos:
+        _el(pai, "BookingMethods", " ".join(metodos))
+    tipo = (regra.get("booking_type") or "").strip()
+    dias = _int(regra.get("prior_notice_last_day"), 0)
+    if tipo == "0":
+        _el(pai, "BookWhen", "timeOfTravelOnly")
+    elif tipo == "1":
+        _el(pai, "BookWhen", "advanceAndDayOfTravel")
+    elif tipo == "2":
+        _el(pai, "BookWhen", "untilPreviousDay" if dias <= 1 else "advanceOnly")
+        hora = _hora(regra.get("prior_notice_last_time") or "")
+        if hora:
+            _el(pai, "LatestBookingTime", hora[0])
+    if tipo == "1" and _int(regra.get("prior_notice_duration_min"), 0) > 0:
+        _el(pai, "MinimumBookingPeriod", f"PT{_int(regra.get('prior_notice_duration_min'))}M")
+    if endereco:
+        _el(pai, "BookingUrl", endereco)
+    if (regra.get("message") or "").strip():
+        _el(pai, "BookingNote", regra["message"].strip())
 
 
 def _ordem_natural(codigo: str) -> tuple:
@@ -737,15 +908,21 @@ def _ordem_natural(codigo: str) -> tuple:
     return tuple(partes)
 
 
-def _ponto_do_padrao(st: Linha) -> tuple[str, bool, bool, bool, str, str]:
+def _ponto_do_padrao(
+    st: Linha, *, linha_a_pedido: bool = False
+) -> tuple[str, bool, bool, bool, str, str]:
     """O que um ponto do padrão diz: onde, se se entra, se se sai, se a hora é certa."""
     entra = st.get("pickup_type", "") or "0"
     sai = st.get("drop_off_type", "") or "0"
     # `2` (marcar com a operadora) e `3` (combinar com o motorista) são, em
     # NeTEx, uma paragem a pedido: `RequestStop`. O GTFS distingue as duas e
     # distingue a entrada da saída; o NeTEx do perfil não, e fica a mais
-    # restritiva das duas.
-    a_pedido = entra in ("2", "3") or sai in ("2", "3")
+    # restritiva das duas. NUMA LINHA A PEDIDO o `2` não se repete paragem a
+    # paragem: a reserva é da linha (`BookingArrangements`), e marcar as vinte
+    # paragens de um circuito como «a pedido» não dizia nada que a linha não
+    # diga — só o `3`, que é outra coisa (fazer sinal ao motorista).
+    pedidos = ("3",) if linha_a_pedido else ("2", "3")
+    a_pedido = entra in pedidos or sai in pedidos
     certa = (st.get("timepoint", "") or "1") != "0"
     return (
         st["stop_id"],
@@ -831,7 +1008,7 @@ def _grau(valor: str | None) -> str:
     return (valor or "").strip() or "0"
 
 
-def _descricao(feed: Gtfs, identidade: Identidade, *, estimadas: bool) -> str:
+def _descricao(feed: Gtfs, identidade: Identidade, *, estimadas: bool, a_pedido: bool) -> str:
     """Quem fez isto, de quê, e a quem se atribui — dentro do ficheiro.
 
     A atribuição que o GTFS leva no `attributions.txt` vai também aqui,
@@ -854,6 +1031,17 @@ def _descricao(feed: Gtfs, identidade: Identidade, *, estimadas: bool) -> str:
     ]
     if atribuicoes:
         partes.append("Atribuição: " + "; ".join(atribuicoes) + ".")
+    if identidade.com_openstreetmap:
+        partes.append(
+            "A parte destes dados que deriva do OpenStreetMap está sob a Open Database License "
+            "(ODbL) 1.0: © contribuidores do OpenStreetMap, "
+            "https://www.openstreetmap.org/copyright. O resto não tem licença aberta declarada."
+        )
+    if a_pedido:
+        partes.append(
+            "As linhas a pedido (FlexibleLine) só andam com reserva: a hora é a que o serviço "
+            "faz se alguém o reservar, e a regra de reserva vai em BookingArrangements."
+        )
     if estimadas:
         partes.append(
             f"Os pontos com a nota «{NOTA_DA_HORA_ESTIMADA}» têm a hora estimada, como os de "
@@ -1110,8 +1298,9 @@ def exigir_esquemas() -> bool:
 
 
 def resumo_em_texto(r: Resumo) -> str:
+    a_pedido = f" ({r.linhas_a_pedido} a pedido)" if r.linhas_a_pedido else ""
     return (
-        f"{r.linhas} linhas · {r.viagens} viagens · {r.paragens} paragens "
+        f"{r.linhas} linhas{a_pedido} · {r.viagens} viagens · {r.paragens} paragens "
         f"({r.lugares} lugares) · {r.padroes} padrões · {r.passagens} passagens · "
         f"{r.tipos_de_dia} tipos de dia em {r.dias} dias"
     )
@@ -1132,15 +1321,18 @@ def contagens(rotulo: str, r: Resumo) -> dict[str, int]:
 def feeds_a_exportar(regiao: Any) -> Iterable[Any]:
     """As saídas da receita que viram NeTEx: a rede regular da região.
 
-    O que a autoridade de transportes gere e o sítio já distribui em GTFS — e
-    nada de terceiros, pela razão do `_dados_abertos`: o feed de outra
-    entidade não se redistribui daqui, em formato nenhum. O transporte a
-    pedido (`feed-proprio-flex`) fica para quando o FlexibleLine estiver
-    escrito; até lá, a reserva que ele exige não tinha onde ir.
+    O que a autoridade de transportes gere e o sítio já distribui em GTFS — a
+    rede regular e o transporte a pedido (`feed-proprio-flex`, que sai em
+    `FlexibleLine`) — e nada de terceiros, pela razão do `_dados_abertos`: o
+    feed de outra entidade não se redistribui daqui, em formato nenhum.
     """
     for s in regiao.saidas:
-        if s.papel in ("horarios", "feed-proprio") and (s.saida or "").endswith(".zip"):
+        if s.papel in PAPEIS_PROPRIOS and (s.saida or "").endswith(".zip"):
             yield s
+
+
+#: Os papéis das saídas que viram NeTEx: as redes que a região constrói.
+PAPEIS_PROPRIOS = ("horarios", "feed-proprio", "feed-proprio-flex")
 
 
 def destino_de(construcao: Path, saida: Any) -> Path:
