@@ -224,14 +224,27 @@ try {
  * documento e o `nosniff` em cada ficheiro. A linha passou a 202,4 de 200, e a
  * paragem ficou a 214,5 de 215: sobem 5 KiB cada. A rede e o tarifário ainda
  * cabem, a 1,8 e 1,3 do teto.
+ *
+ * A 1/11/2026, O MAPA COM REDE passou-o de propósito, em dois sítios. O início
+ * passa a escrever as cidades, as vilas e as estações em negrito, e o negrito
+ * é outro tipo de letra para o mapa: mais um ficheiro de glifos (76 KiB) quando
+ * no ecrã há nomes das duas espessuras — e no Lighthouse há. A rede em si
+ * (`rede-no-mapa.json`) são 2 KiB na demonstração. O início ficou a 729,6 de
+ * 680 e sobe para 770. O código da rede, dos anéis e do toque no `Mapa.tsx`
+ * custa 3,5 KiB de JavaScript a cada página com mapa (medido na mesma
+ * máquina contra o `main` de antes dele): «como chegar» ficou a 296,5 de 295 e
+ * a 178,7 de 180 no HTML e JS, e sobem 5 KiB os dois. E o CSS dos controlos
+ * do mapa nos dois temas vai na folha de todas as páginas (0,2 KiB): a rede e
+ * o tarifário, que estavam a um KiB do teto, passaram-no por uma décima entre
+ * duas medições iguais — sobem 5 KiB, para não reprovarem ao acaso.
  */
 const ORCAMENTO = {
-  início: { htmlEJs: 520, total: 680 },
-  'a rede': { htmlEJs: 170, total: 215 },
-  'como chegar': { htmlEJs: 180, total: 295 },
+  início: { htmlEJs: 520, total: 770 },
+  'a rede': { htmlEJs: 170, total: 220 },
+  'como chegar': { htmlEJs: 185, total: 300 },
   paragem: { htmlEJs: 170, total: 220 },
   linha: { htmlEJs: 155, total: 205 },
-  tarifário: { htmlEJs: 170, total: 215 },
+  tarifário: { htmlEJs: 170, total: 220 },
 };
 
 const daDemonstracao = (r) => {
