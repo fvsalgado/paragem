@@ -26,12 +26,32 @@ dúvidas.
 
 O que passa por aqui sem decisão fica sem coordenada e **fora das viagens**.
 Não se aproxima, não se usa o centro da povoação, não se inventa.
+
+## O que a tabela manual pode dizer
+
+Uma entrada com `escolha` é uma decisão. Uma entrada SEM `escolha` e com
+`por_confirmar` é só uma pergunta: o par continua a ser decidido pelas regras,
+e a pergunta sai no relatório em vez de ficar num comentário que ninguém lê.
+Uma decisão também pode levar a pergunta ao lado — escolheu-se, e ainda assim
+há uma dúvida que alguém tem de ir tirar ao terreno.
+
+## O mesmo nome em sítios diferentes
+
+O par é (linha, nome) de propósito, e isso tem um preço: nada impede que o
+mesmo nome do papel fique, em linhas diferentes, em paragens a quilómetros uma
+da outra. Umas vezes é verdade — duas aldeias com o mesmo nome em concelhos
+diferentes. Outras é o alinhamento com uma edição antiga da rede a apontar
+para uma paragem que a linha deixou de servir, e aí o terminal de uma cidade
+fica partido em dois: quem lá espera vê metade dos autocarros, e o planeador
+manda quem sai de uma linha andar dois quilómetros para apanhar a outra «no
+mesmo sítio». `nomes_em_paragens_diferentes` aponta esses casos — no MESMO
+concelho, que é onde a homonímia deixa de ser a explicação provável.
 """
 
 from __future__ import annotations
 
 import collections
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -77,6 +97,8 @@ class Decisao:
 class Resolucao:
     decisoes: dict[tuple[str, str], Decisao] = field(default_factory=dict)
     universo: Universo = field(default_factory=Universo)
+    #: As perguntas que a tabela manual deixa em aberto, por par (`por_confirmar`).
+    perguntas: dict[tuple[str, str], str] = field(default_factory=dict)
 
     @property
     def resolvidas(self) -> list[Decisao]:
@@ -134,10 +156,16 @@ def _pares_do_papel(viagens: Iterable[Any]) -> dict[str, list[str]]:
     return ordem
 
 
+def _e_decisao(entrada: dict[str, Any]) -> bool:
+    """Uma entrada com `escolha` decide; sem ela, é só uma pergunta."""
+    return str(entrada.get("escolha") or "").strip() != ""
+
+
 def validar_tabela_manual(
     manual: list[dict[str, Any]], viagens: Iterable[Any], universo: Universo
 ) -> None:
     ordem = _pares_do_papel(viagens)
+    vistos: set[tuple[str, str]] = set()
     for entrada in manual:
         linha, nome = str(entrada["linha"]), entrada["nome"]
         if nome not in ordem.get(linha, []):
@@ -146,8 +174,26 @@ def validar_tabela_manual(
                 "Ou o horário mudou — e a decisão tem de ser revista —, ou o nome está "
                 "escrito de outra maneira."
             )
+        # DUAS ENTRADAS PARA O MESMO PAR: qual das duas vale? A segunda ganhava
+        # em silêncio, e a primeira ficava na tabela a dizer uma coisa que a
+        # construção não fazia.
+        if (linha, nome) in vistos:
+            raise ErroDaTabelaManual(
+                f"o par {linha} × {nome!r} está duas vezes na tabela manual. Junta as duas "
+                "entradas numa só."
+            )
+        vistos.add((linha, nome))
+        if not _e_decisao(entrada):
+            # Sem escolha, só pode ser uma pergunta — uma entrada que não
+            # decide nem pergunta nada é uma linha a mais que ninguém lê.
+            if not str(entrada.get("por_confirmar") or "").strip():
+                raise ErroDaTabelaManual(
+                    f"a entrada {linha} × {nome!r} não tem `escolha` nem `por_confirmar`: "
+                    "não decide nem pergunta nada."
+                )
+            continue
         escolha = str(entrada.get("escolha") or "")
-        if escolha in ("", "sem") or escolha.startswith("ponto:"):
+        if escolha == "sem" or escolha.startswith("ponto:"):
             continue
         if escolha not in universo:
             raise ErroDaTabelaManual(
@@ -193,8 +239,13 @@ def resolver(
     validar_tabela_manual(manual, viagens, universo)
 
     ordem = _pares_do_papel(viagens)
-    por_linha_nome = {(str(e["linha"]), e["nome"]): e for e in manual}
+    por_linha_nome = {(str(e["linha"]), e["nome"]): e for e in manual if _e_decisao(e)}
     r = Resolucao(universo=universo)
+    r.perguntas = {
+        (str(e["linha"]), e["nome"]): " ".join(str(e["por_confirmar"]).split())
+        for e in manual
+        if str(e.get("por_confirmar") or "").strip()
+    }
 
     # --- o que o alinhamento aponta, por (linha, nome) ----------------------
     apontados: dict[tuple[str, str], list[tuple[str, float]]] = collections.defaultdict(list)
@@ -430,3 +481,102 @@ def _pelo_corredor(
                 )
                 r.decisoes[chave] = Decisao(linha, nome, c, metodo, round(s, 2), nota)
                 mudou = True
+
+
+# --- o mesmo nome em sítios diferentes ------------------------------------
+
+
+@dataclass(frozen=True)
+class Divergencia:
+    """Um nome do papel que, no mesmo concelho, ficou em sítios afastados.
+
+    `sitios` vai do mais servido para o menos: (identificador, nome oficial,
+    linhas que lá o põem). `perguntas` são as que a tabela manual já tem
+    escritas sobre algum destes pares.
+    """
+
+    nome: str
+    concelho: str | None
+    distancia_m: float
+    sitios: tuple[tuple[str, str, tuple[str, ...]], ...]
+    perguntas: tuple[str, ...] = ()
+
+    def em_texto(self, nome_do_concelho: str | None = None) -> str:
+        onde = (
+            f", {nome_do_concelho or self.concelho}" if (nome_do_concelho or self.concelho) else ""
+        )
+        partes = "; ".join(
+            f"{oficial or ident} ({', '.join(linhas)})" for ident, oficial, linhas in self.sitios
+        )
+        km = f"{self.distancia_m / 1000:.1f}".replace(".", ",")
+        texto = f"«{self.nome}»{onde}: até {km} km — {partes}"
+        if self.perguntas:
+            texto += " · por confirmar: " + " ".join(self.perguntas)
+        return texto
+
+
+def nomes_em_paragens_diferentes(
+    r: Resolucao,
+    concelho_de: Callable[[float, float], str | None],
+    raio_m: float = 300,
+) -> list[Divergencia]:
+    """O mesmo nome do papel, ligado em linhas diferentes a paragens afastadas.
+
+    Só dentro do MESMO concelho: duas aldeias com o mesmo nome em concelhos
+    diferentes são a explicação mais provável quando o concelho muda, e são
+    raras quando não muda. Dois postes do mesmo cruzamento — um de cada lado
+    da estrada — ficam abaixo do raio e não contam.
+
+    Um caso em que TODOS os pares foram decididos à mão, sem pergunta em
+    aberto, não volta a aparecer: alguém olhou e decidiu que eram sítios
+    diferentes. O que tiver uma pergunta escrita continua na lista, com a
+    pergunta ao lado.
+
+    `concelho_de` responde com o identificador do concelho de um ponto, ou
+    `None` quando não sabe — e todos os `None` contam como o mesmo concelho:
+    sem carta administrativa, é o lado que mostra mais e não o que esconde.
+    """
+    por_nome: dict[str, list[Decisao]] = collections.defaultdict(list)
+    for d in r.decisoes.values():
+        if d.id and d.id in r.universo:
+            por_nome[d.nome].append(d)
+
+    saida: list[Divergencia] = []
+    for nome, decisoes in por_nome.items():
+        if len({d.id for d in decisoes}) < 2:
+            continue
+        por_concelho: dict[str | None, list[Decisao]] = collections.defaultdict(list)
+        for d in decisoes:
+            p = r.universo[d.id]  # type: ignore[index]
+            por_concelho[concelho_de(p.lat, p.lon)].append(d)
+        for concelho, do_concelho in por_concelho.items():
+            ids = sorted({d.id for d in do_concelho if d.id})
+            if len(ids) < 2:
+                continue
+            pontos = {i: r.universo[i].ponto for i in ids}
+            maior = max(metros(pontos[a], pontos[b]) for a in ids for b in ids if a < b)
+            if maior <= raio_m:
+                continue
+            perguntas = tuple(
+                r.perguntas[(d.linha, d.nome)]
+                for d in do_concelho
+                if (d.linha, d.nome) in r.perguntas
+            )
+            if not perguntas and all(d.metodo.startswith("manual:") for d in do_concelho):
+                continue
+            linhas_de: dict[str, list[str]] = collections.defaultdict(list)
+            for d in do_concelho:
+                linhas_de[d.id].append(d.linha)  # type: ignore[index]
+            sitios = tuple(
+                (i, r.universo[i].nome, tuple(sorted(linhas_de[i], key=_ordem_da_linha)))
+                for i in sorted(ids, key=lambda i: (-len(linhas_de[i]), i))
+            )
+            saida.append(
+                Divergencia(nome, concelho, round(maior), sitios, tuple(dict.fromkeys(perguntas)))
+            )
+    saida.sort(key=lambda x: (-x.distancia_m, x.nome))
+    return saida
+
+
+def _ordem_da_linha(codigo: str) -> tuple[int, str]:
+    return (int(codigo), "") if codigo.isdigit() else (10**9, codigo)

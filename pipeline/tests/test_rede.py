@@ -301,6 +301,113 @@ def test_os_limiares_vêm_da_receita():
     assert resolver(viagens, alinhamentos, u, None, largo).de("8", "Fonte Nova").id == "g19:9"
 
 
+# --- perguntas na tabela manual ----------------------------------------------
+
+
+def test_uma_entrada_so_com_pergunta_nao_decide_e_a_pergunta_fica():
+    """`por_confirmar` sem `escolha`: as regras decidem, e a dúvida chega ao relatório."""
+    viagens = [_viagem("8", [("Fonte Nova", "08:00:00")])]
+    u = _universo(Paragem("g19:1", "FONTE NOVA", 39.46, -8.2, "geoportal-19"))
+    manual = [{"linha": "8", "nome": "Fonte Nova", "por_confirmar": "Qual dos postes?"}]
+    r = resolver(viagens, [], u, manual)
+    assert r.de("8", "Fonte Nova").metodo == "nome-exato-unico"
+    assert r.perguntas == {("8", "Fonte Nova"): "Qual dos postes?"}
+
+
+def test_uma_entrada_que_nao_decide_nem_pergunta_rebenta():
+    viagens = [_viagem("8", [("Fonte Nova", "08:00:00")])]
+    with pytest.raises(ErroDaTabelaManual, match="não decide nem pergunta"):
+        resolver(viagens, [], Universo(), [{"linha": "8", "nome": "Fonte Nova"}])
+
+
+def test_o_mesmo_par_duas_vezes_na_tabela_rebenta():
+    viagens = [_viagem("8", [("Fonte Nova", "08:00:00")])]
+    manual = [
+        {"linha": "8", "nome": "Fonte Nova", "escolha": "sem"},
+        {"linha": "8", "nome": "Fonte Nova", "escolha": "sem"},
+    ]
+    with pytest.raises(ErroDaTabelaManual, match="duas vezes"):
+        resolver(viagens, [], Universo(), manual)
+
+
+# --- o mesmo nome em paragens diferentes -------------------------------------
+
+
+def _terminal_partido(metodo_da_terceira: str = "alinhamento"):
+    """O padrão que partiu um terminal: três linhas, o mesmo nome, dois sítios.
+
+    Duas linhas ficam no terminal; a terceira, alinhada com uma edição antiga
+    da rede, fica no cruzamento da estrada nacional a dois quilómetros e meio —
+    e no mesmo concelho.
+    """
+    from paragem.resolucao import Decisao, Resolucao
+
+    u = _universo(
+        Paragem("g19:1", "TERMINAL PEDRA ALTA", 39.6317, -8.6803, "geoportal-19"),
+        Paragem("g15:7", "TERMINAL PEDRA ALTA", 39.6322, -8.6809, "geoportal-15"),
+        Paragem("g19:9", "PEDRA ALTA", 39.6205, -8.6576, "geoportal-19"),
+    )
+    nome = "Pedra Alta (Terminal)"
+    decisoes = {
+        ("1", nome): Decisao("1", nome, "g19:1", "alinhamento", 0.65),
+        ("2", nome): Decisao("2", nome, "g15:7", "nome-exato-unico", 1.0),
+        ("3", nome): Decisao("3", nome, "g19:9", metodo_da_terceira, 0.65),
+    }
+    return Resolucao(decisoes=decisoes, universo=u)
+
+
+def test_um_terminal_partido_no_mesmo_concelho_aparece():
+    from paragem.resolucao import nomes_em_paragens_diferentes
+
+    (d,) = nomes_em_paragens_diferentes(_terminal_partido(), lambda lat, lon: "pedra-alta")
+    assert d.nome == "Pedra Alta (Terminal)"
+    assert d.concelho == "pedra-alta"
+    assert 2300 < d.distancia_m < 2500
+    assert {ident for ident, _, _ in d.sitios} == {"g19:1", "g15:7", "g19:9"}
+    assert "Pedra Alta (Terminal)" in d.em_texto("Pedra Alta")
+
+
+def test_duas_povoacoes_homonimas_em_concelhos_diferentes_nao_aparecem():
+    from paragem.resolucao import nomes_em_paragens_diferentes
+
+    # O ponto de longe cai noutro concelho: é outra terra com o mesmo nome.
+    def concelho(lat, lon):
+        return "outro" if lat < 39.625 else "pedra-alta"
+
+    assert nomes_em_paragens_diferentes(_terminal_partido(), concelho) == []
+
+
+def test_os_dois_lados_da_estrada_nao_contam():
+    from paragem.resolucao import nomes_em_paragens_diferentes
+
+    r = _terminal_partido()
+    del r.decisoes[("3", "Pedra Alta (Terminal)")]
+    # Sobram os dois postes do terminal, a 70 m: abaixo do raio.
+    assert nomes_em_paragens_diferentes(r, lambda lat, lon: "pedra-alta") == []
+
+
+def test_o_que_foi_decidido_a_mao_nao_volta_e_o_que_tem_pergunta_volta():
+    from paragem.resolucao import Decisao, nomes_em_paragens_diferentes
+
+    r = _terminal_partido()
+    nome = "Pedra Alta (Terminal)"
+    for (linha, n), d in list(r.decisoes.items()):
+        r.decisoes[(linha, n)] = Decisao(linha, n, d.id, "manual:oficial", 1.0)
+    assert nomes_em_paragens_diferentes(r, lambda lat, lon: "x") == []
+
+    r.perguntas[("3", nome)] = "A linha 3 entra no terminal?"
+    (d,) = nomes_em_paragens_diferentes(r, lambda lat, lon: "x")
+    assert d.perguntas == ("A linha 3 entra no terminal?",)
+    assert "por confirmar" in d.em_texto()
+
+
+def test_sem_carta_administrativa_compara_se_tudo():
+    """Sem concelho conhecido, é o lado que mostra mais — e não o que esconde."""
+    from paragem.resolucao import nomes_em_paragens_diferentes
+
+    assert len(nomes_em_paragens_diferentes(_terminal_partido(), lambda lat, lon: None)) == 1
+
+
 # --- o leitor das camadas --------------------------------------------------
 
 

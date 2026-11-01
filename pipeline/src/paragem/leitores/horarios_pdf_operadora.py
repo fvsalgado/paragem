@@ -52,7 +52,7 @@ from ..paragens import Universo
 from ..regiao import Saida
 from ..relatorio import BLOQUEIA
 from ..resolucao import Parametros as ParametrosDaResolucao
-from ..resolucao import Resolucao, resolver
+from ..resolucao import Resolucao, nomes_em_paragens_diferentes, resolver
 from ..tracados import Parametros as ParametrosDosTracados
 from ..tracados import Tracado, desenhar, ler_rede, numerar
 from . import pdf_horarios as pdf
@@ -104,6 +104,7 @@ def ler(ctx: Contexto, saida: Saida) -> Resultado:
     feed.escrever(destino)
 
     _escrever_decisoes(ctx, resolucao, completas, segmentos, tracados, forma_de)
+    _lacunas_das_paragens(ctx, saida, resolucao)
     contagens.update(
         {
             f"{prefixo}.pares_linha_nome": len(resolucao.decisoes),
@@ -126,6 +127,87 @@ def ler(ctx: Contexto, saida: Saida) -> Resultado:
         contagens=contagens,
         saidas={saida.saida or "": str(destino.relative_to(ctx.raiz))},
         notas=[f"{doc.em_vigor_desde}"] if doc.em_vigor_desde else [],
+    )
+
+
+# --- as paragens que pedem olhos ------------------------------------------
+
+#: A partir de que distância o mesmo nome do papel, no mesmo concelho, deixa de
+#: ser «os dois lados da estrada» e passa a ser uma pergunta. A receita pode
+#: mudá-lo (`params.mesmo_nome_raio_m`).
+RAIO_DO_MESMO_NOME_M = 300
+
+
+def _lacunas_das_paragens(ctx: Contexto, saida: Saida, resolucao: Resolucao) -> None:
+    """O que a resolução deixou para alguém ver: perguntas e nomes partidos.
+
+    NÃO BLOQUEIA, e é de propósito. Um nome em dois sítios pode estar certo —
+    duas povoações com o mesmo nome, uma escola com dois portões —, e uma
+    construção que parasse por isso deixava a região inteira sem horários por
+    causa de uma paragem. O que não pode é passar calado: foi assim que um
+    terminal de cidade ficou partido em dois, com três linhas a apontar para
+    um cruzamento a 2,3 km dele, e o planeador a saltar o autocarro direto.
+    """
+    onde = str(saida.params.get("decisoes") or f"regioes/{ctx.regiao.id}/fontes.yaml")
+    if resolucao.perguntas:
+        ctx.relatorio.lacuna(
+            id=f"{prefixo_das_contagens(saida)}.paragens-por-confirmar",
+            o_que="Paragens por confirmar: a tabela manual deixa perguntas em aberto",
+            onde=onde,
+            porque_importa=(
+                "Estas paragens estão situadas com a leitura mais defensável e não com uma "
+                "certeza. Enquanto ninguém confirmar no terreno ou com quem opera, a "
+                "interface mostra o que está — e alguém tem de saber que há aqui uma dúvida."
+            ),
+            o_que_fazer=(
+                "Confirmar com a operadora ou no terreno; escrever a `escolha` e apagar o "
+                "`por_confirmar`."
+            ),
+            quantos=len(resolucao.perguntas),
+            quais=[f"{linha} × «{nome}»: {p}" for (linha, nome), p in resolucao.perguntas.items()],
+        )
+
+    raio = float(saida.params.get("mesmo_nome_raio_m") or RAIO_DO_MESMO_NOME_M)
+    territorio = ctx.territorio
+    concelho_por_dico = {c.dico: c for c in ctx.regiao.concelhos if c.dico}
+
+    def concelho_de(lat: float, lon: float) -> str | None:
+        if territorio is None:
+            return None
+        limite = territorio.concelho_de(lat, lon)
+        if limite is None:
+            return "fora-da-regiao"
+        c = concelho_por_dico.get(limite.codigo)
+        return c.id if c else limite.codigo
+
+    divergencias = nomes_em_paragens_diferentes(resolucao, concelho_de, raio)
+    ctx.relatorio.contar(
+        f"{prefixo_das_contagens(saida)}.nomes_em_paragens_diferentes", len(divergencias)
+    )
+    if not divergencias:
+        return
+    nomes = {c.id: c.nome for c in ctx.regiao.concelhos}
+    nomes["fora-da-regiao"] = "fora da região"
+    ctx.relatorio.lacuna(
+        id=f"{prefixo_das_contagens(saida)}.mesmo-nome-em-paragens-diferentes",
+        o_que=(
+            f"O mesmo nome do caderno em paragens a mais de {raio:.0f} m, conforme a linha, "
+            "no mesmo concelho"
+        ),
+        onde=onde,
+        porque_importa=(
+            "Um nome que o caderno repete em várias linhas é quase sempre o mesmo sítio. "
+            "Ligado a paragens afastadas conforme a linha, um terminal fica partido em "
+            "dois: quem lá espera vê metade dos autocarros, e o planeador manda quem muda "
+            "de linha andar entre duas paragens que o papel diz serem a mesma."
+        ),
+        o_que_fazer=(
+            "Ver cada caso. Se é o mesmo sítio, decidir na tabela manual (`escolha`); se são "
+            "sítios diferentes, decidir à mão os pares, para que fique escrito; se não se "
+            "sabe, escrever a pergunta (`por_confirmar`)."
+        ),
+        quantos=len(divergencias),
+        quais=[d.em_texto(nomes.get(d.concelho or "", d.concelho)) for d in divergencias],
     )
 
 
