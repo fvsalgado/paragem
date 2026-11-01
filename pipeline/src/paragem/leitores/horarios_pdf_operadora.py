@@ -309,6 +309,34 @@ def _depois_da_meia_noite(completas: list[ViagemCompleta]) -> dict[int, int]:
                 and a.viagem.servico == b.viagem.servico
             ):
                 deslocadas[b.indice] = 24 * 3600
+
+    # E NO MESMO BLOCO, DEPOIS DE UMA QUE PARTE MAIS TARDE. A regra de cima só
+    # apanhava a meia-noite quando as duas viagens calhavam na mesma coluna de
+    # blocos diferentes, e isso é coincidência de paginação. Num caderno, as
+    # colunas de um serviço vão por ordem de partida: uma que parte às 00:05
+    # depois de uma que parte às 19:20, no mesmo bloco e no mesmo serviço, é a
+    # última do dia e não a primeira. Medido numa carreira que chega ao fim da
+    # linha às 23:55 e volta às 00:05 — escrita «00:05», punha-se a andar
+    # vinte e quatro horas antes, no dia de serviço errado (a de sábado de
+    # madrugada era a de sexta à noite).
+    #
+    # Uma viagem das 00:30 que abra a lista do seu serviço continua a ser a
+    # primeira do dia: só se desloca a que vem DEPOIS de uma mais tardia.
+    por_bloco: dict[tuple[str, int, str, str], list[ViagemCompleta]] = collections.defaultdict(list)
+    for c in completas:
+        v = c.viagem
+        por_bloco[(v.linha, v.pagina, v.sentido or "", v.servico)].append(c)
+    for lista in por_bloco.values():
+        lista.sort(key=lambda c: c.indice)
+        mais_tarde = -1
+        for c in lista:
+            if not c.pontos:
+                continue
+            parte = _segundos(c.pontos[0].partida)
+            if parte < 4 * 3600 and mais_tarde > parte:
+                deslocadas[c.indice] = 24 * 3600
+            elif c.indice not in deslocadas:
+                mais_tarde = max(mais_tarde, parte)
     return deslocadas
 
 
