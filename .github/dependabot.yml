@@ -17,6 +17,23 @@ updates:
     commit-message:
       prefix: deps
       prefix-development: deps-dev
+    # As versões grandes ficam para uma sessão própria (decisão do dono a
+    # 1/11/2026): o Next 16 trouxe 15 erros de tipos, o TypeScript 7 mudou a
+    # formatação, e o maplibre 6.16 parte um teste do mapa. Um PR do Dependabot
+    # que nunca fica verde só ocupa um dos cinco lugares. Subir qualquer um
+    # destes continua a ser uma decisão, feita à mão; as correcções pequenas
+    # (patch) continuam a chegar.
+    ignore:
+      - dependency-name: next
+        update-types: ["version-update:semver-major"]
+      - dependency-name: react
+        update-types: ["version-update:semver-major"]
+      - dependency-name: react-dom
+        update-types: ["version-update:semver-major"]
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      - dependency-name: maplibre-gl
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
     groups:
       # O Next e o React sobem juntos ou não sobem: um sem o outro dá quase
       # sempre uma incompatibilidade de tipos.
@@ -64,6 +81,11 @@ updates:
     open-pull-requests-limit: 1
     commit-message:
       prefix: deps
+    # O Node sobe de versão grande numa sessão própria (decisão do dono a
+    # 1/11/2026), como as dependências grandes do sítio.
+    ignore:
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
