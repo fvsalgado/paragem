@@ -4713,8 +4713,54 @@ button.perto-paragem:hover {
   text-decoration: underline;
 }
 .perto-nome {
+  flex: 1 1 auto;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+.perto-distancia {
+  flex: none;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* O NÚMERO DA PARAGEM, O MESMO NA LISTA E NO MAPA. Azul-noite com o número a
+   branco nos dois temas e nos dois sítios: não é um modo nem um estado, é o
+   fio que liga a linha da lista ao ponto do mapa, e tem de se reconhecer
+   igual nos dois. */
+.numero-perto,
+.numero-no-mapa {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: #102c3f;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.numero-no-mapa {
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgb(16 44 63 / 40%);
+  pointer-events: none;
+}
+/* ONDE SE ESTÁ, quando foi a folha a perguntar — o botão do mapa desenha o
+   seu. Um ponto azul com aro branco, que é o sinal que toda a gente conhece. */
+.aqui-no-mapa {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  background: #1a6fd1;
+  border: 3px solid #fff;
+  box-shadow:
+    0 0 0 6px rgb(26 111 209 / 22%),
+    0 1px 4px rgb(16 44 63 / 40%);
+  pointer-events: none;
 }
 ul.perto-partidas {
   list-style: none;

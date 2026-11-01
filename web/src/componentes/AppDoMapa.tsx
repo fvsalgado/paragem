@@ -355,6 +355,18 @@ export default function AppDoMapa({
    * (P2-016): o ponto azul sozinho só mexia o mapa.
    */
   const [aqui, setAqui] = useState<[number, number] | null>(null);
+  /** A posição que o botão do mapa deu — esse já desenha o seu ponto azul. */
+  const aquiDoMapa = useRef<[number, number] | null>(null);
+  /**
+   * AS PARAGENS DO «PERTO DE MIM», PARA O MAPA AS MOSTRAR. A lista dizia «a
+   * 250 m» e o mapa ficava onde estava, sem dizer onde se estava nem onde
+   * eram: o mapa passa a enquadrar a pessoa e as três, numeradas como na lista.
+   */
+  const [perto, setPerto] = useState<{
+    aqui: [number, number];
+    comPonto: boolean;
+    paragens: { lat: number; lon: number; n: number }[];
+  } | null>(null);
   const caixaApp = useRef<HTMLDivElement>(null);
   /**
    * QUANTO TAPAM OS PAINÉIS DA ESQUERDA, na secretária e com o telemóvel
@@ -1118,7 +1130,10 @@ export default function AppDoMapa({
           tipos={tipos}
           pontos={pontos as Marca[]}
           aoEscolher={abrir}
-          aoLocalizar={(lat, lon) => setAqui([lat, lon])}
+          aoLocalizar={(lat, lon) => {
+            aquiDoMapa.current = [lat, lon];
+            setAqui([lat, lon]);
+          }}
           mosaicos={mosaicos}
           atribuicao={atribuicaoDoMapa}
           foco={!percurso && escolhido ? { lat: escolhido.lat, lon: escolhido.lon } : null}
@@ -1136,6 +1151,7 @@ export default function AppDoMapa({
           modosDesligados={modosDesligados}
           limites={limites}
           lembrarVista={`paragem:vista-do-mapa:${regiao}`}
+          perto={!direcoes && !escolhido ? perto : null}
         />
 
         {/* A FOLHA DE ABERTURA: por onde se pode ir, antes de se perguntar nada.
@@ -1242,6 +1258,14 @@ export default function AppDoMapa({
               variante="mapa"
               posicao={aqui}
               aoEscolher={abrir}
+              aoMostrar={(onde, paragens) =>
+                setPerto({
+                  aqui: onde,
+                  comPonto:
+                    aquiDoMapa.current?.[0] !== onde[0] || aquiDoMapa.current?.[1] !== onde[1],
+                  paragens: paragens.map((p, i) => ({ lat: p.lat, lon: p.lon, n: i + 1 })),
+                })
+              }
             />
 
             <h2 className="titulo-dos-modos">O que há {emDaRegiao}</h2>

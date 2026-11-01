@@ -22,6 +22,7 @@ import {
 } from '@/lib/dias';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { pedirPontos } from '@/lib/pontos-do-navegador';
+import { minutosAPe } from '@/lib/a-pe';
 
 /**
  * As paragens mais perto, e o que passa nelas a seguir (§6, «Perto de ti»).
@@ -69,6 +70,17 @@ function distanciaLegivel(metros: number): string {
 }
 
 /**
+ * «250 m · uns 4 min a pé». A distância sozinha não responde à pergunta de
+ * quem vai a pé — se dá tempo —, e a conta é a do planeador (`a-pe.ts`): a
+ * linha reta mais as voltas das ruas. «Uns» porque é isso que é.
+ */
+function distanciaEAPe(metros: number): string {
+  // Em cima dela, «0 m · uns 1 min a pé» dizia duas coisas que não se dizem.
+  if (metros < 15) return 'Aqui mesmo';
+  return `${distanciaLegivel(metros)} · uns ${minutosAPe(metros)} min a pé`;
+}
+
+/**
  * Antes das horas, o dia delas — em poucas palavras, que isto é uma linha.
  *
  * É a mesma informação da folha do mapa, encurtada: «Hoje não há. Na
@@ -91,6 +103,7 @@ export default function PertoDeTi({
   variante = 'pagina',
   posicao = null,
   aoEscolher,
+  aoMostrar,
   dadosDe = null,
 }: {
   regiao: string;
@@ -111,6 +124,11 @@ export default function PertoDeTi({
   posicao?: [number, number] | null;
   /** No mapa, tocar numa paragem abre o cartão dela em vez de mudar de página. */
   aoEscolher?: (p: Ponto) => void;
+  /**
+   * No mapa: onde se está e as paragens da lista, pela ordem dela — o mapa
+   * enquadra-as e numera-as com os mesmos números.
+   */
+  aoMostrar?: (aqui: [number, number], paragens: Ponto[]) => void;
   /** De quando são os horários — «3/9/2026» —, ou `null` sem data (`dataDosHorarios`). */
   dadosDe?: string | null;
 }) {
@@ -192,6 +210,7 @@ export default function PertoDeTi({
       .sort((a, b) => a.metros - b.metros)
       .slice(0, noMapa ? 3 : 5);
     setEstado({ tipo: 'perto', pontos: perto });
+    aoMostrar?.(aqui, perto);
     carregarPartidas([...new Set(perto.map((p) => p.concelho))]);
   }
 
@@ -295,7 +314,8 @@ export default function PertoDeTi({
                 {estado.pontos.length === 1
                   ? 'A paragem mais perto.'
                   : `As ${estado.pontos.length} paragens mais perto.`}{' '}
-                As distâncias são em linha reta — a pé é sempre um pouco mais.
+                As distâncias são em linha reta; o tempo a pé conta com as voltas das ruas, e é uma
+                estimativa.
               </p>
             )}
             <ul className={noMapa ? 'perto-lista' : 'lista perto-lista'}>
@@ -303,10 +323,18 @@ export default function PertoDeTi({
                 const suas = partidas[p.id];
                 const r = suas?.length ? proximasDe(suas) : null;
                 const href = `/rede/${p.tipo === 'estacao' ? 'estacoes' : 'paragens'}/${seguro(p.id)}/`;
+                // NO MAPA, O NÚMERO É O DO MAPA: a paragem 2 da lista é a que
+                // tem um 2 por cima. Fora do mapa não há a que o ligar.
+                const n = estado.pontos.indexOf(p) + 1;
                 const cabeca = (
                   <>
+                    {noMapa && (
+                      <span className="numero-perto" aria-hidden="true">
+                        {n}
+                      </span>
+                    )}
                     <span className="perto-nome">{p.nome}</span>
-                    <span className="secundario">{distanciaLegivel(p.metros)}</span>
+                    <span className="secundario perto-distancia">{distanciaEAPe(p.metros)}</span>
                   </>
                 );
                 return (

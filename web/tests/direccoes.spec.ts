@@ -667,8 +667,21 @@ test.describe('a abertura de uma região', () => {
     const perto = bloco.locator('button.perto-paragem');
     await expect(perto.first()).toBeVisible({ timeout: 15_000 });
     expect(await perto.count(), 'a folha é pequena: três chegam').toBeLessThanOrEqual(3);
-    // A distância, em metros — e não num mapa que é preciso saber ler.
-    await expect(perto.first()).toContainText(/\d+\s?m|\d+,\d\s?km/);
+    // A distância, em metros, E O TEMPO A PÉ — «a 250 m» não diz se dá tempo.
+    // Quem está em cima da primeira lê «Aqui mesmo», e não «0 m».
+    await expect(perto.first().locator('.perto-distancia')).toHaveText(
+      /^(Aqui mesmo|(\d+\s?m|\d+,\d\s?km) · uns \d+ min a pé)$/,
+    );
+    await expect(bloco).toContainText(/(\d+\s?m|\d+,\d\s?km) · uns \d+ min a pé/);
+    // O MAPA MOSTRA AS MESMAS, COM OS MESMOS NÚMEROS: a paragem 2 da lista é a
+    // que tem um 2 por cima no mapa.
+    const quantas = await perto.count();
+    await expect(page.locator('.numero-no-mapa')).toHaveText(
+      Array.from({ length: quantas }, (_, i) => String(i + 1)),
+    );
+    await expect(perto.locator('.numero-perto')).toHaveText(
+      Array.from({ length: quantas }, (_, i) => String(i + 1)),
+    );
     if (partida) {
       // Cada partida diz PARA ONDE VAI (P2-017): numa paragem com os dois
       // sentidos, o número da linha sozinho não diz qual é o nosso.
