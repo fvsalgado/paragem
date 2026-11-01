@@ -84,6 +84,13 @@ test('as partidas do dia vêm numa lista só, pela hora, e mudam com o dia', asy
   await page.goto(`/rede/paragens/${PARAGEM.id}/`);
   const doDia = page.locator('section[aria-labelledby="horario"] .partidas-do-dia');
   await expect(doDia.locator('.dia-escolhido')).toContainText(/^Hoje, /);
+  // A PRIMEIRA PINTURA É A DO SERVIDOR, com o dia dele; o relógio do teste é
+  // outro, e a lista passa ao dia do navegador quando a tabela dos dias chega.
+  // Lida a meio dessa troca, vinha vazia (CI, 1/11/2026): espera-se pela hora
+  // que tem de lá estar.
+  await expect(
+    doDia.locator('tbody td .hora').filter({ hasText: new RegExp(`^${PARTIDA!.hora}$`) }),
+  ).not.toHaveCount(0);
   const horas = await doDia.locator('tbody td .hora').allInnerTexts();
   expect(horas.length).toBeGreaterThan(0);
   expect(horas, 'pela hora').toEqual([...horas].sort());

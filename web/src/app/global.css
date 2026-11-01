@@ -6108,8 +6108,10 @@ details.meio-do-percurso + ol.percurso-da-linha {
 
 /* NOS CARTÕES DOS MODOS, O NOME NÃO SE PARTE: com a contagem comprida à
    direita («122 linhas da rede …, e 23 de outros operadores»), «Autocarro»
-   saía «Autocar / ro». Quem parte a linha é a contagem. */
-.lista a.cartao > span:first-child {
+   saía «Autocar / ro». Quem parte a linha é a contagem. Só em «Por modo», onde
+   o nome é uma palavra: no concelho o nome leva as redes («Urbano municipal ·
+   Circular de …») e, sem encolher, alargava a página a 320 px. */
+.lista.por-modo a.cartao > span:first-child {
   flex-shrink: 0;
 }
 

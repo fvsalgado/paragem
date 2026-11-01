@@ -213,7 +213,7 @@ export default async function CatalogoDaRegiao({
           escondê-lo era dizer que não existe —, mas sem fingir ser botão. */}
       <section aria-labelledby="modos">
         <h2 id="modos">Por modo</h2>
-        <ul className="lista">
+        <ul className="lista por-modo">
           {r.modos.map((m) => {
             const destino = ondeVaiOModo(rid, m);
             const rotulo = NOME_DOS_MODOS[m] ?? m;
