@@ -4,7 +4,13 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ajudaParaEscolher, porPeriodo } from '../src/lib/tarifario.ts';
+import {
+  ajudaParaEscolher,
+  compensaAPartirDe,
+  escolhasDoTarifario,
+  porMes,
+  porPeriodo,
+} from '../src/lib/tarifario.ts';
 import type { Titulo } from '../src/lib/formato.ts';
 
 const t = (
@@ -73,4 +79,42 @@ test('o período diz-se por extenso, e um que a página não conhece não se adi
   assert.equal(porPeriodo('ano'), 'por ano');
   assert.equal(porPeriodo('quinzena'), '');
   assert.equal(porPeriodo(undefined), '');
+});
+
+test('um passe compensa à viagem em que o preço dele fica abaixo de pagar cada uma', () => {
+  // 30 € por mês contra 1,40 € a viagem: com 21 viagens são 29,40 €, com 22
+  // são 30,80 € — é à 22.ª que o passe passa a sair mais barato.
+  assert.equal(compensaAPartirDe(30, 1.4), 22);
+  // Num empate não compensa ainda: 20 × 1,50 € = 30 €.
+  assert.equal(compensaAPartirDe(30, 1.5), 21);
+  assert.equal(compensaAPartirDe(30, 0), null, 'sem preço por viagem não há conta');
+});
+
+test('um passe anual conta-se ao mês, e um período que não se converte fica de fora', () => {
+  assert.equal(porMes({ valor: 120, periodo: 'ano' }), 10);
+  assert.equal(porMes({ valor: 12, periodo: 'mes' }), 12);
+  assert.equal(porMes({ valor: 2, periodo: 'dia' }), null);
+  assert.equal(porMes({ valor: null, periodo: 'mes' }), null);
+});
+
+test('só entram no escolhedor as redes com um bilhete e um passe, e o bilhete inteiro vem primeiro', () => {
+  const e = escolhasDoTarifario([
+    t('reduzido', 'Rede', 0.75),
+    t('simples', 'Rede', 1.5),
+    t('passe', 'Rede', 40, { periodo: 'mes' }),
+    t('jovem', 'Rede', 0, { periodo: 'mes', nota: 'Até aos 23 anos.' }),
+    t('so-passe', 'Comboio', 20, { periodo: 'mes' }),
+  ]);
+  assert.deepEqual(
+    e.map((x) => x.rede),
+    ['Rede'],
+  );
+  assert.deepEqual(
+    e[0].bilhetes.map((x) => x.id),
+    ['simples', 'reduzido'],
+  );
+  assert.deepEqual(
+    e[0].semPagar.map((x) => x.id),
+    ['jovem'],
+  );
 });

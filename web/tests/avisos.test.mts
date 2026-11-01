@@ -265,3 +265,14 @@ test('quem escreve sabe onde o aviso vai aparecer, pelos números das linhas', (
     rede.join(' | '),
   );
 });
+
+test('o filtro da página de avisos deixa sempre à vista o aviso da rede toda', async () => {
+  const { ficaComOFiltro } = await import('../src/lib/avisos.ts');
+  const daLinha = { linhas: ['RA2'], concelhos: ['norte'], todos: false };
+  const deTudo = { linhas: [], concelhos: [], todos: true };
+  assert.equal(ficaComOFiltro(daLinha, { linha: '', concelho: '' }), true);
+  assert.equal(ficaComOFiltro(daLinha, { linha: 'RA2', concelho: '' }), true);
+  assert.equal(ficaComOFiltro(daLinha, { linha: 'RA1', concelho: '' }), false);
+  assert.equal(ficaComOFiltro(daLinha, { linha: 'RA2', concelho: 'sul' }), false);
+  assert.equal(ficaComOFiltro(deTudo, { linha: 'RA1', concelho: 'sul' }), true);
+});

@@ -39,6 +39,12 @@
   --urbano-municipal: #5b3a8e;
   --alerta: #a3261b;
   --alerta-fundo: #fbe9e6;
+  /* ATENÇÃO, UM ESTADO E NÃO UM MODO: o aviso que pede cuidado sem mandar
+     mudar de planos. Usava o âmbar do transporte a pedido — e um aviso sobre
+     autocarros pintado com a cor de outro modo dizia uma coisa que não era.
+     Laranja, a 5,4:1 no branco e a 4,9:1 no fundo dele. */
+  --atencao: #b54708;
+  --atencao-fundo: #fef0e6;
   --foco: #f2b705;
 
   /* A marca do produto — o feixe (§6) —, de fora para dentro. Só a página do
@@ -112,6 +118,8 @@
     --alerta-texto: #ff8a7a;
     --alerta-texto-forte: #ff8a7a;
     --alerta-fundo: #3a1714;
+    --atencao: #f5a524;
+    --atencao-fundo: #33240f;
     --a-pedido-texto: #e0a24a;
     --a-pedido-fundo: #2e2310;
     --bicicleta-fundo: #16301f;
@@ -141,6 +149,8 @@
   --alerta-texto: #ff8a7a;
   --alerta-texto-forte: #ff8a7a;
   --alerta-fundo: #3a1714;
+  --atencao: #f5a524;
+  --atencao-fundo: #33240f;
   --a-pedido-texto: #e0a24a;
   --a-pedido-fundo: #2e2310;
   --bicicleta-fundo: #16301f;
@@ -916,14 +926,15 @@ details.lista-fechada[open] > summary::after {
    mudar de planos; o âmbar para o que pede atenção. */
 .aviso {
   border: 1px solid var(--linhas);
-  border-left: 6px solid var(--marca);
+  /* Sem gravidade, a borda é neutra: a cor da marca não faz de estado. */
+  border-left: 6px solid var(--borda-campo);
   border-radius: var(--raio);
   padding: 0.85rem 1rem;
   margin: 1rem 0;
   background: var(--superficie);
 }
 .aviso.atencao {
-  border-left-color: var(--a-pedido);
+  border-left-color: var(--atencao);
 }
 .aviso.grave {
   border-left-color: var(--alerta);
@@ -943,15 +954,43 @@ details.lista-fechada[open] > summary::after {
   display: inline-block;
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--marca-texto);
-  background: var(--realce);
+  color: var(--texto);
+  background: var(--superficie-suave);
   border-radius: 999px;
   padding: 0.1rem 0.6rem;
   margin: 0 0 0.25rem;
 }
 .aviso.atencao .etiqueta-do-aviso {
-  color: var(--a-pedido-texto);
-  background: var(--a-pedido-fundo);
+  color: var(--atencao);
+  background: var(--atencao-fundo);
+}
+/* O filtro dos avisos: duas escolhas lado a lado, e quantos ficam. */
+.filtro-dos-avisos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem 1rem;
+  margin: 0.75rem 0 0;
+}
+.filtro-dos-avisos label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.filtro-dos-avisos select {
+  min-height: var(--alvo);
+  max-width: 100%;
+}
+.filtro-dos-avisos p {
+  margin: 0;
+  flex-basis: 100%;
+}
+/* DESDE QUANDO E ATÉ QUANDO, À CABEÇA: é a segunda pergunta de quem lê um
+   aviso, logo a seguir a «é comigo?». Estava no fim do cartão. */
+.aviso .prazo-do-aviso {
+  margin: 0 0 0.4rem;
+  font-weight: 700;
+  font-size: 0.95rem;
 }
 .aviso.grave .etiqueta-do-aviso {
   color: var(--alerta-texto-forte);
@@ -986,7 +1025,7 @@ details.lista-fechada[open] > summary::after {
 .avisos-na-abertura {
   margin: 0 0.6rem 0.6rem;
   border: 1px solid var(--linhas);
-  border-left: 6px solid var(--a-pedido);
+  border-left: 6px solid var(--atencao);
   border-radius: var(--raio);
   padding: 0.35rem 0.75rem;
   background: var(--superficie);
@@ -1030,8 +1069,8 @@ details.lista-fechada[open] > summary::after {
   gap: 0.5rem;
   min-height: var(--alvo);
   padding: 0.25rem 0.6rem;
-  border-left: 4px solid var(--a-pedido);
-  background: var(--a-pedido-fundo);
+  border-left: 4px solid var(--atencao);
+  background: var(--atencao-fundo);
   color: var(--texto);
   border-radius: 6px;
 }
@@ -1518,36 +1557,39 @@ ol.percurso-da-linha a:hover {
 
 /* --- a página do concelho -------------------------------------------------- */
 
-/* «Sair do concelho»: um cartão por destino, com as linhas, as horas a que
-   se sai daqui e o «Como chegar» já preenchido. */
-ul.saidas {
-  list-style: none;
+/* «Sair do concelho»: uma tabela — destino, linhas, primeira e última —, e
+   não um cartão por destino com as horas todas. O destino leva ao «Como
+   chegar» já preenchido. */
+table.saidas {
+  width: 100%;
   margin: 0.75rem 0 0;
-  padding: 0;
-  display: grid;
-  gap: 0.75rem;
+  border-collapse: collapse;
+  font-size: 0.95rem;
 }
-@media (min-width: 40rem) {
-  ul.saidas {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+table.saidas th,
+table.saidas td {
+  padding: 0.45rem 0.4rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--linhas);
 }
-ul.saidas > li {
-  background: var(--superficie);
-  border: 1px solid var(--linhas);
-  border-radius: var(--raio);
-  padding: 0.75rem 1rem 0.25rem;
-  min-width: 0;
+table.saidas thead th {
+  font-size: 0.85rem;
+  color: var(--texto-secundario);
+  border-bottom-width: 2px;
 }
-ul.saidas h3 {
-  margin: 0 0 0.35rem;
-  font-size: 1.1rem;
+table.saidas th[scope='row'] {
+  font-weight: 700;
 }
-ul.saidas p {
-  margin: 0.25rem 0;
+table.saidas th[scope='row'] a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
 }
-ul.saidas .cartao-accoes {
-  margin-top: 0.25rem;
+table.saidas .horas-da-saida .secundario {
+  display: block;
+  font-size: 0.8rem;
+  line-height: 1.3;
 }
 .linhas-da-saida,
 .linhas-da-paragem {
@@ -1615,10 +1657,29 @@ details.paragens-do-concelho > summary {
 .lista.paragens-com-linhas a > .nome {
   overflow-wrap: break-word;
 }
+/* AS PARAGENS POR LOCALIDADE: o nome da terra uma vez, e as paragens dela por
+   baixo, recolhidas. */
+ul.localidades {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+ul.localidades > li + li {
+  margin-top: 0.5rem;
+}
+ul.localidades .localidade {
+  display: block;
+  font-weight: 700;
+  padding: 0.35rem 0 0.1rem;
+}
+ul.localidades .localidade + .paragens-com-linhas {
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--linhas);
+}
 
 /* --- o transporte a pedido --------------------------------------------------- */
 
-/* «Há na tua terra?»: o campo, e por baixo as terras encontradas, cada uma
+/* «Há na sua terra?»: o campo, e por baixo as terras encontradas, cada uma
    com os circuitos que lá passam e a ligação para o horário. */
 .procurar-terra {
   background: var(--superficie);
@@ -1827,36 +1888,67 @@ ul.pontos-de-modo .accoes a {
 
 /* --- «Que título me serve?» -------------------------------------------------- */
 
-.ajuda-da-rede {
+.escolher-titulo {
   background: var(--superficie);
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
   padding: 0.25rem 1rem 0.75rem;
   margin: 0.75rem 0;
 }
-.ajuda-da-rede > h3 {
-  margin-top: 0.75rem;
+.escolher-titulo fieldset {
+  border: 0;
+  margin: 0.75rem 0 0;
+  padding: 0;
 }
-dl.qual-titulo {
-  margin: 0;
-}
-dl.qual-titulo dt {
+.escolher-titulo legend,
+.escolher-titulo .quantas-viagens label {
   font-weight: 700;
-  margin-top: 0.75rem;
-  color: var(--marca-texto);
+  padding: 0;
 }
-dl.qual-titulo dd {
-  margin: 0.25rem 0 0;
-  padding-left: 0.75rem;
-  border-left: 3px solid var(--linhas);
+/* Cada escolha é uma linha inteira de alvo (§4.5); o rádio fica do tamanho
+   de um rádio, como no «Quando» das direções. */
+.escolher-titulo fieldset label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--alvo);
+  cursor: pointer;
+}
+.escolher-titulo input[type='radio'] {
+  flex: none;
+  min-height: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--marca-texto);
+}
+.escolher-titulo .quantas-viagens {
+  margin-top: 0.75rem;
+}
+.escolher-titulo .quantas-viagens input {
+  display: block;
+  width: 7rem;
+  margin-top: 0.3rem;
+  font-variant-numeric: tabular-nums;
+}
+.escolher-titulo .quantas-viagens p {
+  margin: 0.3rem 0 0;
+}
+/* A resposta: uma frase a cheio, e a conta por baixo. */
+.conta-do-titulo {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--linhas);
+}
+.conta-do-titulo ul {
+  margin: 0.25rem 0 0.5rem;
+  padding-left: 1.1rem;
   line-height: 1.45;
 }
 .preco-em-linha {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-}
-.nota-do-titulo {
-  display: block;
 }
 
 /* Uma faixa de INFORMAÇÃO: o que é assim e vai continuar assim. O vermelho

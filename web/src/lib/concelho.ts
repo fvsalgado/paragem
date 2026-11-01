@@ -160,3 +160,35 @@ export function saidasDoConcelho(
     }))
     .sort((a, b) => b.viagens - a.viagens || a.nome.localeCompare(b.nome, 'pt'));
 }
+
+/**
+ * AS PARAGENS DE UM CONCELHO, POR LOCALIDADE.
+ *
+ * Eram uma lista plana por ordem alfabética, e as treze paragens da sede do
+ * concelho — «Porto Ameno (Câmara)», «Porto Ameno (Escola)», «Porto Ameno
+ * (Terminal)» — repetiam o nome da terra treze vezes antes de chegarem ao que
+ * as distingue. Junta-se pelo que vem antes do parêntese, que é como os
+ * horários as escrevem; o que vem dentro dele é o nome da paragem na terra.
+ * Uma paragem sem parêntese é a sua própria localidade.
+ */
+export function porLocalidade<P extends { nome: string }>(
+  ps: readonly P[],
+): { localidade: string; paragens: { p: P; dentro: string }[] }[] {
+  const grupos = new Map<string, { p: P; dentro: string }[]>();
+  for (const p of ps) {
+    const m = /^(.*?)\s*\(([^()]+)\)\s*$/.exec(p.nome);
+    const localidade = (m ? m[1] : p.nome).trim() || p.nome;
+    const dentro = m ? m[2].trim() : '';
+    grupos.set(localidade, [...(grupos.get(localidade) ?? []), { p, dentro }]);
+  }
+  const ordem = (a: string, b: string) => a.localeCompare(b, 'pt', { sensitivity: 'base' });
+  return [...grupos.entries()]
+    .map(([localidade, paragens]) => ({
+      localidade,
+      // A paragem com o nome da terra sozinho vem primeiro; as outras por nome.
+      paragens: paragens.sort(
+        (a, b) => (a.dentro ? 1 : 0) - (b.dentro ? 1 : 0) || ordem(a.dentro, b.dentro),
+      ),
+    }))
+    .sort((a, b) => ordem(a.localidade, b.localidade));
+}
