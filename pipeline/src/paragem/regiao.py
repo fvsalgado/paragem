@@ -540,6 +540,8 @@ class Regiao:
                     "de zona."
                 )
 
+        _verificar_redes_do_tarifario(self.id, self.tarifas)
+
         if self.urbanos_da_rede:
             if "urbano-municipal" not in self.modos:
                 raise ErroDeRegiao(
@@ -560,6 +562,66 @@ class Regiao:
                     f"{self.id}: a mesma linha em dois urbanos da rede, ou duas vezes no mesmo — "
                     f"{', '.join(repetidas)}. Uma linha é de uma rede urbana só."
                 )
+
+
+#: Os modos do produto (CLAUDE.md §3), para o que a região diz de cada tabela
+#: do tarifário.
+MODOS_DO_PRODUTO = (
+    "autocarro",
+    "a-pedido",
+    "comboio",
+    "urbano-municipal",
+    "bicicleta",
+    "expresso",
+    "taxi",
+)
+
+
+def _verificar_redes_do_tarifario(id_regiao: str, tarifas: dict[str, Any] | None) -> None:
+    """O que a região diz de cada tabela do tarifário (`tarifas.redes`).
+
+    Cada tabela da página é uma `rede` dos títulos, e a região pode dizer de
+    cada uma QUE MODO É e DE ONDE VÊM OS PREÇOS. As duas coisas faltavam: a
+    conta do «Que título me serve?» oferecia o sistema de bicicletas como uma
+    rede onde se fazem «40 viagens por mês», e a página acabava com «os preços
+    são os que a operadora publica» por baixo de tabelas que não eram dela
+    (auditoria de 1/11/2026).
+
+    É opcional. O que se recusa é descrever uma tabela que não existe — um nome
+    trocado deixava a tabela sem fonte, em silêncio —, um modo que o produto
+    não tem, ou uma chave que ninguém lê.
+    """
+    redes = (tarifas or {}).get("redes")
+    if redes is None:
+        return
+    if not isinstance(redes, dict):
+        raise ErroDeRegiao(
+            f"{id_regiao}: `redes` do tarifário é um mapa — o nome da rede dos títulos e, "
+            "para cada uma, `modo`, `fonte` e `url`."
+        )
+    existentes = {str(t.get("rede")) for t in (tarifas or {}).get("titulos") or []}
+    estranhas = sorted(str(n) for n in redes if str(n) not in existentes)
+    if estranhas:
+        raise ErroDeRegiao(
+            f"{id_regiao}: o tarifário descreve redes que nenhum título tem — "
+            f"{', '.join(estranhas)}. Os nomes são os do campo `rede` dos títulos."
+        )
+    for nome, d in redes.items():
+        if not isinstance(d, dict) or set(d) - {"modo", "fonte", "url"}:
+            raise ErroDeRegiao(
+                f"{id_regiao}: a rede {nome!r} do tarifário diz `modo`, `fonte` e `url`, "
+                "e mais nada."
+            )
+        if d.get("modo") and d["modo"] not in MODOS_DO_PRODUTO:
+            raise ErroDeRegiao(
+                f"{id_regiao}: a rede {nome!r} do tarifário é do modo {d['modo']!r}, que o "
+                f"produto não tem. Os modos são: {', '.join(MODOS_DO_PRODUTO)}."
+            )
+        if d.get("url") and not str(d["url"]).startswith("https://"):
+            raise ErroDeRegiao(
+                f"{id_regiao}: a rede {nome!r} do tarifário aponta para {d['url']!r}; uma "
+                "ligação para fora vai por https."
+            )
 
 
 def _marca(pasta: Path, d: dict[str, Any]) -> tuple[str | None, Path | None]:

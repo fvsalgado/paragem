@@ -2052,6 +2052,24 @@ ul.pontos-de-modo .accoes a {
   font-variant-numeric: tabular-nums;
 }
 
+/* «POR CONFIRMAR», AO LADO DE UM PREÇO, É UM ESTADO DOS DADOS E NÃO UM
+   ALERTA (auditoria de 1/11/2026). Estava no vermelho dos alertas — que é
+   para o que mudou hoje — e, no tema escuro, o vermelho escuro sobre o fundo
+   escuro reprovava no axe. Neutro: o texto secundário (6,4:1 no claro, 8,7:1
+   no escuro) e o contorno dos campos. */
+.por-confirmar {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--borda-campo);
+  border-radius: 6px;
+  color: var(--texto-secundario);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
 /* Uma faixa de INFORMAÇÃO: o que é assim e vai continuar assim. O vermelho
    de alerta é para o que mudou hoje — usado para factos estáveis, gasta-se,
    e a região parece em crise. */

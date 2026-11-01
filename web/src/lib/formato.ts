@@ -676,11 +676,25 @@ export type Titulo = {
   nota?: string;
 };
 
+/**
+ * O que a região diz de uma tabela do tarifário (`tarifas.redes`, pelo nome
+ * da rede dos títulos): que modo é, e de onde vêm os preços dela. Tudo
+ * opcional — sem isto, a tabela sai sem linha de fonte.
+ */
+export type RedeDoTarifario = {
+  modo?: string;
+  /** A frase que se mostra por baixo da tabela: «Tabela tarifária da operadora…». */
+  fonte?: string;
+  url?: string;
+};
+
 export type Tarifas = {
   moeda: string;
   titulos: Titulo[];
   por_confirmar: number;
   reservas: Record<string, unknown>;
+  /** Ausente em dados de antes disto. */
+  redes?: Record<string, RedeDoTarifario>;
 };
 
 export type Lacuna = { id: string; o_que: string; porque_importa: string; quantos?: number };

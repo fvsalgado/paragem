@@ -118,3 +118,27 @@ test('só entram no escolhedor as redes com um bilhete e um passe, e o bilhete i
     ['jovem'],
   );
 });
+
+test('uma tabela de bicicletas não entra na conta das viagens', () => {
+  // A calculadora perguntava «Em que rede viaja?» e oferecia o sistema de
+  // bicicletas ao lado do autocarro — onde não se fazem «40 viagens por mês»:
+  // paga-se o acesso por um período e os minutos a mais. Só se sabe que uma
+  // tabela é de bicicletas quando a região o diz.
+  const titulos = [
+    t('simples', 'Rede', 1.5),
+    t('passe', 'Rede', 40, { periodo: 'mes' }),
+    t('acesso-72h', 'Bicis', 2),
+    t('acesso-mensal', 'Bicis', 6, { periodo: 'mes' }),
+  ];
+  assert.deepEqual(
+    escolhasDoTarifario(titulos).map((e) => e.rede),
+    ['Rede', 'Bicis'],
+    'sem a região dizer o modo, a conta não adivinha pelo nome',
+  );
+  assert.deepEqual(
+    escolhasDoTarifario(titulos, { Bicis: { modo: 'bicicleta' }, Rede: { modo: 'autocarro' } }).map(
+      (e) => e.rede,
+    ),
+    ['Rede'],
+  );
+});

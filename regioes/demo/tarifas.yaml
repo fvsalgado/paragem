@@ -77,6 +77,23 @@ titulos:
     confirmado: true
     fonte: inventado (região de demonstração)
 
+# O QUE CADA TABELA É, e de onde vêm os preços dela: a linha por baixo de cada
+# tabela, e o modo, que tira as bicicletas da conta do «Que título me serve?»
+# (uma bicicleta não se paga à viagem).
+redes:
+  Rede Ameno:
+    modo: autocarro
+    fonte: inventada, como tudo nesta demonstração.
+  Transporte a pedido:
+    modo: a-pedido
+    fonte: inventada, como tudo nesta demonstração.
+  Ferrovia do Poente:
+    modo: comboio
+    fonte: inventada, como tudo nesta demonstração.
+  Bici Ameno:
+    modo: bicicleta
+    fonte: inventada, como tudo nesta demonstração.
+
 # A REGRA DE RESERVA DO TRANSPORTE A PEDIDO, que é o que mais importa nele:
 # não circula se ninguém o chamar.
 #

@@ -2614,6 +2614,10 @@ def _tarifas(regiao: Regiao) -> dict[str, Any]:
         # vai pagar (§4.4).
         "por_confirmar": sum(1 for x in titulos if not x.get("confirmado")),
         "reservas": t.get("reservas") or {},
+        # O QUE CADA TABELA É, quando a região o diz: o modo (a conta do «Que
+        # título me serve?» é de viagens, e uma bicicleta não se paga à
+        # viagem) e de onde vêm os preços dela, numa linha por baixo da tabela.
+        "redes": t.get("redes") or {},
     }
 
 

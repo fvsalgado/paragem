@@ -409,3 +409,53 @@ def test_um_horario_a_pedido_nao_pode_apontar_para_uma_zona_que_nao_ha(tmp_path)
     """Um nome trocado tirava à página o botão de reservar, em silêncio."""
     with pytest.raises(ErroDeRegiao, match="nordeste"):
         Regiao.carregar(_com_a_pedido(tmp_path / "x", ["norte", "nordeste"]))
+
+
+def _com_tarifas(pasta, redes):
+    """Uma região com duas tabelas no tarifário — um autocarro e uma bicicleta."""
+    pasta = _regiao_minima(pasta, inclui={"tarifas": "tarifas.yaml"})
+    (pasta / "tarifas.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "titulos": [
+                    {"id": "b", "rede": "Rede X", "nome": "Bilhete", "valor": 1.5},
+                    {"id": "p", "rede": "Rede X", "nome": "Passe", "valor": 30, "periodo": "mes"},
+                    {"id": "m", "rede": "Bicis", "nome": "Mensal", "valor": 6, "periodo": "mes"},
+                ],
+                "redes": redes,
+            },
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+    return pasta
+
+
+def test_o_tarifario_diz_o_que_cada_tabela_e(tmp_path):
+    """O modo de cada tabela, e de onde vêm os preços dela — e chega ao sítio tal e qual."""
+    from paragem.sitio import _tarifas
+
+    redes = {
+        "Rede X": {"modo": "autocarro", "fonte": "Tabela da operadora.", "url": "https://x.pt"},
+        "Bicis": {"modo": "bicicleta"},
+    }
+    r = Regiao.carregar(_com_tarifas(tmp_path / "x", redes))
+    assert _tarifas(r)["redes"] == redes
+    # Sem `redes`, a página fica como era.
+    assert _tarifas(Regiao.carregar(_regiao_minima(tmp_path / "sem")))["redes"] == {}
+
+
+@pytest.mark.parametrize(
+    ("redes", "erro"),
+    [
+        # Um nome trocado deixava a tabela sem fonte, em silêncio.
+        ({"Rede Y": {"modo": "autocarro"}}, "Rede Y"),
+        ({"Bicis": {"modo": "trotinete"}}, "trotinete"),
+        ({"Bicis": {"modo": "bicicleta", "preco": 1}}, "e mais nada"),
+        ({"Bicis": {"url": "http://bicis.pt"}}, "https"),
+        (["Bicis"], "é um mapa"),
+    ],
+)
+def test_o_tarifario_nao_descreve_o_que_nao_tem(tmp_path, redes, erro):
+    with pytest.raises(ErroDeRegiao, match=erro):
+        Regiao.carregar(_com_tarifas(tmp_path / "x", redes))
