@@ -77,6 +77,7 @@ O que uma construção produz, região a região:
 | GTFS da rede | reconstruído a partir do que a operadora publica |
 | GTFS do operador ferroviário | tal e qual |
 | GTFS dos expressos | recortado às viagens que servem a região |
+| NeTEx da rede | o mesmo GTFS da rede no perfil europeu (EPIP), validado contra o esquema oficial — [`docs/NETEX.md`](docs/NETEX.md) |
 | Recorte do OpenStreetMap | com margem, para as linhas que atravessam a fronteira |
 | GBFS estático | os sistemas de bicicletas, sem prometer disponibilidade que não seja pública |
 | GeoJSON | praças de táxi e traçados de urbanos municipais |
@@ -94,7 +95,9 @@ Três públicos, por esta ordem:
   o território inteiro numa vista só, e um sítio onde publicar avisos que chegam
   a toda a gente ao mesmo tempo.
 - **Quem constrói outra coisa** — quem quer os dados. Saem em GTFS e GBFS, os
-  formatos que o resto do mundo lê, com as licenças e as atribuições à vista.
+  formatos que o resto do mundo lê, e a rede também em NeTEx, o formato do
+  regulamento europeu para os Pontos de Acesso Nacionais — com as licenças e as
+  atribuições à vista.
   E quem quer só ligar ao planeador — o «Como chegar» de um evento, de uma
   câmara — faz uma ligação com a viagem no endereço:
   [`docs/ENDERECOS.md`](docs/ENDERECOS.md).
@@ -124,6 +127,7 @@ uv run pipeline build --regiao demo --sem-rede             # a demonstração, c
 uv run pipeline mosaicos --regiao demo                     # o mapa dela, desenhado da geografia
 uv run pipeline build --regiao <id>        # uma região real: descarrega, constrói, valida
 uv run pipeline validate --regiao <id>     # só o validador, sem reconstruir
+uv run pipeline netex --regiao <id>        # só o NeTEx: reescrever e validar contra o esquema
 uv run pipeline report --regiao <id>       # o relatório de lacunas
 uv run pytest
 ```

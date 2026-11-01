@@ -64,13 +64,16 @@ def test_a_prova_nasce_sem_codigo_novo(raiz):
     assert not {s.leitor for s in p.saidas} & ESPECIFICOS_DA_FONTE
 
 
-def test_a_prova_produz_as_quatro_saidas(raiz, tmp_path, monkeypatch):
+def test_a_prova_produz_as_quatro_saidas_e_o_netex(raiz, tmp_path, monkeypatch):
     c = _construir(raiz, tmp_path, monkeypatch)
     assert set(c.relatorio.saidas) == {
         "gtfs/rede-alta.zip",
         "gbfs/altabike/",
         "geojson/taxis.geojson",
         "geojson/urbanos.geojson",
+        # O NeTEx não vem da receita: sai da rede própria de toda a região que
+        # a tem, sem ninguém o pedir — como o GTFS sai para toda a que o tem.
+        "netex/rede-alta.zip",
     }
 
 

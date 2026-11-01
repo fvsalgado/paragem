@@ -36,6 +36,16 @@ const GRUPOS: { id: string; titulo: string; texto: string }[] = [
     texto: 'O formato que as aplicações de transportes leem. Um ficheiro por rede.',
   },
   {
+    // A MESMA REDE, NOUTRO FORMATO: o que o pipeline escreve do GTFS de cima,
+    // validado contra o esquema oficial (docs/NETEX.md). Os termos são os do
+    // GTFS de onde sai, e a página di-los ao lado de cada ficheiro, como aos
+    // outros.
+    id: 'netex',
+    titulo: 'Horários em NeTEx',
+    texto:
+      'A mesma rede no formato europeu que o regulamento indica para os Pontos de Acesso Nacionais, no perfil de informação ao passageiro (EPIP). Sai do GTFS de cima e diz o mesmo, sem os traçados.',
+  },
+  {
     id: 'catalogos',
     titulo: 'Catálogos de serviços',
     texto:

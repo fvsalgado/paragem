@@ -2786,7 +2786,7 @@ NOSSO = "nosso"
 
 # Por grupo, e por esta ordem: primeiro o que serve para usar a rede, depois o
 # que serve para a conferir.
-GRUPOS = ("feeds", "catalogos", "bicicletas", "geometria", "decisoes", "relatorios")
+GRUPOS = ("feeds", "netex", "catalogos", "bicicletas", "geometria", "decisoes", "relatorios")
 
 #: O RELATÓRIO DA CONSTRUÇÃO É TEXTO NOSSO, e não dados de ninguém.
 #:
@@ -2826,6 +2826,8 @@ def _grupo_de(relativo: str) -> str:
     inicio = relativo.split("/", 1)[0]
     if inicio == "gtfs":
         return "feeds"
+    if inicio == "netex":
+        return "netex"
     if inicio == "gbfs":
         return "bicicletas"
     if inicio in ("tap", "urbanos"):
@@ -3109,6 +3111,40 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
             modo=s.modo,
             papel=s.papel,
             descricao=_descricao_da_saida(s),
+            licenca_da_saida=s.licenca,
+            partes_odbl=s.partes_odbl,
+        )
+
+    # A MESMA REDE EM NeTEx, ao lado do GTFS de onde sai (`netex.py`).
+    #
+    # Não é uma saída da receita — o `build` escreve-o para toda a região com
+    # rede própria —, e por isso não vem no ciclo de cima. OS TERMOS SÃO OS DO
+    # FEED DE ONDE SAI, pela mesma `_termos`: é a mesma informação noutro
+    # formato, e um formato não muda o que se pode fazer com os dados. Uma
+    # região de prova dá obra da casa; a de uma autoridade, «para consulta».
+    from . import netex as _netex
+
+    for s in _netex.feeds_a_exportar(regiao):
+        if not s.publica:
+            continue
+        caminho = _netex.destino_de(Path(destino), s)
+        if not caminho.exists():
+            continue
+        try:
+            fonte = registo.obter(s.fonte)
+        except Exception:  # noqa: BLE001 — sem proveniência, não se publica
+            continue
+        juntar(
+            f"netex/{caminho.name}",
+            caminho,
+            fonte,
+            modo=s.modo,
+            papel=s.papel,
+            descricao=(
+                "a mesma rede em NeTEx, no perfil europeu de informação ao passageiro (EPIP), o "
+                "formato dos Pontos de Acesso Nacionais; validado contra o esquema oficial, e "
+                "sem os traçados, que ficam no GTFS"
+            ),
             licenca_da_saida=s.licenca,
             partes_odbl=s.partes_odbl,
         )

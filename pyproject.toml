@@ -73,6 +73,14 @@ module = ["osmium.*", "networkx.*", "scipy.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
+# O `lxml`, que escreve e valida o NeTEx (`netex.py`). Os stubs dele são um
+# pacote à parte (`lxml-stubs`) que mudava o `uv.lock` para tipar uma dúzia de
+# chamadas a `etree`, e o que se quer verificado ali é o esquema — que se
+# verifica contra o XSD oficial, e não com tipos.
+module = ["lxml", "lxml.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 # As anotações do NumPy usam sintaxe de 3.12 (`type X = …`) e este projeto
 # declara suporte a partir de 3.11. Com `python_version = "3.11"`, o mypy
 # recusa-se a LER o `numpy/__init__.pyi` — e um erro de sintaxe num stub de
