@@ -71,9 +71,11 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
   // página dizia sempre que faltavam horários e que havia um feed GTFS-Flex,
   // e numa região com tudo publicado e sem esse feed eram duas frases falsas.
   const faltaAlgo = semCircuitos.length > 0 || d.circuitos.some((c) => !c.horario);
-  const temFlex = (await dadosAbertos(rid)).some(
-    (x) => x.modo === 'a-pedido' && x.caminho.endsWith('.zip'),
-  );
+  const descargas = await dadosAbertos(rid);
+  const temFlex = descargas.some((x) => x.modo === 'a-pedido' && x.caminho.endsWith('.zip'));
+  // O que falta, circuito a circuito, está no relatório da construção, que se
+  // descarrega dos dados abertos — a página deixou de o publicar em bruto.
+  const comRelatorio = descargas.some((x) => x.grupo === 'relatorios');
 
   return (
     <>
@@ -368,8 +370,14 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
           <p>
             O que falta — o horário dos circuitos que nenhuma fonte publica, e saber a que zona
             pertence cada um — entra por introdução manual assistida a partir das páginas públicas.
-            Está no <Link href={url(rid, 'dados-abertos/')}>relatório de lacunas</Link>, circuito a
-            circuito e zona a zona, com a razão de cada um.
+            {comRelatorio && (
+              <>
+                {' '}
+                Está no relatório da última construção, que se descarrega dos{' '}
+                <Link href={url(rid, 'dados-abertos/')}>dados abertos</Link>, circuito a circuito e
+                zona a zona, com a razão de cada um.
+              </>
+            )}
           </p>
         )}
         {/* O MESMO HORÁRIO, PARA MÁQUINAS. Não é um extra de quem gosta de

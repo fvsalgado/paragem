@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import { dadosAbertos, exigirRegiao, lacunas, regiao } from '@/lib/dados';
+import { dadosAbertos, exigirRegiao, regiao } from '@/lib/dados';
 import { enderecoDaDescarga } from '@/lib/descargas';
 import { tamanho, type Descarga } from '@/lib/formato';
-import { aAutoridade } from '@/lib/prosa';
+import { aAutoridade, lista } from '@/lib/prosa';
 import { disponibilidadeDaRegiao } from '@/lib/enderecos';
 import { dataCompleta } from '@/lib/dias';
 import { metadadosDaRegiao } from '@/lib/metadados';
@@ -29,10 +29,11 @@ export async function generateMetadata({
  * para a CONFERIR. Quem chega aqui vem quase sempre pelo primeiro; quem vem
  * pelo segundo sabe o que procura.
  */
-const GRUPOS: { id: string; titulo: string; texto: string }[] = [
+const GRUPOS: { id: string; titulo: string; texto: string; resumo: string }[] = [
   {
     id: 'feeds',
     titulo: 'Horários em GTFS',
+    resumo: 'os horários em GTFS, que as aplicações de transportes leem',
     texto: 'O formato que as aplicações de transportes leem. Um ficheiro por rede.',
   },
   {
@@ -42,18 +43,21 @@ const GRUPOS: { id: string; titulo: string; texto: string }[] = [
     // outros.
     id: 'netex',
     titulo: 'Horários em NeTEx',
+    resumo: 'os mesmos horários em NeTEx, o formato europeu',
     texto:
       'Os mesmos horários no formato europeu que o regulamento indica para os Pontos de Acesso Nacionais, no perfil de informação ao passageiro (EPIP). Cada ficheiro sai do GTFS com o mesmo nome, ali em cima, e diz o mesmo, sem os traçados.',
   },
   {
     id: 'catalogos',
     titulo: 'Catálogos de serviços',
+    resumo: 'os catálogos dos serviços que não têm GTFS',
     texto:
       'Os serviços que não têm GTFS — transporte a pedido e urbanos municipais — como o sítio os lê.',
   },
   {
     id: 'bicicletas',
     titulo: 'Bicicletas partilhadas',
+    resumo: 'as estações das bicicletas partilhadas',
     // O TEXTO DEPENDE DE O SÍTIO LER AS CONTAGENS, e é decidido na página
     // (`textoDasBicicletas`): dizia «sem disponibilidade, que não é pública»
     // ao lado de um modo que as mostra ao vivo.
@@ -62,17 +66,20 @@ const GRUPOS: { id: string; titulo: string; texto: string }[] = [
   {
     id: 'geometria',
     titulo: 'Pontos e percursos',
+    resumo: 'pontos e percursos para abrir num mapa',
     texto: 'GeoJSON, para abrir num mapa sem escrever código.',
   },
   {
     id: 'decisoes',
     titulo: 'As decisões da construção',
+    resumo: 'as decisões com que se confere o resto',
     texto:
       'Uma linha por decisão: que paragem é cada nome do papel, que viagem herdou que paragens intermédias, e porquê quando não herdou nenhuma. É com isto que se confere o resto.',
   },
   {
     id: 'relatorios',
     titulo: 'Relatórios',
+    resumo: 'o relatório da última construção',
     texto: 'O que a última construção contou, e o que ficou por saber.',
   },
 ];
@@ -144,7 +151,6 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
   const { regiao: rid } = await params;
   const ds = await dadosAbertos(rid);
   const r = await exigirRegiao(rid);
-  const l = await lacunas(rid);
   const porEsclarecer = ds.filter((d) => d.licenca_por_esclarecer);
   const sobOdbl = ds.filter((d) => d.termos === 'odbl');
   const daCasa = ds.filter((d) => d.termos === 'nosso');
@@ -153,11 +159,41 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
   return (
     <>
       <h1>Dados abertos</h1>
+      {/* ABRE PELO QUE SE PODE USAR. A página começava por um bloco de catorze
+          linhas sobre o que não se pode fazer com os ficheiros, e acabava no
+          registo interno da construção em bruto — «esperava 28, obtive 26»,
+          códigos do validador. Quem decide lia primeiro a ressalva e por fim
+          o diário de depuração (decidido pelo dono a 1/11/2026). Agora: o que
+          há, os ficheiros, e os termos uma vez, a seguir. O registo continua a
+          descarregar-se, para quem o quiser: é o relatório da construção. */}
       <p>
-        Os dados {r.de} são construídos a partir de fontes públicas, com um comando só, e o que
-        falta fica escrito em vez de preenchido a palpite. Aqui estão os ficheiros que saem dessa
-        construção, cada um com os seus termos.
+        Os dados dos transportes {r.de}, para descarregar e usar:{' '}
+        {lista(GRUPOS.filter((g) => ds.some((d) => d.grupo === g.id)).map((g) => g.resumo))}. Saem
+        de fontes públicas, construídos com um comando só, e cada ficheiro diz de onde vem, de
+        quando é e em que termos se usa.
       </p>
+
+      {GRUPOS.map((g) => {
+        const doGrupo = ds.filter((d) => d.grupo === g.id);
+        if (!doGrupo.length) return null;
+        return (
+          <section key={g.id}>
+            <h2>{g.titulo}</h2>
+            <p>
+              {g.id === 'bicicletas'
+                ? textoDasBicicletas(disponibilidadeDaRegiao(rid, r.demonstracao) !== '')
+                : g.texto}
+            </p>
+            <ul className="descargas">
+              {doGrupo.map((d) => (
+                <Ficheiro key={d.caminho ?? d.ficheiro} d={d} />
+              ))}
+            </ul>
+          </section>
+        );
+      })}
+
+      <h2 id="termos">Com que termos</h2>
 
       {/* O AVISO MUDA CONFORME O QUE HÁ, e não é cosmética.
 
@@ -243,26 +279,6 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
         </div>
       )}
 
-      {GRUPOS.map((g) => {
-        const doGrupo = ds.filter((d) => d.grupo === g.id);
-        if (!doGrupo.length) return null;
-        return (
-          <section key={g.id}>
-            <h2>{g.titulo}</h2>
-            <p>
-              {g.id === 'bicicletas'
-                ? textoDasBicicletas(disponibilidadeDaRegiao(rid, r.demonstracao) !== '')
-                : g.texto}
-            </p>
-            <ul className="descargas">
-              {doGrupo.map((d) => (
-                <Ficheiro key={d.caminho ?? d.ficheiro} d={d} />
-              ))}
-            </ul>
-          </section>
-        );
-      })}
-
       {porEsclarecer.length > 0 && (
         <p className="secundario">
           {porEsclarecer.length}{' '}
@@ -307,33 +323,6 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
         não responder: se não conseguirmos ler a base, o endereço responde com um erro e não com um
         feed vazio, porque dizer «não há avisos» por cima de uma greve é pior do que não responder.
       </p>
-
-      <h2>O que falta</h2>
-      <p>
-        O pipeline conta o que não sabe em todas as construções. Isto é o que contou da última vez:
-      </p>
-      {l.bloqueios.length > 0 && (
-        <>
-          <h3>Impede a publicação</h3>
-          <ul>
-            {l.bloqueios.map((b) => (
-              <li key={b.id}>
-                <strong>{b.o_que}</strong>
-                {typeof b.quantos === 'number' ? ` (${b.quantos})` : ''} — {b.porque_importa}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-      <h3>Lacunas conhecidas</h3>
-      <ul>
-        {l.lacunas.map((x) => (
-          <li key={x.id}>
-            {x.o_que}
-            {typeof x.quantos === 'number' ? ` (${x.quantos})` : ''}
-          </li>
-        ))}
-      </ul>
     </>
   );
 }

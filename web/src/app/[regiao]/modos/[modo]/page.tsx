@@ -220,9 +220,13 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
   // osm-portugal.» — o identificador interno da fonte. O nome legível é o
   // que a página de dados abertos já mostra ao lado de cada ficheiro deste
   // modo; um modo sem ficheiros publicados fica só com a ligação para lá.
-  const fontes = [
-    ...new Set((await dadosAbertos(rid)).filter((x) => x.modo === mid).map((x) => x.fonte)),
-  ].filter(Boolean);
+  const descargas = await dadosAbertos(rid);
+  const fontes = [...new Set(descargas.filter((x) => x.modo === mid).map((x) => x.fonte))].filter(
+    Boolean,
+  );
+  // O QUE FALTA ESTÁ NO RELATÓRIO DA CONSTRUÇÃO, que se descarrega dos dados
+  // abertos — a página deixou de publicar a lista em bruto (1/11/2026).
+  const comRelatorio = descargas.some((x) => x.grupo === 'relatorios');
 
   return (
     <>
@@ -517,8 +521,11 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
           <p>
             {fontes.length > 0 ? <>Fontes: {lista(fontes)}. </> : null}
             As licenças e os ficheiros estão em{' '}
-            <Link href={url(rid, 'dados-abertos/')}>dados abertos</Link>, e o que falta está no
-            relatório de lacunas da mesma página.
+            <Link href={url(rid, 'dados-abertos/')}>dados abertos</Link>
+            {comRelatorio
+              ? ', e o que falta, no relatório da última construção, que se descarrega de lá'
+              : ''}
+            .
           </p>
         </details>
         <p className="cartao-accoes">

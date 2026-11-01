@@ -413,6 +413,12 @@ export const tarifasPorConfirmar = (regiao = REGIAO): number =>
  * que esta região publica se pode reutilizar. O que NÃO é legítimo é a página
  * não dizer qual dos dois casos é — e é isso que o teste do §4.4 verifica.
  */
+/** O relatório da construção, quando a região o publica entre as descargas. */
+export const relatorioDaConstrucao = (regiao = REGIAO): string | null =>
+  (ler<{ grupo?: string; caminho?: string }[]>(regiao, 'dados-abertos.json') ?? []).find(
+    (d) => d.grupo === 'relatorios',
+  )?.caminho ?? null;
+
 export const descargasParaConsulta = (regiao = REGIAO): number =>
   (ler<{ termos?: string }[]>(regiao, 'dados-abertos.json') ?? []).filter(
     (d) => d.termos === 'consulta',
