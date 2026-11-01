@@ -10,7 +10,7 @@ import Distintivo from '@/componentes/Distintivo';
 import { calendarioDe, horaDoRelogio, proximas, type Calendario } from '@/lib/dias';
 import ASeguir from '@/componentes/ASeguir';
 import PertoDeTi from '@/componentes/PertoDeTi';
-import { camadasDe, ordemDeApresentacao } from '@/lib/pontos-no-mapa';
+import { camadasDe, ordemDeApresentacao, rotuloNoMapa } from '@/lib/pontos-no-mapa';
 import DisponibilidadeBicicletas, {
   ContagemDaEstacao,
 } from '@/componentes/DisponibilidadeBicicletas';
@@ -588,6 +588,21 @@ export default function AppDoMapa({
    */
   function carregarPartidas(p: Marca | Ponto) {
     setPartidas(null);
+    // UMA ESTAÇÃO TAMBÉM TEM «A SEGUIR». O cartão de uma paragem dizia o que
+    // passa a seguir e o de uma estação não dizia nada — e a estação é onde
+    // a hora mais conta. As partidas vêm da ficha dela, a mesma da página.
+    if (p.tipo === 'estacao') {
+      fetch(enderecoDosDados(regiao, `estacoes/${seguro(p.id)}.json`))
+        .then((r) => {
+          if (r.ok) return r.json();
+          if (r.status === 404 || r.status === 400) return { partidas: [] };
+          throw new Error(`estação: HTTP ${r.status}`);
+        })
+        .then((f: { partidas?: Partida[] }) => setPartidas(f.partidas ?? []))
+        .catch(() => setPartidas('falhou'));
+      if (!calendario) calendarioDe(regiao).then(setCalendario);
+      return;
+    }
     const c = (p.concelho || 'fora-da-regiao').replace(/[^a-zA-Z0-9\-_]/g, '-');
     fetch(enderecoDosDados(regiao, `partidas/${c}.json`))
       .then((r) => {
@@ -613,7 +628,7 @@ export default function AppDoMapa({
     setDirecoes(null);
     setPercurso(null);
     setAlturaDasDirecoes('media');
-    if (p.tipo !== 'paragem') return;
+    if (p.tipo !== 'paragem' && p.tipo !== 'estacao') return;
     carregarPartidas(p);
     // Uma vez por sessão. Sem isto o distintivo sai cinzento, que é o que
     // acontece também se o ficheiro faltar — e um distintivo cinzento continua
@@ -794,7 +809,7 @@ export default function AppDoMapa({
       )
     : [];
   const aCarregarHoras =
-    escolhido?.tipo === 'paragem' &&
+    (escolhido?.tipo === 'paragem' || escolhido?.tipo === 'estacao') &&
     (partidas === null || (Array.isArray(partidas) && calendario === undefined));
 
   // O que o mapa mostra, contado, para quem não o vê (P3-018). Contado no
@@ -863,7 +878,9 @@ export default function AppDoMapa({
             os botões do mapa primeiro (P3-014). */}
         {escolhido && !direcoes && (
           <section
-            className={`cartao-de-baixo${escolhido.tipo === 'paragem' ? ' com-horas' : ''}`}
+            className={`cartao-de-baixo${
+              escolhido.tipo === 'paragem' || escolhido.tipo === 'estacao' ? ' com-horas' : ''
+            }`}
             aria-labelledby="escolhido"
             data-altura={alturaDoCartao}
             onFocus={() => (tinhaFoco.current = true)}
@@ -879,8 +896,12 @@ export default function AppDoMapa({
               {/* Sem nome no mapa, o título é o que a coisa É. Oito das nove
                 praças de táxi estão nesse caso, e um cartão com o título em
                 branco não diz nada a ninguém. */}
+              {/* UM NOME SÓ. A estação chegava da procura como «Porto Ameno
+                (estação)», ao lado da paragem «Porto Ameno (Estação)» — dois
+                nomes para o mesmo sítio no mesmo ecrã. O que ela é diz-se na
+                linha de baixo («Estação de comboio»), como no mapa. */}
               <h2 id="escolhido" tabIndex={-1} ref={tituloDoCartao}>
-                {escolhido.nome || rotuloDe(escolhido)}
+                {(escolhido.nome && rotuloNoMapa(escolhido)) || rotuloDe(escolhido)}
               </h2>
               {/* UM FECHO DISCRETO, E O ALVO CONTINUA A TER 44 px.
                 Era um botão escuro do tamanho de um terço da largura, ao lado
@@ -974,8 +995,12 @@ export default function AppDoMapa({
             {partidas === 'falhou' && (
               <div className="faixa alerta" role="status">
                 <p>
-                  <strong>Não foi possível carregar as horas desta paragem.</strong> Pode ser da
-                  ligação à Internet — não quer dizer que não haja autocarros.
+                  <strong>
+                    Não foi possível carregar as horas{' '}
+                    {escolhido.tipo === 'estacao' ? 'desta estação' : 'desta paragem'}.
+                  </strong>{' '}
+                  Pode ser da ligação à Internet — não quer dizer que não haja{' '}
+                  {escolhido.tipo === 'estacao' ? 'comboios' : 'autocarros'}.
                 </p>
                 <p>
                   <button
@@ -993,7 +1018,13 @@ export default function AppDoMapa({
               partidas, fora do período, sem a tabela dos dias. */}
             {aSeguir && (
               <div className="a-seguir-reservado">
-                <ASeguir resultado={aSeguir} instante={instante} agora={agora} cores={cores} />
+                <ASeguir
+                  resultado={aSeguir}
+                  instante={instante}
+                  agora={agora}
+                  cores={cores}
+                  modo={escolhido.tipo === 'estacao' ? 'comboio' : undefined}
+                />
               </div>
             )}
             {Array.isArray(partidas) && partidas.length === 0 && <p>Sem partidas registadas.</p>}

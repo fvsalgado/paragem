@@ -692,7 +692,11 @@ test.describe('a abertura de uma região', () => {
 
     const nome = (await perto.first().locator('.perto-nome').innerText()).trim();
     await perto.first().click();
-    await expect(page.locator('section.cartao-de-baixo h2')).toHaveText(nome);
+    // Uma estação tem um nome só no cartão: o «(estação)» da lista sai, que a
+    // linha de baixo já diz o que ela é.
+    await expect(page.locator('section.cartao-de-baixo h2')).toHaveText(
+      nome.replace(/\s*\(estação\)$/i, ''),
+    );
   });
 
   test('a caixa de procura diz o que se escreve nela', async ({ page }) => {
