@@ -41,6 +41,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from . import rede_no_mapa
 from .calendario import NomesDosCodigos, nome_pela_semana
 from .geo import distancia_km
 from .gtfs import Gtfs
@@ -1757,6 +1758,7 @@ def construir(raiz: Path, regiao: Regiao, destino: Path, territorio=None) -> Sit
         quantas_linhas, bytes_percursos = _percursos(s, regiao, g)
         if quantas_linhas:
             s.saidas.append(Saida(s.destino / "percursos", bytes_percursos, quantas_linhas))
+        rede_no_mapa.escrever(s, g)  # a rede inteira no mapa, mais grossa onde passa mais
     s._escrever("lacunas.json", _lacunas(raiz, regiao))
     s._escrever("dados-abertos.json", _dados_abertos(raiz, regiao, destino, s.destino))
     indice = _procura(indice_paragens, estacoes, modos, ((regiao.nomes or {}).get("procura") or {}))
