@@ -61,6 +61,31 @@ export function quantosNoConcelho(d: ModoDetalhe, concelho: string): number {
   );
 }
 
+/**
+ * UMA PARAGEM PARA MOSTRAR, ESCOLHIDA PELOS DADOS — a da caixa que se leva
+ * para o sítio de uma câmara, que abria vazia («Escolha a paragem, e a caixa
+ * aparece aqui»), com os botões de copiar desligados.
+ *
+ * A que mais linhas junta, e entre essas a de mais partidas: é o terminal,
+ * quase sempre, e é a que se reconhece. Só pelas partidas ganhava uma paragem
+ * de uma avenida com um urbano de dez em dez minutos — muito servida, e com um
+ * nome que fora da cidade não diz nada. Não se crava nenhuma: os horários
+ * mudam, e o exemplo muda com eles. `null` numa região sem paragens.
+ */
+export function paragemDeExemplo(paragens: Paragem[]): Paragem | null {
+  let melhor: Paragem | null = null;
+  for (const p of paragens) {
+    if (
+      !melhor ||
+      p.linhas.length > melhor.linhas.length ||
+      (p.linhas.length === melhor.linhas.length && p.partidas > melhor.partidas)
+    ) {
+      melhor = p;
+    }
+  }
+  return melhor;
+}
+
 /** A paragem com mais partidas de cada concelho — o «terminal», quase sempre. */
 export function paragemPrincipal(paragens: Paragem[]): Map<string, Paragem> {
   const m = new Map<string, Paragem>();

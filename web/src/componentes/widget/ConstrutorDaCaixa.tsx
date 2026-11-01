@@ -14,12 +14,20 @@ import { usePontos } from '@/lib/pontos-do-navegador';
  * dele. As paragens vêm do mesmo ficheiro que a procura do mapa usa, pedido
  * aqui — não vão no HTML desta página.
  */
+/**
+ * PORQUE É QUE O BOTÃO ESTÁ DESLIGADO, dito ao lado dele — e ao leitor de
+ * ecrã, pelo `aria-describedby`. Um botão que não responde sem dizer porquê
+ * lê-se como avariado.
+ */
+const POR_ESCOLHER = 'Escolha primeiro a paragem, lá em cima.';
+
 export default function ConstrutorDaCaixa({
   regiao,
   origem,
   concelhos,
   modosDesligados,
   comParagens,
+  exemplo = null,
 }: {
   regiao: string;
   /** `https://<domínio da região>`, para o código; sem ele, o do navegador. */
@@ -28,9 +36,16 @@ export default function ConstrutorDaCaixa({
   modosDesligados: string[];
   /** Uma região sem autocarros não tem paragens com partidas: só «Para onde quer ir?». */
   comParagens: boolean;
+  /**
+   * A paragem com que a caixa abre, escolhida pelos dados (`paragemDeExemplo`):
+   * sem ela, a página abria com a pré-visualização vazia e os botões de copiar
+   * desligados. O nome vem com ela para a escolha não mostrar o identificador
+   * enquanto as paragens não chegam.
+   */
+  exemplo?: { id: string; nome: string; concelho: string | null } | null;
 }) {
   const [tipo, setTipo] = useState<'paragem' | 'viagem'>(comParagens ? 'paragem' : 'viagem');
-  const [paragem, setParagem] = useState<string[]>([]);
+  const [paragem, setParagem] = useState<string[]>(exemplo ? [exemplo.id] : []);
   const [quantas, setQuantas] = useState(5);
   const [daqui, setDaqui] = useState(origem ?? '');
   const [copiado, setCopiado] = useState<string | null>(null);
@@ -56,7 +71,18 @@ export default function ConstrutorDaCaixa({
 
   const { pontos } = usePontos(regiao, modosDesligados, comParagens);
   const opcoes: OpcaoDeEscolha[] = useMemo(() => {
-    if (!Array.isArray(pontos)) return [];
+    // Enquanto as paragens não chegam, a do exemplo já tem nome.
+    if (!Array.isArray(pontos)) {
+      return exemplo
+        ? [
+            {
+              valor: exemplo.id,
+              rotulo: exemplo.nome,
+              detalhe: concelhos[exemplo.concelho ?? ''] ?? '',
+            },
+          ]
+        : [];
+    }
     const daRede = pontos.filter((p) => p.tipo === 'paragem');
     const vezes = new Map<string, number>();
     for (const p of daRede) vezes.set(p.nome, (vezes.get(p.nome) ?? 0) + 1);
@@ -68,7 +94,7 @@ export default function ConstrutorDaCaixa({
         detalhe: concelho,
       };
     });
-  }, [pontos, concelhos]);
+  }, [pontos, concelhos, exemplo]);
 
   const id = paragem[0] ?? '';
   const pronta = tipo === 'viagem' || id !== '';
@@ -211,12 +237,13 @@ export default function ConstrutorDaCaixa({
             type="button"
             className="secundario"
             disabled={!pronta}
+            aria-describedby={pronta ? undefined : 'porque-nao-copia-a-linha'}
             onClick={() => copiar(linha, 'linha')}
           >
             Copiar o código
           </button>{' '}
-          <span role="status" className="secundario">
-            {copiado === 'linha' ? 'Copiado.' : ''}
+          <span role="status" className="secundario" id="porque-nao-copia-a-linha">
+            {copiado === 'linha' ? 'Copiado.' : pronta ? '' : POR_ESCOLHER}
           </span>
         </p>
         <h4>O gestor de conteúdos não deixa colar &lt;script&gt;?</h4>
@@ -237,12 +264,13 @@ export default function ConstrutorDaCaixa({
             type="button"
             className="secundario"
             disabled={!pronta}
+            aria-describedby={pronta ? undefined : 'porque-nao-copia-o-iframe'}
             onClick={() => copiar(moldura, 'moldura')}
           >
             Copiar o iframe
           </button>{' '}
-          <span role="status" className="secundario">
-            {copiado === 'moldura' ? 'Copiado.' : ''}
+          <span role="status" className="secundario" id="porque-nao-copia-o-iframe">
+            {copiado === 'moldura' ? 'Copiado.' : pronta ? '' : POR_ESCOLHER}
           </span>
         </p>
       </section>

@@ -4,7 +4,12 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { porLocalidade, quantosNoConcelho, saidasDoConcelho } from '../src/lib/concelho.ts';
+import {
+  paragemDeExemplo,
+  porLocalidade,
+  quantosNoConcelho,
+  saidasDoConcelho,
+} from '../src/lib/concelho.ts';
 import type { LinhaDetalhe, ModoDetalhe, Paragem } from '../src/lib/formato.ts';
 
 const paragem = (id: string, concelho: string | null, partidas = 1): Paragem => ({
@@ -174,4 +179,18 @@ test('o urbano que a rede opera conta como urbano do concelho dele, e só dele',
   // Dados de antes disto não trazem a chave: conta-se como dantes.
   const { urbanos_da_rede: _, ...antigo } = urbanos;
   assert.equal(quantosNoConcelho(antigo, 'cima'), 0);
+});
+
+test('a paragem de exemplo é a que mais linhas junta, e entre essas a de mais partidas', () => {
+  // Só pelas partidas ganhava a paragem de uma avenida com um urbano de dez em
+  // dez minutos; o terminal junta mais linhas, e é o que se reconhece.
+  const com = (id: string, linhas: number, partidas: number): Paragem => ({
+    ...paragem(id, 'cima', partidas),
+    linhas: Array.from({ length: linhas }, (_, i) => String(i + 1)),
+  });
+  const avenida = com('avenida', 3, 280);
+  const terminal = com('terminal', 9, 180);
+  const outro = com('outro', 9, 120);
+  assert.equal(paragemDeExemplo([avenida, outro, terminal])?.id, 'terminal');
+  assert.equal(paragemDeExemplo([]), null);
 });

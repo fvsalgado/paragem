@@ -6,25 +6,59 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { PROVA } from './anfitrioes';
 
-test('a página «Para o seu sítio» monta a caixa e dá a linha para colar', async ({ page }) => {
+/** O contraste entre o texto e o fundo de um elemento, como o navegador os pinta. */
+async function contraste(l: import('@playwright/test').Locator): Promise<number> {
+  return l.evaluate((e) => {
+    const s = getComputedStyle(e);
+    const lum = (cor: string) => {
+      const [r, g, b] = (cor.match(/[\d.]+/g) ?? []).slice(0, 3).map((x) => Number(x) / 255);
+      const f = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+    };
+    const [a, b] = [lum(s.color), lum(s.backgroundColor)].sort((x, y) => y - x);
+    return (a + 0.05) / (b + 0.05);
+  });
+}
+
+test('a página «Para o seu sítio» abre com a caixa montada e dá a linha para colar', async ({
+  page,
+}) => {
   await page.goto(`${PROVA}/levar/`);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Os transportes no seu sítio');
-  await page.getByRole('combobox', { name: 'Paragem' }).fill('merc');
-  await expect(page.getByRole('option').first()).toBeVisible();
-  await page.keyboard.press('Enter');
-  await page.getByLabel('Quantas partidas').selectOption('3');
 
+  // ABRE JÁ COM UMA PARAGEM, a que os dados escolhem — a que mais linhas junta
+  // e, entre essas, a de mais partidas: na prova, a do Mercado. Abria vazia,
+  // com a pré-visualização a pedir uma paragem e os botões desligados.
   const codigo = page.locator('pre.codigo-para-copiar code').first();
   await expect(codigo).toContainText('/widget/embed.js');
   await expect(codigo).toContainText('data-paragem="pa_mercado"');
-  await expect(codigo).toContainText('data-quantas="3"');
-
-  // A pré-visualização é a caixa verdadeira.
   const caixa = page.frameLocator('iframe.previa-da-caixa');
   await expect(caixa.getByRole('heading', { level: 1 })).toContainText('Mercado');
+  const copiar = page.getByRole('button', { name: 'Copiar o código' });
+  await expect(copiar).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Copiar o iframe' })).toBeEnabled();
+
+  // Quem quiser outra, muda.
+  await page.getByRole('combobox', { name: 'Paragem' }).fill('term');
+  await expect(page.getByRole('option').first()).toBeVisible();
+  await page.keyboard.press('Enter');
+  await page.getByLabel('Quantas partidas').selectOption('3');
+  await expect(codigo).toContainText('data-paragem="pa_terminal"');
+  await expect(codigo).toContainText('data-quantas="3"');
+  // A pré-visualização é a caixa verdadeira.
+  await expect(caixa.getByRole('heading', { level: 1 })).toContainText('Terminal');
 
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(axe.violations).toEqual([]);
+
+  // SEM PARAGEM, os botões desligam-se — legíveis, e a dizer porquê. O axe
+  // não mede o contraste de um controlo desligado, e foi assim que um
+  // secundário desligado chegou a 1,1:1: mede-se aqui.
+  await page.getByRole('button', { name: /^Tirar / }).click();
+  await expect(copiar).toBeDisabled();
+  await expect(copiar).toHaveAccessibleDescription(/Escolha primeiro a paragem/);
+  await expect(page.getByText('Escolha primeiro a paragem, lá em cima.').first()).toBeVisible();
+  expect(await contraste(copiar)).toBeGreaterThanOrEqual(4.5);
 });
 
 test('a caixa das partidas é só a caixa, acessível, e não guarda nada', async ({
