@@ -961,6 +961,7 @@ def _escrever_decisoes(
             "pagina",
             "coluna",
             "alinhada",
+            "porque_nao_alinhou",
             "n_papel",
             "n_omitidas",
             "n_intermedias",
@@ -976,6 +977,7 @@ def _escrever_decisoes(
                 "pagina": c.viagem.pagina,
                 "coluna": c.viagem.coluna,
                 "alinhada": c.alinhada or "",
+                "porque_nao_alinhou": c.motivo or "",
                 "n_papel": len(c.viagem.paragens),
                 "n_omitidas": len(c.omitidas),
                 "n_intermedias": c.intermedias,
@@ -1051,6 +1053,21 @@ def _lacunas(ctx, resolucao, completas, sem_cor, por_confirmar, sem_datas, servi
 
     sem_alinhamento = [c for c in completas if not c.alinhada]
     if sem_alinhamento:
+        # POR CAUSA E POR LINHA. Eram «196 viagens» e mais nada, e um número
+        # assim não diz a quem se pergunta: as que são de linhas que o
+        # levantamento não tem pedem a sequência à operadora; as que são de
+        # linhas que ele tem e já não casam dizem que o percurso mudou entre
+        # as duas edições — e essas são as que mais vale conferir no terreno.
+        por_motivo: dict[str, collections.Counter[str]] = collections.defaultdict(
+            collections.Counter
+        )
+        for c in sem_alinhamento:
+            por_motivo[c.motivo or "sem causa registada"][str(c.viagem.linha)] += 1
+        quais = []
+        for motivo, linhas in sorted(por_motivo.items(), key=lambda kv: -sum(kv[1].values())):
+            n = sum(linhas.values())
+            lista = ", ".join(f"{linha} ({k})" for linha, k in linhas.most_common())
+            quais.append(f"{motivo} — {n} viagens em {len(linhas)} linhas: {lista}")
         lacunas.append(
             _lac(
                 "viagens.sem-alinhamento",
@@ -1062,10 +1079,15 @@ def _lacunas(ctx, resolucao, completas, sem_cor, por_confirmar, sem_datas, servi
                     "verdadeiro, que vale mais do que completo e emprestado à viagem errada."
                 ),
                 o_que_fazer=(
-                    "Uma edição mais recente do levantamento resolve-as. Enquanto não vier, "
-                    "ficam assim."
+                    "Depende da causa, que vai à frente de cada grupo. Uma linha que o "
+                    "levantamento não tem só se completa com a sequência de paragens da "
+                    "operadora ou com outra edição do levantamento; uma linha que ele tem e "
+                    "cujos nomes já não casam mudou de percurso entre as duas edições, e "
+                    "confere-se com quem a opera. Baixar o limiar não resolve nenhuma das "
+                    "duas: herdava a sequência de outra viagem."
                 ),
                 quantos=len(sem_alinhamento),
+                quais=quais,
             )
         )
 

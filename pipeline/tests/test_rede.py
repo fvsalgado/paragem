@@ -180,6 +180,50 @@ def test_uma_viagem_sem_correspondencia_fica_sem_alinhamento():
     assert not a.alinhou
 
 
+def test_a_viagem_sem_alinhamento_diz_porque():
+    """Causas diferentes pedem respostas diferentes, e o relatório conta-as à parte.
+
+    Uma linha que o levantamento não tem só se completa com outra edição dele;
+    uma que ele tem e cujos nomes já não casam mudou de percurso. Contadas
+    juntas eram um número só, que não dizia a quem perguntar.
+    """
+    from paragem.alinhamento import (
+        MOTIVO_NENHUM_NOME,
+        MOTIVO_POUCO_PARECIDA,
+        MOTIVO_SEM_SEQUENCIAS,
+    )
+
+    seq = _sequencia("v1", "8", [("g19:1", "08:00:00"), ("g19:2", "08:30:00")])
+    sem_linha, sem_nome, pouco = alinhar(
+        [
+            _viagem("99", [("Pedra Alta (Terminal)", "08:00:00"), ("Caçarão", "09:00:00")]),
+            _viagem("8", [("Sítio Nenhum", "08:00:00"), ("Outro Sítio", "09:00:00")]),
+            _viagem(
+                "8",
+                [
+                    ("Pedra Alta (Terminal)", "08:00:00"),
+                    ("Sítio Nenhum", "08:20:00"),
+                    ("Outro Sítio", "08:40:00"),
+                    ("Mais Um", "09:00:00"),
+                ],
+            ),
+        ],
+        [seq],
+        NOMES,
+    )
+    assert sem_linha.motivo == MOTIVO_SEM_SEQUENCIAS
+    assert sem_nome.motivo == MOTIVO_NENHUM_NOME
+    assert pouco.motivo == MOTIVO_POUCO_PARECIDA
+    assert not any(a.alinhou for a in (sem_linha, sem_nome, pouco))
+
+    (boa,) = alinhar(
+        [_viagem("8", [("Pedra Alta (Terminal)", "08:00:00"), ("Ribeira Branca", "08:30:00")])],
+        [seq],
+        NOMES,
+    )
+    assert boa.alinhou and boa.motivo is None
+
+
 # --- resolução -------------------------------------------------------------
 
 
