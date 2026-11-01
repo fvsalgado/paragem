@@ -643,7 +643,19 @@ export type Sentido = {
   quadro?: { paragens: { id: string; nome: string }[]; viagens: ViagemDoQuadro[] };
 };
 
-export type LinhaDetalhe = Linha & { sentidos: Sentido[] };
+/**
+ * A LINHA NO MAPA (`percursos.linha_no_mapa`, no pipeline): os pedaços de
+ * traçado que as viagens dela percorrem, em polilinhas, e as paragens dela com
+ * sítio, `[lat, lon]`. `aproximado` quando não há traçado e as paragens se
+ * ligam a direito — o mapa desenha-o a tracejado. Ausente em dados de antes.
+ */
+export type LinhaNoMapa = {
+  tracos: string[];
+  aproximado: boolean;
+  paragens: [number, number][];
+};
+
+export type LinhaDetalhe = Linha & { sentidos: Sentido[]; no_mapa?: LinhaNoMapa };
 
 export type Estacao = {
   id: string;

@@ -49,6 +49,7 @@ from .leitores import LEITORES_DE_HORARIO
 from .leitores.osm import ATRIBUICAO as ATRIBUICAO_OSM
 from .leitores.osm import LICENCA_URL as LICENCA_ODBL
 from .marca import marca_publicada
+from .percursos import linha_no_mapa
 from .quadros import Passagem, ViagemDoSentido, quadro_do_sentido
 from .regiao import Regiao
 from .regiao import Saida as SaidaDaReceita
@@ -2097,7 +2098,20 @@ def construir(raiz: Path, regiao: Regiao, destino: Path, territorio=None) -> Sit
         # conhecem: o código e os dados publicam-se separados, e o sítio novo
         # recua para ele quando não encontra este.
         s._escrever("calendario.json", calendario_em_mascaras(g.servicos, datas), len(g.servicos))
+    # A LINHA NO MAPA, dentro da ficha dela: por onde passa e onde para, para
+    # o mapa a acender por cima da rede quando alguém a escolhe
+    # (`percursos.linha_no_mapa`). Uns poucos kB por linha, lidos só por quem
+    # a escolhe.
+    onde = {
+        str(p["id"]): (float(p["lat"]), float(p["lon"]))
+        for p in indice_paragens
+        if p.get("lat") is not None and p.get("lon") is not None
+    }
+    linhas_da_grelha = g.linhas if g is not None else []
     for rid, dados in linhas.items():
+        no_mapa = linha_no_mapa(dados, linhas_da_grelha, s.destino / "percursos", onde)
+        if no_mapa:
+            dados = {**dados, "no_mapa": no_mapa}
         s._escrever(f"linhas/{_seguro(rid)}.json", dados)
     return s
 

@@ -10,11 +10,15 @@ import type {
 import {
   ATRIBUICAO_OSM,
   CORES_DOS_PONTOS,
+  FONTE_DA_LINHA,
   FONTE_DA_REDE,
+  FONTE_DAS_PARAGENS_DA_LINHA,
+  camadasDaLinha,
   camadasDaRede,
   camadasDosNomesDosPontos,
   classeDasViagens,
   estiloDoMapa,
+  type CorDaLinha,
   type TemaDoMapa,
 } from '@/lib/estilo-mapa';
 import {
@@ -556,6 +560,7 @@ export default function Mapa({
   lembrarVista = null,
   perto = null,
   sedes = SEM_SEDES,
+  linha = null,
 }: {
   centro: [number, number];
   zoom?: number;
@@ -640,6 +645,17 @@ export default function Mapa({
    * terras. Sem elas, os nomes são só os do mapa de base.
    */
   sedes?: readonly Sede[];
+  /**
+   * A LINHA ESCOLHIDA, acesa por cima da rede: o traçado dela, as paragens, e
+   * a cor por tema (`camadasDaLinha`). O resto do mapa esbate-se, como com uma
+   * viagem desenhada. O enquadramento é de quem a escolheu (`enquadrar`).
+   */
+  linha?: {
+    tracos: string[];
+    aproximado: boolean;
+    paragens: [number, number][];
+    cor: CorDaLinha;
+  } | null;
 }) {
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<MapaLibre | null>(null);
@@ -959,6 +975,23 @@ export default function Mapa({
             });
           }
 
+          // A LINHA ESCOLHIDA, por cima dos pontos e por baixo dos nomes: é a
+          // única coisa acesa, e os nomes continuam a ler-se por cima dela.
+          // Nasce vazia; enche-se quando alguém escolhe uma linha.
+          for (const fonte of [FONTE_DA_LINHA, FONTE_DAS_PARAGENS_DA_LINHA]) {
+            criado!.addSource(fonte, {
+              type: 'geojson',
+              data: { type: 'FeatureCollection', features: [] },
+            });
+          }
+          for (const camada of camadasDaLinha(
+            tema,
+            { claro: '#0a5c7a', escuro: '#6cb8d6' },
+            false,
+          )) {
+            criado!.addLayer(camada, antesDosNomes);
+          }
+
           // OS NOMES DAS ESTAÇÕES E DAS PARAGENS, por cima dos das aldeias e
           // por baixo dos das vilas: entre uma estação e uma aldeia que não
           // cabem as duas, fica a estação; a vila fica sempre.
@@ -1087,9 +1120,10 @@ export default function Mapa({
   }, [rotas, estado]);
 
   /** As camadas que o sítio acrescenta, com a tinta do tema — para o trocar. */
-  const esbatida = !!percurso;
+  const esbatida = !!percurso || !!linha;
   const camadasNossas = (tema: TemaDoMapa): LayerSpecification[] => [
     ...camadasDaRede(tema, esbatida),
+    ...(linha ? camadasDaLinha(tema, linha.cor, linha.aproximado) : []),
     ...camadasDosNomesDosPontos(tema, 'paragens'),
     // As placas são imagens, e não mudam com o tema: só os círculos.
     ...camadasDe(tiposDasCamadas.current)
@@ -1099,14 +1133,65 @@ export default function Mapa({
   const nossas = useRef(camadasNossas);
   nossas.current = camadasNossas;
 
-  // COM UMA VIAGEM ESCOLHIDA, A REDE RECUA: fica a 25 %, e a viagem é a única
-  // linha que se lê. Sem isto o percurso escolhido era mais um traço azul no
-  // meio de cem.
+  // COM UMA VIAGEM OU UMA LINHA ESCOLHIDA, A REDE RECUA: fica a 25 %, e a
+  // viagem ou a linha é a única que se lê. Sem isto o percurso escolhido era
+  // mais um traço azul no meio de cem.
+  //
+  // E OS PONTOS DOS OUTROS RECUAM TAMBÉM, a um terço: as paragens da linha
+  // acendem-se por cima, e as outras continuam lá — veem-se, tocam-se, e não
+  // competem. A opacidade fica fora das camadas de `camadaDosPontos`, que o
+  // tema volta a pintar; é só daqui que ela muda.
   useEffect(() => {
     const m = mapa.current;
     if (!m || estado !== 'pronto') return;
     pintar(m, camadasDaRede(temaDaPagina(), esbatida));
+    const quanto = esbatida ? 0.35 : 1;
+    for (const c of camadasDe(tiposDasCamadas.current)) {
+      const id = `pontos-${c.tipo}`;
+      const camada = m.getLayer(id);
+      if (!camada) continue;
+      if (camada.type === 'symbol') m.setPaintProperty(id, 'icon-opacity', quanto);
+      else {
+        m.setPaintProperty(id, 'circle-opacity', quanto);
+        m.setPaintProperty(id, 'circle-stroke-opacity', quanto);
+      }
+    }
+    for (const id of ['nomes-de-paragens', 'nomes-de-estacoes']) {
+      if (m.getLayer(id)) m.setPaintProperty(id, 'text-opacity', esbatida ? 0.6 : 1);
+    }
   }, [esbatida, estado]);
+
+  // A LINHA ESCOLHIDA: o traçado, as paragens e a cor dela.
+  useEffect(() => {
+    const m = mapa.current;
+    if (!m || estado !== 'pronto') return;
+    const vazio = { type: 'FeatureCollection' as const, features: [] };
+    (m.getSource(FONTE_DA_LINHA) as GeoJSONSource | undefined)?.setData(
+      linha
+        ? {
+            type: 'FeatureCollection',
+            features: linha.tracos.map((t) => ({
+              type: 'Feature',
+              geometry: { type: 'LineString', coordinates: descodificarLinha(t) },
+              properties: {},
+            })),
+          }
+        : vazio,
+    );
+    (m.getSource(FONTE_DAS_PARAGENS_DA_LINHA) as GeoJSONSource | undefined)?.setData(
+      linha
+        ? {
+            type: 'FeatureCollection',
+            features: linha.paragens.map(([lat, lon]) => ({
+              type: 'Feature',
+              geometry: { type: 'Point', coordinates: [lon, lat] },
+              properties: {},
+            })),
+          }
+        : vazio,
+    );
+    if (linha) pintar(m, camadasDaLinha(temaDaPagina(), linha.cor, linha.aproximado));
+  }, [linha, estado]);
 
   // O TEMA SEGUE O DA PÁGINA COM O MAPA ABERTO: quem escolhe o escuro no
   // menu, ou tem o telemóvel a mudar sozinho ao anoitecer, vê o mapa mudar

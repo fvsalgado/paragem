@@ -809,3 +809,86 @@ export function camadasDosNomesDosPontos(tema: TemaDoMapa, fonte: string): Layer
     } as LayerSpecification,
   ];
 }
+
+// --- a linha escolhida, acesa por cima da rede -----------------------------
+
+export const FONTE_DA_LINHA = 'linha-escolhida';
+export const FONTE_DAS_PARAGENS_DA_LINHA = 'paragens-da-linha';
+
+/** As cores de uma linha no mapa, uma por tema — a do escuro clareada, como os traços da página. */
+export type CorDaLinha = { claro: string; escuro: string };
+
+/**
+ * A LINHA ESCOLHIDA, por cima da rede esbatida: um contorno da cor do fundo,
+ * o traço na cor da linha, e as paragens dela como as estações de um mapa de
+ * metro — o miolo claro e o anel da cor da linha. Mais grossa do que qualquer
+ * traço da rede, para ser a única coisa que se lê.
+ *
+ * SEM TRAÇADO, A TRACEJADO (`aproximado`): as paragens ligadas a direito, que
+ * é o que o planeador faz a uma perna sem traçado — e um traço cheio diria
+ * «é por aqui».
+ */
+export function camadasDaLinha(
+  tema: TemaDoMapa,
+  cor: CorDaLinha,
+  aproximado: boolean,
+): LayerSpecification[] {
+  const fundo = tema === 'claro' ? '#ffffff' : FUNDO_DO_MAPA.escuro;
+  const traco = cor[tema];
+  const pelo = (pares: [number, number][]) => [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    ...pares.flat(),
+  ];
+  return [
+    {
+      id: 'linha-contorno',
+      type: 'line',
+      source: FONTE_DA_LINHA,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: {
+        'line-color': fundo,
+        'line-width': pelo([
+          [8, 5],
+          [12, 8],
+          [16, 13],
+        ]),
+      },
+    } as LayerSpecification,
+    {
+      id: 'linha-traco',
+      type: 'line',
+      source: FONTE_DA_LINHA,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: {
+        'line-color': traco,
+        'line-width': pelo([
+          [8, 3],
+          [12, 5],
+          [16, 8],
+        ]),
+        'line-dasharray': aproximado ? ['literal', [2, 1.5]] : ['literal', [1, 0]],
+      },
+    } as LayerSpecification,
+    {
+      id: 'linha-paragens',
+      type: 'circle',
+      source: FONTE_DAS_PARAGENS_DA_LINHA,
+      paint: {
+        'circle-radius': pelo([
+          [8, 2.2],
+          [12, 4],
+          [16, 6.5],
+        ]),
+        'circle-color': tema === 'claro' ? '#ffffff' : CORES_DOS_PONTOS.escuro.miolo,
+        'circle-stroke-color': traco,
+        'circle-stroke-width': pelo([
+          [8, 1.4],
+          [12, 2.2],
+          [16, 3],
+        ]),
+      },
+    } as LayerSpecification,
+  ];
+}

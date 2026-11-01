@@ -6342,3 +6342,30 @@ details.meio-do-percurso + ol.percurso-da-linha {
 .folha:not(.em-pagina) > .pega-da-folha {
   background-color: color-mix(in srgb, var(--superficie) 99.6%, transparent);
 }
+
+/* --- a linha escolhida no mapa ------------------------------------------- */
+
+/* O cartão de uma linha acesa no mapa: o número e o nome no título, os
+   sentidos numa lista curta, e o horário a um toque. É o cartão de um ponto,
+   com outra cabeça. */
+.cartao-da-linha .cartao-cabecalho h2 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+}
+.cartao-da-linha h2:focus {
+  outline: none;
+}
+ul.sentidos-no-cartao {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+}
+ul.sentidos-no-cartao li {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--linhas);
+}
+ul.sentidos-no-cartao li:last-child {
+  border-bottom: 0;
+}

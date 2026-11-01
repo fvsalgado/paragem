@@ -213,22 +213,47 @@ test('nada encontrado diz-se à vista, e diz o que a procura conhece', async ({ 
   await expect(page.getByRole('option')).toHaveCount(0);
 });
 
-test('a procura do mapa encontra uma linha pelo número, e abre o horário dela', async ({
-  page,
-}) => {
+test('a procura do mapa encontra uma linha pelo número, e acende-a no mapa', async ({ page }) => {
   // Quem conhece o número da carreira escreve o número: a caixa só conhecia
-  // paragens e sítios, e «11» não dava nada (P2-019).
+  // paragens e sítios, e «11» não dava nada (P2-019). Escolhê-la levava à
+  // página da linha, e o mapa — onde se vê por onde ela vai — ficava para
+  // trás: agora acende-se nele, por cima da rede, e o horário fica a um toque.
   test.skip(!temMosaicos(), SEM.mosaicos);
   const l = linhaComMaisViagens();
+  const seguro = l.id.replace(/[^a-zA-Z0-9\-_]/g, '-');
   await page.goto(`/`);
   await page.getByRole('combobox', { name: 'Procurar' }).fill(l.codigo);
   const opcao = page.getByRole('option').filter({ hasText: '· linha' }).first();
   await expect(opcao).toBeVisible({ timeout: 15_000 });
   await expect(opcao).toContainText(l.nome);
   await opcao.click();
-  await expect(page).toHaveURL(
-    new RegExp(`/rede/linhas/${l.id.replace(/[^a-zA-Z0-9\-_]/g, '-')}/$`),
+  await expect(page).toHaveURL(new RegExp(`\\?linha=${encodeURIComponent(l.id)}$`));
+  const cartao = page.locator('section.cartao-da-linha');
+  await expect(cartao.getByRole('heading', { level: 2 })).toContainText(l.nome);
+  // O traçado dela desenha-se no mapa.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            (
+              window as unknown as {
+                __mapa?: { queryRenderedFeatures(o: { layers: string[] }): unknown[] };
+              }
+            ).__mapa?.queryRenderedFeatures({ layers: ['linha-traco'] }).length ?? 0,
+        ),
+      { timeout: 15_000 },
+    )
+    .toBeGreaterThan(0);
+  // O horário, a um toque.
+  await expect(cartao.getByRole('link', { name: 'Horário e paragens' })).toHaveAttribute(
+    'href',
+    `/rede/linhas/${seguro}/`,
   );
+  // E fechar volta ao mapa de abertura.
+  await cartao.getByRole('button', { name: 'Fechar' }).click();
+  await expect(cartao).toHaveCount(0);
+  await expect(page.locator('.folha-de-abertura')).toBeVisible();
 });
 
 test('dois sítios com o mesmo nome dizem de que concelho são', async ({ page }) => {

@@ -318,9 +318,7 @@ export default async function Linha({
               onde={onde}
               cor={traco(l.cor) ?? '#0a5c7a'}
               codigo={l.codigo}
-              noMapa={
-                comMapa ? (paragemId) => url(rid, `/?ponto=${encodeURIComponent(paragemId)}`) : null
-              }
+              noMapa={comMapa ? url(rid, `/?linha=${encodeURIComponent(l.id)}`) : null}
             />
 
             {/* NUM ECRÃ LARGO, O HORÁRIO E O PERCURSO LADO A LADO (P1-014). Era
