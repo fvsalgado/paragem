@@ -152,3 +152,70 @@ def test_o_numero_esperado_que_bate_nao_diz_nada(tmp_path):
     )
     _correspondencias(ctx, tmp_path)
     assert "correspondencias.diferente-do-esperado" not in _ids(ctx)
+
+
+# --- o fim dos feeds de outras entidades -------------------------------------
+
+
+def _feed_com_fim(tmp_path, nome: str, ultimo_dia: str):
+    import zipfile
+
+    caminho = tmp_path / "gtfs" / f"{nome}.zip"
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(caminho, "w") as z:
+        z.writestr(
+            "agency.txt",
+            "agency_id,agency_name,agency_url,agency_timezone\na,Comboios da Serra,http://x,UTC\n",
+        )
+        z.writestr(
+            "calendar.txt",
+            "service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,"
+            f"start_date,end_date\nS,1,1,1,1,1,1,1,20261101,{ultimo_dia}\n",
+        )
+    return caminho
+
+
+def _contexto_com(tmp_path, saidas):
+    from types import SimpleNamespace
+
+    from paragem.relatorio import Relatorio
+
+    return SimpleNamespace(
+        regiao=SimpleNamespace(id="serra", saidas=saidas), relatorio=Relatorio(regiao="serra")
+    )
+
+
+def test_um_feed_de_terceiro_que_acaba_daqui_a_pouco_da_lacuna(tmp_path):
+    from datetime import date
+    from types import SimpleNamespace
+
+    from paragem.construcao import _validade_dos_feeds_de_terceiros
+
+    _feed_com_fim(tmp_path, "comboio", "20261212")
+    saida = SimpleNamespace(
+        papel="feed-de-terceiro", saida="gtfs/comboio.zip", fonte="comboio-gtfs", params={}
+    )
+    ctx = _contexto_com(tmp_path, [saida])
+    _validade_dos_feeds_de_terceiros(ctx, tmp_path, hoje=date(2026, 11, 1))
+    (lac,) = ctx.relatorio.lacunas
+    assert lac.id == "comboio.acaba-em-breve"
+    assert "Comboios da Serra" in lac.o_que and "12/12/2026" in lac.o_que
+    assert "daqui a 41 dias" in lac.o_que
+    assert ctx.relatorio.contagens["comboio.dias_ate_ao_fim"] == 41
+
+
+def test_um_feed_de_terceiro_com_folga_nao_da_lacuna_e_o_da_casa_nunca(tmp_path):
+    from datetime import date
+    from types import SimpleNamespace
+
+    from paragem.construcao import _validade_dos_feeds_de_terceiros
+
+    _feed_com_fim(tmp_path, "comboio", "20270301")
+    _feed_com_fim(tmp_path, "rede", "20261105")
+    saidas = [
+        SimpleNamespace(papel="feed-de-terceiro", saida="gtfs/comboio.zip", fonte="c", params={}),
+        SimpleNamespace(papel="horarios", saida="gtfs/rede.zip", fonte="r", params={}),
+    ]
+    ctx = _contexto_com(tmp_path, saidas)
+    _validade_dos_feeds_de_terceiros(ctx, tmp_path, hoje=date(2026, 11, 1))
+    assert ctx.relatorio.lacunas == []

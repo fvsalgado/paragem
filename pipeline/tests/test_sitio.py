@@ -539,11 +539,10 @@ def _fonte(licenca: str = "", por_esclarecer: bool = False):
 def test_a_licenca_da_saida_ganha_a_da_fonte():
     """A licença de uma obra derivada não é a da entrada principal.
 
-    O feed da rede sai de um caderno de horários que não declara licença, e por
-    isso ficava «para consulta». Mas 668 dos 903 traçados encaminham-se pelo
-    OpenStreetMap, e a partilha nos mesmos termos da ODbL ganha a tudo o que
-    entra. O ficheiro não estava por licenciar — estava mal rotulado, e o
-    rótulo era MAIS restritivo do que a realidade obriga.
+    Uma saída que deriva só do OpenStreetMap, por um leitor cuja fonte
+    principal é outra, declara ODbL e é ODbL. O que este teste NÃO diz é que
+    um feed com horários de uma operadora passe a ODbL por ter traçados do
+    mapa: isso é a receita a não o declarar (ver o teste das partes do mapa).
     """
     from paragem.sitio import _termos
 
@@ -643,10 +642,8 @@ def test_um_modo_que_a_regiao_nao_declara_fica_de_fora_da_conta():
 def test_uma_tabela_de_decisoes_nao_sai_mais_fechada_do_que_o_ficheiro_que_explica():
     """As decisões carregam as MESMAS coordenadas resolvidas que o feed.
 
-    Saíam com a licença da FONTE — «sem licença aberta declarada, para
-    consulta» — ao lado do feed que explicam, rotulado ODbL. É o mesmo erro
-    que o `_termos` foi escrito para corrigir: a licença de uma obra derivada
-    não é a da entrada principal.
+    Saem com os termos da saída de que decidem, e não com os da fonte: nem
+    mais apertados nem mais largos do que o ficheiro que explicam.
     """
     from paragem.sitio import ODBL, _termos
 
@@ -999,3 +996,147 @@ fontes:
         # Um dos dois sem data: o modo fica sem data.
         "expresso": None,
     }
+
+
+# --- a parte do mapa num ficheiro que não é todo dele ----------------------
+
+
+def test_um_ficheiro_para_consulta_com_partes_do_mapa_diz_qual_e_a_parte(tmp_path):
+    """A ODbL obriga quem usa o OpenStreetMap; não relicencia os dados dos outros.
+
+    Um catálogo com as horas de uma brochura e as coordenadas de um mapa fica
+    para consulta — e a parte do mapa leva a atribuição dentro, a dizer que é
+    ESSA parte que está sob ODbL e não o ficheiro inteiro.
+    """
+    import zipfile
+
+    from paragem.sitio import NOTA_DA_ODBL, _embutir_atribuicao
+
+    alvo = _zip(tmp_path / "estacoes.zip", {"station_information.json": "{}"})
+    _embutir_atribuicao(alvo, "as coordenadas das estações")
+    with zipfile.ZipFile(alvo) as z:
+        nota = z.read(NOTA_DA_ODBL).decode("utf-8")
+    assert "as coordenadas das estações" in nota
+    assert "para consulta" in nota
+    assert "OpenStreetMap" in nota
+
+    catalogo = tmp_path / "catalogo.json"
+    catalogo.write_text('{"nome": "x"}', encoding="utf-8")
+    _embutir_atribuicao(catalogo, "as coordenadas das paragens")
+    d = json.loads(catalogo.read_text(encoding="utf-8"))
+    assert "OpenStreetMap" in d["attribution"]
+    assert d["license"].startswith("Sem licença aberta declarada")
+    assert "as coordenadas das paragens" in d["license"]
+
+
+def test_a_atribuicao_ao_lado_de_um_ficheiro_para_consulta_com_partes_do_mapa():
+    from types import SimpleNamespace
+
+    from paragem.sitio import CONSULTA, _atribuicao_da_descarga
+
+    caderno = SimpleNamespace(atribuicao="Operadora X", exige_atribuicao=False)
+    texto, obrigatoria = _atribuicao_da_descarga(caderno, CONSULTA, "os traçados")
+    assert "OpenStreetMap" in texto and "Operadora X" in texto
+    assert obrigatoria is True
+    # Sem partes do mapa, é só a da fonte, como era.
+    assert _atribuicao_da_descarga(caderno, CONSULTA) == ("Operadora X", False)
+
+
+# --- cada feed com o seu fim -------------------------------------------------
+
+
+def test_o_calendario_diz_onde_acaba_cada_feed():
+    """A tabela é uma só, e o fim dela é o do feed que vai mais longe.
+
+    Uma estação cujo feed acabou dizia «os horários carregados vão até» ao fim
+    do feed de outra rede. O último dia de cada feed sai pelo prefixo dos
+    serviços, que é o mesmo das partidas.
+    """
+    from paragem.sitio import calendario_em_mascaras
+
+    servicos = ["rede:A-U", "comboio:S1", "comboio:S2", "sem-prefixo"]
+    datas = {
+        "20261210": [0, 1],
+        "20261212": [0, 2],
+        "20261213": [0],
+        "20271026": [0, 3],
+    }
+    c = calendario_em_mascaras(servicos, datas)
+    assert c["fins"] == {"comboio": "20261212", "rede": "20271026"}
+    assert calendario_em_mascaras(servicos, {})["fins"] == {}
+
+
+def test_o_regiao_json_traz_cada_feed_com_o_seu_fim(raiz, tmp_path):
+    from paragem.sitio import construir
+
+    gtfs = raiz / "build" / "prova" / "gtfs"
+    if not (gtfs / "rede-alta.zip").exists():
+        pytest.skip("sem build/prova — corre `uv run pipeline build --regiao prova`")
+    shutil.copytree(gtfs, tmp_path / "gtfs")
+    construir(raiz, regiao_ou_salta("prova"), tmp_path)
+    r = json.loads((tmp_path / "sitio" / "regiao.json").read_text(encoding="utf-8"))
+    cal = json.loads((tmp_path / "sitio" / "calendario.json").read_text(encoding="utf-8"))
+    assert r["feeds"], "a região tem feeds, e cada um diz até quando vai"
+    for nome, f in r["feeds"].items():
+        assert f["inicio"] <= f["fim"], nome
+        # O mesmo fim que a tabela dos dias dá a esse feed, em ISO.
+        if nome in cal["fins"]:
+            assert f["fim"].replace("-", "") == cal["fins"][nome], nome
+        # «da …» só com o artigo declarado; sem ele não se adivinha.
+        assert f["de"] is None or f["de"].split(" ", 1)[0] in {"da", "do", "das", "dos"}
+
+
+# --- desde quando vale o caderno ---------------------------------------------
+
+
+def test_a_data_do_rodape_le_se_por_extenso():
+    from datetime import date
+
+    from paragem.leitores.pdf_horarios import Documento, data_por_extenso
+
+    rodape = "Em vigor desde 5 de dezembro de 2025 | Valid from 5th December 2025"
+    assert data_por_extenso(rodape) == date(2025, 12, 5)
+    assert Documento(em_vigor_desde=rodape).data_em_vigor == date(2025, 12, 5)
+    assert data_por_extenso("Em vigor desde 1 de Março de 2026") == date(2026, 3, 1)
+    assert data_por_extenso("Em vigor desde o início do ano letivo") is None
+    assert data_por_extenso("31 de fevereiro de 2026") is None
+
+
+def test_o_feed_version_nao_repete_o_em_vigor_desde():
+    """Saía «em vigor desde Em vigor desde 5 de dezembro de 2025 | Valid from…»."""
+    from paragem.leitores.horarios_pdf_operadora import _em_vigor
+    from paragem.leitores.pdf_horarios import Documento
+
+    doc = Documento(em_vigor_desde="Em vigor desde 5 de dezembro de 2025 | Valid from 5th Dec")
+    assert _em_vigor(doc) == " em vigor desde 2025-12-05"
+    # Sem data legível, o rodapé sem a expressão repetida e sem a tradução.
+    assert _em_vigor(Documento(em_vigor_desde="Em vigor desde o Natal | Valid…")) == (
+        " em vigor desde o Natal"
+    )
+    assert _em_vigor(Documento()) == ""
+
+
+# --- os nomes por que se procura -------------------------------------------
+
+
+def test_um_outro_nome_declarado_aponta_para_a_mesma_paragem():
+    """«santuário» dava o santuário de outra terra, e não o da cidade."""
+    from paragem.sitio import _procura
+
+    paragens = [
+        {"id": "t1", "nome": "Pedra Alta (Terminal)", "lat": 39.6, "lon": -8.6, "partidas": 101},
+        {
+            "id": "o1",
+            "nome": "Santuário da Ribeira Branca",
+            "lat": 39.5,
+            "lon": -8.5,
+            "partidas": 12,
+        },
+    ]
+    outros = {"Santuário da Pedra Alta": "Pedra Alta (Terminal)", "Fantasma": "Não existe"}
+    pontos = {p[0]: p for p in _procura(paragens, [], {}, outros)["pontos"]}
+    assert pontos["Santuário da Pedra Alta"][1:] == pontos["Pedra Alta (Terminal)"][1:]
+    # Um nome que aponta para uma paragem que não existe não entra.
+    assert "Fantasma" not in pontos
+    # E não substitui nada que já lá estivesse com esse nome.
+    assert pontos["Santuário da Ribeira Branca"][5] == "o1"

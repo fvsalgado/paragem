@@ -40,7 +40,7 @@ import {
   type Capacidade,
 } from '@/lib/planeador';
 import { arrumarParaMostrar, contarTransbordos } from '@/lib/viagens';
-import { instanteNaRegiao } from '@/lib/fuso';
+import { FUSO, instanteNaRegiao } from '@/lib/fuso';
 import { aPedidoNasPontas, type PropostaAPedido } from '@/lib/a-pedido';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { comoProcura, escreverViagem } from '@/lib/endereco-da-viagem';
@@ -699,7 +699,7 @@ export default function Direccoes({
     if (estado.tipo !== 'resultados' || problema || !lista.length) return '';
     const it = lista[recomendada] ?? lista[0];
     const quantas = lista.length === 1 ? '1 opção' : `${lista.length} opções`;
-    const dia = diaDe(it.startTime, referencia);
+    const dia = diaDe(it.startTime, referencia, FUSO, Date.now());
     return (
       `${naProxima ? 'Noutro dia: ' : ''}${quantas}. ` +
       `A recomendada parte ${dia ? `${dia}, ` : ''}às ${horaDe(it.startTime)} e chega às ${horaDe(
@@ -1049,10 +1049,14 @@ export default function Direccoes({
                 <div className="faixa">
                   <h3>
                     A próxima ligação é{' '}
+                    {/* CONTADO A PARTIR DE HOJE, e não do dia perguntado:
+                        «amanhã» numa pesquisa para outro dia era o dia
+                        seguinte ao perguntado, e quem o lê hoje entende
+                        outra coisa. */}
                     {quandoE(
                       proxima!.dia.replace(/-/g, ''),
-                      diasEntre(estado.data, proxima!.dia),
-                      estado.data.replace(/-/g, ''),
+                      diasEntre(dataDoCampo(new Date()), proxima!.dia),
+                      dataDoCampo(new Date()).replace(/-/g, ''),
                     )}
                   </h3>
                   <p>
@@ -1244,8 +1248,8 @@ function Opcao({
               para o dia seguinte: enquanto a página só sabia escrever
               «07:30», mostrar a carreira de amanhã a quem pergunta ao fim da
               tarde era enganar. */}
-          {diaDe(it.startTime, referencia) && (
-            <b className="dia">{diaDe(it.startTime, referencia)}, </b>
+          {diaDe(it.startTime, referencia, FUSO, Date.now()) && (
+            <b className="dia">{diaDe(it.startTime, referencia, FUSO, Date.now())}, </b>
           )}
           {horaDe(it.startTime)} – {horaDe(it.endTime)}
         </span>

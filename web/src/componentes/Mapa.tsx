@@ -1,12 +1,32 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import type { Map as MapaLibre, GeoJSONSource } from 'maplibre-gl';
-import { ATRIBUICAO_OSM, estiloDoMapa, type TemaDoMapa } from '@/lib/estilo-mapa';
-import { camadasDe, type CamadaDePontos } from '@/lib/pontos-no-mapa';
-import { DENSIDADE, imagemDaPlaca } from '@/lib/icones-do-mapa';
+import type {
+  Map as MapaLibre,
+  GeoJSONSource,
+  LayerSpecification,
+  MapGeoJSONFeature,
+} from 'maplibre-gl';
+import {
+  ATRIBUICAO_OSM,
+  CORES_DOS_PONTOS,
+  FONTE_DA_REDE,
+  camadasDaRede,
+  camadasDosNomesDosPontos,
+  classeDasViagens,
+  estiloDoMapa,
+  type TemaDoMapa,
+} from '@/lib/estilo-mapa';
+import {
+  camadasDe,
+  raioNoZoom,
+  rotuloNoMapa,
+  zoomDeAparecer,
+  type CamadaDePontos,
+} from '@/lib/pontos-no-mapa';
+import { DENSIDADE, LADO, imagemDaPlaca } from '@/lib/icones-do-mapa';
 import type { Ponto } from '@/lib/formato';
-import type { PercursoGeo } from '@/lib/otp';
+import { descodificarLinha, type PercursoGeo } from '@/lib/otp';
 import { ouvirTema, temaEfetivo } from '@/lib/tema';
 
 /**
@@ -152,15 +172,22 @@ function temaDaPagina(): TemaDoMapa {
  * Um `setStyle` refazia o estilo inteiro e levava com ele as camadas que o
  * sítio acrescenta depois — os pontos da rede, o percurso escolhido. As cores
  * do mapa de base são só tinta: troca-se a tinta de cada camada do estilo, e
- * o resto fica onde estava.
+ * o resto fica onde estava. As camadas que o sítio acrescenta — a rede, os
+ * pontos e os nomes deles — trocam a sua da mesma maneira (`camadasNossas`).
  */
 function aplicarTema(
   m: MapaLibre,
   mosaicos: string,
   atribuicao: string | undefined,
   tema: TemaDoMapa,
+  nossas: LayerSpecification[],
 ) {
-  for (const camada of estiloDoMapa(mosaicos, atribuicao, tema).layers) {
+  pintar(m, [...estiloDoMapa(mosaicos, atribuicao, tema).layers, ...nossas]);
+}
+
+/** Troca a tinta destas camadas, as que existirem no mapa. */
+function pintar(m: MapaLibre, camadas: LayerSpecification[]) {
+  for (const camada of camadas) {
     if (!('paint' in camada) || !camada.paint || !m.getLayer(camada.id)) continue;
     for (const [propriedade, valor] of Object.entries(camada.paint)) {
       m.setPaintProperty(
@@ -170,6 +197,195 @@ function aplicarTema(
       );
     }
   }
+}
+
+/** Só se mostra o que já se separou do vizinho: ver `zoomDeAparecer`. */
+const JA_APARECEU = ['>=', ['zoom'], ['coalesce', ['get', 'zmin'], 0]];
+
+/** Uma interpolação pelo zoom, a partir de pares `[zoom, valor]`. */
+const pelosZooms = (pares: [number, number][], f: (v: number) => number = (v) => v) => [
+  'interpolate',
+  ['linear'],
+  ['zoom'],
+  ...pares.flatMap(([z, v]) => [z, f(v)]),
+];
+
+/**
+ * A CAMADA DE UM MODO — a mesma especificação para a criar e para lhe trocar
+ * a tinta quando o tema muda.
+ *
+ * A PARAGEM É UM ANEL, com o miolo claro e o contorno da cor da rede: um disco
+ * azul por cima do traço azul da linha desaparecia nele. O anel lê-se como as
+ * estações de um mapa de metro, e o contorno engrossa com o zoom.
+ */
+function camadaDosPontos(c: CamadaDePontos, tema: TemaDoMapa, placa: boolean): LayerSpecification {
+  const id = `pontos-${c.tipo}`;
+  const filtro = ['all', ['==', ['get', 'tipo'], c.tipo], JA_APARECEU];
+  if (placa) {
+    return {
+      id,
+      type: 'symbol',
+      source: 'paragens',
+      minzoom: c.minzoom,
+      filter: filtro,
+      // A PLACA NÃO EMPURRA OS NOMES. Por baixo deles na ordem de desenho, e
+      // fora da deteção de colisões: um nome de terra não desaparece por haver
+      // uma estação ao lado. E OPACA DESDE QUE APARECE: a desvanecer entre o
+      // `minzoom` e o seguinte, a estação era invisível a z9 — o zoom em que
+      // se vê a região inteira, e em que ela é o marco que orienta.
+      metadata: { cor: c.cor, forma: c.forma },
+      layout: {
+        'icon-image': `placa-${c.tipo}`,
+        'icon-size': pelosZooms(c.raios, (r) => (r * 2) / (LADO / DENSIDADE)),
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
+      },
+    } as LayerSpecification;
+  }
+  const P = CORES_DOS_PONTOS[tema];
+  const paragem = c.tipo === 'paragem';
+  const escuro = tema === 'escuro';
+  return {
+    id,
+    type: 'circle',
+    source: 'paragens',
+    minzoom: c.minzoom,
+    metadata: { cor: c.cor, forma: c.forma },
+    // DE LONGE NÃO SE MOSTRAM TODAS. Vistas de cima, as paragens são uma
+    // nuvem que tapa a própria rede, e a esse zoom não se distingue uma da
+    // outra. O `zmin` de cada ponto diz quando aparece (`zoomDeAparecer`):
+    // as mais servidas desde o `minzoom`, as outras desde 13, e a gémea do
+    // outro lado da rua só quando já se separa. O catálogo em `/rede/` tem-nas
+    // todas, sempre.
+    filter: filtro,
+    paint: {
+      'circle-radius': pelosZooms(c.raios),
+      // O ANEL DE UM PRIVADO, no escuro, troca de papéis: miolo escuro e anel
+      // claro. Branco, era o disco mais claro do mapa — um farol em cima do
+      // terminal, a anunciar o expresso mais alto do que a rede.
+      'circle-color': paragem ? P.miolo : c.anel ? (escuro ? P.halo : '#ffffff') : c.cor,
+      'circle-stroke-color': paragem
+        ? P.anel
+        : c.anel
+          ? escuro
+            ? P.secundario
+            : c.cor
+          : '#ffffff',
+      'circle-stroke-width': paragem
+        ? pelosZooms([
+            [11, 1.2],
+            [13, 1.6],
+            [14, 2],
+            [16, 2.6],
+          ])
+        : c.anel
+          ? 3
+          : 1.5,
+    },
+  } as LayerSpecification;
+}
+
+/** Os modos da rede e os tipos de ponto que os filtros ligam e desligam. */
+const TIPO_DO_MODO: Record<string, string> = { autocarro: 'paragem', comboio: 'estacao' };
+
+/** O ficheiro da rede tal como o pipeline o escreve (`rede_no_mapa.py`). */
+type RedeCrua = { modos: string[]; trocos: [number, number | null, string][] };
+
+/**
+ * A rede em GeoJSON, para o MapLibre: um traço por elemento, com o modo, as
+ * viagens e a classe de espessura. Os módulos desligados no painel ficam de
+ * fora, como os pontos deles.
+ */
+function rotasDaRede(d: RedeCrua, desligados: readonly string[]) {
+  return {
+    type: 'FeatureCollection' as const,
+    features: (d.trocos ?? []).flatMap(([m, viagens, polilinha]) => {
+      const modo = d.modos?.[m];
+      if (!modo || desligados.includes(modo)) return [];
+      return [
+        {
+          type: 'Feature' as const,
+          geometry: { type: 'LineString' as const, coordinates: descodificarLinha(polilinha) },
+          properties: { modo, viagens, f: classeDasViagens(viagens) },
+        },
+      ];
+    }),
+  };
+}
+
+/**
+ * O QUE O DEDO APANHA: o ponto mais perto numa caixa de 44 × 44 px à volta do
+ * toque (§4.5). Um anel de 5 px pede uma pontaria que ninguém tem de pé num
+ * autocarro; o alvo é a caixa, e entre dois pontos dentro dela ganha o mais
+ * perto do dedo.
+ */
+const ALVO = 44;
+
+/** Onde se guarda a última vista, por região: `lembrarVista` é a chave. */
+type Vista = { lon: number; lat: number; zoom: number };
+
+function lerVista(chave: string, limites: Limites | null): Vista | null {
+  try {
+    const v = JSON.parse(window.localStorage.getItem(chave) ?? 'null') as Vista | null;
+    if (!v || ![v.lon, v.lat, v.zoom].every((x) => typeof x === 'number' && isFinite(x))) {
+      return null;
+    }
+    if (v.zoom < 5 || v.zoom > 20) return null;
+    // UMA VISTA DE OUTRO SÍTIO NÃO SE ABRE. Com a caixa da área servida
+    // alargada para metade de cada lado: o que estiver fora disso é de outra
+    // região no mesmo endereço (uma pré-visualização), ou de uns dados que
+    // mudaram de sítio.
+    if (limites) {
+      const [[o, s], [e, n]] = limites;
+      const [dx, dy] = [(e - o) / 2, (n - s) / 2];
+      if (v.lon < o - dx || v.lon > e + dx || v.lat < s - dy || v.lat > n + dy) return null;
+    }
+    return v;
+  } catch {
+    return null;
+  }
+}
+
+function guardarVista(chave: string, v: Vista): void {
+  try {
+    window.localStorage.setItem(chave, JSON.stringify(v));
+  } catch {
+    // Sem armazenamento (navegação privada, cota cheia): abre-se na área toda.
+  }
+}
+
+/** `[[oeste, sul], [este, norte]]`, como o `fitBounds` do MapLibre. */
+export type Limites = [[number, number], [number, number]];
+
+/**
+ * O RESPIRO À VOLTA DA ÁREA SERVIDA, além do que as folhas tapam: a coluna dos
+ * botões do mapa à direita, e a escala e a atribuição em baixo.
+ */
+const RESPIRO = { top: 16, bottom: 40, left: 16, right: 60 };
+
+/**
+ * O centro e o zoom que mostram os limites inteiros no que as folhas não
+ * tapam — a conta do `fitBounds`, feita aqui para o esboço e para o mapa
+ * nascerem já no sítio.
+ */
+function vistaDosLimites(
+  limites: Limites,
+  largura: number,
+  altura: number,
+  margem: { top: number; bottom: number; left: number; right: number },
+): { centro: [number, number]; zoom: number } {
+  const [[o, s], [e, n]] = limites;
+  const [x0, y0] = projetar(n, o, 0);
+  const [x1, y1] = projetar(s, e, 0);
+  const livreX = Math.max(80, largura - margem.left - margem.right - RESPIRO.left - RESPIRO.right);
+  const livreY = Math.max(80, altura - margem.top - margem.bottom - RESPIRO.top - RESPIRO.bottom);
+  const zoom = Math.log2(
+    Math.min(livreX / Math.max(x1 - x0, 1e-9), livreY / Math.max(y1 - y0, 1e-9)),
+  );
+  return {
+    centro: [(s + n) / 2, (o + e) / 2],
+    zoom: Math.max(6, Math.min(15, zoom)),
+  };
 }
 
 /**
@@ -192,6 +408,22 @@ function juntarPlaca(m: MapaLibre, c: CamadaDePontos): boolean {
  * sobra é onde desenhar — sem sobra, o `fitBounds` desiste.
  */
 const MARGEM_MAXIMA = 0.65;
+
+/**
+ * As margens que o mapa recebe: o que as folhas tapam, com os tetos que
+ * deixam sempre onde desenhar. Em cima e em baixo juntos nunca passam de
+ * quatro quintos da tela, e à esquerda nunca de metade — senão o `fitBounds`
+ * desiste.
+ */
+function margensEfetivas(
+  largura: number,
+  altura: number,
+  m: { baixo: number; esquerda: number; cima: number },
+): { top: number; right: number; bottom: number; left: number } {
+  const baixo = Math.min(m.baixo, altura * MARGEM_MAXIMA);
+  const cima = Math.max(0, Math.min(m.cima, altura * 0.8 - baixo));
+  return { top: cima, right: 0, bottom: baixo, left: Math.min(m.esquerda, largura * 0.5) };
+}
 
 /** Web Mercator, em píxeis de um mundo de 512 × 2^zoom — o que o MapLibre usa. */
 function projetar(lat: number, lon: number, zoom: number): [number, number] {
@@ -239,15 +471,19 @@ function Esboco({
   const meioX = esquerda + (largura - esquerda) / 2;
   const camadas = camadasDe(pontos.map((p) => p.tipo));
   const regra = new Map(camadas.map((c) => [c.tipo, c]));
-  const visiveis = pontos.flatMap((p) => {
+  // A MESMA REGRA DO MAPA: o que ainda não se separou do vizinho não aparece,
+  // e o raio é o que o MapLibre vai interpolar a este zoom.
+  const zmin = zoomDeAparecer(pontos);
+  const escuro = temaDaPagina() === 'escuro';
+  const cores = CORES_DOS_PONTOS[escuro ? 'escuro' : 'claro'];
+  const visiveis = pontos.flatMap((p, i) => {
     const c = regra.get(p.tipo);
-    if (!c || zoom < c.minzoom) return [];
-    if (c.desbastar && zoom < 13 && (p.partidas ?? 0) <= 40) return [];
+    if (!c || zoom < c.minzoom || Math.floor(zoom) < zmin[i]) return [];
     const [x, y] = projetar(p.lat, p.lon, zoom);
     const px = x - cx + meioX;
     const py = y - cy + meioY;
     if (px < -10 || py < -10 || px > largura + 10 || py > altura + 10) return [];
-    return [{ px, py, c }];
+    return [{ px, py, c, r: raioNoZoom(c.raios, zoom) }];
   });
   return (
     <svg
@@ -258,15 +494,33 @@ function Esboco({
       aria-hidden="true"
       focusable="false"
     >
-      {visiveis.map(({ px, py, c }, i) => (
+      {visiveis.map(({ px, py, c, r }, i) => (
         <circle
           key={i}
           cx={px}
           cy={py}
-          r={c.raio[0] + 1}
-          fill={c.anel ? '#ffffff' : c.forma === 'placa' ? c.fundo : c.cor}
-          stroke={c.anel || c.fundo === '#ffffff' ? c.cor : '#ffffff'}
-          strokeWidth={c.anel ? 2.5 : 1.5}
+          r={r}
+          fill={
+            c.tipo === 'paragem'
+              ? cores.miolo
+              : c.anel
+                ? escuro
+                  ? cores.halo
+                  : '#ffffff'
+                : c.forma === 'placa'
+                  ? c.fundo
+                  : c.cor
+          }
+          stroke={
+            c.tipo === 'paragem'
+              ? cores.anel
+              : c.anel && escuro
+                ? cores.secundario
+                : c.anel || c.fundo === '#ffffff'
+                  ? c.cor
+                  : '#ffffff'
+          }
+          strokeWidth={c.tipo === 'paragem' ? 1.5 : c.anel ? 2.5 : 1.5}
         />
       ))}
     </svg>
@@ -292,6 +546,10 @@ export default function Mapa({
   margemSuperior = 0,
   margensMedidas = true,
   modosVisiveis,
+  rede = null,
+  modosDesligados = [],
+  limites = null,
+  lembrarVista = null,
 }: {
   centro: [number, number];
   zoom?: number;
@@ -343,6 +601,22 @@ export default function Mapa({
    * página de direções, que não tem filtro nenhum por cima.
    */
   modosVisiveis?: Set<string>;
+  /**
+   * Onde está a rede (`rede-no-mapa.json`): um traço por troço, mais grosso
+   * onde passa mais. Sem ela — dados publicados antes de ela existir, ou uma
+   * página sem rede para mostrar — o mapa desenha-se como antes, só pontos.
+   */
+  rede?: string | null;
+  /** Os módulos que o painel desligou: a rede deles não se desenha. */
+  modosDesligados?: readonly string[];
+  /**
+   * A ÁREA SERVIDA, para o mapa abrir nela inteira. Abria a z12 em cima da
+   * paragem mais servida — via-se um bairro, e não a região a que o sítio
+   * diz respeito.
+   */
+  limites?: Limites | null;
+  /** A chave onde guardar a última vista; sem ela, não se guarda nem se lê. */
+  lembrarVista?: string | null;
 }) {
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<MapaLibre | null>(null);
@@ -352,8 +626,44 @@ export default function Mapa({
   escolher.current = aoEscolher;
   const localizar = useRef(aoLocalizar);
   localizar.current = aoLocalizar;
+  /** Os pontos pelo tipo e pelo identificador: o toque devolve o ponto, e não uma cópia dele. */
+  const pontoDe = useRef(new Map<string, Marca>());
+  /**
+   * SE A VISTA JÁ ESTÁ DECIDIDA. Até alguém mexer no mapa — ou o mapa ir a um
+   * sítio escolhido, a um percurso, à localização —, a vista é a área servida
+   * inteira, e volta a enquadrá-la quando as folhas mudam de altura. Depois,
+   * é de quem a decidiu.
+   */
+  const vistaDecidida = useRef(false);
+  /** As margens de agora, para quem as lê fora de um efeito (o nascer do mapa). */
+  const margens = useRef({ baixo: margemInferior, esquerda: margemEsquerda, cima: margemSuperior });
+  margens.current = { baixo: margemInferior, esquerda: margemEsquerda, cima: margemSuperior };
+  /** A rede como chegou, para a voltar a filtrar sem a voltar a pedir. */
+  const [rotas, setRotas] = useState<ReturnType<typeof rotasDaRede> | null>(null);
   /** O tamanho da caixa, para o esboço que se mostra enquanto o mapa chega. */
   const [tamanho, setTamanho] = useState<{ w: number; h: number } | null>(null);
+
+  /**
+   * ONDE O MAPA NASCE: a última vista de quem já cá esteve (`lembrarVista`),
+   * ou a área servida inteira no que as folhas não tapam, ou — numa página
+   * sem área declarada — o centro que ela deu. O esboço e o mapa perguntam
+   * aqui, e nascem no mesmo sítio.
+   */
+  const cameraInicial = (
+    w: number,
+    h: number,
+  ): { centro: [number, number]; zoom: number; origem: 'guardada' | 'limites' | 'centro' } => {
+    const guardada = lembrarVista ? lerVista(lembrarVista, limites) : null;
+    if (guardada)
+      return { centro: [guardada.lat, guardada.lon], zoom: guardada.zoom, origem: 'guardada' };
+    if (limites && w > 0 && h > 0) {
+      return {
+        ...vistaDosLimites(limites, w, h, margensEfetivas(w, h, margens.current)),
+        origem: 'limites',
+      };
+    }
+    return { centro, zoom, origem: 'centro' };
+  };
 
   const [estado, setEstado] = useState<'a-carregar' | 'pronto' | 'falhou'>('a-carregar');
 
@@ -383,14 +693,20 @@ export default function Mapa({
         const protocolo = new pm.Protocol();
         addProtocol('pmtiles', protocolo.tile);
 
+        // ONDE NASCE: a última vista de quem já cá esteve, ou a área servida
+        // inteira no que as folhas não tapam (`cameraInicial`). Nasce já com
+        // as margens, para não saltar quando elas chegarem depois do `load`.
+        const [largura, altura] = [caixa.current.clientWidth, caixa.current.clientHeight];
+        const inicio = cameraInicial(largura, altura);
+        if (inicio.origem === 'guardada') vistaDecidida.current = true;
         criado = new Map({
           container: caixa.current,
           // O MAPA NO TEMA DA PÁGINA, como o resto dela (P1-044): um mapa
           // claro no meio de uma página escura encandeava exatamente onde o
           // tema escuro devia poupar os olhos.
           style: estiloDoMapa(mosaicos, atribuicao || undefined, temaDaPagina()),
-          center: [centro[1], centro[0]],
-          zoom,
+          center: [inicio.centro[1], inicio.centro[0]],
+          zoom: inicio.zoom,
           // A ATRIBUIÇÃO JÁ ESCRITA QUANDO O CONTROLO NASCE. Vinha só da fonte
           // dos mosaicos, e o MapLibre só a escrevia quando a fonte respondia —
           // segundos depois, a alargar o canto de baixo para a esquerda: era o
@@ -406,6 +722,7 @@ export default function Mapa({
           localIdeographFontFamily: "'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif",
         });
         mapa.current = criado;
+        criado.setPadding(margensEfetivas(largura, altura, margens.current));
 
         // A TELA ESCONDE-SE, OS BOTÕES NÃO.
         //
@@ -442,6 +759,9 @@ export default function Mapa({
           positionOptions: { enableHighAccuracy: false },
           trackUserLocation: true,
           showAccuracyCircle: true,
+          // A z15 na pessoa: vê-se a rua e as paragens dela. Sem deslizar para
+          // quem pediu ao sistema menos movimento.
+          fitBoundsOptions: { maxZoom: 15, ...(semMovimento() ? { animate: false } : {}) },
         });
         // O PONTO AZUL PASSA A RESPONDER. Quem carrega neste botão quer saber o
         // que passa ali perto, e até aqui o mapa só se mexia (P2-016): a folha
@@ -449,6 +769,12 @@ export default function Mapa({
         localizacao.on('geolocate', (pos) =>
           localizar.current?.(pos.coords.latitude, pos.coords.longitude),
         );
+        // A ESCALA EM BAIXO À DIREITA, por cima da atribuição. Estava em
+        // baixo à esquerda — e na secretária esse canto é o da coluna das
+        // folhas: a escala ficava a meio da coluna, a flutuar sobre o painel.
+        // Os controlos de baixo empilham-se do último para o primeiro: a
+        // escala antes do botão da localização fica entre ele e a atribuição.
+        criado.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-right');
         criado.addControl(localizacao, 'bottom-right');
         // O BOTÃO NASCE SEM NOME. O MapLibre cria-o desativado e só lhe dá o
         // nome quando o navegador responde se sabe dar a localização — e nesse
@@ -462,7 +788,6 @@ export default function Mapa({
           botaoDaLocalizacao.setAttribute('aria-label', nome);
           botaoDaLocalizacao.setAttribute('title', nome);
         }
-        criado.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left');
 
         // O erro vai para a consola: um mapa que falha em silêncio é uma
         // caixa cinzenta que ninguém consegue diagnosticar.
@@ -488,7 +813,28 @@ export default function Mapa({
           // a preposição do nome do bairro. Os nomes são a única âncora de
           // orientação de um mapa; com um ponto por cima ficam por ler. O `beforeId` põe cada camada nossa logo abaixo da primeira
           // camada de nomes do estilo.
-          const antesDosNomes = criado!.getLayer('nomes-de-sitios') ? 'nomes-de-sitios' : undefined;
+          const antesDosNomes = criado!.getStyle().layers.find((l) => l.type === 'symbol')?.id;
+          const tema = temaDaPagina();
+
+          // A REDE, POR BAIXO DE TUDO O QUE O SÍTIO ACRESCENTA. É o que um
+          // mapa de transportes diz antes de qualquer outra coisa — por onde
+          // passam as linhas —, e era o que este não dizia: os traçados só se
+          // desenhavam para a viagem escolhida. Por cima das estradas e por
+          // baixo do percurso escolhido e das paragens, que se desenham em
+          // cima dela como as estações num mapa de metro.
+          criado!.addSource(FONTE_DA_REDE, {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] },
+          });
+          for (const camada of camadasDaRede(tema)) criado!.addLayer(camada, antesDosNomes);
+          if (rede) {
+            fetch(rede)
+              .then((r) => (r.ok ? (r.json() as Promise<RedeCrua>) : null))
+              .then((d) => vivo && d && setRotas(rotasDaRede(d, modosDesligados)))
+              // Sem a rede, o mapa é o de antes: pontos. Não é motivo para avisar.
+              .catch((e) => console.warn('rede no mapa:', e));
+          }
+
           // O PERCURSO ENTRA PRIMEIRO, para os pontos das paragens ficarem
           // por cima dele. A ordem de `addLayer` é a ordem de desenho, e um
           // traço de 6 px por cima de um ponto de 6 px apaga-o.
@@ -570,120 +916,84 @@ export default function Mapa({
           for (const c of camadasDe(tiposDasCamadas.current)) {
             const id = `pontos-${c.tipo}`;
             const placa = c.forma === 'placa' && juntarPlaca(criado!, c);
-            criado!.addLayer(
-              placa
-                ? {
-                    id,
-                    type: 'symbol',
-                    source: 'paragens',
-                    minzoom: c.minzoom,
-                    filter: ['==', ['get', 'tipo'], c.tipo],
-                    // A PLACA NÃO EMPURRA OS NOMES. Por baixo deles na ordem
-                    // de desenho, e fora da deteção de colisões: um nome de
-                    // terra não desaparece por haver uma estação ao lado.
-                    metadata: { cor: c.cor, forma: c.forma },
-                    layout: {
-                      'icon-image': `placa-${c.tipo}`,
-                      'icon-size': [
-                        'interpolate',
-                        ['linear'],
-                        ['zoom'],
-                        c.minzoom,
-                        (c.raio[0] * 2) / (44 / DENSIDADE),
-                        16,
-                        (c.raio[1] * 2) / (44 / DENSIDADE),
-                      ],
-                      'icon-allow-overlap': true,
-                      'icon-ignore-placement': true,
-                    },
-                    paint: {
-                      'icon-opacity': [
-                        'interpolate',
-                        ['linear'],
-                        ['zoom'],
-                        c.minzoom,
-                        0,
-                        c.minzoom + 1,
-                        1,
-                      ],
-                    },
-                  }
-                : {
-                    id,
-                    type: 'circle',
-                    source: 'paragens',
-                    minzoom: c.minzoom,
-                    metadata: { cor: c.cor, forma: c.forma },
-                    // DE LONGE NÃO SE MOSTRAM AS 2 392.
-                    //
-                    // Vistas de cima, são uma nuvem que tapa as estradas, os
-                    // rios e o próprio percurso — e não respondem a pergunta
-                    // nenhuma, porque a esse zoom não se distingue uma da
-                    // outra. Entre o `minzoom` e 13 ficam só as que têm serviço
-                    // a sério, que é o que desenha a espinha da rede. Os outros
-                    // modos são poucos e aparecem todos. O catálogo em
-                    // `/rede/` tem-nas todas, sempre.
-                    filter: c.desbastar
-                      ? [
-                          'all',
-                          ['==', ['get', 'tipo'], c.tipo],
-                          [
-                            'any',
-                            ['>=', ['zoom'], 13],
-                            ['>', ['coalesce', ['get', 'partidas'], 0], 40],
-                          ],
-                        ]
-                      : ['==', ['get', 'tipo'], c.tipo],
-                    paint: {
-                      'circle-radius': [
-                        'interpolate',
-                        ['linear'],
-                        ['zoom'],
-                        c.minzoom,
-                        c.raio[0],
-                        16,
-                        c.raio[1],
-                      ],
-                      // O ANEL troca os papéis: o branco vai para dentro e a cor
-                      // para o contorno. Ver `anel` em `pontos-no-mapa.ts`.
-                      'circle-color': c.anel ? '#ffffff' : c.cor,
-                      'circle-stroke-color': c.anel ? c.cor : '#ffffff',
-                      'circle-stroke-width': c.anel ? 3 : 1.5,
-                      // A aparecer, aparece a desvanecer: pontos que saltam para
-                      // o ecrã a meio de um zoom parecem um erro de desenho.
-                      'circle-opacity': [
-                        'interpolate',
-                        ['linear'],
-                        ['zoom'],
-                        c.minzoom,
-                        0,
-                        c.minzoom + 1,
-                        1,
-                      ],
-                      'circle-stroke-opacity': [
-                        'interpolate',
-                        ['linear'],
-                        ['zoom'],
-                        c.minzoom,
-                        0,
-                        c.minzoom + 1,
-                        1,
-                      ],
-                    },
-                  },
-              antesDosNomes,
-            );
-
-            criado!.on('click', id, (e) => {
-              const f = e.features?.[0];
-              if (f && escolher.current) escolher.current(f.properties as unknown as Marca);
-            });
+            criado!.addLayer(camadaDosPontos(c, tema, placa), antesDosNomes);
             criado!.on('mouseenter', id, () => {
               criado!.getCanvas().style.cursor = 'pointer';
             });
             criado!.on('mouseleave', id, () => {
               criado!.getCanvas().style.cursor = '';
             });
+          }
+
+          // OS NOMES DAS ESTAÇÕES E DAS PARAGENS, por cima dos das aldeias e
+          // por baixo dos das vilas: entre uma estação e uma aldeia que não
+          // cabem as duas, fica a estação; a vila fica sempre.
+          const antesDasVilas = criado!.getLayer('nomes-de-sitios') ? 'nomes-de-sitios' : undefined;
+          for (const camada of camadasDosNomesDosPontos(tema, 'paragens')) {
+            criado!.addLayer(camada, antesDasVilas);
+          }
+
+          // UM TOQUE, O PONTO MAIS PERTO DO DEDO (`ALVO`). Era um ouvinte por
+          // camada, e só respondia a quem acertasse no próprio círculo — um
+          // anel de cinco píxeis. Agora a caixa de 44 px à volta do toque
+          // apanha tudo o que lá estiver desenhado, e escolhe-se o mais perto.
+          criado!.on('click', (e) => {
+            const camadas = camadasDe(tiposDasCamadas.current)
+              .map((c) => `pontos-${c.tipo}`)
+              .filter(
+                (id) =>
+                  criado!.getLayer(id) && criado!.getLayoutProperty(id, 'visibility') !== 'none',
+              );
+            if (!camadas.length || !escolher.current) return;
+            const { x, y } = e.point;
+            const meio = ALVO / 2;
+            let melhor: MapGeoJSONFeature | null = null;
+            let distancia = Infinity;
+            for (const f of criado!.queryRenderedFeatures(
+              [
+                [x - meio, y - meio],
+                [x + meio, y + meio],
+              ],
+              { layers: camadas },
+            )) {
+              if (f.geometry.type !== 'Point') continue;
+              const q = criado!.project(f.geometry.coordinates as [number, number]);
+              const d = Math.hypot(q.x - x, q.y - y);
+              if (d < distancia) [melhor, distancia] = [f, d];
+            }
+            if (!melhor) return;
+            const { tipo, id } = melhor.properties as { tipo: string; id: string };
+            escolher.current(
+              pontoDe.current.get(`${tipo}|${id}`) ?? (melhor.properties as unknown as Marca),
+            );
+          });
+
+          // QUEM MEXE NO MAPA DECIDE A VISTA, e é essa que se guarda. Só
+          // depois de decidida: a área inteira, sem ninguém lhe tocar, não é
+          // uma escolha de ninguém — e guardá-la prendia a próxima visita ao
+          // tamanho do ecrã desta.
+          criado!.on('movestart', (e) => {
+            if ((e as { originalEvent?: unknown }).originalEvent) vistaDecidida.current = true;
+          });
+          criado!.on('moveend', () => {
+            if (!lembrarVista || !vistaDecidida.current) return;
+            const c = criado!.getCenter();
+            guardarVista(lembrarVista, { lon: c.lng, lat: c.lat, zoom: criado!.getZoom() });
+          });
+
+          // COM A LOCALIZAÇÃO JÁ CONCEDIDA, o mapa abre na pessoa, a z15. Só
+          // quando já foi dada — perguntar à entrada era um diálogo do sistema
+          // antes de se ver o que quer que fosse —, e só se o endereço não
+          // pediu outra coisa (um ponto, uma viagem).
+          const pedido = new URLSearchParams(window.location.search);
+          if (lembrarVista && !['ponto', 'de', 'para'].some((k) => pedido.has(k))) {
+            navigator.permissions
+              ?.query({ name: 'geolocation' as PermissionName })
+              .then((estadoDaPermissao) => {
+                if (!vivo || estadoDaPermissao.state !== 'granted') return;
+                if (localizacao.trigger()) vistaDecidida.current = true;
+              })
+              .catch(() => {});
           }
 
           setEstado('pronto');
@@ -722,7 +1032,54 @@ export default function Mapa({
         !modosVisiveis || modosVisiveis.has(c.tipo) ? 'visible' : 'none',
       );
     }
+    // A REDE SEGUE OS MESMOS BOTÕES: desligar «Autocarro» tira as paragens e
+    // as linhas, e não deixa um mapa de traços sem paragens. Um modo da rede
+    // sem botão (um traçado sem pontos) fica sempre.
+    const tipos = new Set(tiposDasCamadas.current);
+    const modos = ['autocarro', 'comboio', 'urbano-municipal'].filter((modo) => {
+      const tipo = TIPO_DO_MODO[modo] ?? modo;
+      return !modosVisiveis || !tipos.has(tipo) || modosVisiveis.has(tipo);
+    });
+    const dosModos = ['in', ['get', 'modo'], ['literal', modos]];
+    for (const camada of camadasDaRede('claro')) {
+      if (!m.getLayer(camada.id)) continue;
+      const proprio = 'filter' in camada ? camada.filter : undefined;
+      m.setFilter(
+        camada.id,
+        (proprio ? ['all', proprio, dosModos] : dosModos) as Parameters<MapaLibre['setFilter']>[1],
+      );
+    }
   }, [modosVisiveis, pontos, estado]);
+
+  // A REDE CHEGA DEPOIS DO MAPA: é um ficheiro à parte, e o mapa não espera
+  // por ele para se desenhar.
+  useEffect(() => {
+    const m = mapa.current;
+    if (!m || estado !== 'pronto' || !rotas) return;
+    (m.getSource(FONTE_DA_REDE) as GeoJSONSource | undefined)?.setData(rotas);
+  }, [rotas, estado]);
+
+  /** As camadas que o sítio acrescenta, com a tinta do tema — para o trocar. */
+  const esbatida = !!percurso;
+  const camadasNossas = (tema: TemaDoMapa): LayerSpecification[] => [
+    ...camadasDaRede(tema, esbatida),
+    ...camadasDosNomesDosPontos(tema, 'paragens'),
+    // As placas são imagens, e não mudam com o tema: só os círculos.
+    ...camadasDe(tiposDasCamadas.current)
+      .filter((c) => c.forma !== 'placa')
+      .map((c) => camadaDosPontos(c, tema, false)),
+  ];
+  const nossas = useRef(camadasNossas);
+  nossas.current = camadasNossas;
+
+  // COM UMA VIAGEM ESCOLHIDA, A REDE RECUA: fica a 25 %, e a viagem é a única
+  // linha que se lê. Sem isto o percurso escolhido era mais um traço azul no
+  // meio de cem.
+  useEffect(() => {
+    const m = mapa.current;
+    if (!m || estado !== 'pronto') return;
+    pintar(m, camadasDaRede(temaDaPagina(), esbatida));
+  }, [esbatida, estado]);
 
   // O TEMA SEGUE O DA PÁGINA COM O MAPA ABERTO: quem escolhe o escuro no
   // menu, ou tem o telemóvel a mudar sozinho ao anoitecer, vê o mapa mudar
@@ -730,7 +1087,10 @@ export default function Mapa({
   useEffect(() => {
     const m = mapa.current;
     if (!m || estado !== 'pronto') return;
-    return ouvirTema(() => aplicarTema(m, mosaicos, atribuicao || undefined, temaDaPagina()));
+    return ouvirTema(() => {
+      const tema = temaDaPagina();
+      aplicarTema(m, mosaicos, atribuicao || undefined, tema, nossas.current(tema));
+    });
   }, [estado, mosaicos, atribuicao]);
 
   // Os pontos podem mudar depois de o mapa estar pronto (uma procura, um
@@ -739,12 +1099,16 @@ export default function Mapa({
     const m = mapa.current;
     if (!m || estado !== 'pronto') return;
     const fonte = m.getSource('paragens') as GeoJSONSource | undefined;
+    // O `zmin` de cada ponto (quem cede o lugar a quem) e o nome que o mapa
+    // escreve vão nas propriedades; o toque devolve o ponto original.
+    const zmin = zoomDeAparecer(pontos);
+    pontoDe.current = new globalThis.Map(pontos.map((p) => [`${p.tipo}|${p.id}`, p]));
     fonte?.setData({
       type: 'FeatureCollection',
-      features: pontos.map((p) => ({
+      features: pontos.map((p, i) => ({
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [p.lon, p.lat] },
-        properties: { ...p },
+        properties: { ...p, zmin: zmin[i], rotulo: rotuloNoMapa(p) },
       })),
     });
   }, [pontos, estado]);
@@ -778,13 +1142,30 @@ export default function Mapa({
     // uma tela meio pintada. Pedir-lhe que se volte a medir é barato e
     // resolve-o na origem.
     m.resize();
-    const alto = m.getContainer().clientHeight;
-    const baixo = Math.min(margemInferior, alto * MARGEM_MAXIMA);
-    // Em cima e em baixo juntos nunca passam de quatro quintos da tela: é
-    // preciso sobrar onde desenhar, senão o `fitBounds` desiste.
-    const cima = Math.max(0, Math.min(margemSuperior, alto * 0.8 - baixo));
-    const esquerda = Math.min(margemEsquerda, m.getContainer().clientWidth * 0.5);
-    m.setPadding({ top: cima, right: 0, bottom: baixo, left: esquerda });
+    const aplicar = () => {
+      const { clientWidth, clientHeight } = m.getContainer();
+      m.setPadding(
+        margensEfetivas(clientWidth, clientHeight, {
+          baixo: margemInferior,
+          esquerda: margemEsquerda,
+          cima: margemSuperior,
+        }),
+      );
+      // A ÁREA SERVIDA VOLTA A CABER quando as folhas mudam de altura — até
+      // alguém decidir a vista (`vistaDecidida`). As folhas medem-se depois
+      // de o mapa nascer, e a primeira medida pode não ser a última.
+      if (limites && !vistaDecidida.current) {
+        m.fitBounds(limites, { padding: RESPIRO, duration: 0, maxZoom: 15 });
+      }
+    };
+    // UMA MARGEM NOVA NÃO INTERROMPE UM MOVIMENTO. O `setPadding` é um
+    // `jumpTo`, e um `jumpTo` pára a animação que estiver a meio: o mapa ia
+    // a voar para a localização de quem carregou no botão, a folha crescia
+    // com as paragens perto («Perto de ti»), e o voo ficava parado onde ia
+    // — a z8, com a pessoa fora do ecrã. Espera-se que acabe.
+    if (m.isMoving()) m.once('moveend', aplicar);
+    else aplicar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [margemInferior, margemEsquerda, margemSuperior, estado]);
 
   // O MAPA VAI ATÉ AO QUE SE ESCOLHEU.
@@ -800,6 +1181,7 @@ export default function Mapa({
   useEffect(() => {
     const m = mapa.current;
     if (!m || estado !== 'pronto' || !foco) return;
+    vistaDecidida.current = true;
     m.easeTo({
       center: [foco.lon, foco.lat],
       zoom: Math.max(m.getZoom(), 15),
@@ -858,6 +1240,7 @@ export default function Mapa({
   useEffect(() => {
     const m = mapa.current;
     if (!m || estado !== 'pronto' || !enquadrar) return;
+    vistaDecidida.current = true;
     m.fitBounds(enquadrar, {
       // Só o respiro. O que está tapado já está na margem do mapa — menos o
       // que o próprio mapa põe por cima de si: a coluna dos botões à direita
@@ -894,8 +1277,7 @@ export default function Mapa({
       {estado === 'a-carregar' && tamanho && margensMedidas && (
         <Esboco
           pontos={pontos}
-          centro={centro}
-          zoom={zoom}
+          {...(({ centro, zoom }) => ({ centro, zoom }))(cameraInicial(tamanho.w, tamanho.h))}
           largura={tamanho.w}
           altura={tamanho.h}
           margemInferior={margemInferior}

@@ -82,6 +82,12 @@ export type Regiao = {
   nome: string;
   /** Uma rede inventada. Marca-se em todas as páginas — ver §4.4. */
   demonstracao?: boolean;
+  /**
+   * Uma rede REAL num sítio que a autoridade de transportes ainda não adotou.
+   * Marca-se em todas as páginas, e o sítio não fala em nome dela
+   * (`MarcaDeProposta`). Ausente em dados de antes disto.
+   */
+  proposta?: boolean;
   artigo: string;
   /** «a Serra da Pedra Alta», «o Baixo Sável» — escrito, não adivinhado. */
   nome_com_artigo: string;
@@ -179,8 +185,99 @@ export type Regiao = {
    * disto. Nos dois casos não se mostra data nenhuma (`dataDosHorarios`).
    */
   dados_de?: Record<string, string | null>;
+  /**
+   * Cada feed, pelo nome do ficheiro — que é o prefixo dos serviços dele na
+   * tabela dos dias (`<feed>:<serviço>`): desde quando vale, até quando vai, e
+   * de quem é (`sitio.py`, `feeds_json`). Ausente em dados de antes disto.
+   */
+  feeds?: Record<string, FeedDaRegiao>;
   caixa: { lat_min: number; lat_max: number; lon_min: number; lon_max: number };
 };
+
+export type FeedDaRegiao = {
+  modo: string;
+  /** De outra entidade, filtrado ou inteiro. */
+  terceiro: boolean;
+  operador: string;
+  /** «da Alta Transportes», «do Comboio da Serra» — só com o artigo declarado; `null` sem ele. */
+  de: string | null;
+  /** A data de CONTEÚDO que o registo declara («em vigor desde»), `AAAA-MM-DD`. */
+  em_vigor_desde: string | null;
+  /** O primeiro e o último dia com serviço, `AAAA-MM-DD`. */
+  inicio: string | null;
+  fim: string | null;
+};
+
+/** Quantos dias de folga antes de um feed «acabar antes» dos outros (`frasesDosFeeds`). */
+const FOLGA_DO_FIM_DIAS = 30;
+
+/** Dias entre duas datas `AAAA-MM-DD`. */
+function diasAte(de: string, ate: string): number {
+  return Math.round((Date.parse(`${ate}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / 86_400_000);
+}
+
+/** «5/12/2025» de «2025-12-05» — como o resto do sítio escreve estas datas. */
+function dataDoFeed(iso: string): string {
+  const [ano, mes, dia] = iso.split('-');
+  return `${Number(dia)}/${Number(mes)}/${ano}`;
+}
+
+/**
+ * OS FEEDS DE UMA PÁGINA, pelas chaves dos serviços que ela mostra
+ * (`<feed>:<serviço>`), sem repetir e pela ordem em que aparecem.
+ */
+export function feedsDosServicos(servicos: readonly (string | null | undefined)[]): string[] {
+  const vistos: string[] = [];
+  for (const s of servicos) {
+    const i = s ? s.indexOf(':') : -1;
+    const feed = s && i > 0 ? s.slice(0, i) : '';
+    if (feed && !vistos.includes(feed)) vistos.push(feed);
+  }
+  return vistos;
+}
+
+/**
+ * O QUE SE DIZ DE CADA FEED AO LADO DAS HORAS DELE: desde quando valem, e até
+ * quando vão quando acabam antes dos outros.
+ *
+ * «Horários da Alta Transportes em vigor desde 5/12/2025.» — a data de CONTEÚDO que o
+ * próprio documento imprime, declarada no registo; nunca a de obtenção
+ * adivinhada. «Horários da CP só até 12/12/2026.» — o feed de outra entidade
+ * que acaba antes do resto: sem isto, a estação ficava sem comboios no dia 13
+ * sem ter avisado ninguém.
+ *
+ * Com o artigo do operador declarado, «da …»; sem ele, «do operador …», que
+ * não precisa de artigo nenhum. A rede da casa vem primeiro.
+ */
+export function frasesDosFeeds(
+  r: Pick<Regiao, 'feeds'> | null | undefined,
+  feeds: readonly string[],
+): string[] {
+  const todos = r?.feeds ?? {};
+  const fins = Object.values(todos)
+    .map((f) => f.fim)
+    .filter((f): f is string => !!f);
+  const maisLonge = fins.length ? fins.reduce((a, b) => (b > a ? b : a)) : '';
+  const quais = feeds
+    .filter((f) => todos[f])
+    .sort((a, b) => Number(todos[a].terceiro) - Number(todos[b].terceiro));
+  const frases: string[] = [];
+  for (const nome of quais) {
+    const f = todos[nome];
+    const quem =
+      f.de || (f.operador ? `do operador ${operadorCurto(f.operador)}` : 'deste operador');
+    if (f.em_vigor_desde && /^\d{4}-\d{2}-\d{2}$/.test(f.em_vigor_desde)) {
+      frases.push(`Horários ${quem} em vigor desde ${dataDoFeed(f.em_vigor_desde)}.`);
+    }
+    // «ACABA ANTES» É COM FOLGA: as janelas que andam com o relógio acabam
+    // com um ou dois dias de diferença umas das outras, e «só até» a um dia
+    // do fim do resto era ruído na paragem mais servida da região.
+    if (f.fim && maisLonge && diasAte(f.fim, maisLonge) > FOLGA_DO_FIM_DIAS) {
+      frases.push(`Horários ${quem} só até ${dataDoFeed(f.fim)}.`);
+    }
+  }
+  return frases;
+}
 
 /**
  * «3/9/2026»: de quando são os horários destes modos — o mais antigo deles —,
@@ -465,6 +562,12 @@ export type Descarga = {
   licenca_por_esclarecer: boolean;
   /** `odbl` reutiliza-se, `consulta` vê-se, `terceiro` fala-se com quem o publica. */
   termos?: 'odbl' | 'consulta' | 'terceiro' | 'nosso';
+  /**
+   * Num ficheiro para consulta, a parte que vem do OpenStreetMap — «os
+   * traçados», «as coordenadas das estações». É essa parte que está sob ODbL,
+   * e não o ficheiro inteiro. Ausente quando não há, e em dados de antes disto.
+   */
+  partes_odbl?: string | null;
   atribuicao: string | null;
   atribuicao_obrigatoria: boolean;
   descricao?: string;
@@ -817,12 +920,13 @@ export function esperaLegivel(hora: string, agora: string, amanha = false): stri
   // espera sumia-se — justamente à hora em que ela mais faz falta. Quem
   // chama diz que deu a volta, e aqui somam-se as 24 horas.
   const falta = b + (amanha ? 24 * 60 : 0) - a;
-  if (falta < 0 || falta > 12 * 60) return null;
+  // SÓ ATÉ UMA HORA. «5 h 49» obriga a fazer a conta ao contrário para saber
+  // a que horas é — e a mais de uma hora ninguém está na paragem à espera: está
+  // a planear, e quem planeia quer o relógio. Daí para a frente a resposta é a
+  // hora, que quem chama já mostra quando isto devolve `null`.
+  if (falta < 0 || falta > 60) return null;
   if (falta < 1) return 'agora';
-  if (falta < 60) return `${falta} min`;
-  const h = Math.floor(falta / 60);
-  const resto = falta % 60;
-  return resto ? `${h} h ${String(resto).padStart(2, '0')}` : `${h} h`;
+  return `${falta} min`;
 }
 
 /**

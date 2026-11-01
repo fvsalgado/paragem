@@ -334,8 +334,13 @@ export default function EscolherPonto({
       if (exatos.length + comeca.length + todas.length >= 80) break;
     }
 
-    exatos.sort((a, b) => peso(a) - peso(b));
-    comeca.sort((a, b) => peso(a) - peso(b));
+    // ENTRE IGUAIS, A MAIS SERVIDA PRIMEIRO. «Santuário» dava à cabeça a
+    // paragem de aldeia com o nome escrito por extenso, e não a do santuário
+    // que toda a gente procura; quem escreve o princípio de um nome quer, na
+    // dúvida, o sítio de onde parte mais gente.
+    const servida = (a: Ponto, b: Ponto) => (b.partidas ?? 0) - (a.partidas ?? 0);
+    exatos.sort((a, b) => peso(a) - peso(b) || servida(a, b));
+    comeca.sort((a, b) => peso(a) - peso(b) || servida(a, b));
     todas.sort((a, b) => peso(a) - peso(b) || a.nome.length - b.nome.length);
     let achados = semRepetir([...exatos, ...comeca, ...todas]);
     // Onde acaba cada grupo, depois de tirar as repetições — que só tiram o

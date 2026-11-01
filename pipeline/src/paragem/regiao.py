@@ -33,6 +33,21 @@ _CONTRACOES: dict[str, dict[str, str]] = {
 }
 
 
+def prosa_de_operador(nome: Any, artigo: Any) -> dict[str, str]:
+    """«pela …» e «da …» de um operador, quando o artigo dele está declarado.
+
+    Serve a rede da região (`rede.operador_artigo`) e os feeds de outros
+    operadores, que o declaram na receita (`params.operador_artigo`). Sem
+    artigo, nada: «Horários de CP» é o que sai de adivinhar.
+    """
+    if artigo not in _CONTRACOES or not nome:
+        return {}
+    return {
+        "operador_por": f"{_CONTRACOES[artigo]['por']} {nome}",
+        "operador_de": f"{_CONTRACOES[artigo]['de']} {nome}",
+    }
+
+
 class ErroDeRegiao(Exception):
     """A declaração de uma região está errada ou incompleta."""
 
@@ -96,11 +111,19 @@ class Saida:
     publica: bool = True
     #: A LICENÇA DA SAÍDA, quando não é a da fonte.
     #:
-    #: A de uma obra derivada não é a da entrada principal: é a soma de todas
-    #: as entradas mais o que lhe pusemos em cima, e a mais exigente ganha.
-    #: Um feed cujos traçados se encaminham pelo OpenStreetMap leva a partilha
-    #: nos mesmos termos da ODbL, mesmo que o caderno de horários de onde saem
-    #: as horas não declare licença nenhuma.
+    #: A de uma obra derivada não é a da entrada principal. Uma saída que deriva
+    #: SÓ do OpenStreetMap, pela mão de um leitor que a fonte não deixa ver —
+    #: uma lista de estações em que só a posição vem do mapa, por exemplo —, é
+    #: ODbL e declara-o aqui.
+    #:
+    #: O QUE ISTO NÃO FAZ é relicenciar dados de terceiros. Esteve escrito que
+    #: «a partilha nos mesmos termos da ODbL ganha a tudo o que entra», e com
+    #: isso feeds com os horários de uma operadora, as paragens de uma
+    #: autoridade de transportes e os cartazes de uma câmara saíam rotulados
+    #: ODbL. A ODbL obriga quem usa o OpenStreetMap; não dá a ninguém direitos
+    #: sobre os dados dos outros, que ninguém nos autorizou a reutilizar. Uma
+    #: saída que junta os dois fica «para consulta» (o rótulo por omissão), e a
+    #: parte que veio do mapa diz-se em `partes_odbl`.
     #:
     #: NÃO SE INFERE, declara-se. Os leitores compostos puxam fontes por dentro
     #: — camadas de um geoportal, um registo do regulador, o próprio
@@ -108,6 +131,12 @@ class Saida:
     #: a partir dela dava a licença errada com ar de automática, que é pior do
     #: que não inferir. Quem constrói a região sabe o que lá entrou, e escreve-o.
     licenca: str | None = None
+    #: A PARTE DO OPENSTREETMAP numa saída que não é toda dele — «os traçados
+    #: encaminhados pelo OpenStreetMap», «as coordenadas das estações». A saída
+    #: continua para consulta; esta parte é ODbL, e a atribuição vai dentro do
+    #: ficheiro e ao lado dele na página de dados abertos. Declara-se, como a
+    #: licença: o leitor sabe o que puxou, a receita é que o diz.
+    partes_odbl: str | None = None
     leitor_especifico_da_fonte: bool = False
     params: dict[str, Any] = field(default_factory=dict)
 
@@ -180,6 +209,16 @@ class Regiao:
     #: O LOGÓTIPO da rede ou da autoridade: um ficheiro ao lado do
     #: `regiao.yaml`, publicado com os dados. Sem ele, o nome por extenso.
     logotipo: Path | None = None
+    #: UMA PROPOSTA, e não um serviço da autoridade de transportes.
+    #:
+    #: A região é real, os dados são públicos e a rede existe — mas o sítio foi
+    #: feito por nós para mostrar à autoridade o que o produto faz, e ela ainda
+    #: não o adotou. Quem o abre tem de o saber antes de mais nada: um sítio com
+    #: o nome da rede, as paragens dela e o logótipo dela lê-se como sendo DELA,
+    #: e falar em nome de uma autoridade que não nos deu essa voz é o que o
+    #: §4.4 e o §7 não deixam. É o irmão do `demonstracao`, que é para uma rede
+    #: que não existe; as duas coisas não se juntam.
+    proposta: bool = False
 
     # --- prosa -----------------------------------------------------------
 
@@ -227,11 +266,9 @@ class Regiao:
 
     @property
     def prosa_do_operador(self) -> dict[str, str]:
-        """«pela Alta Transportes» — só quando a região declara o artigo do operador."""
+        """«pela Alta Transportes», «da Alta Transportes» — só com o artigo do operador."""
         artigo, nome = self.rede.get("operador_artigo"), self.rede.get("operador")
-        if artigo not in _CONTRACOES or not nome:
-            return {}
-        return {"operador_por": f"{_CONTRACOES[artigo]['por']} {nome}"}
+        return prosa_de_operador(nome, artigo)
 
     # --- território ------------------------------------------------------
 
@@ -363,6 +400,9 @@ class Regiao:
                 papel=s.get("papel"),
                 publica=bool(s.get("publica", True)),
                 licenca=s.get("licenca"),
+                partes_odbl=(str(s["partes_odbl"]).strip() or None)
+                if s.get("partes_odbl")
+                else None,
                 leitor_especifico_da_fonte=bool(s.get("leitor_especifico_da_fonte", False)),
                 params=s.get("params") or {},
             )
@@ -378,6 +418,7 @@ class Regiao:
             dominio_env=d.get("dominio_env"),
             dominio=(str(d["dominio"]).strip().lower() or None) if d.get("dominio") else None,
             demonstracao=bool(d.get("demonstracao", False)),
+            proposta=bool(d.get("proposta", False)),
             municipios_membros=int(terr.get("municipios_membros", len(concelhos))),
             concelhos_servidos=int(terr.get("concelhos_servidos", len(concelhos))),
             caixa=caixa,
@@ -409,6 +450,12 @@ class Regiao:
         incompleta, ou o número que o produto vai anunciar é falso. «Onze
         municípios» impresso ao lado de dez linhas é uma mentira por omissão.
         """
+        if self.demonstracao and self.proposta:
+            raise ErroDeRegiao(
+                f"{self.id}: declara `demonstracao` e `proposta` ao mesmo tempo. Uma demonstração "
+                "é uma rede inventada; uma proposta é uma rede real que a autoridade ainda não "
+                "adotou. A faixa de cima de cada página não pode dizer as duas coisas."
+            )
         if len(self.concelhos) != self.concelhos_servidos:
             raise ErroDeRegiao(
                 f"{self.id}: declara servir {self.concelhos_servidos} concelhos e a lista tem "

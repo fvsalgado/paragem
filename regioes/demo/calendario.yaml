@@ -49,8 +49,8 @@ feriados_municipais:
 
 codigos:
   periodo:
-    A: { nome: Anual, regra: todo-o-ano }
-    E: { nome: Escolar, regra: periodos-de-aulas }
+    A: { nome: Todo o ano, regra: todo-o-ano }
+    E: { nome: Em tempo de aulas, regra: periodos-de-aulas }
     FE: { nome: Férias escolares, regra: periodos-de-ferias }
   dias:
     U: { nome: Dias úteis, dias_da_semana: [1, 2, 3, 4, 5], exclui_feriados: true }

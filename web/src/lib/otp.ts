@@ -208,24 +208,36 @@ export function horaDe(epochMs: number, fuso: string = FUSO): string {
  * Compara-se o DIA CIVIL e não a diferença em horas: das 23h de hoje às 2h de
  * amanhã vão três horas, e são dois dias. É o dia que se escreve.
  */
-export function diaDe(epochMs: number, referenciaMs: number, fuso: string = FUSO): string {
+export function diaDe(
+  epochMs: number,
+  referenciaMs: number,
+  fuso: string = FUSO,
+  hojeMs?: number,
+): string {
   // O DIA CIVIL DA REGIÃO, e não o do aparelho: o «amanhã» vira à meia-noite
   // de lá. Com o dia do telemóvel, um aparelho na hora de Espanha escrevia
   // «amanhã» na partida das 23h30 de hoje.
   if (!Number.isFinite(epochMs) || !Number.isFinite(referenciaMs)) return '';
+  const chave = (ms: number) => relogioNoFuso(ms, fuso).chave;
   const civil = (ms: number) => {
-    const c = relogioNoFuso(ms, fuso).chave;
+    const c = chave(ms);
     return Date.UTC(+c.slice(0, 4), +c.slice(4, 6) - 1, +c.slice(6, 8));
   };
   const dias = Math.round((civil(epochMs) - civil(referenciaMs)) / 86400000);
   if (dias === 0) return '';
-  if (dias === 1) return 'amanhã';
-  if (dias === -1) return 'ontem';
-  return new Date(epochMs).toLocaleDateString('pt-PT', {
-    weekday: 'long',
-    day: 'numeric',
-    timeZone: fuso,
-  });
+  // «AMANHÃ» É O DE HOJE, e não o do dia perguntado. Numa pesquisa para
+  // terça feita ao domingo, a viagem de quarta saía «amanhã» — e quem a lê ao
+  // domingo vai à paragem na segunda. Com `hojeMs`, um dia perguntado que não
+  // é hoje escreve-se pelo nome e pela data; sem ele, conta-se a partir do
+  // dia perguntado, como antes.
+  const perguntadoEHoje = hojeMs === undefined || chave(hojeMs) === chave(referenciaMs);
+  if (perguntadoEHoje && dias === 1) return 'amanhã';
+  if (perguntadoEHoje && dias === -1) return 'ontem';
+  const c = chave(epochMs);
+  const semana = new Date(
+    Date.UTC(+c.slice(0, 4), +c.slice(4, 6) - 1, +c.slice(6, 8)),
+  ).toLocaleDateString('pt-PT', { weekday: 'long', timeZone: 'UTC' });
+  return `${semana}, ${+c.slice(6, 8)}/${+c.slice(4, 6)}`;
 }
 
 export const NOME_DO_MODO: Record<string, string> = {

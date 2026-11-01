@@ -17,6 +17,7 @@ import {
   NOME_DOS_MODOS,
 } from '@/lib/dados';
 import { dataDosHorarios, type Ponto } from '@/lib/formato';
+import { limitesDaRede } from '@/lib/pontos-no-mapa';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { disponibilidadeDaRegiao, motorDaRegiao } from '@/lib/enderecos';
 import { metadadosDaRegiao } from '@/lib/metadados';
@@ -125,6 +126,10 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
   const centro: [number, number] = maisServido
     ? [maisServido.lat, maisServido.lon]
     : [(r.caixa.lat_min + r.caixa.lat_max) / 2, (r.caixa.lon_min + r.caixa.lon_max) / 2];
+  // E ABRE NA ÁREA SERVIDA INTEIRA, e não num bairro: os limites das paragens
+  // e das estações (`limitesDaRede`). O ponto mais servido fica para quem não
+  // tem paragens com coordenadas.
+  const limites = limitesDaRede(pontos);
 
   // OS MODOS QUE A REGIÃO DECLARA, já com o destino de cada um.
   //
@@ -189,6 +194,7 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
         deDaRegiao={r.de}
         emDaRegiao={r.em}
         centro={centro}
+        limites={limites}
         caixa={r.caixa}
         tipos={tipos}
         contagens={contagens}

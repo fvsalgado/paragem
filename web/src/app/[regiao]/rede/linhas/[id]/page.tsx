@@ -23,6 +23,7 @@ import Distintivo, { corDoTraco } from '@/componentes/Distintivo';
 import QuadrosPorDia, { type QuadroDoDia } from '@/componentes/QuadrosPorDia';
 import { metadadosDaRegiao } from '@/lib/metadados';
 import { cartaoDaLinha } from '@/lib/partilha';
+import { feedsDosServicos } from '@/lib/formato';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -249,7 +250,13 @@ export default async function Linha({
           </>
         )}
       </p>
-      <MarcaDeDados regiao={rid} modos={[l.modo]} />
+      <MarcaDeDados
+        regiao={rid}
+        modos={[l.modo]}
+        feeds={feedsDosServicos(
+          l.sentidos.flatMap((s) => (s.quadro?.viagens ?? []).map((v) => v.servico_id)),
+        )}
+      />
       <AvisosDaPagina avisos={avisos} catalogo={catalogo} titulo="Avisos nesta linha" />
 
       {/* Com dois sentidos, a página é comprida: o segundo começa depois do

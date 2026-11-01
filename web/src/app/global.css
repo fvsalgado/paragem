@@ -58,7 +58,7 @@
   --superficie-suave: #eef2f0;
   --realce: #e8f1f4;
   --realce-forte: #dfeaef;
-  --fundo-do-mapa: #e6ebe3;
+  --fundo-do-mapa: #eef0eb;
   --marca-texto: var(--marca);
   --marca-texto-hover: var(--marca-hover);
   --alerta-texto: var(--alerta);
@@ -97,7 +97,7 @@
     --superficie-suave: #1d2e37;
     --realce: #1f3a47;
     --realce-forte: #21404f;
-    --fundo-do-mapa: #1b262c;
+    --fundo-do-mapa: #172127;
     --texto: #e6edf0;
     --texto-secundario: #a9b8bf;
     --linhas: #2a3a43;
@@ -125,7 +125,7 @@
   --superficie-suave: #1d2e37;
   --realce: #1f3a47;
   --realce-forte: #21404f;
-  --fundo-do-mapa: #1b262c;
+  --fundo-do-mapa: #172127;
   --texto: #e6edf0;
   --texto-secundario: #a9b8bf;
   --linhas: #2a3a43;
@@ -2431,6 +2431,63 @@ button.resumo-opcao:hover {
   width: var(--alvo);
   height: var(--alvo);
 }
+
+/* ===========================================================================
+   O MAPA: OS CONTROLOS NOS DOIS TEMAS
+   ---------------------------------------------------------------------------
+   Os botões de aproximar, afastar e da localização eram brancos nos dois
+   temas, com os ícones escuros que o MapLibre desenha — à noite, três
+   quadrados a acender no canto de um mapa escuro. Passam a ter a superfície
+   e o texto da página, e os ícones invertem-se no escuro (`hue-rotate` traz
+   o azul da localização ativa de volta ao azul, em vez de laranja).
+
+   Este bloco é só dos controlos do mapa. Ganha às regras de cima e à folha
+   do MapLibre — que chega depois desta — pelo peso dos seletores (todos
+   começam na caixa do mapa), e não pela ordem nem por `!important`.
+   =========================================================================== */
+
+.mapa-caixa .maplibregl-ctrl-group {
+  background: var(--superficie);
+  border: 1px solid var(--linhas);
+  box-shadow: 0 1px 6px rgb(16 44 63 / 22%);
+}
+.mapa-caixa .maplibregl-ctrl-group button + button {
+  border-top: 1px solid var(--linhas);
+}
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-zoom-in,
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-zoom-out,
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-geolocate,
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-compass {
+  background-color: var(--superficie);
+  color: var(--texto);
+}
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-zoom-in:hover,
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-zoom-out:hover,
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-geolocate:hover,
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-compass:hover {
+  background-color: var(--superficie-suave);
+}
+.mapa-caixa .maplibregl-ctrl button:disabled .maplibregl-ctrl-icon {
+  opacity: 0.35;
+}
+
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-tema='claro'])) .mapa-caixa .maplibregl-ctrl button .maplibregl-ctrl-icon {
+    filter: invert(1) hue-rotate(180deg);
+  }
+}
+:where(:root[data-tema='escuro']) .mapa-caixa .maplibregl-ctrl button .maplibregl-ctrl-icon {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* A ESCALA, EM BAIXO À DIREITA, entre o botão da localização e a
+   atribuição: encostada à direita como eles, e sem a margem de cima que a
+   separava do botão como se fosse de outro canto. */
+.app-mapa .maplibregl-ctrl-bottom-right .maplibregl-ctrl-scale {
+  margin-top: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+/* === fim dos controlos do mapa ============================================ */
 
 .so-para-leitores {
   position: absolute;
@@ -5323,4 +5380,15 @@ pre.codigo-para-copiar {
   vertical-align: top;
   padding: 0.45rem 0.5rem;
   border-bottom: 1px solid var(--linhas);
+}
+
+/* A CONTAGEM AO LADO DE UM NOME COMPRIDO NÃO SE PARTE A MEIO (ronda de
+   1/11/2026). A coluna secundária das listas pode partir onde calhar
+   (`overflow-wrap: anywhere`), e numa linha com o nome de um grupo de
+   circuitos ao lado lia-se «13 viage ns». Uma contagem é curta: fica inteira,
+   e quem encolhe é o nome. */
+.lista .secundario.contagem {
+  flex-shrink: 0;
+  overflow-wrap: normal;
+  white-space: nowrap;
 }

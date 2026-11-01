@@ -20,12 +20,14 @@ rotulado ODbL, e o rótulo afirmava uma origem que o ficheiro não tinha. Uma
 estação que só a operadora conheça fica de fora do ficheiro até entrar no mapa:
 a posição dela não é nossa para distribuir, e a lacuna diz qual é.
 
-**Disponibilidade, não.** Nem bicicletas nem docas livres. A página do sistema
-não a tem em lado nenhum (o mapa dela é Leaflet com marcadores gerados no
-servidor), não há `gbfs.json`, e o sistema não consta do catálogo público da
-MobilityData. A única fonte viva é a app do operador — uma API privada de um
-fornecedor privado, que o CLAUDE.md §4.2 proíbe. O `station_status` continua a
-não sair daqui, e a interface continua a não prometer o que não sabe (§6.4).
+**Disponibilidade, não — neste ficheiro.** Nem bicicletas nem docas livres: o
+GBFS que daqui sai é estático, sem `station_status`, e não se publica uma
+contagem que envelhece no minuto seguinte. O sistema não tem `gbfs.json` nem
+consta do catálogo público da MobilityData. As contagens que o sítio mostra são
+outra coisa: lidas no momento em que alguém abre a página, da página de
+estações que o próprio sistema publica, por um serviço à parte
+(`disponibilidade/`, ligado por decisão do dono em `autorizacao.mjs`). Não
+passam por aqui, não se guardam, e não se redistribuem.
 
 O que isto destrava é um PEDIDO, e está escrito na lacuna: o sistema é da
 autoridade de transportes e a operação é contratada. Publicar GBFS completo é

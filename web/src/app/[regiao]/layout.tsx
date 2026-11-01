@@ -8,6 +8,7 @@ import { origemDoProduto } from '@/lib/produto';
 import Cabecalho from '@/componentes/Cabecalho';
 import Rodape from '@/componentes/Rodape';
 import MarcaDeDemonstracao from '@/componentes/MarcaDeDemonstracao';
+import MarcaDeProposta from '@/componentes/MarcaDeProposta';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -109,6 +110,7 @@ export default async function LayoutDaRegiao({
       <Cabecalho regiao={id} />
       <main id="conteudo" className="pagina">
         <MarcaDeDemonstracao regiao={id} />
+        <MarcaDeProposta regiao={id} />
         {children}
       </main>
       <Rodape regiao={id} />

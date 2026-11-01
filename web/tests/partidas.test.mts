@@ -14,6 +14,7 @@ import {
   calendarioDasMascaras,
   chaveDoDia,
   dataDoCampo,
+  fimDasPartidas,
   fraseDoDia,
   horaDoRelogio,
   periodoDe,
@@ -24,8 +25,14 @@ import {
 test('a espera responde à pergunta de quem está na paragem', () => {
   assert.equal(esperaLegivel('14:20', '14:08'), '12 min');
   assert.equal(esperaLegivel('14:08', '14:08'), 'agora');
-  assert.equal(esperaLegivel('15:51', '14:08'), '1 h 43');
-  assert.equal(esperaLegivel('16:08', '14:08'), '2 h');
+  assert.equal(esperaLegivel('15:08', '14:08'), '60 min');
+});
+
+test('a mais de uma hora, a resposta é a hora e não «5 h 49»', () => {
+  // Quem está a mais de uma hora de uma partida não está na paragem: está a
+  // planear, e quer o relógio. A folha mostra a hora quando a espera é nula.
+  assert.equal(esperaLegivel('15:09', '14:08'), null);
+  assert.equal(esperaLegivel('19:57', '14:08'), null);
 });
 
 test('o que já passou, ou é longe de mais, fica só com o relógio', () => {
@@ -149,9 +156,11 @@ test('O AMANHÃ É O AMANHÃ A SÉRIO: sexta à noite, as próximas são as de s
     ['08:00', '12:00'],
     'só as de sábado',
   );
-  // E a espera conta as 24 horas da volta ao dia: «06:45» menos «20:46» dava
-  // negativo, e a espera sumia-se à hora em que mais faz falta.
-  assert.equal(esperaLegivel('08:00', '23:50', true), '8 h 10');
+  // E a espera conta as 24 horas da volta ao dia: «00:20» menos «23:50» dava
+  // negativo, e a espera sumia-se à hora em que mais faz falta. A mais de uma
+  // hora, é a hora que se mostra.
+  assert.equal(esperaLegivel('00:20', '23:50', true), '30 min');
+  assert.equal(esperaLegivel('08:00', '23:50', true), null);
   assert.equal(
     fraseDoDia(r, dia(2, 23, 50)),
     'Hoje já não há mais partidas nesta paragem. As próximas são amanhã:',
@@ -327,4 +336,54 @@ test('as partidas compactas voltam a ser as mesmas partidas', () => {
   assert.equal(de_volta[1].estimada, true);
   assert.equal(de_volta[2].servico_id, undefined, 'sem serviço declarado continua sem serviço');
   assert.equal(de_volta[2].operador, 'Outra, Lda');
+});
+
+// DOIS FEEDS NA MESMA TABELA, e um acaba antes do outro: o comboio a 3/10, a
+// rede a 6/10. É o caso da estação que, dois dias depois do fim do feed dela,
+// dizia «os horários carregados vão até» ao fim do feed dos autocarros.
+const CAL_DOIS_FEEDS = calendarioDasDatas({
+  servicos: ['rede:U', 'comboio:D'],
+  datas: {
+    '20261001': [0, 1],
+    '20261002': [0, 1],
+    '20261003': [1],
+    '20261005': [0],
+    '20261006': [0],
+  },
+});
+const C = (hora: string) => ({ hora, linha: 'IR', servico_id: 'comboio:D' });
+
+test('cada feed acaba no seu dia, e a folha diz o fim do feed das partidas dela', () => {
+  assert.deepEqual(CAL_DOIS_FEEDS.fins, { rede: '20261006', comboio: '20261003' });
+  assert.equal(fimDasPartidas([C('08:00')], CAL_DOIS_FEEDS), '20261003');
+  assert.equal(fimDasPartidas([C('08:00'), U('09:00')], CAL_DOIS_FEEDS), '20261006');
+  // Sem serviço declarado, ou de um feed sem fim conhecido: o da tabela.
+  assert.equal(fimDasPartidas([{ hora: '08:00' }], CAL_DOIS_FEEDS), '20261006');
+
+  // Na estação, depois do fim do comboio e antes do dos autocarros: fora do
+  // período DO COMBOIO, com o fim dele.
+  const estacao = proximas([C('08:00')], dia(5), '07:00', CAL_DOIS_FEEDS);
+  assert.deepEqual(estacao, { tipo: 'fora-do-periodo', inicio: '20261001', fim: '20261003' });
+  // E no último dia dele, depois do último comboio: não há mais, até ao fim dele.
+  const ultima = proximas([C('08:00')], dia(3, 22), '22:00', CAL_DOIS_FEEDS);
+  assert.deepEqual(ultima, { tipo: 'nenhuma', fim: '20261003' });
+  // A paragem dos autocarros não é tocada: o fim continua a ser o dela.
+  const paragem = proximas([U('08:00')], dia(6, 22), '22:00', CAL_DOIS_FEEDS);
+  assert.deepEqual(paragem, { tipo: 'nenhuma', fim: '20261006' });
+});
+
+test('a tabela em máscaras traz os fins como o pipeline os escreve', () => {
+  const c = calendarioDasMascaras({
+    formato: 'mascaras/1',
+    inicio: '20261001',
+    dias: 6,
+    servicos: ['rede:U', 'comboio:D'],
+    padroes: ['Mw==', 'Bw=='],
+    padrao: [0, 1],
+    fins: { comboio: '20261003', rede: '20261006' },
+  });
+  assert.equal(fimDasPartidas([C('08:00')], c), '20261003');
+  // Dados de antes disto não trazem os fins: vale o da tabela para todos.
+  assert.deepEqual(CAL_EM_MASCARAS.fins, {});
+  assert.equal(fimDasPartidas([C('08:00')], CAL_EM_MASCARAS), '20261006');
 });

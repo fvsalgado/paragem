@@ -166,7 +166,10 @@ def test_a_autoridade_e_o_operador_com_o_artigo_declarado(raiz):
         "de": "da Comunidade Intermunicipal da Serra da Pedra Alta",
         "por": "pela Comunidade Intermunicipal da Serra da Pedra Alta",
     }
-    assert prova.prosa_do_operador == {"operador_por": "pela Alta Transportes"}
+    assert prova.prosa_do_operador == {
+        "operador_por": "pela Alta Transportes",
+        "operador_de": "da Alta Transportes",
+    }
     # O município é «o»: é a outra metade do par, e a que apanha uma contração
     # cravada no feminino.
     municipio = regiao_ou_salta("prova-municipio")
@@ -215,3 +218,40 @@ def test_recusa_artigo_da_autoridade_que_nao_e_artigo(raiz, tmp_path):
     )
     with pytest.raises(ErroDeRegiao, match="`artigo` tem de ser"):
         Regiao.carregar(pasta)
+
+
+def _regiao_minima(pasta, **extra):
+    pasta.mkdir()
+    (pasta / "regiao.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "id": pasta.name,
+                "nome": "X",
+                "artigo": "a",
+                "territorio": {"caixa": {"lat_min": 1, "lat_max": 2, "lon_min": 1, "lon_max": 2}},
+                "modos": [],
+                **extra,
+            }
+        ),
+        encoding="utf-8",
+    )
+    return pasta
+
+
+def test_uma_proposta_declara_se_e_por_omissao_nao_e(tmp_path):
+    """A rede é real e o sítio não é da autoridade: tem de o dizer em todas as páginas."""
+    assert Regiao.carregar(_regiao_minima(tmp_path / "proposta", proposta=True)).proposta is True
+    assert Regiao.carregar(_regiao_minima(tmp_path / "sem-nada")).proposta is False
+
+
+def test_uma_demonstracao_nao_pode_ser_tambem_uma_proposta(tmp_path):
+    pasta = _regiao_minima(tmp_path / "as-duas", proposta=True, demonstracao=True)
+    with pytest.raises(ErroDeRegiao, match="ao mesmo tempo"):
+        Regiao.carregar(pasta)
+
+
+def test_as_regioes_de_prova_nao_sao_propostas(raiz):
+    """São inventadas: a faixa delas é a da demonstração, e não esta."""
+    for r in carregar_todas(raiz):
+        if r.demonstracao:
+            assert not r.proposta, r.id

@@ -361,14 +361,14 @@ def test_um_codigo_de_dias_por_algarismos_tem_nome_e_nunca_sai_cru(raiz):
 
     decl = regiao_ou_salta("prova").calendario
     nomes = NomesDosCodigos(decl)
-    assert nomes.get("E-235") == "Escolar · Segundas, terças e quintas, exceto feriados"
-    assert nomes.get("A-4") == "Anual · Quartas, exceto feriados"
-    assert nomes.get("A-U") == "Anual · Dias úteis"
+    assert nomes.get("E-235") == "Em tempo de aulas · Segundas, terças e quintas, exceto feriados"
+    assert nomes.get("A-4") == "Todo o ano · Quartas, exceto feriados"
+    assert nomes.get("A-U") == "Todo o ano · Dias úteis"
     # E o nome concorda com as datas: «2» é segunda-feira nas duas respostas.
     cal = Calendario(decl)
     datas = cal.resolver("A-2", date(2026, 3, 1), date(2026, 3, 31)).datas
     assert datas and {d.isoweekday() for d in datas} == {1}
-    assert nomes.get("A-2", "").startswith("Anual · Segundas")
+    assert nomes.get("A-2", "").startswith("Todo o ano · Segundas")
 
 
 def test_o_que_a_declaracao_nao_diz_nao_se_adivinha_nem_sai_em_codigo(raiz):
@@ -376,8 +376,8 @@ def test_o_que_a_declaracao_nao_diz_nao_se_adivinha_nem_sai_em_codigo(raiz):
 
     nomes = NomesDosCodigos(regiao_ou_salta("prova").calendario)
     # Dias desconhecidos de um período conhecido: diz-se que falta.
-    assert nomes.get("E-XYZ") == "Escolar · Dias por confirmar"
-    assert nomes.get("E-29") == "Escolar · Dias por confirmar", "o 9 não está no mapa"
+    assert nomes.get("E-XYZ") == "Em tempo de aulas · Dias por confirmar"
+    assert nomes.get("E-29") == "Em tempo de aulas · Dias por confirmar", "o 9 não está no mapa"
     # Um código que não é desta declaração não tem nome — quem chama decide.
     assert nomes.get("Z-U") is None
     assert nomes.get("WKD", "omissão") == "omissão"
@@ -387,7 +387,7 @@ def test_o_prefixo_do_concelho_nao_muda_o_nome(raiz):
     from paragem.calendario import NomesDosCodigos
 
     nomes = NomesDosCodigos(regiao_ou_salta("prova").calendario, ["pa"])
-    assert nomes.get("PA_E-U") == nomes.get("E-U") == "Escolar · Dias úteis"
+    assert nomes.get("PA_E-U") == nomes.get("E-U") == "Em tempo de aulas · Dias úteis"
     # Um prefixo que nenhum concelho declara não é prefixo.
     assert nomes.get("XX_E-U") is None
 

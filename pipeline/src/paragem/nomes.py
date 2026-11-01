@@ -189,3 +189,59 @@ def titulo(nome: str | None) -> str:
         return baixa[:1].upper() + baixa[1:]
 
     return _PALAVRA.sub(trocar, texto)
+
+
+# --- o texto de um cartaz, escrito como se lê --------------------------------
+
+#: As siglas que só se escrevem em maiúsculas. Um cartaz em CAIXA ALTA passado
+#: a «Escola Eb 2/3» ou a «Estação / Cp» lê-se como um erro de quem escreveu.
+#: Só siglas comuns, de nada que seja de uma região: o nome de uma rede ou de
+#: um serviço de um cliente não entra aqui (§7 do briefing).
+SIGLAS = frozenset(
+    {"cp", "eb", "ebi", "ji", "gnr", "psp", "ctt", "usf", "ucsp", "ipss", "ii", "iii", "iv"}
+)
+
+_SIGLA = re.compile(r"[A-Za-zÀ-ÿ]+")
+
+
+def _com_siglas(texto: str) -> str:
+    return _SIGLA.sub(
+        lambda m: m.group(0).upper() if m.group(0).lower() in SIGLAS else m.group(0), texto
+    )
+
+
+def _so_maiusculas(texto: str) -> bool:
+    letras = [c for c in texto if c.isalpha()]
+    return bool(letras) and all(c.isupper() for c in letras)
+
+
+def nome_de_cartaz(nome: str | None) -> str:
+    """O nome de uma paragem de um cartaz em CAIXA ALTA, escrito como se escreve.
+
+    «INSTITUTO DE LÍNGUAS» lia-se «da INSTITUTO DE LÍNGUAS» na página dos
+    urbanos. É o `titulo` de sempre, com as siglas no sítio delas: «Estação /
+    CP», «Escola EB 2/3». Um nome em caixa mista fica como está.
+    """
+    texto = limpo(nome)
+    if not _so_maiusculas(texto):
+        return texto
+    return _com_siglas(titulo(texto))
+
+
+def frase_de_cartaz(frase: str | None) -> str:
+    """Uma nota de rodapé de um cartaz, escrita como uma frase.
+
+    «(1) - REALIZA-SE APENAS NO PERÍODO ESCOLAR» passa a «(1) Realiza-se
+    apenas no período escolar»; «excepto» passa a «exceto», que é como se
+    escreve desde o Acordo Ortográfico — a interface é em português europeu
+    de hoje. Não se muda o sentido de nada: só a caixa e a grafia.
+    """
+    texto = limpo(frase)
+    if _so_maiusculas(texto):
+        texto = texto.lower()
+        m = re.match(r"^(\(\s*\d+\s*\)\s*)(?:[-–—]\s*)?", texto)
+        inicio = m.group(1) if m else ""
+        resto = texto[m.end() :] if m else texto
+        texto = inicio + resto[:1].upper() + resto[1:]
+        texto = _com_siglas(texto)
+    return re.sub(r"\b([Ee])xcepto\b", lambda m: f"{m.group(1)}xceto", texto)

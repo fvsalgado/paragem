@@ -41,6 +41,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from . import rede_no_mapa
 from .calendario import NomesDosCodigos, nome_pela_semana
 from .geo import distancia_km
 from .gtfs import Gtfs
@@ -342,6 +343,9 @@ class Sitio:
             # Uma rede inventada apresentada como informação de transportes é o
             # que o §4.4 proíbe. O sítio marca-a em todas as páginas.
             "demonstracao": r.demonstracao,
+            # Uma rede real num sítio que a autoridade ainda não adotou: o
+            # sítio di-lo em todas as páginas, e não fala em nome dela.
+            "proposta": r.proposta,
             "modos": r.modos,
             # Os que a região mostra e não gere — ver `modos_de_terceiros`.
             # É por esta lista que o painel sabe sobre que modos é que a
@@ -362,6 +366,10 @@ class Sitio:
             # fontes trazem, ou `None` quando alguma não a tem — e aí o sítio
             # não mostra data nenhuma (`datas_dos_horarios`).
             "dados_de": datas_dos_horarios(self.raiz, r),
+            # E POR FEED: desde quando valem, até quando vão, e de quem são
+            # (`feeds_json`). Cada feed acaba no seu dia, e o sítio dizia a data
+            # de um ao lado das partidas de outro.
+            "feeds": self.feeds_json(),
             # SE O CONCELHO DE CADA PONTO VEIO DA CARTA. Sem ela, um ponto sem
             # concelho não está fora da região — está por atribuir —, e a
             # página das bicicletas punha a estação do terminal «Fora da
@@ -374,6 +382,70 @@ class Sitio:
                 "lon_max": r.caixa.lon_max,
             },
         }
+
+    def feeds_json(self) -> dict[str, dict[str, Any]]:
+        """DE CADA FEED, o que a página tem de dizer ao lado das horas dele.
+
+        O sítio usava um período só para todas as fontes — do primeiro ao
+        último dia da tabela inteira. O feed do operador ferroviário acaba a
+        meio de dezembro e o da rede da região um ano depois da construção, e
+        numa estação, dois dias depois do fim do primeiro, lia-se «nos
+        horários carregados, que vão até» à data do segundo: a data de um
+        feed ao lado das partidas do outro.
+
+        Por feed — pelo nome do ficheiro, que é o prefixo dos serviços na
+        tabela dos dias (`<feed>:<serviço>`):
+
+        - `inicio` e `fim`: o primeiro e o último dia com serviço;
+        - `em_vigor_desde`: a data de CONTEÚDO que o registo declara para a
+          fonte (`Fonte.em_vigor_desde`) — «em vigor desde» —, ou `None`;
+        - `operador` e `de`: quem o opera, e «da …» quando o artigo está
+          declarado — o da rede para o feed próprio (`rede.operador_artigo`), o
+          da receita para os outros (`params.operador_artigo`, e
+          `params.operador_nome` quando o nome do feed não é o que se escreve
+          numa frase). Sem artigo, `de` fica vazio e o sítio usa outra forma.
+        """
+        from .fontes import ErroDeFonte, Registo
+        from .grelha import _datas_de_servico
+        from .regiao import prosa_de_operador
+
+        if self._registo is None:
+            self._registo = Registo.carregar(self.raiz)
+        r = self.regiao
+        saida: dict[str, dict[str, Any]] = {}
+        for s in r.saidas:
+            if not s.saida or not s.saida.endswith(".zip") or not s.modo:
+                continue
+            nome = s.saida.split("/")[-1]
+            feed = self._feed(nome)
+            if feed is None:
+                continue
+            dias = sorted(d for d, sids in _datas_de_servico(feed).items() if sids)
+            params = s.params or {}
+            if s.papel in CATALOGO_PROPRIO and r.rede.get("operador"):
+                operador = str(r.rede["operador"])
+                de = r.prosa_do_operador.get("operador_de")
+            else:
+                operador = str(params.get("operador_nome") or self._operador_de(feed))
+                de = prosa_de_operador(operador, params.get("operador_artigo")).get("operador_de")
+            try:
+                vigor = self._registo.obter(s.fonte).em_vigor_desde
+            except ErroDeFonte:
+                vigor = None
+
+            def iso(chave: str) -> str:
+                return f"{chave[:4]}-{chave[4:6]}-{chave[6:8]}"
+
+            saida[nome.removesuffix(".zip")] = {
+                "modo": s.modo,
+                "terceiro": s.papel == "feed-de-terceiro",
+                "operador": operador,
+                "de": de,
+                "em_vigor_desde": vigor.isoformat() if vigor else None,
+                "inicio": iso(dias[0]) if dias else None,
+                "fim": iso(dias[-1]) if dias else None,
+            }
+        return saida
 
     def concelhos_json(self, paragens: list[dict]) -> list[dict[str, Any]]:
         por_concelho: collections.Counter[str] = collections.Counter()
@@ -1062,12 +1134,14 @@ class Sitio:
             return None
         dados = json.loads(caminho.read_text(encoding="utf-8"))
         sistema = decl.params.get("sistema") or {}
+        nomes_da_regiao = (self.regiao.nomes or {}).get("paragens") or {}
         estacoes = []
         for e in dados.get("data", {}).get("stations", []):
             try:
                 lat, lon = float(e["lat"]), float(e["lon"])
             except (KeyError, TypeError, ValueError):
                 continue
+            nome = e.get("name") or None
             estacoes.append(
                 {
                     # O `id` é o `station_id` do GBFS — e é por ele que a
@@ -1076,7 +1150,10 @@ class Sitio:
                     # navegador. Tem de ser o mesmo dos dois lados, e é: vem
                     # daqui, do feed que a construção produziu.
                     "id": e.get("station_id") or None,
-                    "nome": e.get("name") or None,
+                    # O NOME COMO A REGIÃO O ESCREVE (`nomes.yaml`), como nas
+                    # paragens: o sítio de um sistema escreve «Terminal
+                    # Rodoviario», sem acento, e a interface é em português.
+                    "nome": nomes_da_regiao.get(nome, nome) if nome else None,
                     "lat": round(lat, 6),
                     "lon": round(lon, 6),
                     "concelho": self._concelho_de(territorio, lat, lon),
@@ -1217,7 +1294,7 @@ class Sitio:
         caminho = self.destino.parent / decl.saida
         if not caminho.exists():
             return None
-        linha = json.loads(caminho.read_text(encoding="utf-8"))
+        linha = _cartaz_legivel(json.loads(caminho.read_text(encoding="utf-8")))
         quadros = linha.get("quadros") or []
         return {
             "horarios": [
@@ -1412,6 +1489,54 @@ class Sitio:
             default=None,
         )
         return perto[1] if perto and perto[0] <= RAIO_SEM_CARTA_KM else None
+
+
+def _cartaz_legivel(linha: dict[str, Any]) -> dict[str, Any]:
+    """Um cartaz em CAIXA ALTA, escrito como se lê — e sem mudar mais nada.
+
+    O cartaz de uma câmara vem todo em maiúsculas, e a página escrevia-o tal e
+    qual: «da INSTITUTO DE LÍNGUAS», «(1) - REALIZA-SE APENAS NO PERÍODO
+    ESCOLAR». O §6 proíbe rótulos em maiúsculas, e uma página inteira assim
+    lê-se como um grito.
+
+    O mesmo nome muda em todo o lado ao mesmo tempo — paragens, passagens das
+    viagens, coordenadas, as que não têm sítio —, porque a página junta-os pelo
+    nome. As horas, a ordem e o que as regras dizem não mudam.
+    """
+    from .nomes import frase_de_cartaz, nome_de_cartaz
+
+    def nomes(lista: list[Any]) -> list[Any]:
+        return [nome_de_cartaz(x) if isinstance(x, str) else x for x in lista]
+
+    novo = dict(linha)
+    novo["regras"] = [frase_de_cartaz(r) for r in linha.get("regras") or []]
+    quadros = []
+    for q in linha.get("quadros") or []:
+        q2 = dict(q)
+        if q.get("nome"):
+            q2["nome"] = nome_de_cartaz(q["nome"])
+        q2["paragens"] = nomes(q.get("paragens") or [])
+        q2["rotulos"] = [frase_de_cartaz(r) for r in q.get("rotulos") or []]
+        if q.get("regras"):
+            q2["regras"] = [frase_de_cartaz(r) for r in q["regras"]]
+        q2["viagens"] = [
+            {
+                **v,
+                "passagens": [
+                    [nome_de_cartaz(p[0]), *p[1:]] if p and isinstance(p[0], str) else p
+                    for p in v.get("passagens") or []
+                ],
+                **({"rotulo": frase_de_cartaz(v["rotulo"])} if v.get("rotulo") else {}),
+            }
+            for v in q.get("viagens") or []
+        ]
+        quadros.append(q2)
+    novo["quadros"] = quadros
+    novo["coordenadas"] = {
+        nome_de_cartaz(k): v for k, v in (linha.get("coordenadas") or {}).items()
+    }
+    novo["sem_coordenada"] = nomes(linha.get("sem_coordenada") or [])
+    return novo
 
 
 def partidas_das_estacoes(estacoes: list[dict], g, feed: str) -> dict[str, list[dict[str, Any]]]:
@@ -1633,9 +1758,13 @@ def construir(raiz: Path, regiao: Regiao, destino: Path, territorio=None) -> Sit
         quantas_linhas, bytes_percursos = _percursos(s, regiao, g)
         if quantas_linhas:
             s.saidas.append(Saida(s.destino / "percursos", bytes_percursos, quantas_linhas))
+        # A rede inteira no mapa, mais grossa onde passa mais.
+        rede = rede_no_mapa.escrever(s, g)
+        if rede:
+            s.saidas.append(Saida(*rede))
     s._escrever("lacunas.json", _lacunas(raiz, regiao))
     s._escrever("dados-abertos.json", _dados_abertos(raiz, regiao, destino, s.destino))
-    indice = _procura(indice_paragens, estacoes, modos)
+    indice = _procura(indice_paragens, estacoes, modos, ((regiao.nomes or {}).get("procura") or {}))
     s._escrever("procura.json", indice, len(indice["pontos"]))
 
     # OS SÍTIOS VÃO NUM FICHEIRO À PARTE, e é uma decisão de dados móveis.
@@ -1756,6 +1885,7 @@ def calendario_em_mascaras(servicos: list[str], datas: dict[str, list[int]]) -> 
             "servicos": servicos,
             "padroes": [],
             "padrao": [0] * len(servicos),
+            "fins": {},
         }
     chaves = sorted(datas)
     inicio = datetime.strptime(chaves[0], "%Y%m%d").date()
@@ -1768,6 +1898,16 @@ def calendario_em_mascaras(servicos: list[str], datas: dict[str, list[int]]) -> 
             mascaras[i][j >> 3] |= 1 << (j & 7)
     padroes: dict[bytes, int] = {}
     padrao = [padroes.setdefault(bytes(m), len(padroes)) for m in mascaras]
+    # O ÚLTIMO DIA DE CADA FEED, pelo prefixo dos serviços (`<feed>:<serviço>`).
+    # A tabela é uma só para todos, e o fim dela é o do feed que vai mais
+    # longe: sem isto, a folha de uma estação cujo feed acabou dizia «os
+    # horários carregados vão até» ao fim do feed de outra rede.
+    fins: dict[str, str] = {}
+    for chave, indices in datas.items():
+        for i in indices:
+            feed = servicos[i].split(":", 1)[0] if ":" in servicos[i] else ""
+            if feed and chave > fins.get(feed, ""):
+                fins[feed] = chave
     return {
         "formato": "mascaras/1",
         "inicio": chaves[0],
@@ -1775,6 +1915,7 @@ def calendario_em_mascaras(servicos: list[str], datas: dict[str, list[int]]) -> 
         "servicos": servicos,
         "padroes": [base64.b64encode(m).decode("ascii") for m in padroes],
         "padrao": padrao,
+        "fins": dict(sorted(fins.items())),
     }
 
 
@@ -1896,7 +2037,10 @@ def _comboio_pelos_carris(
 
 
 def _procura(
-    paragens: list[dict], estacoes: list[dict], modos: dict[str, Any] | None = None
+    paragens: list[dict],
+    estacoes: list[dict],
+    modos: dict[str, Any] | None = None,
+    outros_nomes: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Os pontos do mapa, e o índice de quem escreve na caixa de procura.
 
@@ -1956,6 +2100,20 @@ def _procura(
         ]
 
     melhor.update(_pontos_dos_modos(modos or {}, campos))
+
+    # OS NOMES POR QUE SE PROCURA UMA PARAGEM, e que não são o dela.
+    #
+    # Quem vai ao santuário de uma cidade escreve «santuário», e a paragem que
+    # o serve chama-se «<cidade> (Terminal)»: a primeira resposta era o
+    # santuário de outra terra, com o nome escrito por extenso numa paragem de
+    # aldeia. A região declara o outro nome (`nomes.yaml`, `procura:`), e ele
+    # entra na procura a apontar para a MESMA paragem — o mesmo sítio e o mesmo
+    # identificador, para a página e o planeador serem os dela. Um nome que
+    # aponte para uma paragem que não existe não entra: não se inventa sítio.
+    for outro, alvo in (outros_nomes or {}).items():
+        destino = melhor.get(str(alvo))
+        if destino is not None and str(outro) not in melhor:
+            melhor[str(outro)] = [str(outro), *destino[1:]]
 
     linhas = sorted(melhor.values(), key=lambda x: _simples(str(x[0])))
     return {"campos": campos, "pontos": linhas}
@@ -2445,13 +2603,15 @@ def _lacunas(raiz: Path, regiao: Regiao) -> dict[str, Any]:
 # e poder olhar.
 #
 #   odbl      a saída (ou a fonte) DECLARA ODbL na receita da região: o que
-#             deriva do OpenStreetMap — só dele, ou com os traçados
-#             encaminhados por ele — leva a partilha nos mesmos termos. É uma
-#             licença aberta, e a atribuição vai dentro do ficheiro
-#             (`_embutir_atribuicao`). Não se infere: declara-se (`licenca:`).
+#             deriva SÓ do OpenStreetMap. É uma licença aberta, e a atribuição
+#             vai dentro do ficheiro (`_embutir_atribuicao`). Não se infere:
+#             declara-se (`licenca:`).
 #   consulta  construído por nós a partir de fontes SEM licença aberta
-#             declarada. Está aqui para se ver e conferir; a publicação com
-#             licença aberta depende da autoridade de transportes (Fase 5).
+#             declarada — os horários de uma operadora, as paragens de uma
+#             autoridade de transportes, os cartazes de uma câmara —, mesmo
+#             que leve partes do OpenStreetMap (`partes_odbl`). Está aqui para
+#             se ver e conferir; a publicação com licença aberta depende da
+#             autoridade de transportes (Fase 5).
 #   terceiro  é o ficheiro de outra entidade, filtrado à região. Os termos
 #             são os dela, e quem o quiser reutilizar fala com ela.
 ODBL = "odbl"
@@ -2479,12 +2639,16 @@ LICENCA_DO_RELATORIO = "CC-BY-4.0"
 def _termos(fonte: Any, papel: str | None, licenca_da_saida: str | None = None) -> str:
     """O rótulo sai da licença da SAÍDA quando ela a declara, e só então da fonte.
 
-    Era só da fonte, e isso estava errado na raiz: a licença de uma obra
-    derivada não é a da entrada principal. O feed da rede sai de um caderno de
-    horários que não declara licença — e por isso ficava «para consulta» — mas
-    74 % dos traçados dele encaminham-se pelo OpenStreetMap, cuja partilha nos
-    mesmos termos ganha a tudo o resto. O ficheiro não estava por licenciar:
-    estava mal rotulado, e o rótulo era mais restritivo do que a realidade.
+    A licença de uma obra derivada não é a da entrada principal, e por isso a
+    receita pode declarar a da saída. Mas só se declara ODbL no que deriva SÓ
+    do OpenStreetMap.
+
+    Esteve escrito aqui que a partilha nos mesmos termos da ODbL «ganha a tudo
+    o resto», e com esse argumento o feed de uma rede — horários da operadora,
+    paragens da autoridade de transportes, traçados encaminhados pelo mapa —
+    saía rotulado ODbL. A ODbL não dá direitos sobre dados de terceiros que
+    ninguém nos autorizou a reutilizar: o que eles trazem continua deles, e o
+    ficheiro fica «para consulta», com a parte do mapa dita em `partes_odbl`.
     """
     licenca = (licenca_da_saida or fonte.licenca or "").upper()
     if licenca.startswith("ODBL"):
@@ -2557,36 +2721,51 @@ def _nomeia_osm(texto: str | bytes | None) -> bool:
     return "openstreetmap" in texto.lower()
 
 
-def _atribuicao_da_descarga(fonte: Any, termos: str) -> tuple[str | None, bool]:
+def _atribuicao_da_descarga(
+    fonte: Any, termos: str, partes_odbl: str | None = None
+) -> tuple[str | None, bool]:
     """A atribuição que a página escreve ao lado do ficheiro, e se é obrigatória.
 
     A de um ficheiro sob ODbL leva sempre o OpenStreetMap: é dele que vem a
     licença, mesmo quando a fonte principal é outra — o registo de fontes dá a
-    atribuição da ENTRADA, e o rótulo ODbL é da SAÍDA (`Saida.licenca`).
+    atribuição da ENTRADA, e o rótulo ODbL é da SAÍDA (`Saida.licenca`). A de
+    um ficheiro para consulta com partes do mapa leva-o também: a atribuição do
+    OpenStreetMap é obrigatória onde quer que os dados dele vão.
     """
     propria = fonte.atribuicao
-    if termos != ODBL:
+    if termos != ODBL and not partes_odbl:
         return propria, fonte.exige_atribuicao
     if _nomeia_osm(propria):
         return propria, True
     return (f"{ATRIBUICAO_OSM}; {propria}" if propria else ATRIBUICAO_OSM), True
 
 
-def _embutir_atribuicao(alvo: Path) -> None:
+def _embutir_atribuicao(alvo: Path, parcial: str | None = None) -> None:
     """Põe a nota da ODbL dentro do ficheiro, onde o formato a deixa pôr.
 
     Num GTFS vai para o `attributions.txt`, que é onde o formato a quer; noutro
     zip, num `ATRIBUICAO.txt`; num JSON, nos campos `attribution` e `license`,
     como no GeoJSON que o leitor do OpenStreetMap escreve. Um CSV não tem onde a
     guardar sem deixar de ser CSV — leva-a a página, ao lado dele.
+
+    `parcial` é a parte do ficheiro que vem do OpenStreetMap, num ficheiro que
+    NÃO é todo dele. Aí a nota diz que é essa parte que está sob ODbL — e não o
+    ficheiro inteiro, que leva dados de quem não nos deu licença nenhuma.
     """
     if alvo.suffix == ".zip":
-        _atribuicao_no_zip(alvo)
+        _atribuicao_no_zip(alvo, parcial)
     elif alvo.suffix in (".json", ".geojson"):
-        _atribuicao_no_json(alvo)
+        _atribuicao_no_json(alvo, parcial)
 
 
-def _atribuicao_no_zip(alvo: Path) -> None:
+def _nota_parcial(parcial: str) -> str:
+    return (
+        f"Sem licença aberta declarada, para consulta. A parte que deriva do OpenStreetMap "
+        f"({parcial}) está sob a Open Database License (ODbL) 1.0 — {LICENCA_ODBL}"
+    )
+
+
+def _atribuicao_no_zip(alvo: Path, parcial: str | None = None) -> None:
     with zipfile.ZipFile(alvo) as z:
         membros = [(i.filename, z.read(i)) for i in z.infolist() if not i.is_dir()]
     nomes = [n for n, _ in membros]
@@ -2603,9 +2782,17 @@ def _atribuicao_no_zip(alvo: Path) -> None:
         if any(_nomeia_osm(b) for _, b in membros):
             return
         nota = (
-            f"Estes dados derivam do OpenStreetMap.\n"
-            f"{ATRIBUICAO_OSM} — {COPYRIGHT_OSM}\n"
-            f"Disponíveis sob a Open Database License (ODbL) 1.0 — {LICENCA_ODBL}\n"
+            (
+                f"Parte destes dados deriva do OpenStreetMap: {parcial}.\n"
+                f"{ATRIBUICAO_OSM} — {COPYRIGHT_OSM}\n"
+                f"{_nota_parcial(parcial)}\n"
+            )
+            if parcial
+            else (
+                f"Estes dados derivam do OpenStreetMap.\n"
+                f"{ATRIBUICAO_OSM} — {COPYRIGHT_OSM}\n"
+                f"Disponíveis sob a Open Database License (ODbL) 1.0 — {LICENCA_ODBL}\n"
+            )
         )
         membros.append((NOTA_DA_ODBL, nota.encode("utf-8")))
     # Reescrito como o `_zipar` escreve: a mesma data fixa, para que o mesmo
@@ -2644,7 +2831,7 @@ def _com_linha_do_osm(atual: bytes | None) -> bytes:
     return (texto + saida.getvalue()).encode("utf-8")
 
 
-def _atribuicao_no_json(alvo: Path) -> None:
+def _atribuicao_no_json(alvo: Path, parcial: str | None = None) -> None:
     dados = json.loads(alvo.read_text(encoding="utf-8"))
     if not isinstance(dados, dict) or _nomeia_osm(dados.get("attribution")):
         return
@@ -2653,7 +2840,7 @@ def _atribuicao_no_json(alvo: Path) -> None:
     # OpenStreetMap, para se ver sem descer o ficheiro.
     novo: dict[str, Any] = {"type": dados["type"]} if "type" in dados else {}
     novo["attribution"] = f"{ATRIBUICAO_OSM}; {atual}" if atual else ATRIBUICAO_OSM
-    novo["license"] = dados.get("license") or LICENCA_ODBL
+    novo["license"] = _nota_parcial(parcial) if parcial else (dados.get("license") or LICENCA_ODBL)
     novo.update({k: v for k, v in dados.items() if k not in novo})
     alvo.write_text(json.dumps(novo, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
@@ -2689,6 +2876,7 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
         papel: str | None,
         descricao: str,
         licenca_da_saida: str | None = None,
+        partes_odbl: str | None = None,
     ) -> None:
         alvo = pasta / relativo
         alvo.parent.mkdir(parents=True, exist_ok=True)
@@ -2697,9 +2885,14 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
         else:
             shutil.copyfile(origem, alvo)
         termos = _termos(fonte, papel, licenca_da_saida)
+        # A PARTE DO MAPA SÓ SE DIZ À PARTE quando o ficheiro não é todo dele:
+        # num ficheiro sob ODbL, a ODbL já é o ficheiro inteiro.
+        parcial = partes_odbl if termos != ODBL else None
         if termos == ODBL:
             _embutir_atribuicao(alvo)
-        atribuicao, obrigatoria = _atribuicao_da_descarga(fonte, termos)
+        elif parcial:
+            _embutir_atribuicao(alvo, parcial)
+        atribuicao, obrigatoria = _atribuicao_da_descarga(fonte, termos, parcial)
         dados = alvo.read_bytes()
         saida.append(
             {
@@ -2716,6 +2909,7 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
                 "licenca": licenca_da_saida or fonte.licenca,
                 "licenca_por_esclarecer": fonte.licenca_por_esclarecer,
                 "termos": termos,
+                "partes_odbl": parcial,
                 "atribuicao": atribuicao,
                 "atribuicao_obrigatoria": obrigatoria,
                 "descricao": descricao,
@@ -2754,6 +2948,7 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
             papel=s.papel,
             descricao=_descricao_da_saida(s),
             licenca_da_saida=s.licenca,
+            partes_odbl=s.partes_odbl,
         )
 
     # As DECISÕES, que não são saídas da receita e são o que torna a
@@ -2781,14 +2976,13 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
                 modo=dona.modo,
                 papel="decisoes",
                 descricao=DECISOES.get(ficheiro.name, "uma decisão por linha, com a razão"),
-                # A LICENÇA É A DA SAÍDA DE QUE ESTA TABELA DECIDE, e não a da
-                # fonte. É o mesmo erro que o `_termos` foi escrito para
-                # corrigir, repetido aqui: a tabela carrega as MESMAS
-                # coordenadas resolvidas que o feed carrega, e saía rotulada
-                # «para consulta» ao lado do feed rotulado ODbL. Uma tabela
-                # que explica um ficheiro não pode estar sob termos mais
-                # apertados do que o ficheiro que explica.
+                # OS TERMOS SÃO OS DA SAÍDA DE QUE ESTA TABELA DECIDE, e não
+                # os da fonte: a tabela carrega as MESMAS coordenadas
+                # resolvidas que o feed carrega, e não pode sair sob termos
+                # diferentes dos do ficheiro que explica — nem mais apertados
+                # nem mais largos.
                 licenca_da_saida=dona.licenca,
+                partes_odbl=dona.partes_odbl,
             )
 
     relatorio = raiz / "build" / "reports" / f"{regiao.id}.md"

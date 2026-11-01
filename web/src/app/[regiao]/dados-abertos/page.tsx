@@ -3,6 +3,7 @@ import { dadosAbertos, exigirRegiao, lacunas, regiao } from '@/lib/dados';
 import { enderecoDaDescarga } from '@/lib/descargas';
 import { tamanho, type Descarga } from '@/lib/formato';
 import { aAutoridade } from '@/lib/prosa';
+import { disponibilidadeDaRegiao } from '@/lib/enderecos';
 import { dataCompleta } from '@/lib/dias';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
@@ -43,8 +44,10 @@ const GRUPOS: { id: string; titulo: string; texto: string }[] = [
   {
     id: 'bicicletas',
     titulo: 'Bicicletas partilhadas',
-    texto:
-      'GBFS estático: onde ficam as estações. Sem disponibilidade, que não é pública — e prometê-la seria inventá-la.',
+    // O TEXTO DEPENDE DE O SÍTIO LER AS CONTAGENS, e é decidido na página
+    // (`textoDasBicicletas`): dizia «sem disponibilidade, que não é pública»
+    // ao lado de um modo que as mostra ao vivo.
+    texto: 'GBFS estático: onde ficam as estações.',
   },
   {
     id: 'geometria',
@@ -63,6 +66,22 @@ const GRUPOS: { id: string; titulo: string; texto: string }[] = [
     texto: 'O que a última construção contou, e o que ficou por saber.',
   },
 ];
+
+/**
+ * O que se diz das bicicletas, conforme o sítio leia ou não as contagens.
+ *
+ * Dizia «sem disponibilidade, que não é pública — e prometê-la seria
+ * inventá-la», e a página do modo mostrava as bicicletas e as docas livres de
+ * cada estação, lidas no momento da página de estações que o próprio sistema
+ * publica (`disponibilidade/`, ligada por decisão do dono). As duas coisas são
+ * verdade ao mesmo tempo, e é isso que se escreve: o ficheiro é estático e não
+ * as leva; o sítio lê-as ao vivo, e não as guarda nem as redistribui.
+ */
+function textoDasBicicletas(lidasAoVivo: boolean): string {
+  return lidasAoVivo
+    ? 'GBFS estático: onde ficam as estações, sem a disponibilidade. As bicicletas e as docas livres que a página das bicicletas mostra são lidas no momento, da página de estações que o próprio sistema publica — não se guardam nem se redistribuem daqui, e quando essa página não responde as estações aparecem sem contagem, em vez de uma contagem adivinhada.'
+    : 'GBFS estático: onde ficam as estações. Sem disponibilidade: este sítio não a lê, e não a promete.';
+}
 
 const TERMOS: Record<string, string> = {
   nosso: 'obra da casa, sob licença aberta — leve-se sem perguntar',
@@ -97,6 +116,12 @@ function Ficheiro({ d }: { d: Descarga }) {
           dizem agora a da fonte de onde ele sai (P1-046, P2-026). */}
       <div className="secundario">
         {TERMOS[d.termos ?? 'consulta'] ?? 'termos por confirmar'} · origem: {d.fonte}
+        {/* A PARTE DO MAPA, num ficheiro que não é todo dele: é essa parte que
+            está sob ODbL, e não o ficheiro — que leva dados de quem não nos
+            deu licença nenhuma. */}
+        {d.partes_odbl
+          ? ` · a parte que vem do OpenStreetMap (${d.partes_odbl}) está sob ODbL`
+          : ''}
         {d.atribuicao
           ? ` · ${d.atribuicao_obrigatoria ? 'atribuição obrigatória' : 'atribuição'}: ${d.atribuicao}`
           : ''}
@@ -113,7 +138,6 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
   const porEsclarecer = ds.filter((d) => d.licenca_por_esclarecer);
   const sobOdbl = ds.filter((d) => d.termos === 'odbl');
   const daCasa = ds.filter((d) => d.termos === 'nosso');
-  const abertos = [...sobOdbl, ...daCasa];
   const soParaConsulta = ds.filter((d) => d.termos === 'consulta');
 
   return (
@@ -131,16 +155,36 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
           termos não nos autorizavam a relicenciar, dizê-lo era honestidade.
           Deixar o mesmo aviso depois de eles saírem seria o contrário: uma
           página de dados abertos a pedir desculpa por dados que são abertos. */}
+      {/* UM FACTO SOBRE OS TERMOS, E NÃO UM ALARME: numa faixa de informação.
+          O vermelho é dos avisos de serviço (P1-017).
+
+          E DIZ O QUE A ODbL NÃO FAZ. Esteve aqui que os ficheiros com
+          horários e paragens da região saíam sob ODbL por terem partes do
+          OpenStreetMap — e com isso «pode levá-los, usá-los e
+          redistribuí-los» ao lado de dados que ninguém nos autorizou a
+          reutilizar. A ODbL obriga quem usa o mapa; não dá direitos sobre os
+          dados dos outros. */}
       {soParaConsulta.length ? (
-        <div className="faixa alerta">
+        <div className="faixa informacao">
           <p>
-            <strong>Nem todos estes ficheiros têm licença aberta declarada.</strong> Os que a
-            declaração desta região dá como assentes no OpenStreetMap saem sob ODbL e reutilizam-se
-            com atribuição
-            {abertos.length ? ` (${abertos.length})` : ''}. Os que a construção faz a partir de
-            documentos cujos termos não nos autorizam a relicenciar estão aqui{' '}
-            <strong>para consulta</strong> ({soParaConsulta.length}): a publicação com licença
-            aberta depende de autorização {aAutoridade(r, 'de')}.
+            <strong>Nem todos estes ficheiros têm licença aberta declarada.</strong>{' '}
+            {sobOdbl.length > 0 ? (
+              <>
+                Os que derivam só do OpenStreetMap saem sob ODbL e reutilizam-se com atribuição
+                {` (${sobOdbl.length})`}.{' '}
+              </>
+            ) : null}
+            Os que levam horários, paragens ou circuitos de quem gere e opera o serviço estão aqui{' '}
+            <strong>para consulta</strong> ({soParaConsulta.length}): servem para ver e conferir,
+            mas não se redistribuem com uma licença que não é nossa para dar. Quando um deles leva
+            partes do OpenStreetMap, diz quais — essas partes estão sob ODbL, com a atribuição
+            dentro do ficheiro. A publicação com licença aberta depende de autorização{' '}
+            {aAutoridade(r, 'de')}.
+          </p>
+          <p>
+            Aqui está <strong>o que {aAutoridade(r, 'com_artigo')} gere</strong>. Os feeds de outros
+            operadores alimentam o mapa, as páginas de paragem e o planeador deste sítio, mas não se
+            descarregam daqui: quem os distribui é quem os produz.
           </p>
         </div>
       ) : (
@@ -195,7 +239,11 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
         return (
           <section key={g.id}>
             <h2>{g.titulo}</h2>
-            <p>{g.texto}</p>
+            <p>
+              {g.id === 'bicicletas'
+                ? textoDasBicicletas(disponibilidadeDaRegiao(rid, r.demonstracao) !== '')
+                : g.texto}
+            </p>
             <ul className="descargas">
               {doGrupo.map((d) => (
                 <Ficheiro key={d.caminho ?? d.ficheiro} d={d} />
@@ -218,9 +266,11 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
           ficheiro com data não lhe servia de nada. */}
       <h2>Avisos em tempo real</h2>
       <p>
-        As alterações ao serviço que a autoridade de transportes publica — supressões, desvios,
-        greves — saem em <strong>GTFS-RT Service Alerts</strong>, o formato que as aplicações de
-        transportes leem:
+        {r.proposta
+          ? 'As alterações ao serviço publicadas neste sítio'
+          : 'As alterações ao serviço que a autoridade de transportes publica'}{' '}
+        — supressões, desvios, greves — saem em <strong>GTFS-RT Service Alerts</strong>, o formato
+        que as aplicações de transportes leem:
       </p>
       <p>
         <a href="../gtfs-rt/alerts.pb">
@@ -231,9 +281,13 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
         <strong>
           São os avisos dos serviços que a autoridade de transportes desta região gere
         </strong>{' '}
-        — a mesma regra dos ficheiros aqui de cima. Este sítio mostra também serviços de outros
-        operadores, e sobre esses o aviso é de quem os opera: espelhá-lo aqui era republicar
-        informação de serviço de outra entidade, que a pode corrigir sem nos dizer.
+        — a mesma regra dos ficheiros aqui de cima
+        {r.proposta
+          ? `, e enquanto este sítio for uma proposta não são os avisos oficiais ${aAutoridade(r, 'de')}`
+          : ''}
+        . Este sítio mostra também serviços de outros operadores, e sobre esses o aviso é de quem os
+        opera: espelhá-lo aqui era republicar informação de serviço de outra entidade, que a pode
+        corrigir sem nos dizer.
       </p>
       <p>
         Cada pedido traz <strong>todos</strong> os avisos em vigor, e o que não vier deixou de valer

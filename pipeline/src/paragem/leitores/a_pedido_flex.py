@@ -635,7 +635,10 @@ def _montar(
         },
         {
             "attribution_id": "paragem",
-            "organization_name": f"Paragem.pt — construído de: {fonte[:200]}",
+            # A FRASE INTEIRA, ou nenhuma: cortada aos 200 carateres, saía
+            # «… e a regra de r» no feed. Um nome de organização longo não
+            # parte nada; um cortado a meio de uma palavra parece um erro.
+            "organization_name": f"Paragem.pt — construído de: {' '.join(fonte.split())}",
             "is_producer": "1",
             "is_operator": "0",
             "is_authority": "0",

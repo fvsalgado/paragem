@@ -88,6 +88,12 @@ class Fonte:
     atribuicao_obrigatoria: bool = False
     verificado_em: date | None = None
     obtido_em: date | None = None
+    #: DESDE QUANDO O DOCUMENTO DIZ QUE VALE — a data de CONTEÚDO, e não a de
+    #: obtenção. Um caderno de horários «em vigor desde 5 de dezembro de 2025»
+    #: obtido não se sabe quando tem uma data que interessa a quem viaja, e é
+    #: esta: escreve-se como o próprio documento a escreve, e o leitor que o
+    #: lê confere-a contra o texto quando o texto a traz.
+    em_vigor_desde: date | None = None
     notas: str | None = None
     # NACIONAL ou de uma região, e é o que decide se a declaração desta fonte
     # pode ir para um repositório público. `nacional` quer dizer que serve
@@ -236,6 +242,7 @@ class Registo:
                 atribuicao_obrigatoria=bool(item.get("atribuicao_obrigatoria", False)),
                 verificado_em=_data(item.get("verificado_em")),
                 obtido_em=_data(item.get("obtido_em")),
+                em_vigor_desde=_data(item.get("em_vigor_desde")),
                 notas=item.get("notas"),
                 ambito=item.get("ambito"),
                 raiz=base,

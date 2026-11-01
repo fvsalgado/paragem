@@ -1,5 +1,5 @@
 import { lacunas, regiao as lerRegiao, servicosSemDatas } from '@/lib/dados';
-import { dataDosHorarios, fraseDosHorarios } from '@/lib/formato';
+import { dataDosHorarios, fraseDosHorarios, frasesDosFeeds } from '@/lib/formato';
 
 /**
  * A frase que impede alguém de confundir isto com tempo real.
@@ -16,17 +16,26 @@ import { dataDosHorarios, fraseDosHorarios } from '@/lib/formato';
 export default async function MarcaDeDados({
   regiao,
   modos,
+  feeds = [],
   detalhe = false,
 }: {
   regiao: string;
   modos?: readonly string[];
+  /**
+   * Os feeds das partidas desta página (`feedsDosServicos`). De cada um diz-se
+   * desde quando valem os horários, e até quando vão quando acabam antes dos
+   * outros (`frasesDosFeeds`).
+   */
+  feeds?: readonly string[];
   detalhe?: boolean;
 }) {
   const [l, r] = await Promise.all([lacunas(regiao), lerRegiao(regiao)]);
   const semDatas = servicosSemDatas(l);
+  const dosFeeds = frasesDosFeeds(r, feeds);
   return (
     <p className="marca-dados" role="note">
       {fraseDosHorarios(dataDosHorarios(r, modos))}
+      {dosFeeds.length > 0 ? ` ${dosFeeds.join(' ')}` : null}
       {detalhe && semDatas > 0
         ? ` ${semDatas} serviços ainda não têm os dias em que circulam.`
         : null}

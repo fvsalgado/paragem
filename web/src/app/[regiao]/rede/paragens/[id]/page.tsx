@@ -26,6 +26,7 @@ import type { QuadroDoDia } from '@/componentes/QuadrosPorDia';
 import { metadadosDaRegiao } from '@/lib/metadados';
 import { cartaoDaParagem } from '@/lib/partilha';
 import { linhasNumaFrase } from '@/lib/prosa';
+import { feedsDosServicos } from '@/lib/formato';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -239,7 +240,11 @@ export default async function Paragem({
         </Link>
         {noMapa && <a href={noMapa}>Ver no mapa</a>}
       </p>
-      <MarcaDeDados regiao={rid} modos={[...modosDaParagem]} />
+      <MarcaDeDados
+        regiao={rid}
+        modos={[...modosDaParagem]}
+        feeds={feedsDosServicos(partidas.map((d) => d.servico_id))}
+      />
       <AvisosDaPagina avisos={avisos} catalogo={catalogo} titulo="Avisos nesta paragem" />
 
       {partidas.length === 0 ? (

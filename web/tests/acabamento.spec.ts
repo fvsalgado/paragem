@@ -146,7 +146,7 @@ test('o tema escuro vem do sistema, e o mapa muda com ele', async ({ page }) => 
     page.evaluate(() =>
       (window as unknown as ComMapa).__mapa!.getPaintProperty('fundo', 'background-color'),
     );
-  expect(await fundo()).toBe('#1b262c');
+  expect(await fundo()).toBe('#172127');
   await page.emulateMedia({ colorScheme: 'light' });
-  await expect.poll(fundo).toBe('#e6ebe3');
+  await expect.poll(fundo).toBe('#eef0eb');
 });

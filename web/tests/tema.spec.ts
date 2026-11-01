@@ -136,19 +136,19 @@ test('o mapa muda de tinta com a escolha do menu, e não só com o aparelho', as
     page.evaluate(() =>
       (window as unknown as ComMapa).__mapa!.getPaintProperty('fundo', 'background-color'),
     );
-  expect(await fundo()).toBe('#e6ebe3');
+  expect(await fundo()).toBe('#eef0eb');
 
   // Aqui não há cabeçalho nem rodapé: a escolha está no menu.
   await page.getByRole('button', { name: 'Abrir o menu' }).click();
   const menu = page.getByRole('dialog', { name: 'Menu' });
   await menu.getByRole('radio', { name: 'Escuro' }).check();
-  await expect.poll(fundo).toBe('#1b262c');
+  await expect.poll(fundo).toBe('#172127');
   await expect(page.locator('body')).toHaveCSS('background-color', ESCURO);
 
   // E com a página aberta numa escolha, o aparelho a mudar não a desfaz.
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.emulateMedia({ colorScheme: 'light' });
-  expect(await fundo()).toBe('#1b262c');
+  expect(await fundo()).toBe('#172127');
 });
 
 /**
