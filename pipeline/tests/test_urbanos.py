@@ -238,6 +238,38 @@ def test_as_paragens_do_cartaz_sao_as_que_a_receita_conta():
         pytest.skip("nenhuma receita declara as paragens de um cartaz (`esperado_paragens`)")
 
 
+def _rotas_mapeadas(r) -> list[str]:
+    """Os nomes das relações de percurso que o OpenStreetMap tem nesta região.
+
+    Saem da saída `osm-rotas` da própria região — o GeoJSON dos percursos —,
+    e não do nome de nenhuma rede.
+    """
+    from conftest import construcao_de
+
+    nomes: list[str] = []
+    for s in r.saidas:
+        if s.leitor != "osm-rotas" or not s.saida:
+            continue
+        f = construcao_de(r) / s.saida
+        if not f.exists():
+            continue
+        for feicao in json.loads(f.read_text(encoding="utf-8")).get("features") or []:
+            p = feicao.get("properties") or {}
+            for chave in ("nome", "ref"):
+                if p.get(chave):
+                    nomes.append(str(p[chave]))
+    return nomes
+
+
+def _simples(texto: str) -> str:
+    import re
+    import unicodedata
+
+    d = unicodedata.normalize("NFD", texto.casefold())
+    d = "".join(c for c in d if unicodedata.category(c) != "Mn")
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", d).split())
+
+
 def test_as_linhas_mapeadas_no_openstreetmap_resolvem_se_muito_melhor():
     """A diferença que este módulo existe para provar, sem cravar contagens.
 
@@ -246,15 +278,24 @@ def test_as_linhas_mapeadas_no_openstreetmap_resolvem_se_muito_melhor():
     mudar — o OpenStreetMap é vivo — mas a razão não: uma relação de percurso
     É a lista das paragens da carreira, e onde ela existe quase tudo casa.
 
-    Uma linha «com percurso» é a que tem alguma paragem posta pela relação
-    (`osm-percurso`); as outras não têm nenhuma. Se um dia isto falhar sem
-    ninguém ter mexido no leitor, é boa notícia disfarçada: quer dizer que
-    alguém mapeou as outras linhas.
+    **Uma linha «com percurso» é a que tem a SUA relação no mapa** — a saída
+    `osm-rotas` da região tem uma rota cujo nome acaba o nome da linha. Era
+    «a que tem alguma paragem posta por uma relação», e isso deixou de
+    distinguir alguma coisa a 1/11/2026: as linhas sem relação própria
+    passaram a apanhar, pelo nome, as paragens que partilham com a linha que a
+    tem — o terminal, os bombeiros —, e contavam-se como mapeadas com 3 de 30
+    e 6 de 28. A média descia para 0,41 sem nenhuma linha ter piorado. O
+    limiar fica onde estava; o que mudou foi o que se mede.
+
+    Se um dia isto falhar sem ninguém ter mexido no leitor, é boa notícia
+    disfarçada: quer dizer que alguém mapeou as outras linhas.
     """
     com, sem = [], []
-    for _, _, d in _linhas_construidas():
-        fontes = {c.get("fonte") for c in d["coordenadas"].values()}
-        (com if "osm-percurso" in fontes else sem).append(_contagem(d))
+    for r, _, d in _linhas_construidas():
+        rotas = [_simples(n) for n in _rotas_mapeadas(r)]
+        nome = _simples(str(d.get("nome") or ""))
+        propria = any(rota and (nome == rota or nome.endswith(" " + rota)) for rota in rotas)
+        (com if propria else sem).append(_contagem(d))
     if not com or not sem:
         pytest.skip("é preciso uma linha com percurso mapeado e uma sem, na mesma raiz")
     fracao = lambda ps: sum(p for p, _ in ps) / sum(t for _, t in ps)  # noqa: E731
