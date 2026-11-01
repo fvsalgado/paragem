@@ -243,9 +243,11 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
           ficheiro com data não lhe servia de nada. */}
       <h2>Avisos em tempo real</h2>
       <p>
-        As alterações ao serviço que a autoridade de transportes publica — supressões, desvios,
-        greves — saem em <strong>GTFS-RT Service Alerts</strong>, o formato que as aplicações de
-        transportes leem:
+        {r.proposta
+          ? 'As alterações ao serviço publicadas neste sítio'
+          : 'As alterações ao serviço que a autoridade de transportes publica'}{' '}
+        — supressões, desvios, greves — saem em <strong>GTFS-RT Service Alerts</strong>, o formato
+        que as aplicações de transportes leem:
       </p>
       <p>
         <a href="../gtfs-rt/alerts.pb">
@@ -256,9 +258,13 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
         <strong>
           São os avisos dos serviços que a autoridade de transportes desta região gere
         </strong>{' '}
-        — a mesma regra dos ficheiros aqui de cima. Este sítio mostra também serviços de outros
-        operadores, e sobre esses o aviso é de quem os opera: espelhá-lo aqui era republicar
-        informação de serviço de outra entidade, que a pode corrigir sem nos dizer.
+        — a mesma regra dos ficheiros aqui de cima
+        {r.proposta
+          ? `, e enquanto este sítio for uma proposta não são os avisos oficiais ${aAutoridade(r, 'de')}`
+          : ''}
+        . Este sítio mostra também serviços de outros operadores, e sobre esses o aviso é de quem os
+        opera: espelhá-lo aqui era republicar informação de serviço de outra entidade, que a pode
+        corrigir sem nos dizer.
       </p>
       <p>
         Cada pedido traz <strong>todos</strong> os avisos em vigor, e o que não vier deixou de valer

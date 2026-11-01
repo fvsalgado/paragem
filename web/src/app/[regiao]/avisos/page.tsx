@@ -67,10 +67,24 @@ export default async function Avisos({ params }: { params: Promise<{ regiao: str
       ) : as.length === 0 ? (
         <>
           <p>Não há avisos em vigor.</p>
-          <p className="secundario">
-            O que aparece aqui são as alterações ao serviço que a autoridade de transportes publica:
-            supressões, desvios, greves. Um aviso cujo prazo já passou sai desta página.
-          </p>
+          {/* NUMA PROPOSTA, O SÍTIO NÃO FALA PELA AUTORIDADE. Dizia que aqui
+              saíam «as alterações que a autoridade de transportes publica» —
+              e numa região que ela ainda não adotou isso é falso: ela publica
+              os avisos dela nos canais dela, e esta página pode não os ter.
+              Quem lê «não há avisos» tem de saber onde confirmar. */}
+          {r.proposta ? (
+            <p className="secundario">
+              O que aparece aqui são as alterações ao serviço publicadas neste sítio: supressões,
+              desvios, greves. Este sítio ainda não é um serviço {aAutoridade(r, 'de')}, e por isso
+              pode não ter os avisos oficiais — esses saem nos canais de quem gere e opera o
+              serviço, e é lá que se confirma antes de contar com ele.
+            </p>
+          ) : (
+            <p className="secundario">
+              O que aparece aqui são as alterações ao serviço que a autoridade de transportes
+              publica: supressões, desvios, greves. Um aviso cujo prazo já passou sai desta página.
+            </p>
+          )}
         </>
       ) : (
         as.map((a) => <CartaoDeAviso key={a.id} aviso={a} catalogo={catalogo} />)
@@ -81,8 +95,11 @@ export default async function Avisos({ params }: { params: Promise<{ regiao: str
           avisos sem avisos nenhuns tem direito a saber se isso quer dizer «não
           há» ou «não é aqui que se sabe». */}
       <p className="secundario">
-        São os avisos dos serviços geridos {aAutoridade(r, 'por')}. Para alterações noutros serviços
-        que aparecem neste sítio, o aviso é de quem os opera, e é no sítio dele que sai a tempo.
+        {r.proposta
+          ? `Dizem respeito aos serviços geridos ${aAutoridade(r, 'por')}, e não são os avisos oficiais.`
+          : `São os avisos dos serviços geridos ${aAutoridade(r, 'por')}.`}{' '}
+        Para alterações noutros serviços que aparecem neste sítio, o aviso é de quem os opera, e é
+        no sítio dele que sai a tempo.
       </p>
       <p className="secundario">
         Os avisos publicados saem também em <a href="gtfs-rt/alerts.pb">GTFS-RT Service Alerts</a>,
