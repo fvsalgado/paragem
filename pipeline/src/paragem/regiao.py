@@ -100,6 +100,28 @@ class Concelho:
 
 
 @dataclass(frozen=True)
+class UrbanoDaRede:
+    """Uma rede urbana que a REDE PRÓPRIA opera — os urbanos de uma cidade.
+
+    O modo «urbano municipal» era só o que corria à margem da concessão: as
+    redes das câmaras, lidas dos cartazes e do OpenStreetMap. Mas há
+    concessões que operam elas próprias os urbanos das cidades, com número de
+    linha no caderno como as outras — e para quem mora lá são «o urbano». A
+    página do concelho dizia «sem registo neste concelho: urbano municipal» e,
+    logo abaixo, listava as linhas do urbano da cidade.
+
+    DECLARADO, não adivinhado (`rede.urbanos` no `regiao.yaml`): o produto não
+    decide pelo nome de uma linha que ela é urbana. `linhas` são os números
+    das linhas no feed próprio (`route_short_name`), como o público as
+    conhece; `concelho` é o da cidade que a rede serve.
+    """
+
+    nome: str
+    concelho: str
+    linhas: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class Saida:
     """Uma coisa que esta região constrói, e o leitor que a constrói."""
 
@@ -230,6 +252,11 @@ class Regiao:
     #: tal e qual. O produto não pode dizê-lo por ela: o nome de uma autoridade
     #: só se escreve dentro de `regioes/<id>/` (CLAUDE.md, §7).
     faixa_da_proposta: dict[str, str] | None = None
+    #: OS URBANOS QUE A REDE PRÓPRIA OPERA (`UrbanoDaRede`), declarados em
+    #: `rede.urbanos`. Contam como urbanos do concelho deles, ao lado das redes
+    #: das câmaras. Saem do `rede` — que vai tal e qual para o sítio — e ficam
+    #: aqui, validados.
+    urbanos_da_rede: list[UrbanoDaRede] = field(default_factory=list)
 
     # --- prosa -----------------------------------------------------------
 
@@ -425,12 +452,13 @@ class Regiao:
             nome=d["nome"],
             artigo=artigo,
             autoridade=d.get("autoridade_de_transportes") or {},
-            rede=d.get("rede") or {},
+            rede={k: v for k, v in (d.get("rede") or {}).items() if k != "urbanos"},
             dominio_env=d.get("dominio_env"),
             dominio=(str(d["dominio"]).strip().lower() or None) if d.get("dominio") else None,
             demonstracao=bool(d.get("demonstracao", False)),
             proposta=bool(d.get("proposta", False)),
             faixa_da_proposta=_faixa_da_proposta(d["id"], d.get("proposta")),
+            urbanos_da_rede=_urbanos_da_rede(d["id"], (d.get("rede") or {}).get("urbanos")),
             municipios_membros=int(terr.get("municipios_membros", len(concelhos))),
             concelhos_servidos=int(terr.get("concelhos_servidos", len(concelhos))),
             caixa=caixa,
@@ -496,6 +524,27 @@ class Regiao:
                 "uma secção que o produto diz não ter."
             )
 
+        if self.urbanos_da_rede:
+            if "urbano-municipal" not in self.modos:
+                raise ErroDeRegiao(
+                    f"{self.id}: declara urbanos na rede (`rede.urbanos`) e não tem "
+                    "`urbano-municipal` na lista de modos. São urbanos: sem o modo, não há onde "
+                    "os mostrar."
+                )
+            fora = sorted({u.concelho for u in self.urbanos_da_rede} - set(ids))
+            if fora:
+                raise ErroDeRegiao(
+                    f"{self.id}: `rede.urbanos` aponta para concelhos que a região não tem — "
+                    f"{', '.join(fora)}."
+                )
+            todos = [x for u in self.urbanos_da_rede for x in u.linhas]
+            repetidas = sorted({x for x in todos if todos.count(x) > 1})
+            if repetidas:
+                raise ErroDeRegiao(
+                    f"{self.id}: a mesma linha em dois urbanos da rede, ou duas vezes no mesmo — "
+                    f"{', '.join(repetidas)}. Uma linha é de uma rede urbana só."
+                )
+
 
 def _marca(pasta: Path, d: dict[str, Any]) -> tuple[str | None, Path | None]:
     """A cor e o logótipo que a região declara — validados, ou a recusa (`marca.py`).
@@ -545,6 +594,48 @@ def _faixa_da_proposta(id_regiao: str, valor: Any) -> dict[str, str] | None:
             f"nada — tem {sorted(valor)}. Para a frase genérica, `proposta: true`."
         )
     return faixa
+
+
+def _urbanos_da_rede(id_regiao: str, valor: Any) -> list[UrbanoDaRede]:
+    """As redes urbanas que a rede própria opera, como a região as declara.
+
+    Cada uma com `nome`, `concelho` e `linhas` (os números no feed), e nada
+    mais. O que se confere aqui é a forma; que o concelho exista confere-o o
+    `_verificar`, e que cada número exista no feed confere-o a construção
+    (`construcao._urbanos_da_rede`), que é quem tem o feed.
+    """
+    if valor in (None, []):
+        return []
+    if not isinstance(valor, list):
+        raise ErroDeRegiao(
+            f"{id_regiao}: `rede.urbanos` é uma lista de redes, cada uma com `nome`, `concelho` "
+            "e `linhas`."
+        )
+    urbanos: list[UrbanoDaRede] = []
+    for i, u in enumerate(valor):
+        if not isinstance(u, dict) or sorted(u) != ["concelho", "linhas", "nome"]:
+            raise ErroDeRegiao(
+                f"{id_regiao}: `rede.urbanos[{i}]` declara-se com `nome`, `concelho` e `linhas`, "
+                f"os três e mais nada — tem {sorted(u) if isinstance(u, dict) else u!r}."
+            )
+        nome = str(u["nome"] or "").strip()
+        concelho = str(u["concelho"] or "").strip()
+        linhas = u["linhas"] if isinstance(u["linhas"], list) else []
+        # OS NÚMEROS SÃO TEXTO, como no feed: «0101» e «101» são linhas
+        # diferentes, e um YAML sem aspas lia o primeiro como um inteiro.
+        codigos = tuple(str(x).strip() for x in linhas if str(x).strip())
+        if not nome or not concelho or not codigos or len(codigos) != len(linhas):
+            raise ErroDeRegiao(
+                f"{id_regiao}: `rede.urbanos[{i}]` tem de ter `nome`, `concelho` e pelo menos um "
+                "número de linha em `linhas`, sem vazios."
+            )
+        if any(not isinstance(x, str) for x in linhas):
+            raise ErroDeRegiao(
+                f"{id_regiao}: os números das linhas de `rede.urbanos[{i}]` ({nome}) escrevem-se "
+                'entre aspas, como texto — `["0101", "12"]`: sem elas, o YAML lê «0101» como 101.'
+            )
+        urbanos.append(UrbanoDaRede(nome=nome, concelho=concelho, linhas=codigos))
+    return urbanos
 
 
 def _ler_yaml(caminho: Path) -> dict[str, Any]:

@@ -22,7 +22,12 @@ import MarcaDeDados from '@/componentes/MarcaDeDados';
 import FeriadoMunicipalDoConcelho from '@/componentes/FeriadoMunicipal';
 import Distintivo from '@/componentes/Distintivo';
 import { aAutoridade, lista, plural } from '@/lib/prosa';
-import { paragemPrincipal, porLocalidade, saidasDoConcelho } from '@/lib/concelho';
+import {
+  paragemPrincipal,
+  porLocalidade,
+  quantosNoConcelho,
+  saidasDoConcelho,
+} from '@/lib/concelho';
 import { horaLegivel } from '@/lib/formato';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
@@ -115,15 +120,11 @@ export default async function Concelho({
   const outros = Object.entries(await lerModos(rid)).map(([m, d]) => ({
     modo: m,
     nome: NOME_DOS_MODOS[m] ?? m,
-    // AS LINHAS CONTAM TAMBÉM: um urbano municipal é um traçado ou um
-    // horário, e não um ponto — e a página dizia «sem registo neste concelho»
-    // do urbano que corre de ponta a ponta da vila.
-    quantos:
-      d.sistemas.reduce((n, s) => n + s.estacoes.filter((e) => e.concelho === c.id).length, 0) +
-      d.pontos.filter((x) => x.concelho === c.id).length +
-      d.paragens.filter((x) => x.concelho === c.id).length +
-      d.percursos.filter((x) => (x.concelhos ?? []).includes(c.id)).length +
-      (d.horarios ?? []).filter((x) => x.concelho === c.id).length,
+    // Os pontos, as linhas e os urbanos da rede (`quantosNoConcelho`).
+    quantos: quantosNoConcelho(d, c.id),
+    // O NOME DO URBANO DA CIDADE, quando é da rede: «Urbano municipal» sozinho
+    // não diz a quem mora cá que é o urbano que conhece pelo nome.
+    redes: (d.urbanos_da_rede ?? []).filter((u) => u.concelho === c.id).map((u) => u.nome),
     incompleto: d.incompleto,
   }));
   const presentes = outros.filter((o) => o.quantos > 0).sort((a, b) => b.quantos - a.quantos);
@@ -334,7 +335,12 @@ export default async function Concelho({
                           className={`cartao modo-${o.modo}`}
                           href={url(rid, `modos/${o.modo}/`)}
                         >
-                          <span>{o.nome}</span>
+                          <span>
+                            {o.nome}
+                            {o.redes.length > 0 && (
+                              <span className="secundario"> · {lista(o.redes)}</span>
+                            )}
+                          </span>
                           <span className="secundario">{o.quantos}</span>
                         </Link>
                       </li>

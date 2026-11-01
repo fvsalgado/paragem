@@ -58,6 +58,9 @@ def test_todo_o_modo_declarado_tem_de_produzir_alguma_coisa(raiz, regiao):
     produzidos = {s.modo for s in _declaracoes_de_modo(r)}
     if getattr(r, "a_pedido", None) and r.a_pedido.get("zonas"):
         produzidos.add("a-pedido")
+    # Os urbanos que a rede própria opera também são urbanos.
+    if r.urbanos_da_rede:
+        produzidos.add("urbano-municipal")
     em_falta = set(r.modos) - produzidos
     assert not em_falta, f"{regiao} promete {sorted(em_falta)} e não constrói nada para eles"
 
@@ -104,3 +107,81 @@ def test_o_filtro_dos_urbanos_nunca_e_pela_rede(raiz):
             assert "operator" in s.params["filtro"], f"{regiao}: {s.saida} não filtra pelo operador"
             assert "network" not in s.params["filtro"], f"{regiao}: {s.saida} filtra pela rede"
     assert vistas, "nenhuma região declara traçados de rotas — o teste deixou de afirmar"
+
+
+# --- os urbanos que a rede própria opera ------------------------------------
+
+
+def _feed_da_demonstracao(raiz: Path, destino: Path) -> None:
+    """O feed da rede da demonstração, como a construção o escreve — sem construir nada."""
+    import zipfile
+
+    origem = raiz / "data" / "manual" / "demo" / "gtfs-rede"
+    (destino / "gtfs").mkdir(parents=True)
+    with zipfile.ZipFile(destino / "gtfs" / "rede-ameno.zip", "w") as z:
+        for f in sorted(origem.glob("*.txt")):
+            z.write(f, f.name)
+
+
+def test_os_urbanos_da_rede_contam_como_urbanos_do_concelho(raiz, tmp_path):
+    """A página de um concelho dizia «sem registo: urbano municipal» por cima das linhas do urbano.
+
+    A demonstração declara a circular de Porto Ameno como o urbano da vila
+    (`rede.urbanos`). Tem de chegar ao modo dos urbanos com o concelho, as
+    linhas lidas do feed próprio — com o identificador com que a página da
+    linha existe —, e a contar na contagem do modo.
+    """
+    from paragem.sitio import Sitio
+
+    demo = regiao_ou_salta("demo")
+    assert demo.urbanos_da_rede, "a demonstração declara o urbano da vila na rede"
+    _feed_da_demonstracao(raiz, tmp_path)
+    modos = Sitio(raiz, demo, tmp_path).modos(None)
+
+    urbanos = modos["urbano-municipal"]["urbanos_da_rede"]
+    assert [(u["nome"], u["concelho"]) for u in urbanos] == [
+        ("Circular de Porto Ameno", "porto-ameno")
+    ]
+    assert [(x["id"], x["codigo"]) for x in urbanos[0]["linhas"]] == [("RA11", "11")]
+    assert urbanos[0]["linhas"][0]["nome"] == "Circular de Porto Ameno"
+    assert modos["urbano-municipal"]["quantos"] >= 1
+    # E as linhas não se duplicam no modo: têm catálogo, e é lá que se vêem.
+    assert not any(h.get("id") == "RA11" for h in modos["urbano-municipal"]["horarios"])
+
+
+def test_uma_linha_urbana_que_o_feed_nao_tem_sai_como_lacuna(raiz, tmp_path):
+    """Um caderno que renumera uma linha deixava o urbano com uma a menos, em silêncio."""
+    import dataclasses
+
+    from paragem.construcao import _urbanos_da_rede
+    from paragem.fontes import Registo
+    from paragem.leitores.base import Contexto
+    from paragem.regiao import UrbanoDaRede
+    from paragem.relatorio import Relatorio
+    from paragem.sitio import Sitio
+
+    demo = regiao_ou_salta("demo")
+    com_uma_a_mais = dataclasses.replace(
+        demo,
+        urbanos_da_rede=[
+            UrbanoDaRede("Circular de Porto Ameno", "porto-ameno", ("11", "99")),
+            UrbanoDaRede("Urbano que não há", "almeao", ("98",)),
+        ],
+    )
+    _feed_da_demonstracao(raiz, tmp_path)
+    ctx = Contexto(
+        regiao=com_uma_a_mais,
+        registo=Registo.carregar(raiz),
+        raiz=raiz,
+        destino=tmp_path,
+        relatorio=Relatorio(regiao="demo"),
+    )
+    _urbanos_da_rede(ctx, tmp_path)
+    (lacuna,) = [x for x in ctx.relatorio.lacunas if x.id == "urbanos-da-rede.linha-em-falta"]
+    assert lacuna.quais == ["Circular de Porto Ameno: linha 99", "Urbano que não há: linha 98"]
+
+    # O sítio mostra só o que existe, e um urbano sem nenhuma linha não aparece.
+    urbanos = Sitio(raiz, com_uma_a_mais, tmp_path)._urbanos_da_rede()
+    assert [(u["nome"], [x["codigo"] for x in u["linhas"]]) for u in urbanos] == [
+        ("Circular de Porto Ameno", ["11"])
+    ]

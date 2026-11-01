@@ -289,6 +289,66 @@ def test_a_faixa_da_proposta_a_meio_recusa_se(tmp_path, faixa):
         Regiao.carregar(pasta)
 
 
+def _com_concelhos(pasta, **extra):
+    """Uma região mínima com um concelho e o modo dos urbanos, para os urbanos da rede."""
+    pasta = _regiao_minima(
+        pasta,
+        modos=["autocarro", "urbano-municipal"],
+        inclui={"concelhos": "concelhos.yaml"},
+        **extra,
+    )
+    (pasta / "concelhos.yaml").write_text(
+        yaml.safe_dump(
+            {"concelhos": [{"id": "vila", "nome": "Vila", "distrito": "D", "dico": "0001"}]}
+        ),
+        encoding="utf-8",
+    )
+    return pasta
+
+
+def test_os_urbanos_da_rede_declaram_se_e_saem_do_que_vai_tal_e_qual(tmp_path):
+    rede = {
+        "nome": "Rede X",
+        "urbanos": [{"nome": "Urbano da Vila", "concelho": "vila", "linhas": ["0101", "12"]}],
+    }
+    r = Regiao.carregar(_com_concelhos(tmp_path / "x", rede=rede))
+    assert [(u.nome, u.concelho, u.linhas) for u in r.urbanos_da_rede] == [
+        ("Urbano da Vila", "vila", ("0101", "12"))
+    ]
+    # O `rede` vai tal e qual para o sítio; os urbanos vão validados, à parte.
+    assert "urbanos" not in r.rede
+    assert Regiao.carregar(_regiao_minima(tmp_path / "sem")).urbanos_da_rede == []
+
+
+@pytest.mark.parametrize(
+    ("urbanos", "modos", "erro"),
+    [
+        ([{"nome": "U", "concelho": "outra", "linhas": ["1"]}], None, "concelhos que a região"),
+        ([{"nome": "U", "concelho": "vila", "linhas": []}], None, "pelo menos um"),
+        ([{"nome": "U", "concelho": "vila"}], None, "os três e mais nada"),
+        ([{"nome": "U", "concelho": "vila", "linhas": [101]}], None, "entre aspas"),
+        (
+            [
+                {"nome": "U", "concelho": "vila", "linhas": ["1"]},
+                {"nome": "V", "concelho": "vila", "linhas": ["1"]},
+            ],
+            None,
+            "a mesma linha",
+        ),
+        ([{"nome": "U", "concelho": "vila", "linhas": ["1"]}], ["autocarro"], "urbano-municipal"),
+    ],
+)
+def test_os_urbanos_da_rede_mal_declarados_recusam_se(tmp_path, urbanos, modos, erro):
+    extra = {"rede": {"nome": "Rede X", "urbanos": urbanos}}
+    pasta = _com_concelhos(tmp_path / "x", **extra)
+    if modos is not None:
+        d = yaml.safe_load((pasta / "regiao.yaml").read_text(encoding="utf-8"))
+        d["modos"] = modos
+        (pasta / "regiao.yaml").write_text(yaml.safe_dump(d), encoding="utf-8")
+    with pytest.raises(ErroDeRegiao, match=erro):
+        Regiao.carregar(pasta)
+
+
 def test_uma_demonstracao_nao_pode_ser_tambem_uma_proposta(tmp_path):
     pasta = _regiao_minima(tmp_path / "as-duas", proposta=True, demonstracao=True)
     with pytest.raises(ErroDeRegiao, match="ao mesmo tempo"):

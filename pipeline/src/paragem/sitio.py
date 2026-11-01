@@ -1194,6 +1194,32 @@ class Sitio:
                 else:
                     m[chave] = valor
 
+        # OS URBANOS QUE A REDE PRÓPRIA OPERA, ao lado dos das câmaras.
+        #
+        # As linhas deles têm catálogo — são linhas da rede, com página e
+        # horário —, e por isso não se duplicam aqui: o modo leva só QUAIS são,
+        # de que concelho, e para onde levar. Sem isto, a página de um concelho
+        # dizia «sem registo: urbano municipal» por cima das linhas do urbano
+        # da cidade (`Regiao.urbanos_da_rede`).
+        urbanos = self._urbanos_da_rede()
+        if urbanos:
+            m = por_modo.setdefault(
+                "urbano-municipal",
+                {
+                    "modo": "urbano-municipal",
+                    "gerido_por": [],
+                    "sistemas": [],
+                    "pontos": [],
+                    "percursos": [],
+                    "paragens": [],
+                    "horarios": [],
+                    "incompleto": False,
+                    "notas": [],
+                    "fontes": [],
+                },
+            )
+            m["urbanos_da_rede"] = urbanos
+
         for m in por_modo.values():
             geridos = [s.get("operador") for s in m["sistemas"]]
             geridos += [p.get("operador") for p in m["percursos"]]
@@ -1209,8 +1235,44 @@ class Sitio:
                 + len(m["percursos"])
                 + len(m["paragens"])
                 + len(m.get("horarios") or [])
+                + sum(len(u["linhas"]) for u in m.get("urbanos_da_rede") or [])
             )
         return por_modo
+
+    def _urbanos_da_rede(self) -> list[dict[str, Any]]:
+        """Os urbanos que a região declara na rede, com as linhas lidas do feed próprio.
+
+        Cada número procura-se SÓ no feed próprio: as listas do sítio têm
+        também as linhas de quem partilha o cais, e há números que se repetem
+        entre concessões. O número que o feed não tiver fica de fora — a
+        construção já o escreveu como lacuna (`construcao._urbanos_da_rede`) —,
+        e uma rede sem nenhuma linha encontrada não aparece: um urbano sem
+        linhas era um nome a apontar para nada.
+        """
+        if not self.regiao.urbanos_da_rede:
+            return []
+        feed = self._feed(self.feed_proprio)
+        if feed is None:
+            return []
+        por_codigo: dict[str, list[dict]] = collections.defaultdict(list)
+        for r in feed.routes:
+            por_codigo[str(r.get("route_short_name") or "").strip()].append(r)
+        saida = []
+        for u in self.regiao.urbanos_da_rede:
+            linhas = [
+                {
+                    "id": r["route_id"],
+                    "codigo": codigo,
+                    "nome": " ".join((r.get("route_long_name") or "").split()),
+                    "cor": (r.get("route_color") or "").strip() or None,
+                    "cor_texto": (r.get("route_text_color") or "").strip() or None,
+                }
+                for codigo in u.linhas
+                for r in por_codigo.get(codigo, [])
+            ]
+            if linhas:
+                saida.append({"nome": u.nome, "concelho": u.concelho, "linhas": linhas})
+        return saida
 
     def _peca_de_modo(self, decl, territorio) -> dict[str, Any] | None:
         """Uma saída declarada, lida no formato que o seu leitor produz."""

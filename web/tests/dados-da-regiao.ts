@@ -85,6 +85,8 @@ export type Modo = {
   percursos: { nome: string }[];
   pontos: { concelho: string | null }[];
   paragens: ParagemDeModo[];
+  /** Os urbanos que a rede própria opera (`rede.urbanos`); ausente onde não há. */
+  urbanos_da_rede?: { nome: string; concelho: string; linhas: { id: string; nome: string }[] }[];
 };
 
 /** As paragens de autocarro, como a página de paragens as lista. */

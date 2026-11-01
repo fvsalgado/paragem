@@ -990,6 +990,18 @@ export type HorarioDeModo = {
   concelho?: string | null;
 };
 
+/**
+ * Uma rede urbana que a REDE PRÓPRIA opera — o urbano de uma cidade com
+ * número de linha no caderno, como as outras linhas da rede. Declarada pela
+ * região (`rede.urbanos`), e não adivinhada pelo nome: conta como urbano do
+ * concelho, e as linhas levam para o catálogo, onde têm página e horário.
+ */
+export type UrbanoDaRede = {
+  nome: string;
+  concelho: string;
+  linhas: Pick<Linha, 'id' | 'codigo' | 'nome' | 'cor' | 'cor_texto'>[];
+};
+
 export type ModoDetalhe = {
   modo: string;
   gerido_por: string[];
@@ -998,6 +1010,8 @@ export type ModoDetalhe = {
   percursos: PercursoDeModo[];
   paragens: ParagemDeModo[];
   horarios?: HorarioDeModo[];
+  /** Ausente em dados de antes disto, e em regiões que não os declaram. */
+  urbanos_da_rede?: UrbanoDaRede[];
   operadores?: OperadorDeModo[];
   incompleto: boolean;
   notas: string[];

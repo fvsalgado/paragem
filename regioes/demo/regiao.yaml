@@ -45,6 +45,17 @@ rede:
   url: https://rede-ameno.example.org
   operador: Transportes do Ameno
   operador_artigo: os
+  # OS URBANOS QUE A REDE OPERA. A circular de Porto Ameno é uma linha da rede
+  # como as outras, com número e horário, e é o urbano da vila: conta como
+  # urbano municipal de Porto Ameno, ao lado do urbano que a Câmara de Almeão
+  # opera à margem da concessão. Declara-se pelo NÚMERO da linha, entre aspas,
+  # e não pelo nome — o produto não adivinha, por «circular», que uma linha é
+  # urbana. Sem isto, a página de Porto Ameno dizia «sem registo neste
+  # concelho: urbano municipal» por cima da circular.
+  urbanos:
+    - nome: Circular de Porto Ameno
+      concelho: porto-ameno
+      linhas: ["11"]
 
 # A MARCA DA REDE, inventada como o resto — é o que mostra o sítio com a marca
 # de quem o licencia, e não com a do produto. A cor dá o tom ao endereço em
