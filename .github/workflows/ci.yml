@@ -15,17 +15,13 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  # A versão do poppler está fixada de propósito. A saída de `pdftotext -layout`
-  # muda entre versões, e é contra ela que os números do §6.1 são verificados —
-  # uma atualização silenciosa mudava as contagens sem que nada no repositório
-  # tivesse mudado. Ver docs/ARQUITETURA.md.
-  POPPLER_ESPERADO: "24.02"
+# A versão do poppler está fixada num sítio só, `scripts/poppler.sh`, que os
+# três fluxos usam. Ver docs/ARQUITETURA.md.
 
 jobs:
   qualidade:
     name: Qualidade
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -40,16 +36,11 @@ jobs:
       # O parser de horários corre contra o PDF verdadeiro, que está no
       # repositório — é por isso que os testes conseguem afirmar 122 linhas,
       # 230 blocos e 903 viagens sem descarregar nada.
+      # Aqui só AVISA: os testes do parser afirmam as contagens do caderno e
+      # reprovam sozinhos se a versão as mudar. Nos fluxos que constroem e
+      # publicam dados, reprova (`scripts/poppler.sh` sem `--avisar`).
       - name: Dependências de sistema
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq poppler-utils
-          versao="$(pdftotext -v 2>&1 | head -1 | grep -oE '[0-9]+\.[0-9]+' | head -1)"
-          echo "poppler $versao"
-          if [ "$versao" != "$POPPLER_ESPERADO" ]; then
-            echo "::warning::poppler $versao, esperado $POPPLER_ESPERADO —" \
-                 "a saída de -layout muda entre versões; reconferir os números do §6.1."
-          fi
+        run: scripts/poppler.sh --avisar
 
       - name: Formatação
         run: uv run ruff format --check .

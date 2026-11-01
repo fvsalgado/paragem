@@ -782,6 +782,7 @@ export default function AppDoMapa({
             recebe o foco é um foco que ninguém vê. */}
         <p className="so-para-leitores">
           O mapa mostra {nParagens === 1 ? '1 paragem' : `${nParagens} paragens`}
+          {nParagens > 1 ? ' (uma por nome: as dos dois lados da estrada contam como uma)' : ''}
           {nEstacoes
             ? ` e ${nEstacoes === 1 ? '1 estação' : `${nEstacoes} estações`} de comboio`
             : ''}

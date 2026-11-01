@@ -36,6 +36,14 @@ LIMIAR_DO_PAR = 0.34
 LIMIAR_DA_VIAGEM = 0.45
 
 
+#: As causas por que uma viagem do papel fica sem alinhamento, pela ordem em
+#: que se perguntam. Vão para o relatório, contadas por linha.
+MOTIVO_SEM_SEQUENCIAS = "a linha não está no levantamento"
+MOTIVO_NENHUM_NOME = "nenhum nome casa com as sequências da linha"
+MOTIVO_POUCO_PARECIDA = "as sequências da linha não explicam esta viagem"
+MOTIVO_POUCOS_PONTOS = "menos de metade dos pontos do papel casam"
+
+
 class TemNome(Protocol):
     nome: str
 
@@ -52,6 +60,11 @@ class Alinhamento:
     pares: list[tuple[int, str, float]] = field(default_factory=list)
     n_papel: int = 0
     n_levantamento: int | None = None
+    # PORQUE NÃO ALINHOU, quando não alinhou. São causas diferentes e pedem
+    # respostas diferentes: uma linha que o levantamento não tem só se resolve
+    # com outra edição dele; uma que tem mas cujos nomes já não casam é uma
+    # linha que mudou de percurso entre as duas edições.
+    motivo: str | None = None
 
     @property
     def alinhou(self) -> bool:
@@ -186,6 +199,14 @@ def alinhar(
             if melhor is None or pontuacao > melhor[0]:
                 melhor = (pontuacao, sequencia, pares)
         alinhamento = Alinhamento(indice=indice, linha=str(viagem.linha), n_papel=len(nomes_papel))
+        if not por_linha.get(str(viagem.linha)):
+            alinhamento.motivo = MOTIVO_SEM_SEQUENCIAS
+        elif melhor is None:
+            alinhamento.motivo = MOTIVO_NENHUM_NOME
+        elif melhor[0] < limiar_da_viagem:
+            alinhamento.motivo = MOTIVO_POUCO_PARECIDA
+        elif len(melhor[2]) < max(2, 0.5 * len(nomes_papel)):
+            alinhamento.motivo = MOTIVO_POUCOS_PONTOS
         if (
             melhor
             and melhor[0] >= limiar_da_viagem

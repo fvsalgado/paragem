@@ -202,6 +202,42 @@ def test_horas_depois_da_meia_noite():
     assert [p.partida for p in v.paragens] == ["23:50:00", "24:20:00"]
 
 
+def test_a_viagem_das_00h_depois_de_uma_mais_tardia_e_do_dia_anterior():
+    """Uma coluna das 00:05 a seguir a uma das 19:20, no mesmo bloco, é a última do dia.
+
+    Medido numa carreira que chega ao fim da linha às 23:55 e volta às 00:05,
+    em todos os serviços: escrita «00:05», a de sábado de madrugada aparecia
+    como sendo de sábado, quando é a de sexta à noite. A regra anterior só a
+    apanhava se as duas viagens calhassem na mesma coluna de blocos
+    diferentes. E a das 00:30 que abre a lista do serviço continua a ser a
+    primeira do dia.
+    """
+    from types import SimpleNamespace
+
+    from paragem.leitores.horarios_pdf_operadora import _depois_da_meia_noite
+
+    texto = """\
+98 Volta tarde
+
+               VOLTA                                     A     A     A     A
+               INBOUND                                   U     U     U     S
+               Fim da Linha                            08:05 19:20 00:05 00:30
+               Princípio                               08:40 19:55 00:40 01:05
+"""
+    vs = pdf.viagens(pdf.ler(texto))
+    completas = [
+        SimpleNamespace(
+            indice=i,
+            viagem=v,
+            pontos=[SimpleNamespace(partida=p.partida, chegada=p.chegada) for p in v.paragens],
+        )
+        for i, v in enumerate(vs)
+    ]
+    deslocadas = _depois_da_meia_noite(completas)
+    assert [vs[i].paragens[0].partida for i in deslocadas] == ["00:05:00"]
+    assert deslocadas == {2: 24 * 3600}
+
+
 def test_as_contagens_do_feed_chamam_se_como_o_ficheiro_que_a_receita_declara():
     """Estavam cravadas com a marca da rede do primeiro cliente: o relatório de
     outra região que usasse este leitor sairia com as contagens em nome dele."""

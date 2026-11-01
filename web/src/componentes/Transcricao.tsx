@@ -1,3 +1,5 @@
+import { fraseDoConteudo, type ConteudoDe } from '@/lib/formato';
+
 /**
  * Que uma folha foi transcrita à mão, e quando.
  *
@@ -54,4 +56,25 @@ export default function Transcricao({
 function emPortugues(iso: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+}
+
+/**
+ * DE QUANDO É O DOCUMENTO, ao lado das horas que saem dele.
+ *
+ * A página só dizia quando a folha foi transcrita, e uma brochura de 2017
+ * guardada em 2026 lia-se como sendo de 2026. Diz-se o que o documento diz —
+ * o dia em que entra em vigor, ou o que escreve sem dia —, e quando não diz
+ * nada, diz-se isso: é informação para quem confere, e não um buraco a tapar
+ * com a data de obtenção.
+ */
+export function DataDoDocumento({
+  conteudo,
+  documento,
+}: {
+  conteudo?: ConteudoDe;
+  /** Como a página chama ao papel, com o artigo: «a brochura», «o cartaz». */
+  documento: string;
+}) {
+  const frase = fraseDoConteudo(conteudo, documento);
+  return frase ? <p className="secundario">{frase}</p> : null;
 }

@@ -570,6 +570,36 @@ def _feed_da_regiao(raiz: Path, id_regiao: str, papel: str = "horarios") -> Path
     return None
 
 
+def _numeros_do_sitio(r: Resultado, raiz: Path, id_regiao: str, esperados: dict) -> None:
+    """Os números que o sítio mostra, contra os que a referência declara.
+
+    São os do `numeros.json` (`sitio.py`, `Sitio.numeros`), cada um com o que
+    conta — e é por isso que a referência os pode afirmar com o nome certo, em
+    vez de um «paragens» que num sítio são as do feed e noutro as da lista.
+    Só se conferem com o sítio construído à mão; num clone limpo não há nada
+    a conferir, e não se finge que houve.
+
+    Um número que assenta numa fonte viva — o OpenStreetMap, o feed semanal
+    da CP — declara-se com `afirmado: false` e fica como instantâneo (§8):
+    cravá-lo era um teste que parte sozinho, e parte a publicação com ele.
+    """
+    if not esperados:
+        return
+    caminho = Path(raiz) / "build" / id_regiao / "sitio" / "numeros.json"
+    if not caminho.exists():
+        return
+    feitos = json.loads(caminho.read_text(encoding="utf-8"))
+    for chave, decl in esperados.items():
+        if isinstance(decl, dict) and decl.get("afirmado") is False:
+            continue
+        esperado = decl.get("valor") if isinstance(decl, dict) else decl
+        obtido = (feitos.get(chave) or {}).get("valor")
+        r.afirmar(
+            obtido == esperado,
+            f"{id_regiao}: no sítio, {chave} = {esperado} (construído: {obtido})",
+        )
+
+
 def numeros(raiz: Path) -> Resultado:
     """Confere o que o repositório sabe contar sozinho, sem rede e sem chaves.
 
@@ -703,6 +733,8 @@ def _numeros_de(r: Resultado, raiz: Path, da_referencia: Path, pasta: Path, f: P
             f"{pasta.name}: todas as passagens do feed a pedido exigem reserva"
             f" ({len(sem_regra)} sem)",
         )
+
+    _numeros_do_sitio(r, raiz, pasta.name, d.get("sitio") or {})
 
     obs = d.get("observado_no_prototipo") or {}
     if obs and ref and (da_referencia / ref).exists():

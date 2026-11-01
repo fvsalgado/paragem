@@ -48,6 +48,10 @@ Opcional ao nascer, sem bloquear nada:
 - tarifário — sem ele, não se anuncia preço nenhum;
 - calendário escolar e feriados municipais — sem eles, o gerador projeta só o
   que consegue e o relatório conta o resto;
+- o que um feriado municipal faz aos horários (`feriados_municipais_nos_horarios`
+  no `calendario.yaml`) — `regra: como-feriado` com o `ambito` e a `fonte`, ou
+  `regra: nada-muda` com a `fonte`; sem fonte, `por_confirmar:` com a pergunta,
+  que sai no relatório com os próximos feriados. Uma regra sem fonte não passa;
 - marcas e cartaz social — sem ficheiros, a assinatura sai em texto.
 
 ## Passo 1 — a declaração

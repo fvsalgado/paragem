@@ -57,7 +57,7 @@ from ..resolucao import Resolucao, nomes_em_paragens_diferentes, resolver
 from ..tracados import Parametros as ParametrosDosTracados
 from ..tracados import Tracado, desenhar, ler_rede, numerar
 from . import pdf_horarios as pdf
-from .base import Contexto, Resultado
+from .base import Contexto, Resultado, concelhos_do_feriado_municipal
 
 nome = "horarios-pdf-operadora"
 
@@ -100,7 +100,7 @@ def ler(ctx: Contexto, saida: Saida) -> Resultado:
 
     prefixo = prefixo_das_contagens(saida)
     feed, contagens, lacunas = _escrever(
-        ctx, doc, completas, resolucao, camadas, formas, forma_de, prefixo
+        ctx, saida, doc, completas, resolucao, camadas, formas, forma_de, prefixo
     )
     destino = ctx.caminho_de_saida(saida)
     feed.escrever(destino)
@@ -309,6 +309,34 @@ def _depois_da_meia_noite(completas: list[ViagemCompleta]) -> dict[int, int]:
                 and a.viagem.servico == b.viagem.servico
             ):
                 deslocadas[b.indice] = 24 * 3600
+
+    # E NO MESMO BLOCO, DEPOIS DE UMA QUE PARTE MAIS TARDE. A regra de cima só
+    # apanhava a meia-noite quando as duas viagens calhavam na mesma coluna de
+    # blocos diferentes, e isso é coincidência de paginação. Num caderno, as
+    # colunas de um serviço vão por ordem de partida: uma que parte às 00:05
+    # depois de uma que parte às 19:20, no mesmo bloco e no mesmo serviço, é a
+    # última do dia e não a primeira. Medido numa carreira que chega ao fim da
+    # linha às 23:55 e volta às 00:05 — escrita «00:05», punha-se a andar
+    # vinte e quatro horas antes, no dia de serviço errado (a de sábado de
+    # madrugada era a de sexta à noite).
+    #
+    # Uma viagem das 00:30 que abra a lista do seu serviço continua a ser a
+    # primeira do dia: só se desloca a que vem DEPOIS de uma mais tardia.
+    por_bloco: dict[tuple[str, int, str, str], list[ViagemCompleta]] = collections.defaultdict(list)
+    for c in completas:
+        v = c.viagem
+        por_bloco[(v.linha, v.pagina, v.sentido or "", v.servico)].append(c)
+    for lista in por_bloco.values():
+        lista.sort(key=lambda c: c.indice)
+        mais_tarde = -1
+        for c in lista:
+            if not c.pontos:
+                continue
+            parte = _segundos(c.pontos[0].partida)
+            if parte < 4 * 3600 and mais_tarde > parte:
+                deslocadas[c.indice] = 24 * 3600
+            elif c.indice not in deslocadas:
+                mais_tarde = max(mais_tarde, parte)
     return deslocadas
 
 
@@ -326,6 +354,7 @@ def prefixo_das_contagens(saida: Saida) -> str:
 
 def _escrever(
     ctx: Contexto,
+    saida: Saida,
     doc: pdf.Documento,
     completas: list[ViagemCompleta],
     resolucao: Resolucao,
@@ -479,11 +508,12 @@ def _escrever(
 
     # --- calendário -------------------------------------------------------
     cal = Calendario(ctx.regiao.calendario, [c.id for c in ctx.regiao.concelhos])
+    municipais = _feriados_municipais_por_servico(ctx, saida, cal, viagens_gtfs, horarios, paragens)
     datas: list[dict[str, str]] = []
     por_confirmar: list[str] = []
     sem_datas: list[str] = []
     for servico in sorted(servicos):
-        res = cal.resolver(servico, hoje, fim)
+        res = cal.resolver(servico, hoje, fim, municipais.get(servico, ()))
         if not res.datas:
             sem_datas.append(f"{servico}: {'; '.join(res.por_confirmar)}")
         elif not res.confiavel:
@@ -594,6 +624,52 @@ def _escrever(
     }
     lacunas = _lacunas(ctx, resolucao, completas, sem_cor, por_confirmar, sem_datas, servicos)
     return feed, contagens, lacunas
+
+
+def _feriados_municipais_por_servico(
+    ctx: Contexto,
+    saida: Saida,
+    cal: Calendario,
+    viagens: list[dict[str, str]],
+    horarios: list[dict[str, str]],
+    paragens: dict[str, dict[str, str]],
+) -> dict[str, frozenset[str]]:
+    """Por onde anda cada viagem, para o feriado municipal saber a quem se aplica.
+
+    O concelho de cada paragem sai da carta administrativa — e só dela: sem
+    carta não se sabe, e a regra fica por aplicar com a razão escrita. Nada
+    disto corre sem a região declarar que um feriado municipal se faz como
+    feriado.
+    """
+    regra = cal.regra_dos_feriados_municipais
+    if regra.regra != "como-feriado":
+        return {}
+    com_feriado = cal.concelhos_com_feriado_municipal()
+    territorio = ctx.territorio
+    por_dico = {c.dico: c.id for c in ctx.regiao.concelhos if c.dico}
+    do_stop: dict[str, str | None] = {}
+    for p in paragens.values():
+        concelho = None
+        if territorio is not None:
+            limite = territorio.concelho_de(float(p["stop_lat"]), float(p["stop_lon"]))
+            concelho = por_dico.get(limite.codigo) if limite else "fora-da-regiao"
+        do_stop[p["stop_id"]] = concelho
+    onde: dict[str, set[str] | None] = {}
+    for h in horarios:
+        c = do_stop.get(h["stop_id"])
+        atual = onde.setdefault(h["trip_id"], set())
+        if c is None or atual is None:
+            onde[h["trip_id"]] = None
+        else:
+            atual.add(c)
+    return concelhos_do_feriado_municipal(
+        ctx,
+        saida,
+        regra,
+        {v["trip_id"]: v["service_id"] for v in viagens},
+        onde,
+        com_feriado,
+    )
 
 
 def _cor_do_texto(cor: str) -> str:
@@ -913,6 +989,7 @@ def _escrever_decisoes(
             "pagina",
             "coluna",
             "alinhada",
+            "porque_nao_alinhou",
             "n_papel",
             "n_omitidas",
             "n_intermedias",
@@ -928,6 +1005,7 @@ def _escrever_decisoes(
                 "pagina": c.viagem.pagina,
                 "coluna": c.viagem.coluna,
                 "alinhada": c.alinhada or "",
+                "porque_nao_alinhou": c.motivo or "",
                 "n_papel": len(c.viagem.paragens),
                 "n_omitidas": len(c.omitidas),
                 "n_intermedias": c.intermedias,
@@ -1003,6 +1081,21 @@ def _lacunas(ctx, resolucao, completas, sem_cor, por_confirmar, sem_datas, servi
 
     sem_alinhamento = [c for c in completas if not c.alinhada]
     if sem_alinhamento:
+        # POR CAUSA E POR LINHA. Eram «196 viagens» e mais nada, e um número
+        # assim não diz a quem se pergunta: as que são de linhas que o
+        # levantamento não tem pedem a sequência à operadora; as que são de
+        # linhas que ele tem e já não casam dizem que o percurso mudou entre
+        # as duas edições — e essas são as que mais vale conferir no terreno.
+        por_motivo: dict[str, collections.Counter[str]] = collections.defaultdict(
+            collections.Counter
+        )
+        for c in sem_alinhamento:
+            por_motivo[c.motivo or "sem causa registada"][str(c.viagem.linha)] += 1
+        quais = []
+        for motivo, linhas in sorted(por_motivo.items(), key=lambda kv: -sum(kv[1].values())):
+            n = sum(linhas.values())
+            lista = ", ".join(f"{linha} ({k})" for linha, k in linhas.most_common())
+            quais.append(f"{motivo} — {n} viagens em {len(linhas)} linhas: {lista}")
         lacunas.append(
             _lac(
                 "viagens.sem-alinhamento",
@@ -1014,10 +1107,15 @@ def _lacunas(ctx, resolucao, completas, sem_cor, por_confirmar, sem_datas, servi
                     "verdadeiro, que vale mais do que completo e emprestado à viagem errada."
                 ),
                 o_que_fazer=(
-                    "Uma edição mais recente do levantamento resolve-as. Enquanto não vier, "
-                    "ficam assim."
+                    "Depende da causa, que vai à frente de cada grupo. Uma linha que o "
+                    "levantamento não tem só se completa com a sequência de paragens da "
+                    "operadora ou com outra edição do levantamento; uma linha que ele tem e "
+                    "cujos nomes já não casam mudou de percurso entre as duas edições, e "
+                    "confere-se com quem a opera. Baixar o limiar não resolve nenhuma das "
+                    "duas: herdava a sequência de outra viagem."
                 ),
                 quantos=len(sem_alinhamento),
+                quais=quais,
             )
         )
 

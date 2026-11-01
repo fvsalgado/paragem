@@ -292,3 +292,29 @@ def test_construida_num_dia_qualquer_tem_servico_nos_meses_seguintes(
             mes = (dia.replace(day=1) + timedelta(days=32 * n)).strftime("%Y%m")
             assert mes in meses, f"{id_regiao}: {saida} sem serviço em {mes}"
         assert min(datas) >= dia.strftime("%Y%m%d"), "a janela começa no dia da construção"
+
+
+def test_no_savel_o_feriado_municipal_chega_ao_feed(raiz, tmp_path, monkeypatch):
+    """A regra declarada aplica-se: no dia do feriado municipal, o dia útil não anda.
+
+    É a outra metade da prova dos feriados. A Serra mostra que a lacuna
+    aparece quando falta a regra; o Sável, que a declara com a fonte, mostra
+    que o feriado entra no calendário do feed — e que a lacuna da pergunta
+    desaparece.
+
+    Constrói-se «a» 1/11/2026 (`PARAGEM_HOJE`) para o feriado da janela cair
+    num dia útil — 24 de junho de 2027 é uma quinta-feira —, e o teste não
+    passar em vão no ano em que cair ao domingo.
+    """
+    monkeypatch.setenv("PARAGEM_HOJE", "2026-11-01")
+    _copiar_repo(raiz, tmp_path)
+    c = construir(tmp_path, carregar(tmp_path, "prova-municipio"), descarregar=False)
+    assert not c.relatorio.tem_bloqueios, [x.o_que for x in c.relatorio.bloqueios]
+    ids = {x.id for x in c.relatorio.lacunas}
+    assert "calendario.feriados-municipais-por-aplicar" not in ids
+    assert not any(i.endswith(".feriados-municipais-por-partir") for i in ids)
+
+    feed = Gtfs.ler(c.destino / "gtfs" / "savel-bus.zip")
+    do_dia_util = {x["date"] for x in feed.obter("calendar_dates.txt") if x["service_id"] == "A-U"}
+    assert "20270623" in do_dia_util, "a véspera é um dia útil como os outros"
+    assert "20270624" not in do_dia_util, "o feriado municipal não é dia útil"

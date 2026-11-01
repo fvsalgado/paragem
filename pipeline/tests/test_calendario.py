@@ -424,3 +424,146 @@ def test_um_servico_de_fora_chama_se_pelos_dias_da_semana():
     assert nome_pela_semana(linha(1, 3, 5)) == "Segundas, quartas e sextas"
     assert nome_pela_semana(linha()) is None
     assert nome_pela_semana(None) is None
+
+
+# --- o que um feriado municipal faz aos horários ---------------------------
+#
+# A regra vem de uma fonte, ou fica por confirmar. Prova-se com uma declaração
+# inventada: um concelho com feriado a uma terça-feira, um código de dias úteis
+# e um de domingos e feriados.
+
+COM_MUNICIPAL = {
+    "feriados_nacionais": {"fixos": [], "moveis": []},
+    "feriados_municipais": [
+        {"concelho": "vila-de-cima", "data": {"mes": 11, "dia": 24}, "confirmado": True},
+    ],
+    "codigos": {
+        "periodo": {"A": {"nome": "Todo o ano", "regra": "todo-o-ano"}},
+        "dias": {
+            "U": {"nome": "Dias úteis", "dias_da_semana": [1, 2, 3, 4, 5], "exclui_feriados": True},
+            "DF": {"nome": "Domingos e feriados", "dias_da_semana": [7], "inclui_feriados": True},
+        },
+    },
+}
+DIA = date(2026, 11, 24)  # uma terça-feira
+
+
+def _com_regra(regra):
+    return Calendario({**COM_MUNICIPAL, "feriados_municipais_nos_horarios": regra})
+
+
+def test_sem_regra_o_feriado_municipal_fica_por_confirmar_e_nao_muda_nada():
+    """É a resposta de antes — e agora é uma pergunta à vista, não um silêncio."""
+    cal = _com_regra({"por_confirmar": "Num feriado municipal, a rede faz o quê?"})
+    r = cal.regra_dos_feriados_municipais
+    assert r.por_confirmar and r.estado == "por-confirmar"
+    assert r.pergunta == "Num feriado municipal, a rede faz o quê?"
+    assert DIA in cal.resolver("A-U", DIA, DIA, ["vila-de-cima"]).datas
+    assert DIA not in cal.resolver("A-DF", DIA, DIA, ["vila-de-cima"]).datas
+    # E sem declaração nenhuma, o mesmo.
+    assert Calendario(COM_MUNICIPAL).regra_dos_feriados_municipais.por_confirmar
+
+
+def test_como_feriado_suprime_o_dia_util_e_poe_o_de_feriado_so_no_concelho():
+    cal = _com_regra(
+        {"regra": "como-feriado", "ambito": "viagens-so-no-concelho", "fonte": "inventada"}
+    )
+    assert DIA not in cal.resolver("A-U", DIA, DIA, ["vila-de-cima"]).datas
+    assert DIA in cal.resolver("A-DF", DIA, DIA, ["vila-de-cima"]).datas
+    # Num serviço que não anda nesse concelho, o dia é um dia útil como os outros.
+    assert DIA in cal.resolver("A-U", DIA, DIA, ["vila-de-baixo"]).datas
+    assert DIA in cal.resolver("A-U", DIA, DIA).datas
+    # E o feriado municipal continua fora dos nacionais.
+    assert DIA not in cal.feriados(2026)
+
+
+def test_nada_muda_e_uma_resposta_e_nao_toca_em_dia_nenhum():
+    cal = _com_regra({"regra": "nada-muda", "fonte": "inventada"})
+    assert cal.regra_dos_feriados_municipais.estado == "nada-muda"
+    assert DIA in cal.resolver("A-U", DIA, DIA, ["vila-de-cima"]).datas
+
+
+def test_uma_regra_sem_fonte_nao_se_escreve():
+    """Uma regra sem fonte é o palpite que o bloco existe para impedir."""
+    import pytest
+
+    from paragem.calendario import ErroDeCalendario
+
+    for decl in (
+        {"regra": "como-feriado", "ambito": "viagens-so-no-concelho"},
+        {"regra": "nada-muda"},
+        {"regra": "como-feriado", "fonte": "inventada"},  # falta o âmbito
+        {"regra": "suspende-o-troco", "fonte": "inventada"},
+    ):
+        with pytest.raises(ErroDeCalendario):
+            _ = _com_regra(decl).regra_dos_feriados_municipais
+
+
+def test_os_feriados_municipais_da_janela_saem_por_data_com_o_concelho():
+    cal = Calendario(COM_MUNICIPAL)
+    f = cal.feriados_municipais_entre(date(2026, 11, 1), date(2027, 12, 31))
+    assert [(x["data"], x["concelho"]) for x in f] == [
+        (date(2026, 11, 24), "vila-de-cima"),
+        (date(2027, 11, 24), "vila-de-cima"),
+    ]
+    assert cal.feriados_municipais_entre(date(2026, 11, 25), date(2027, 11, 23)) == []
+    assert cal.concelhos_com_feriado_municipal() == {"vila-de-cima"}
+
+
+def test_em_cada_regiao_a_regra_dos_feriados_municipais_le_se(raiz):
+    """Uma declaração que rebenta só no dia da construção rebenta aqui antes."""
+    for rid in ids_das_regioes():
+        assert Calendario(regiao_ou_salta(rid).calendario).regra_dos_feriados_municipais
+
+
+def test_o_feriado_aplica_se_ao_servico_so_quando_todas_as_viagens_concordam():
+    """Um serviço é de muitas viagens, e a regra é sobre viagens.
+
+    Quando caem todas do mesmo lado, aplica-se ao serviço; quando não caem,
+    não se aplica — e diz-se, na lacuna, em vez de escolher um dos dois erros.
+    """
+    from types import SimpleNamespace
+
+    from paragem.calendario import RegraDosFeriadosMunicipais
+    from paragem.leitores.base import concelhos_do_feriado_municipal
+
+    lacunas = []
+    ctx = SimpleNamespace(
+        regiao=SimpleNamespace(id="inventada"),
+        relatorio=SimpleNamespace(lacuna=lambda **k: lacunas.append(k)),
+    )
+    saida = SimpleNamespace(fonte="feed-inventado")
+    servico_da_viagem = {"t1": "A-U", "t2": "A-U", "t3": "E-U", "t4": "E-U", "t5": "A-S"}
+    onde = {
+        "t1": {"cima"},
+        "t2": {"cima"},
+        "t3": {"cima", "baixo"},
+        "t4": {"baixo"},
+        "t5": None,
+    }
+    passam = RegraDosFeriadosMunicipais("como-feriado", "viagens-que-passam-no-concelho", "x")
+    aplicar = concelhos_do_feriado_municipal(ctx, saida, passam, servico_da_viagem, onde, {"cima"})
+    assert aplicar == {"A-U": frozenset({"cima"})}
+    assert lacunas and lacunas[0]["id"] == "feed-inventado.feriados-municipais-por-partir"
+    assert any(q.startswith("E-U:") for q in lacunas[0]["quais"])
+    assert any(q.startswith("A-S:") for q in lacunas[0]["quais"])
+
+    # «Só no concelho»: a viagem que atravessa para baixo e a que anda só em
+    # baixo ficam ambas de fora — o E-U não apanha o feriado em nenhuma, e por
+    # isso não precisa de partir.
+    lacunas.clear()
+    so = RegraDosFeriadosMunicipais("como-feriado", "viagens-so-no-concelho", "x")
+    aplicar = concelhos_do_feriado_municipal(
+        ctx, saida, so, servico_da_viagem, {**onde, "t5": {"cima"}}, {"cima"}
+    )
+    assert aplicar == {"A-U": frozenset({"cima"}), "A-S": frozenset({"cima"})}
+    assert not lacunas
+
+    # Sem regra declarada, nada se aplica e nada se escreve.
+    assert (
+        concelhos_do_feriado_municipal(
+            ctx, saida, RegraDosFeriadosMunicipais(), servico_da_viagem, onde, {"cima"}
+        )
+        == {}
+    )
+    assert not lacunas

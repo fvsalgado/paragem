@@ -72,6 +72,8 @@ class ViagemCompleta:
     pontos: list[Ponto] = field(default_factory=list)
     omitidas: list[str] = field(default_factory=list)
     alinhada: str | None = None
+    # Porque não alinhou (`Alinhamento.motivo`), para o relatório dizer a causa.
+    motivo: str | None = None
 
     @property
     def intermedias(self) -> int:
@@ -160,6 +162,7 @@ def preencher(
             indice=indice,
             viagem=viagem,
             alinhada=alinhamento.viagem if alinhamento and alinhamento.alinhou else None,
+            motivo=alinhamento.motivo if alinhamento and not alinhamento.alinhou else None,
         )
         for i, ponto_do_papel in enumerate(viagem.paragens):
             decisao = decisoes[i]

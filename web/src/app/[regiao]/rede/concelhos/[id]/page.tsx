@@ -19,6 +19,7 @@ import {
   regiao,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
+import FeriadoMunicipalDoConcelho from '@/componentes/FeriadoMunicipal';
 import Distintivo from '@/componentes/Distintivo';
 import { aAutoridade, lista, plural } from '@/lib/prosa';
 import { paragemPrincipal, saidasDoConcelho } from '@/lib/concelho';
@@ -162,6 +163,7 @@ export default async function Concelho({
       </p>
       <p className="secundario">{numeros.join(' · ')}.</p>
       <MarcaDeDados regiao={rid} />
+      <FeriadoMunicipalDoConcelho feriado={c.feriado_municipal} />
 
       {/* DUAS COLUNAS NUM ECRÃ LARGO (P1-014), como a paragem e a linha: à
           esquerda o que se lê de alto a baixo — sair, as linhas, as paragens —,

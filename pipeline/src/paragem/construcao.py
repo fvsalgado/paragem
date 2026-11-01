@@ -18,7 +18,7 @@ from typing import Any
 import yaml
 
 from . import urbanos, validador
-from .calendario import Calendario
+from .calendario import Calendario, hoje
 from .fontes import ErroDeFonte, Registo, sha256
 from .geo import distancia_km
 from .gtfs import Gtfs
@@ -843,8 +843,8 @@ def _lacunas_de_declaracao(ctx: Contexto) -> None:
         # e a lacuna tem de o dizer — senão o relatório continua a pedir a
         # mesma coisa com a mesma urgência depois de metade do problema estar
         # resolvido, e quem o lê deixa de o ler.
-        hoje = date.today()
-        incertos = cal.dias_incertos(hoje, hoje + timedelta(days=365))
+        dia = hoje()
+        incertos = cal.dias_incertos(dia, dia + timedelta(days=365))
         ctx.relatorio.lacuna(
             id="calendario.ano-letivo-por-confirmar",
             o_que="O ano letivo vem do calendário escolar oficial, não da operadora",
@@ -900,31 +900,7 @@ def _lacunas_de_declaracao(ctx: Contexto) -> None:
             quais=por_confirmar_fm,
         )
 
-    # Os feriados municipais já se calculam; o que ainda não acontece é
-    # aplicá-los ao calendário de serviço. É uma decisão por tomar, não um
-    # esquecimento — ver a lacuna.
-    ctx.relatorio.lacuna(
-        id="calendario.feriados-municipais-por-aplicar",
-        o_que="Os feriados municipais estão levantados mas não afetam os horários",
-        onde=f"regioes/{r.id}/calendario.yaml",
-        # O texto é o MESMO em todas as regiões, as inventadas incluídas, e por
-        # isso não pode citar o caso medido: dizia o feriado de uma terra real
-        # aplicado a uma linha real, e saía no relatório de lacunas das
-        # demonstrações, publicado com elas.
-        porque_importa=(
-            "Um feriado municipal vale num concelho e não no resto do território, e boa parte "
-            "das linhas atravessa concelhos. Aplicar o feriado de um concelho a uma linha que "
-            "sai dele suprimia viagens que existem no resto do percurso; não o aplicar anuncia "
-            "viagens que não existem. As duas hipóteses erram, em sentidos opostos, e a "
-            "escolha é de quem conhece a operação — não do pipeline."
-        ),
-        o_que_fazer=(
-            "Perguntar à operadora o que faz num feriado municipal: suspende a linha inteira, "
-            "só o troço do concelho, ou nada. Onde os `service_id` trazem o concelho no nome, "
-            "são o caminho para o aplicar assim que a resposta existir."
-        ),
-        quantos=len(cal.feriados_municipais(2026)),
-    )
+    _feriados_municipais_nos_horarios(ctx, r, cal)
 
     especificos = [s for s in r.saidas if s.leitor in ESPECIFICOS_DA_FONTE]
     if especificos:
@@ -979,6 +955,93 @@ def _lacunas_de_declaracao(ctx: Contexto) -> None:
         "regiao.leitores_genericos", sum(1 for s in r.saidas if s.leitor in GENERICOS)
     )
     ctx.relatorio.contar("regiao.leitores_especificos", len(especificos))
+
+
+#: Os leitores que constroem calendários a partir das regras da região e que
+#: AINDA NÃO aplicam o feriado municipal. Estão escritos para que uma região que
+#: declare a regra saiba onde ela não chega — em vez de a julgar aplicada.
+LEITORES_SEM_FERIADO_MUNICIPAL = {"a-pedido-flex", "stepp-servicos"}
+
+
+def _feriados_municipais_nos_horarios(ctx: Contexto, r: Regiao, cal: Calendario) -> None:
+    """O que um feriado municipal faz aos horários: a regra declarada, ou a pergunta.
+
+    Estava aqui uma lacuna fixa — «levantados mas não afetam os horários» —
+    contada com os feriados de 2026, e que não dizia QUANDO nem ONDE: era a
+    mesma frase em setembro e na véspera do feriado. Passa a ser a pergunta
+    que a região escreveu, com os próximos feriados à frente; quando a região
+    tiver a resposta e a fonte, escreve-a em `feriados_municipais_nos_horarios`
+    e esta lacuna desaparece.
+    """
+    regra = cal.regra_dos_feriados_municipais
+    inicio = hoje()
+    proximos = cal.feriados_municipais_entre(inicio, inicio + timedelta(days=365))
+    nomes = {c.id: c.nome for c in r.concelhos}
+    quais = [
+        f"{f['data']:%d/%m/%Y} · {nomes.get(f['concelho'], f['concelho'])}"
+        + (f" · {f['nome']}" if f["nome"] else "")
+        + ("" if f["confirmado"] else " (data por confirmar com a câmara)")
+        for f in proximos
+    ]
+    if regra.por_confirmar:
+        if not proximos:
+            return
+        # O texto fixo é o MESMO em todas as regiões, as inventadas incluídas,
+        # e por isso não cita o caso medido: dizia o feriado de uma terra real
+        # aplicado a uma linha real, e saía no relatório de lacunas das
+        # demonstrações, publicado com elas. O que é da região — a pergunta e
+        # as datas — vem da declaração dela.
+        ctx.relatorio.lacuna(
+            id="calendario.feriados-municipais-por-aplicar",
+            o_que="Não se sabe o que muda nos horários num feriado municipal",
+            onde=f"regioes/{r.id}/calendario.yaml → feriados_municipais_nos_horarios",
+            porque_importa=(
+                "Um feriado municipal vale num concelho e não no resto do território, e boa "
+                "parte das linhas atravessa concelhos. Aplicá-lo a uma linha que sai do concelho "
+                "suprimia viagens que existem no resto do percurso; não o aplicar anuncia viagens "
+                "que não existem. As duas hipóteses erram, em sentidos opostos, e a escolha é de "
+                "quem conhece a operação — não do pipeline. Até haver resposta, os horários "
+                "desses dias saem como os de um dia normal, e o sítio diz que o dia é feriado "
+                "municipal e que o que muda está por confirmar."
+            ),
+            o_que_fazer=(
+                (regra.pergunta + " ")
+                if regra.pergunta
+                else (
+                    "Perguntar à operadora o que faz num feriado municipal: horário de feriado no "
+                    "concelho (em que viagens), ou nada. "
+                )
+            )
+            + (
+                "A resposta escreve-se em `feriados_municipais_nos_horarios`, com a `regra`, o "
+                "`ambito` e a `fonte`."
+            ),
+            quantos=len(proximos),
+            quais=quais,
+        )
+        return
+    if regra.regra == "como-feriado":
+        sem = sorted(
+            {
+                f"{s.leitor} → {s.saida or s.fonte}"
+                for s in r.saidas
+                if s.leitor in LEITORES_SEM_FERIADO_MUNICIPAL
+            }
+        )
+        if sem:
+            ctx.relatorio.lacuna(
+                id="calendario.feriados-municipais-leitores-sem-regra",
+                o_que="Feeds a que a regra do feriado municipal ainda não chega",
+                onde=f"regioes/{r.id}/calendario.yaml → feriados_municipais_nos_horarios",
+                porque_importa=(
+                    "A região declarou que um feriado municipal se faz como feriado, e estes "
+                    "feeds constroem o calendário sem a aplicar: nos dias de feriado municipal "
+                    "anunciam o horário de um dia normal."
+                ),
+                o_que_fazer="Aplicar a regra nestes leitores, como os outros já fazem.",
+                quantos=len(sem),
+                quais=sem,
+            )
 
 
 def _localizar_urbanos(ctx: Contexto, destino: Path, regiao: Regiao) -> None:

@@ -60,7 +60,7 @@ jobs:
     # contra os dados reais e as viagens de aceitação do §9. O sítio inteiro
     # corre quando o PR deixa de ser rascunho, e no `main`.
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
       # UM MÓDULO DESLIGADO, E O TRABALHO INTEIRO A SABER DISSO.
@@ -163,7 +163,7 @@ jobs:
       # passo mais dado a esperar por um espelho lento.
       - name: Dependências de sistema
         if: steps.dados.outputs.cache-hit != 'true'
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils osmium-tool
+        run: scripts/poppler.sh osmium-tool
 
       # AS FONTES DESCARREGADAS, 2,2 GB. Só quando há o que construir.
       #

@@ -1140,3 +1140,142 @@ def test_um_outro_nome_declarado_aponta_para_a_mesma_paragem():
     assert "Fantasma" not in pontos
     # E não substitui nada que já lá estivesse com esse nome.
     assert pontos["Santuário da Ribeira Branca"][5] == "o1"
+
+
+def test_os_numeros_batem_com_as_listas_que_as_paginas_leem(raiz, tmp_path):
+    """Um só conjunto de números: cada um sai da lista que a página conta.
+
+    Numa região real, a mesma rede tinha quatro números de paragens em quatro
+    sítios do produto. Este teste não crava nenhum — afirma que cada número do
+    `numeros.json` é o que a página correspondente conta.
+    """
+    from paragem.sitio import construir
+
+    gtfs = raiz / "build" / "prova" / "gtfs"
+    if not (gtfs / "rede-alta.zip").exists():
+        pytest.skip("sem build/prova — corre `uv run pipeline build --regiao prova`")
+    shutil.copytree(gtfs, tmp_path / "gtfs")
+    construir(raiz, regiao_ou_salta("prova"), tmp_path)
+    sitio = tmp_path / "sitio"
+
+    def ler(nome):
+        return json.loads((sitio / nome).read_text(encoding="utf-8"))
+
+    n, paragens, linhas, concelhos = (
+        ler("numeros.json"),
+        ler("paragens.json"),
+        ler("linhas.json"),
+        ler("concelhos.json"),
+    )
+    procura = ler("procura.json")
+    tipo = procura["campos"].index("tipo")
+    assert all(v.get("conta") for v in n.values()), "cada número diz o que conta"
+    assert n["paragens"]["valor"] == len(paragens)
+    assert sum(n["paragens"]["por_feed"].values()) == len(paragens)
+    assert n["paragens_nos_concelhos"]["valor"] == sum(c["paragens"] for c in concelhos)
+    assert n["paragens_na_procura"]["valor"] == sum(
+        1 for x in procura["pontos"] if x[tipo] == "paragem"
+    )
+    assert n["linhas"]["valor"] == len(linhas)
+    assert sum(n["linhas"]["por_feed"].values()) == len(linhas)
+    assert n["paragens_da_rede"]["valor"] <= n["paragens"]["valor"]
+    assert n["linhas_da_rede"]["valor"] <= n["linhas"]["valor"]
+
+
+def test_a_referencia_confere_os_numeros_do_sitio_e_salta_os_de_fonte_viva(tmp_path):
+    """O `check-numeros` afirma os números do sítio pelo nome do que contam.
+
+    Os de uma fonte viva (`afirmado: false`) ficam como instantâneo: cravá-los
+    era um teste que parte sozinho quando alguém mexe no OpenStreetMap.
+    """
+    from paragem.verificacoes import Resultado, _numeros_do_sitio
+
+    pasta = tmp_path / "build" / "inventada" / "sitio"
+    pasta.mkdir(parents=True)
+    (pasta / "numeros.json").write_text(
+        json.dumps(
+            {
+                "paragens": {"valor": 30, "conta": "x"},
+                "linhas": {"valor": 4, "conta": "x"},
+                "estacoes_de_bicicletas": {"valor": {"a": 9}, "conta": "x"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    r = Resultado("Números")
+    _numeros_do_sitio(
+        r,
+        tmp_path,
+        "inventada",
+        {
+            "paragens": {"valor": 30},
+            "linhas": {"valor": 5},
+            "estacoes_de_bicicletas": {"valor": {"a": 8}, "afirmado": False},
+        },
+    )
+    assert len(r.passou) == 1 and "paragens = 30" in r.passou[0]
+    assert len(r.falhou) == 1 and "linhas = 5" in r.falhou[0]
+
+    # Sem sítio construído, não se confere nada — e não se finge que sim.
+    vazio = Resultado("Números")
+    _numeros_do_sitio(vazio, tmp_path, "outra", {"paragens": {"valor": 1}})
+    assert not vazio.passou and not vazio.falhou
+
+
+def test_nenhum_nome_de_linha_sai_com_espacos_a_mais(raiz):
+    """Um registo escrevia «Pedra Alta  - Ribeira», com dois espaços, e o título lia-se com um buraco."""
+    from paragem.regiao import carregar_todas
+
+    vistas = 0
+    for r in carregar_todas(raiz):
+        f = raiz / "build" / r.id / "sitio" / "linhas.json"
+        if not f.exists():
+            continue
+        for x in json.loads(f.read_text(encoding="utf-8")):
+            vistas += 1
+            assert x["nome"] == " ".join(x["nome"].split()), f"{r.id}: «{x['nome']}»"
+    if not vistas:
+        pytest.skip("nenhum sítio construído nesta raiz")
+
+
+def test_a_data_do_documento_e_a_que_ele_diz_e_nunca_a_de_obtencao(tmp_path, monkeypatch):
+    """Uma brochura de 2017 guardada em 2026 não é «de 2026».
+
+    O sítio leva de cada horário a data de conteúdo do registo — o dia em que
+    o documento diz que entra em vigor, ou o que ele diz sem dia —, e quando o
+    documento não diz nada leva os dois vazios, e não a data de obtenção.
+    """
+    from paragem.sitio import _conteudo_de
+
+    monkeypatch.delenv("PARAGEM_RAIZES", raising=False)
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "sources.yaml").write_text(
+        """\
+versao: 1
+fontes:
+  - id: com-dia
+    nome: brochura com dia
+    formato: pdf
+    obtido_em: 2026-09-20
+    em_vigor_desde: 2020-12-02
+  - id: sem-dia
+    nome: brochura sem dia
+    formato: pdf
+    obtido_em: 2026-09-20
+    data_do_conteudo: >-
+      novo circuito a partir
+      de maio de 2022
+  - id: sem-nada
+    nome: brochura sem data
+    formato: pdf
+    obtido_em: 2026-09-20
+""",
+        encoding="utf-8",
+    )
+    assert _conteudo_de(tmp_path, "com-dia") == {"em_vigor_desde": "2020-12-02", "texto": None}
+    assert _conteudo_de(tmp_path, "sem-dia") == {
+        "em_vigor_desde": None,
+        "texto": "novo circuito a partir de maio de 2022",
+    }
+    assert _conteudo_de(tmp_path, "sem-nada") == {"em_vigor_desde": None, "texto": None}
+    assert _conteudo_de(tmp_path, "nao-existe") == {"em_vigor_desde": None, "texto": None}

@@ -43,6 +43,17 @@ feriados_nacionais:
 feriados_municipais:
   - { concelho: savel, data: { mes: 6, dia: 24 }, confirmado: true, fonte: inventado (região de prova) }
 
+# O QUE O FERIADO MUNICIPAL FAZ AOS HORÁRIOS, declarado — e por isso aplicado.
+# A Serra não tem feriados municipais e a região real deixa a regra por
+# confirmar, à espera de quem opera; esta é a que prova que, com a resposta
+# escrita, o feriado chega ao feed: a 24 de junho o A-U não anda. O Sável é um
+# município só e a saída diz que o feed inteiro anda nele (`concelho: savel`,
+# na receita), e por isso o âmbito não divide viagem nenhuma.
+feriados_municipais_nos_horarios:
+  regra: como-feriado
+  ambito: viagens-que-passam-no-concelho
+  fonte: inventado (região de prova)
+
 codigos:
   periodo:
     A: { nome: Todo o ano, regra: todo-o-ano }

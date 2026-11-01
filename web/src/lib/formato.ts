@@ -314,6 +314,39 @@ export function fraseDosHorarios(data: string | null | undefined): string {
   return `Horários planeados${data ? ` · dados de ${data}` : ''}, não em tempo real.`;
 }
 
+/**
+ * `numeros.json`: UM SÓ CONJUNTO DE NÚMEROS, cada um com o que conta
+ * (`sitio.py`, `numeros`). Ausente em dados de antes disto.
+ */
+export type Numero<T = number> = { valor: T; conta: string; por_feed?: Record<string, number> };
+export type Numeros = Partial<{
+  paragens: Numero;
+  paragens_da_rede: Numero;
+  paragens_nos_concelhos: Numero;
+  paragens_com_partidas: Numero;
+  paragens_na_procura: Numero;
+  linhas: Numero;
+  linhas_da_rede: Numero;
+  codigos_repetidos: Numero<string[]>;
+  estacoes: Numero;
+  estacoes_de_bicicletas: Numero<Record<string, number>>;
+}>;
+
+/**
+ * O próximo feriado municipal de um concelho, como o pipeline o escreve
+ * (`sitio.py`, `_proximos_feriados_municipais`). `nos_horarios` é o que ele faz
+ * aos horários: `por-confirmar` enquanto a região não souber, e nesse caso os
+ * horários desse dia são os de um dia normal.
+ */
+export type FeriadoMunicipal = {
+  /** `AAAA-MM-DD`. */
+  data: string;
+  nome: string | null;
+  /** A data vem da câmara, e não só de fontes secundárias. */
+  data_confirmada: boolean;
+  nos_horarios: 'por-confirmar' | 'como-feriado' | 'nada-muda';
+};
+
 export type Concelho = {
   id: string;
   nome: string;
@@ -322,7 +355,71 @@ export type Concelho = {
   membro: boolean;
   servido_por: string | null;
   paragens: number;
+  /** Ausente em dados de antes disto, e `null` num concelho sem feriado declarado. */
+  feriado_municipal?: FeriadoMunicipal | null;
 };
+
+const MESES = [
+  'janeiro',
+  'fevereiro',
+  'março',
+  'abril',
+  'maio',
+  'junho',
+  'julho',
+  'agosto',
+  'setembro',
+  'outubro',
+  'novembro',
+  'dezembro',
+];
+const DIAS_DA_SEMANA = [
+  'domingo',
+  'segunda-feira',
+  'terça-feira',
+  'quarta-feira',
+  'quinta-feira',
+  'sexta-feira',
+  'sábado',
+];
+
+/**
+ * O que se diz de um feriado municipal na página da paragem e do concelho.
+ *
+ * NÃO NOMEIA O CONCELHO, e é de propósito: «no Porto» e «em Braga»
+ * pedem contrações que a declaração da região não traz, e este projeto não as
+ * adivinha. A página já diz de que concelho é; a frase diz «neste concelho».
+ *
+ * `null` quando não há nada a dizer: sem feriado, ou com a regra «nada muda».
+ */
+export function fraseDoFeriadoMunicipal(
+  f: FeriadoMunicipal | null | undefined,
+): { titulo: string; texto: string } | null {
+  if (!f || !/^\d{4}-\d{2}-\d{2}$/.test(f.data) || f.nos_horarios === 'nada-muda') return null;
+  const [ano, mes, dia] = f.data.split('-').map(Number);
+  const semana = DIAS_DA_SEMANA[new Date(Date.UTC(ano, mes - 1, dia)).getUTCDay()];
+  const titulo = `${dia} de ${MESES[mes - 1]}, ${semana}, é feriado municipal neste concelho.`;
+  const texto =
+    f.nos_horarios === 'como-feriado'
+      ? 'Os horários desse dia já contam com o feriado.'
+      : 'O que muda nos horários nesse dia ainda não se sabe: aparecem aqui como os de um dia ' +
+        'normal, e podem não ser esses. Convém confirmar antes de viajar.';
+  const data = f.data_confirmada
+    ? ''
+    : ' A data é a que as fontes dão; falta a confirmação da câmara.';
+  return { titulo, texto: texto + data };
+}
+
+/** Faltam no máximo `dias` dias para o feriado (o próprio dia incluído). */
+export function feriadoEmBreve(
+  f: FeriadoMunicipal | null | undefined,
+  hoje: string,
+  dias = 21,
+): boolean {
+  if (!f) return false;
+  const falta = (Date.parse(`${f.data}T00:00:00Z`) - Date.parse(`${hoje}T00:00:00Z`)) / 86400000;
+  return falta >= 0 && falta <= dias;
+}
 
 export type Paragem = {
   id: string;
@@ -669,7 +766,36 @@ export type HorarioAPedido = {
    */
   transcrito_por?: string;
   transcrito_em?: string;
+  /** De quando é o documento, pelo que ele diz (`ConteudoDe`). */
+  conteudo_de?: ConteudoDe;
 };
+
+/**
+ * DE QUANDO É O DOCUMENTO de onde saem os horários, pelo que ele próprio diz:
+ * o dia em que entra em vigor, ou o que diz sem dia («maio de 2022»). Os dois
+ * vazios quando o documento não diz nada — e nunca a data de obtenção no
+ * lugar deles (`sitio.py`, `_conteudo_de`).
+ */
+export type ConteudoDe = { em_vigor_desde: string | null; texto: string | null };
+
+/**
+ * «Em vigor desde 2/12/2020, diz a brochura.» — `documento` é como a página
+ * chama ao papel, com o artigo («a brochura», «o cartaz»).
+ */
+export function fraseDoConteudo(
+  c: ConteudoDe | null | undefined,
+  documento: string,
+): string | null {
+  if (!c) return null;
+  const Documento = documento.charAt(0).toUpperCase() + documento.slice(1);
+  const d = c.em_vigor_desde;
+  if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+    const [ano, mes, dia] = d.split('-').map(Number);
+    return `Em vigor desde ${dia}/${mes}/${ano}, diz ${documento}.`;
+  }
+  if (c.texto) return `${Documento} não diz o dia em que entra em vigor: ${c.texto}.`;
+  return `${Documento} não diz desde quando vale.`;
+}
 
 export type APedido = {
   zonas: ZonaAPedido[];
@@ -843,6 +969,8 @@ export type HorarioDeModo = {
   /** Quem transcreveu a folha à mão, e quando. Vazio nas que um leitor leu. */
   transcrito_por?: string;
   transcrito_em?: string;
+  /** De quando é o cartaz, pelo que ele diz (`ConteudoDe`). */
+  conteudo_de?: ConteudoDe;
   /**
    * Onde fica cada paragem, para as que se sabe. NUNCA é a lista toda, e
    * nunca se completa por estimativa: o cartaz dá o nome, e o nome só se
