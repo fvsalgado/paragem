@@ -151,7 +151,10 @@ def _feicoes(geo: dict[str, Any]) -> list[tuple[str, Any, dict[str, Any], int]]:
         fronteiras: Any = linemerge(unary_union([g.boundary for g in concelhos]))  # type: ignore[arg-type]
         partes = getattr(fronteiras, "geoms", [fronteiras])
         for linha in partes:
-            props = {"admin_level": 8}
+            # O 7, e não o 8: no OpenStreetMap português o concelho é o 7 e o
+            # 8 é a freguesia — e o estilo do sítio desenha só os concelhos.
+            # Um mapa inventado fala a mesma língua que um recortado.
+            props = {"admin_level": 7}
             saida.append(("boundary", linha, props, _zoom_minimo("boundary", props)))
     return saida
 

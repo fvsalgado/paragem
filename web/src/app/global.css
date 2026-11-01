@@ -58,7 +58,7 @@
   --superficie-suave: #eef2f0;
   --realce: #e8f1f4;
   --realce-forte: #dfeaef;
-  --fundo-do-mapa: #e6ebe3;
+  --fundo-do-mapa: #eef0eb;
   --marca-texto: var(--marca);
   --marca-texto-hover: var(--marca-hover);
   --alerta-texto: var(--alerta);
@@ -97,7 +97,7 @@
     --superficie-suave: #1d2e37;
     --realce: #1f3a47;
     --realce-forte: #21404f;
-    --fundo-do-mapa: #1b262c;
+    --fundo-do-mapa: #172127;
     --texto: #e6edf0;
     --texto-secundario: #a9b8bf;
     --linhas: #2a3a43;
@@ -125,7 +125,7 @@
   --superficie-suave: #1d2e37;
   --realce: #1f3a47;
   --realce-forte: #21404f;
-  --fundo-do-mapa: #1b262c;
+  --fundo-do-mapa: #172127;
   --texto: #e6edf0;
   --texto-secundario: #a9b8bf;
   --linhas: #2a3a43;
