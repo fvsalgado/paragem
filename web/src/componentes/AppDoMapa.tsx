@@ -180,6 +180,7 @@ function escrever(camada: Camada | null, endereco: string, empilhar: boolean): v
 export default function AppDoMapa({
   regiao,
   centro,
+  limites = null,
   caixa = null,
   tipos,
   contagens,
@@ -211,6 +212,8 @@ export default function AppDoMapa({
   /** «na Serra da Pedra Alta», «no Baixo Sável» — escrito pela região, não colado aqui. */
   emDaRegiao: string;
   centro: [number, number];
+  /** A área servida, onde o mapa abre (`limitesDaRede`). */
+  limites?: [[number, number], [number, number]] | null;
   /** A caixa da região: um ponto pedido por coordenadas tem de cair perto dela. */
   caixa?: Caixa | null;
   /**
@@ -1098,6 +1101,10 @@ export default function AppDoMapa({
           margemSuperior={lateral ? 0 : tapadoEmCima}
           margensMedidas={medido}
           modosVisiveis={visiveis}
+          rede={enderecoDosDados(regiao, 'rede-no-mapa.json')}
+          modosDesligados={modosDesligados}
+          limites={limites}
+          lembrarVista={`paragem:vista-do-mapa:${regiao}`}
         />
 
         {/* A FOLHA DE ABERTURA: por onde se pode ir, antes de se perguntar nada.

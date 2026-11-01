@@ -1,5 +1,8 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { test, expect } from '@playwright/test';
-import type { Map as MapaLibre } from 'maplibre-gl';
+import type { GeoJSONSource, Map as MapaLibre } from 'maplibre-gl';
 
 import { camadasDe } from '../src/lib/pontos-no-mapa.ts';
 import {
@@ -11,8 +14,10 @@ import {
   tiposNoMapa,
   umaEstacaoDeBicicletas,
   estacoes,
+  paragemComMaisPartidas,
   SEM,
 } from './dados-da-regiao';
+import { BUILD, REGIAO } from './anfitrioes';
 
 /**
  * O MAPA MOSTRA OS MODOS TODOS, e deixa escolher quais.
@@ -266,4 +271,73 @@ test('«Perto de ti» continua a ser só paragens e estações', async ({ page }
     destinos.filter((h) => outros.has(idDe(h))),
     'um ponto sem partidas entrou no «Perto de ti»',
   ).toEqual([]);
+});
+
+/**
+ * A REDE DESENHA-SE, e por baixo dos pontos.
+ *
+ * O mapa era um mapa de transportes sem rede: os traçados só apareciam para a
+ * viagem escolhida. O que isto guarda é que a camada existe, que tem traços
+ * quando a região publicou o `rede-no-mapa.json`, e que fica por baixo das
+ * paragens — um traço de 7 px por cima de um anel de 5 apagava-o.
+ */
+test('a rede desenha-se, por baixo das paragens', async ({ page }) => {
+  test.skip(
+    !existsSync(join(BUILD, REGIAO, 'sitio', 'rede-no-mapa.json')),
+    `a região ${REGIAO} não publicou a rede no mapa`,
+  );
+  await page.goto(`/`);
+  await mapaPronto(page);
+  const lerRede = () =>
+    page.evaluate(async () => {
+      const m = (window as unknown as { __mapa?: MapaLibre }).__mapa;
+      const fonte = m?.getSource('rede') as GeoJSONSource | undefined;
+      if (!m || !fonte) return null;
+      const dados = (await fonte.getData()) as { features?: unknown[] };
+      const ordem = m.getStyle().layers.map((l) => l.id);
+      return {
+        tracos: dados.features?.length ?? 0,
+        rede: ordem.indexOf('rede-linha'),
+        pontos: ordem.findIndex((id) => id.startsWith('pontos-')),
+      };
+    });
+  await expect
+    .poll(async () => (await lerRede())?.tracos ?? 0, { timeout: 30_000 })
+    .toBeGreaterThan(0);
+  const r = (await lerRede())!;
+  expect(r.rede, 'a camada da rede não existe').toBeGreaterThanOrEqual(0);
+  expect(r.rede, 'a rede está por cima dos pontos').toBeLessThan(r.pontos);
+});
+
+/**
+ * O TOQUE APANHA O PONTO MAIS PERTO, numa caixa de 44 × 44 px (§4.5).
+ *
+ * Um anel de paragem tem cinco píxeis de raio: acertar-lhe com o dedo, de pé
+ * num autocarro, era sorte. O toque a 15 px do centro — fora do anel, dentro
+ * do alvo — tem de abrir o cartão.
+ */
+test('um toque ao lado da paragem abre-a na mesma', async ({ page }) => {
+  await page.goto(`/`);
+  await mapaPronto(page);
+  const alvo = paragemComMaisPartidas();
+  // Até o anel estar DESENHADO onde se vai tocar: o mapa nasce antes dos
+  // pontos, e um toque no mapa vazio não prova nada.
+  const lerOnde = () =>
+    page.evaluate(
+      async ({ lon, lat }) => {
+        const m = (window as unknown as { __mapa?: MapaLibre }).__mapa;
+        if (!m?.getLayer('pontos-paragem')) return null;
+        m.jumpTo({ center: [lon, lat], zoom: 16 });
+        await new Promise((r) => m.once('idle', r));
+        const p = m.project([lon, lat]);
+        if (!m.queryRenderedFeatures(p, { layers: ['pontos-paragem'] }).length) return null;
+        const q = m.getCanvas().getBoundingClientRect();
+        return { x: q.left + p.x, y: q.top + p.y };
+      },
+      { lon: alvo.lon, lat: alvo.lat },
+    );
+  await expect.poll(lerOnde, { timeout: 30_000 }).not.toBeNull();
+  const onde = (await lerOnde())!;
+  await page.mouse.click(onde.x + 15, onde.y);
+  await expect(page.locator('.cartao-de-baixo')).toBeVisible();
 });

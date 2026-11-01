@@ -1,4 +1,4 @@
-import { NOME_DOS_MODOS } from './formato.ts';
+import { NOME_DOS_MODOS, type Ponto } from './formato.ts';
 import { modoDoTipo } from './modulos.ts';
 
 /**
@@ -62,23 +62,29 @@ export type CamadaDePontos = {
   fundo: string;
   /** A partir de que zoom aparece. */
   minzoom: number;
-  /** O raio do círculo ao aparecer e a z16 — numa placa, o meio lado. */
-  raio: [number, number];
+  /**
+   * O raio do círculo — numa placa, o meio lado — a cada zoom: pares
+   * `[zoom, raio]`, interpolados entre si. Eram dois números, o de aparecer e
+   * o de z16, e uma paragem crescia por igual de 2 a 6 px: pequena demais a
+   * z12 para se ver em cima do traço da rede, e larga demais a z13 para
+   * caberem as de uma rua.
+   */
+  raios: [number, number][];
   /**
    * Se, entre o `minzoom` e 13, só aparecem os pontos mais servidos.
    *
-   * Vale para as 2 392 paragens e para mais nada: 81 estações de bicicletas
-   * ou 9 praças de táxi não tapam mapa nenhum, e desbastá-las escondia
-   * exatamente o que quem liga o filtro está a procurar.
+   * Vale para as paragens e para mais nada: umas dezenas de estações de
+   * bicicletas ou uma dúzia de praças de táxi não tapam mapa nenhum, e
+   * desbastá-las escondia exatamente o que quem liga o filtro está a procurar.
    */
   desbastar: boolean;
   /**
-   * Desenha-se como ANEL — recheio branco e contorno da cor — e não como disco.
+   * Desenha-se como ANEL — recheio claro e contorno da cor — e não como disco.
    *
-   * É para o que fica por baixo de outro ponto no mesmo sítio. Um disco
-   * grande e escuro debaixo da paragem lia-se como uma mancha e tapava-a;
-   * um anel lê-se como o que é: uma marca à volta de um sítio que já lá
-   * estava, a dizer que ali para mais alguma coisa.
+   * A paragem é um anel desde que a rede passou a desenhar-se: um disco azul
+   * por cima de um traço azul desaparecia nele, e um anel lê-se como uma
+   * estação num mapa de metro. O expresso é o anel largo
+   * POR BAIXO da paragem, no mesmo sítio — um halo à volta dela.
    */
   anel: boolean;
 };
@@ -86,36 +92,91 @@ export type CamadaDePontos = {
 /**
  * Cada camada aparece ao zoom a que se torna ÚTIL, e não todas ao mesmo.
  *
- * As 2 392 paragens vistas de cima são uma nuvem azul que tapa as estradas e
- * os rios, e a esse zoom não se distingue uma da outra — por isso só a partir
- * de 11, e entre 11 e 13 só as que têm serviço a sério. As 27 estações são
- * poucas e são marcos: aparecem cedo, a 9, e maiores. As 81 estações de
- * bicicletas e as 9 praças de táxi decidem-se a pé, e a pé anda-se com o mapa
- * perto: 12.
+ * As paragens vistas de cima são uma nuvem que tapa a própria rede, e a esse
+ * zoom não se distingue uma da outra — por isso só a partir de 11, e entre 11
+ * e 13 só as que têm serviço a sério. As estações são poucas e são marcos:
+ * aparecem cedo, a 9, e opacas desde aí (estavam a 0 a z9 e só chegavam a
+ * cheias a z10 — invisíveis no zoom em que se vê a região inteira). As
+ * estações de bicicletas e as praças de táxi decidem-se a pé, e a pé anda-se
+ * com o mapa perto.
  */
 type Regra = {
   minzoom: number;
-  raio: [number, number];
+  raios: [number, number][];
   desbastar?: boolean;
   forma?: Forma;
 };
 
 const CAMADAS_CONHECIDAS: Record<string, Regra> = {
-  estacao: { minzoom: 9, raio: [6, 11], forma: 'placa' },
-  paragem: { minzoom: 11, raio: [2, 6], desbastar: true },
-  bicicleta: { minzoom: 11, raio: [3, 8] },
-  'urbano-municipal': { minzoom: 12, raio: [3, 7] },
-  taxi: { minzoom: 12, raio: [6, 9], forma: 'placa' },
+  estacao: {
+    minzoom: 9,
+    raios: [
+      [9, 5.5],
+      [12, 7],
+      [16, 11],
+    ],
+    forma: 'placa',
+  },
+  // A PARAGEM: pequena enquanto é um ponto na rede, e com o tamanho de um alvo
+  // de dedo quando já se anda a pé — 2,5 a 3,5 px de z11 a z13, e de 4,5 a 7
+  // de z14 a z16.
+  paragem: {
+    minzoom: 11,
+    raios: [
+      [11, 2.5],
+      [13, 3.5],
+      [14, 4.5],
+      [16, 7],
+    ],
+    desbastar: true,
+    forma: 'anel',
+  },
+  bicicleta: {
+    minzoom: 12,
+    raios: [
+      [12, 3],
+      [16, 7],
+    ],
+  },
+  'urbano-municipal': {
+    minzoom: 12,
+    raios: [
+      [12, 3],
+      [16, 7],
+    ],
+  },
+  taxi: {
+    minzoom: 13,
+    raios: [
+      [13, 6],
+      [16, 9],
+    ],
+    forma: 'placa',
+  },
   // OS CAIS DOS EXPRESSOS SÃO GRANDES E FICAM POR BAIXO, e as duas coisas
   // andam juntas. São uma mão-cheia de pontos numa região e caem praticamente
   // em cima da paragem da rede — medidos entre 19 e 36 metros dela. Desenhados
-  // por cima, tapavam-na: a cidade com mais autocarros ficava sem um único
-  // ponto azul. Desenhados por baixo e mais largos, ficam um halo à volta dela
-  // — que é exatamente o que ali há, um cais servido pelas duas coisas.
-  expresso: { minzoom: 9, raio: [5, 11], forma: 'anel' },
+  // por cima, tapavam-na; por baixo e mais largos, ficam um halo à volta
+  // dela — que é exatamente o que ali há, um cais servido pelas duas coisas.
+  // A partir de 11 e não de 9: um anel à volta de nada, a z9, era um ponto
+  // cinzento perdido no meio da região.
+  expresso: {
+    minzoom: 11,
+    raios: [
+      [11, 5],
+      [16, 11],
+    ],
+    forma: 'anel',
+  },
 };
 
-const OMISSAO: Regra = { minzoom: 12, raio: [3, 7] };
+const OMISSAO: Regra = {
+  minzoom: 12,
+  raios: [
+    [12, 3],
+    [16, 7],
+  ],
+};
 
 /** A ordem em que as camadas se EMPILHAM: a última fica por cima. Não é a de apresentação. */
 const ORDEM = ['expresso', 'paragem', 'urbano-municipal', 'taxi', 'bicicleta', 'estacao'];
@@ -140,7 +201,7 @@ const PRIVADOS = new Set(['taxi', 'expresso']);
 
 export function camadaDe(tipo: string): CamadaDePontos {
   const modo = modoDoTipo(tipo);
-  const { minzoom, raio, desbastar, forma = 'ponto' } = CAMADAS_CONHECIDAS[tipo] ?? OMISSAO;
+  const { minzoom, raios, desbastar, forma = 'ponto' } = CAMADAS_CONHECIDAS[tipo] ?? OMISSAO;
   const cor = COR_DO_MODO[modo] ?? NEUTRA;
   return {
     tipo,
@@ -152,7 +213,7 @@ export function camadaDe(tipo: string): CamadaDePontos {
     // um modo da rede é da cor dele, com o desenho a branco.
     fundo: PRIVADOS.has(modo) ? '#ffffff' : cor,
     minzoom,
-    raio,
+    raios,
     desbastar: !!desbastar,
     anel: forma === 'anel',
   };
@@ -194,4 +255,142 @@ export function ordemDeApresentacao(
     return i < 0 ? ordem.length : i;
   };
   return [...camadas].sort((a, b) => posicao(a) - posicao(b));
+}
+
+/** O raio de uma camada a um zoom, como o MapLibre o interpola — para o esboço. */
+export function raioNoZoom(raios: [number, number][], zoom: number): number {
+  if (zoom <= raios[0][0]) return raios[0][1];
+  for (let i = 1; i < raios.length; i++) {
+    const [z0, r0] = raios[i - 1];
+    const [z1, r1] = raios[i];
+    if (zoom <= z1) return r0 + ((r1 - r0) * (zoom - z0)) / (z1 - z0);
+  }
+  return raios[raios.length - 1][1];
+}
+
+/** Acima disto, a paragem tem serviço a sério e aparece entre o `minzoom` e 13. */
+export const PARTIDAS_PARA_APARECER_CEDO = 40;
+
+/**
+ * Até onde dois pontos são O MESMO SÍTIO no mapa: a paragem de cada lado da
+ * rua, a doca das bicicletas à porta da estação.
+ */
+const GEMEAS_METROS = 60;
+const JUNTO_A_ESTACAO_METROS = 120;
+
+/** O zoom a partir do qual, juntos, se separam o suficiente para se verem os dois. */
+export const ZOOM_DE_SEPARAR = 15;
+
+const metros = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) => {
+  const dy = (a.lat - b.lat) * 110_540;
+  const dx = (a.lon - b.lon) * 111_320 * Math.cos(((a.lat + b.lat) / 2) * (Math.PI / 180));
+  return Math.hypot(dx, dy);
+};
+
+const simples = (s: string) =>
+  s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/**
+ * O ZOOM A PARTIR DO QUAL CADA PONTO SE DESENHA — e é o que decide quem cede
+ * o lugar a quem, onde há dois no mesmo sítio.
+ *
+ * - **As paragens gémeas.** A da ida e a da volta têm o mesmo nome e ficam
+ *   cada uma do seu lado da rua: a z13 eram dois anéis colados, e a rua
+ *   parecia ter o dobro das paragens. Até z15 desenha-se a mais servida das
+ *   duas; dali para cima, as duas — já se separam.
+ * - **O que está à porta de uma estação.** A doca das bicicletas, a praça de
+ *   táxis e o cais do urbano empilhavam-se em cima da placa do comboio, e
+ *   nenhum se lia. Cedem-lhe o lugar até se separarem.
+ * - **O resto das paragens**, como sempre: as mais servidas desde o
+ *   `minzoom`, as outras desde 13.
+ *
+ * Decide-se nos DADOS, e não pela deteção de colisões do MapLibre: essa
+ * escondia uma praça de táxis por cair debaixo do nome da vila — e a praça é
+ * a informação, o nome é o contexto. Uma regra que se pode testar sem
+ * desenhar nada.
+ */
+export function zoomDeAparecer(pontos: readonly Ponto[]): number[] {
+  const lado = 0.002; // ~200 m: uma célula basta para as duas distâncias
+  const celula = (p: Ponto) => `${Math.floor(p.lat / lado)}:${Math.floor(p.lon / lado)}`;
+  const grelha = new Map<string, number[]>();
+  pontos.forEach((p, i) => {
+    const c = celula(p);
+    const lista = grelha.get(c);
+    if (lista) lista.push(i);
+    else grelha.set(c, [i]);
+  });
+  const vizinhos = (p: Ponto): number[] => {
+    const [y, x] = [Math.floor(p.lat / lado), Math.floor(p.lon / lado)];
+    const saida: number[] = [];
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) saida.push(...(grelha.get(`${y + dy}:${x + dx}`) ?? []));
+    return saida;
+  };
+  return pontos.map((p, i) => {
+    const c = camadaDe(p.tipo);
+    let z = c.minzoom;
+    if (c.desbastar && (p.partidas ?? 0) <= PARTIDAS_PARA_APARECER_CEDO) z = Math.max(z, 13);
+    if (p.tipo === 'paragem') {
+      const nome = simples(p.nome);
+      const gemea = vizinhos(p).some((j) => {
+        if (j === i) return false;
+        const q = pontos[j];
+        if (q.tipo !== 'paragem' || simples(q.nome) !== nome) return false;
+        if (metros(p, q) > GEMEAS_METROS) return false;
+        // Cede a MENOS servida; entre iguais, a que vem depois.
+        const [a, b] = [p.partidas ?? 0, q.partidas ?? 0];
+        return b > a || (b === a && j < i);
+      });
+      if (gemea) z = Math.max(z, ZOOM_DE_SEPARAR);
+    } else if (p.tipo !== 'estacao' && p.tipo !== 'sitio') {
+      const aPorta = vizinhos(p).some(
+        (j) => pontos[j].tipo === 'estacao' && metros(p, pontos[j]) <= JUNTO_A_ESTACAO_METROS,
+      );
+      if (aPorta) z = Math.max(z, ZOOM_DE_SEPARAR);
+    }
+    return z;
+  });
+}
+
+/**
+ * O nome que o mapa escreve ao lado do ponto. A estação dispensa o
+ * «(estação)» que a lista precisa: a placa com o comboio já o diz, e num
+ * mapa cada palavra a mais tapa uma rua.
+ */
+export function rotuloNoMapa(p: Pick<Ponto, 'nome' | 'tipo'>): string {
+  if (p.tipo !== 'estacao') return p.nome;
+  return p.nome.replace(/\s*\((esta[cç][aã]o|station)\)\s*$/i, '').trim() || p.nome;
+}
+
+/**
+ * A ÁREA SERVIDA: a caixa das paragens e das estações, sem a ponta de 1 % de
+ * cada lado.
+ *
+ * Não é a caixa da região (`territorio.caixa`): essa é um retângulo à volta
+ * de TUDO, com as pontas das linhas que saem do território, e é desenhada à
+ * mão com folga. E tira-se a ponta de cada lado porque uma carreira que vai
+ * a uma cidade a cinquenta quilómetros põe lá uma paragem — e abrir o mapa
+ * a mostrá-la era encolher a região para caber a viagem de uma linha.
+ * `null` sem paragens com coordenadas.
+ */
+export function limitesDaRede(
+  pontos: readonly Ponto[],
+): [[number, number], [number, number]] | null {
+  const daRede = pontos.filter(
+    (p) => (p.tipo === 'paragem' || p.tipo === 'estacao') && isFinite(p.lat) && isFinite(p.lon),
+  );
+  if (daRede.length === 0) return null;
+  const lats = daRede.map((p) => p.lat).sort((a, b) => a - b);
+  const lons = daRede.map((p) => p.lon).sort((a, b) => a - b);
+  const ponta = Math.floor(daRede.length * 0.01);
+  const [i, j] = [ponta, daRede.length - 1 - ponta];
+  return [
+    [lons[i], lats[i]],
+    [lons[j], lats[j]],
+  ];
 }
