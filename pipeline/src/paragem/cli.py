@@ -125,6 +125,76 @@ def _cmd_validate(args: argparse.Namespace) -> int:
     return 1 if falhou else 0
 
 
+def _cmd_netex(args: argparse.Namespace) -> int:
+    """Volta a escrever e a validar o NeTEx de um `build` que já existe.
+
+    O `build` já o faz. Isto existe pela razão do `validate`: perguntar outra
+    vez sem esperar pela construção toda — e uma região real são dez minutos.
+    """
+    from . import netex
+    from .gtfs import Gtfs
+
+    raiz = _raiz(args)
+    falhou = False
+    for regiao in _regioes(args):
+        construcao = raiz / "build" / regiao.id
+        print(f"\n── {regiao.nome_com_artigo} ({regiao.id}) ──")
+        feeds = [s for s in netex.feeds_a_exportar(regiao) if (construcao / s.saida).exists()]
+        if not feeds:
+            print("   não há rede própria construída. Corre `pipeline build` primeiro.")
+            falhou = True
+            continue
+        for s in feeds:
+            feed = Gtfs.ler(construcao / s.saida)
+            alvo = netex.destino_de(construcao, s)
+            resumo = netex.escrever(
+                feed,
+                alvo,
+                netex.identidade_da_regiao(regiao, feed, s),
+                hoje=netex.hoje_da_construcao(),
+            )
+            print(f"   {alvo.relative_to(raiz)} · {resumo.bytes_xml / 1e6:.1f} MB de XML")
+            print(f"     {netex.resumo_em_texto(resumo)}")
+            xml = netex.ler_xml(alvo)
+            for esquema in netex.ESQUEMAS:
+                nome = f"{esquema.nome} {esquema.etiqueta}"
+                try:
+                    v = netex.validar(xml, raiz, esquema)
+                except netex.EsquemaIndisponivel as e:
+                    print(f"   ✗ {nome}: não validado — {e}")
+                    falhou = falhou or esquema.normativo
+                    continue
+                if v.valido:
+                    print(f"   ✓ {nome}: válido")
+                    continue
+                print(f"   ✗ {nome}: {len(v.erros)} erros")
+                for erro in v.erros[:8]:
+                    print(f"       {erro[:200]}")
+                falhou = falhou or esquema.normativo
+    return 1 if falhou else 0
+
+
+def _cmd_netex_esquemas(args: argparse.Namespace) -> int:
+    """Vai buscar os esquemas do NeTEx, nos commits fixados, para `.cache/netex/`."""
+    from . import netex
+
+    raiz = _raiz(args)
+    falhou = False
+    for esquema in netex.ESQUEMAS:
+        try:
+            caminho = netex.caminho_do_esquema(raiz, esquema)
+        except netex.EsquemaIndisponivel as e:
+            print(f"   ✗ {esquema.nome} {esquema.etiqueta}: {e}")
+            falhou = True
+            continue
+        try:
+            onde = caminho.relative_to(raiz)
+        except ValueError:
+            onde = caminho
+        print(f"   ✓ {esquema.nome} {esquema.etiqueta} ({esquema.commit[:12]}) → {onde}")
+    return 1 if falhou else 0
+
+
 def _cmd_grafo(args: argparse.Namespace) -> int:
     """Constrói o grafo do motor de viagens a partir do que o `build` produziu.
 
@@ -521,6 +591,16 @@ def main(argv: list[str] | None = None) -> int:
         sub.add_parser("validate", help="corre o validador sobre os feeds já construídos")
     )
     vl.set_defaults(func=_cmd_validate)
+
+    nx = com_regiao(
+        sub.add_parser("netex", help="volta a escrever e a validar o NeTEx de um build")
+    )
+    nx.set_defaults(func=_cmd_netex)
+
+    ne = sub.add_parser(
+        "netex-esquemas", help="descarrega os esquemas do NeTEx fixados para .cache/netex/"
+    )
+    ne.set_defaults(func=_cmd_netex_esquemas)
 
     mo = com_regiao(sub.add_parser("mosaicos", help="gera os mosaicos vetoriais do mapa"))
     mo.add_argument(

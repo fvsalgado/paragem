@@ -140,6 +140,10 @@ def construir(
     print(f"   {_tempo.monotonic() - passo:6.1f}s  validador", flush=True)
 
     passo = _tempo.monotonic()
+    _netex(ctx, destino, exigir=exigir_validador)
+    print(f"   {_tempo.monotonic() - passo:6.1f}s  NeTEx", flush=True)
+
+    passo = _tempo.monotonic()
     _correspondencias(ctx, destino)
     print(f"   {_tempo.monotonic() - passo:6.1f}s  correspondências comboio–autocarro", flush=True)
 
@@ -388,6 +392,136 @@ def _validar_feeds(ctx: Contexto, destino: Path, *, exigir: bool = False) -> Non
                 ctx, feed, feed.stem, proprio=feed.stem not in de_terceiros, exigir=exigir
             )
         )
+
+
+def _netex(ctx: Contexto, destino: Path, *, exigir: bool = False) -> None:
+    """A rede da região também em NeTEx (perfil EPIP), validada contra o esquema.
+
+    Sai do GTFS que acabou de passar no validador, e não das fontes: é a mesma
+    construção escrita noutro formato (`netex.py`). Corre para todas as regiões
+    que têm rede própria, sem a receita o pedir — uma região nova tem NeTEx sem
+    um commit, como tem GTFS.
+
+    **A validação conta como a do GTFS.** Um erro contra o esquema oficial
+    bloqueia: um ficheiro que o Ponto de Acesso Nacional recusa não se publica.
+    Não a conseguir correr é um aviso — e um bloqueio onde a verificação é
+    exigida (`exigir`, o CI), pela razão do validador: uma corrida verde em que
+    a verificação não aconteceu é pior do que uma vermelha. O esquema do perfil
+    não é normativo (o repositório dele di-lo), e o que ele recusa é aviso.
+    """
+    from . import netex
+
+    for s in netex.feeds_a_exportar(ctx.regiao):
+        origem = destino / str(s.saida)
+        if not origem.exists():
+            continue
+        rotulo = origem.stem
+        alvo = netex.destino_de(destino, s)
+        onde = ctx.caminho_curto(alvo)
+        try:
+            feed = Gtfs.ler(origem)
+            resumo = netex.escrever(
+                feed,
+                alvo,
+                netex.identidade_da_regiao(ctx.regiao, feed, s),
+                hoje=netex.hoje_da_construcao(),
+            )
+        except Exception as e:  # noqa: BLE001 — o NeTEx não pode parar o resto da construção
+            alvo.unlink(missing_ok=True)
+            ctx.relatorio.bloqueia(
+                id=f"netex.{rotulo}.rebentou",
+                o_que=f"O NeTEx de {rotulo} não se escreveu: {type(e).__name__}",
+                onde=onde,
+                porque_importa=str(e),
+                o_que_fazer="Corrigir pipeline/src/paragem/netex.py.",
+            )
+            continue
+
+        ctx.relatorio.saidas[f"netex/{alvo.name}"] = onde
+        ctx.relatorio.contagens.update(netex.contagens(rotulo, resumo))
+
+        if resumo.viagens_de_fora:
+            ctx.relatorio.lacuna(
+                id=f"netex.{rotulo}.viagens-de-fora",
+                o_que=f"Viagens de {rotulo} que o NeTEx não leva",
+                onde=onde,
+                porque_importa=(
+                    "O NeTEx tem de dizer o mesmo que o GTFS de onde sai. Uma viagem sem duas "
+                    "paragens, ou sem um dia de serviço, não é uma viagem que se apanhe — mas o "
+                    "GTFS tem-na, e a diferença fica escrita."
+                ),
+                o_que_fazer="Ver por que razão o GTFS as tem.",
+                quantos=sum(resumo.viagens_de_fora.values()),
+                quais=[f"{n} {razao}" for razao, n in resumo.viagens_de_fora.most_common()],
+            )
+        if resumo.tabelas_de_fora:
+            ctx.relatorio.aviso(
+                id=f"netex.{rotulo}.fora-do-perfil",
+                o_que=f"O que o GTFS de {rotulo} tem e o NeTEx não leva",
+                onde=onde,
+                porque_importa=(
+                    "O perfil europeu de informação ao passageiro não pede tudo o que o GTFS "
+                    "pode ter. Fica no GTFS, que se descarrega ao lado."
+                ),
+                o_que_fazer="Nenhuma, enquanto o perfil não o pedir. Ver docs/NETEX.md.",
+                quantos=len(resumo.tabelas_de_fora),
+                quais=[
+                    f"{tabela} ({n} linhas): {netex.FORA[tabela]}"
+                    for tabela, n in sorted(resumo.tabelas_de_fora.items())
+                ],
+            )
+        if resumo.modos_desconhecidos:
+            ctx.relatorio.aviso(
+                id=f"netex.{rotulo}.modo-desconhecido",
+                o_que=f"Linhas de {rotulo} com um route_type sem modo NeTEx",
+                onde=onde,
+                porque_importa="Saem como «other», em vez de ficarem no autocarro por omissão.",
+                o_que_fazer="Acrescentar o tipo à tabela de netex.py, se for um tipo do GTFS.",
+                quantos=sum(resumo.modos_desconhecidos.values()),
+                quais=sorted(resumo.modos_desconhecidos),
+            )
+
+        xml = netex.ler_xml(alvo)
+        for esquema in netex.ESQUEMAS:
+            nome = f"{esquema.nome} {esquema.etiqueta}"
+            try:
+                v = netex.validar(xml, ctx.raiz, esquema, descarregar=ctx.descarregar)
+            except netex.EsquemaIndisponivel as e:
+                registar = (
+                    ctx.relatorio.bloqueia if exigir and esquema.normativo else ctx.relatorio.aviso
+                )
+                registar(
+                    id=f"netex.{rotulo}.{esquema.nome.lower()}.nao-correu",
+                    o_que=f"O NeTEx de {rotulo} não foi validado contra o esquema {nome}",
+                    onde=onde,
+                    porque_importa=(
+                        "Um ficheiro que ninguém validou parece exatamente igual a um ficheiro "
+                        "válido. Fica dito qual dos dois é."
+                    ),
+                    o_que_fazer=str(e),
+                )
+                continue
+            ctx.relatorio.contagens[f"netex.{rotulo}.erros.{esquema.nome.lower()}"] = len(v.erros)
+            if v.valido:
+                continue
+            registar = ctx.relatorio.bloqueia if esquema.normativo else ctx.relatorio.aviso
+            registar(
+                id=f"netex.{rotulo}.{esquema.nome.lower()}.invalido",
+                o_que=f"O NeTEx de {rotulo} não passa no esquema {nome}",
+                onde=onde,
+                porque_importa=(
+                    "O esquema oficial é o que um Ponto de Acesso Nacional usa para aceitar ou "
+                    "recusar um ficheiro."
+                    if esquema.normativo
+                    else (
+                        "O esquema do perfil não é normativo nem mantido, mas é o único que diz "
+                        "o que o perfil deixa de fora — o oficial aceita o NeTEx inteiro."
+                    )
+                ),
+                o_que_fazer="Corrigir pipeline/src/paragem/netex.py; os primeiros erros abaixo.",
+                quantos=len(v.erros),
+                quais=v.erros[:8],
+            )
 
 
 def _correspondencias(ctx: Contexto, destino: Path) -> None:

@@ -335,6 +335,10 @@ Duas, e ambas por boas razões:
   (`8.0.1`) pela mesma razão do poppler: as regras mudam entre versões, e um
   validador que se atualiza sozinho faz o CI mudar de opinião sem que nada no
   repositório tenha mudado.
+- **git**, para ir buscar os **esquemas do NeTEx** — o oficial e o do perfil
+  europeu de informação ao passageiro — nos commits fixados, para
+  `.cache/netex/`. Contra eles se valida o NeTEx que sai de cada rede (ver
+  [`NETEX.md`](NETEX.md)).
 
 O resto é Python, instalado pelo `uv`.
 

@@ -54,7 +54,16 @@ jobs:
       - name: Tipos
         run: uv run mypy
 
+      # OS ESQUEMAS DO NeTEx NÃO VIVEM NO REPOSITÓRIO (pipeline/src/paragem/netex.py
+      # diz porquê): vêm do GitHub, nos commits fixados. Sem eles os testes de
+      # validação saltam — e aqui não podem saltar, porque um teste que salta
+      # no CI não verificou nada. Daí a variável no passo seguinte.
+      - name: Esquemas do NeTEx
+        run: uv run pipeline netex-esquemas
+
       - name: Testes
+        env:
+          PARAGEM_EXIGIR_ESQUEMAS_NETEX: "1"
         run: uv run pytest -q
 
       # Três ficheiros dizem de onde vêm os dados: data/sources.yaml,
@@ -166,6 +175,12 @@ jobs:
       # CI do produto corre inteiro onde não há dados de ninguém
       # (docs/RAIZES.md). A demonstração acrescenta uns dez segundos, quase
       # todos do validador de GTFS.
+      # O `--sem-rede` é das FONTES, e os esquemas do NeTEx são uma ferramenta,
+      # como o validador de GTFS: vão-se buscar antes, para que a construção
+      # valide o NeTEx de cada região em vez de avisar que não o validou.
+      - name: Esquemas do NeTEx
+        run: uv run pipeline netex-esquemas
+
       - name: Construir as regiões desta raiz
         run: uv run pipeline build --todas --sem-rede
 
