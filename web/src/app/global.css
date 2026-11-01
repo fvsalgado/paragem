@@ -759,6 +759,16 @@ code {
 .cartao.modo-taxi {
   border-left: 1px solid var(--linhas);
 }
+/* OS «OUTROS TRANSPORTES» DE UM CONCELHO: cartões numa lista, sem a borda da
+   lista por baixo de cada um (eram dois traços entre cartões) e com o
+   espaço de dentro de um cartão — a `.lista a` encostava o texto à borda. */
+.lista.outros-modos > li {
+  border-bottom: 0;
+}
+.lista.outros-modos > li > a.cartao {
+  padding: 0.6rem 1rem;
+  margin: 0.5rem 0;
+}
 
 .lista {
   list-style: none;
@@ -1748,6 +1758,13 @@ ul.linhas-do-concelho a > span:last-child {
 ul.zonas-do-concelho {
   margin: 0.25rem 0 0.5rem;
   padding-left: 1.25rem;
+}
+/* Cada zona leva à sua entrada na página do transporte a pedido: um alvo
+   sozinho na linha, com os 44 px. */
+ul.zonas-do-concelho a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
 }
 
 /* As paragens do concelho, fechadas quando são muitas: o nome por inteiro e

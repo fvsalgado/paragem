@@ -428,11 +428,11 @@ const DIAS_DA_SEMANA = [
  */
 export function fraseDoFeriadoMunicipal(
   f: FeriadoMunicipal | null | undefined,
+  /** `AAAA-MM-DD`. Com ele, o ano diz-se quando não é o de hoje. */
+  hoje?: string,
 ): { titulo: string; texto: string } | null {
   if (!f || !/^\d{4}-\d{2}-\d{2}$/.test(f.data) || f.nos_horarios === 'nada-muda') return null;
-  const [ano, mes, dia] = f.data.split('-').map(Number);
-  const semana = DIAS_DA_SEMANA[new Date(Date.UTC(ano, mes - 1, dia)).getUTCDay()];
-  const titulo = `${dia} de ${MESES[mes - 1]}, ${semana}, é feriado municipal neste concelho.`;
+  const titulo = `${diaDoFeriado(f, hoje)}, é feriado municipal neste concelho.`;
   const texto =
     f.nos_horarios === 'como-feriado'
       ? 'Os horários desse dia já contam com o feriado.'
@@ -442,6 +442,18 @@ export function fraseDoFeriadoMunicipal(
     ? ''
     : ' A data é a que as fontes dão; falta a confirmação da câmara.';
   return { titulo, texto: texto + data };
+}
+
+/**
+ * «1 de março, segunda-feira» — e «1 de março de 2027, segunda-feira» quando
+ * o ano não é o de hoje: lido a 1 de novembro, «1 de março» sem ano deixava
+ * quem lê a perguntar de que ano (auditoria de 1/11/2026).
+ */
+export function diaDoFeriado(f: FeriadoMunicipal, hoje?: string): string {
+  const [ano, mes, dia] = f.data.split('-').map(Number);
+  const semana = DIAS_DA_SEMANA[new Date(Date.UTC(ano, mes - 1, dia)).getUTCDay()];
+  const doAno = hoje && hoje.slice(0, 4) !== String(ano) ? ` de ${ano}` : '';
+  return `${dia} de ${MESES[mes - 1]}${doAno}, ${semana}`;
 }
 
 /** Faltam no máximo `dias` dias para o feriado (o próprio dia incluído). */

@@ -60,3 +60,18 @@ test('«em breve» é do próprio dia até ao prazo, e nunca depois', () => {
   assert.equal(feriadoEmBreve(f, '2026-11-25'), false);
   assert.equal(feriadoEmBreve(null, '2026-11-24'), false);
 });
+
+test('o ano diz-se quando não é o de hoje', async () => {
+  const { diaDoFeriado, fraseDoFeriadoMunicipal } = await import('../src/lib/formato.ts');
+  const f = {
+    data: '2027-03-01',
+    nome: null,
+    data_confirmada: true,
+    nos_horarios: 'como-feriado' as const,
+  };
+  assert.equal(diaDoFeriado(f, '2026-11-01'), '1 de março de 2027, segunda-feira');
+  assert.equal(diaDoFeriado(f, '2027-02-20'), '1 de março, segunda-feira');
+  assert.match(fraseDoFeriadoMunicipal(f, '2026-11-01')!.titulo, /^1 de março de 2027, /);
+  // Sem dia de hoje, como era.
+  assert.match(fraseDoFeriadoMunicipal(f)!.titulo, /^1 de março, segunda-feira, é feriado/);
+});

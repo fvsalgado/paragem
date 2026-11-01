@@ -70,6 +70,25 @@ export default function ConstrutorDaCaixa({
   }, []);
 
   const { pontos } = usePontos(regiao, modosDesligados, comParagens);
+
+  // A PARAGEM QUE O ENDEREÇO PEDE (`?paragem=<id>`): a página de cada concelho
+  // manda para aqui com a paragem principal dele, para a câmara levar a caixa
+  // já montada com a sua terra (auditoria de 1/11/2026). Só vale uma paragem
+  // que exista — um identificador trocado deixava a caixa a dizer que não
+  // encontra nada —, e por isso espera pelas paragens.
+  const pedida = useRef<string | null>(null);
+  useEffect(() => {
+    pedida.current = new URLSearchParams(window.location.search).get('paragem');
+  }, []);
+  useEffect(() => {
+    const p = pedida.current;
+    if (!p || !comParagens || !Array.isArray(pontos)) return;
+    pedida.current = null;
+    if (pontos.some((x) => x.tipo === 'paragem' && x.id === p)) {
+      setTipo('paragem');
+      setParagem([p]);
+    }
+  }, [pontos, comParagens]);
   const opcoes: OpcaoDeEscolha[] = useMemo(() => {
     // Enquanto as paragens não chegam, a do exemplo já tem nome.
     if (!Array.isArray(pontos)) {
