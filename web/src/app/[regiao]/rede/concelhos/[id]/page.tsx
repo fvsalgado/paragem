@@ -22,7 +22,8 @@ import MarcaDeDados from '@/componentes/MarcaDeDados';
 import FeriadoMunicipalDoConcelho from '@/componentes/FeriadoMunicipal';
 import Distintivo from '@/componentes/Distintivo';
 import { aAutoridade, lista, plural } from '@/lib/prosa';
-import { paragemPrincipal, saidasDoConcelho } from '@/lib/concelho';
+import { paragemPrincipal, porLocalidade, saidasDoConcelho } from '@/lib/concelho';
+import { horaLegivel } from '@/lib/formato';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
 /**
@@ -58,9 +59,6 @@ export async function generateMetadata({
     caminho: urlRede(rid, `concelhos/${c.id}/`),
   });
 }
-
-/** Quantas horas de um tipo de dia se mostram antes de «e mais N». */
-const HORAS_A_MOSTRAR = 6;
 
 export default async function Concelho({
   params,
@@ -180,56 +178,73 @@ export default async function Concelho({
                 adivinha. */}
             <h2 id="c-sair">Sair do concelho</h2>
             <p className="secundario">
-              Para onde se vai daqui de autocarro, sem mudar, e a que horas sai do concelho.
+              Para onde se vai daqui de autocarro, sem mudar, e a primeira e a última partida do
+              concelho no dia mais servido.
             </p>
-            <ul className="saidas">
-              {saidas.slice(0, 6).map((sd) => (
-                <li key={sd.chave}>
-                  <h3>{sd.nome}</h3>
-                  <p className="linhas-da-saida">
-                    <span className="so-para-leitores">
-                      {sd.linhas.length === 1 ? 'Linha ' : 'Linhas '}
-                    </span>
-                    {sd.linhas.map((l) => (
-                      <Distintivo key={l.id} codigo={l.codigo} cor={l.cor} />
-                    ))}
-                  </p>
-                  {sd.porDia.slice(0, 2).map(({ dia, horas }) => (
-                    <p key={dia} className="horas-da-saida">
-                      <strong>{dia}:</strong> {horas.slice(0, HORAS_A_MOSTRAR).join(', ')}
-                      {horas.length > HORAS_A_MOSTRAR &&
-                        ` e mais ${horas.length - HORAS_A_MOSTRAR}`}
-                    </p>
-                  ))}
-                  {sd.porDia.length > 2 && (
-                    <p className="secundario">
-                      E noutros dias:{' '}
-                      {sd.porDia
-                        .slice(2)
-                        .map((d) => d.dia)
-                        .join('; ')}
-                      .
-                    </p>
-                  )}
-                  <p className="cartao-accoes">
-                    <Link
-                      href={url(
-                        rid,
-                        `/viagem/?${new URLSearchParams({
-                          ...(principal ? { de: principal.nome } : {}),
-                          para: sd.para,
-                        }).toString()}`,
-                      )}
-                    >
-                      Como chegar a {sd.nome}
-                    </Link>
-                  </p>
-                </li>
-              ))}
-            </ul>
-            {saidas.length > 6 && (
+            {/* UMA TABELA, E NÃO SEIS CARTÕES. Cada destino era um cartão com
+                as horas todas de dois tipos de dia — denso, e sem se ver de
+                relance a pergunta que importa: até que horas há. Destino, as
+                linhas, e a primeira e a última do dia mais servido; as horas
+                todas estão a um toque, no «Como chegar» e na linha. */}
+            <table className="saidas">
+              <caption className="so-para-leitores">
+                Os destinos a que se chega sem mudar, as linhas e a primeira e a última partida
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Destino</th>
+                  <th scope="col">Linhas</th>
+                  <th scope="col">Primeira e última</th>
+                </tr>
+              </thead>
+              <tbody>
+                {saidas.slice(0, 12).map((sd) => {
+                  const dia = sd.porDia[0];
+                  return (
+                    <tr key={sd.chave}>
+                      <th scope="row">
+                        <Link
+                          href={url(
+                            rid,
+                            `/viagem/?${new URLSearchParams({
+                              ...(principal ? { de: principal.nome } : {}),
+                              para: sd.para,
+                            }).toString()}`,
+                          )}
+                        >
+                          {sd.nome}
+                          <span className="so-para-leitores">: como chegar</span>
+                        </Link>
+                      </th>
+                      <td>
+                        <span className="linhas-da-saida">
+                          {sd.linhas.map((l) => (
+                            <Distintivo key={l.id} codigo={l.codigo} cor={l.cor} />
+                          ))}
+                        </span>
+                      </td>
+                      <td className="horas-da-saida">
+                        {dia ? (
+                          <>
+                            <span className="preco-em-linha">
+                              {horaLegivel(dia.horas[0]).texto}
+                              {dia.horas.length > 1 &&
+                                ` · ${horaLegivel(dia.horas[dia.horas.length - 1]).texto}`}
+                            </span>
+                            <span className="secundario">{dia.dia}</span>
+                          </>
+                        ) : (
+                          <span className="secundario">sem hora marcada</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {saidas.length > 12 && (
               <p>
-                <strong>Mais destinos:</strong> {lista(saidas.slice(6).map((sd) => sd.nome))}.
+                <strong>Mais destinos:</strong> {lista(saidas.slice(12).map((sd) => sd.nome))}.
               </p>
             )}
           </section>
@@ -366,20 +381,40 @@ export default async function Concelho({
             <summary>
               {ps.length === 1 ? 'A paragem do concelho' : `As ${ps.length} paragens do concelho`}
             </summary>
-            <ul className="lista paragens-com-linhas">
-              {ps.slice(0, 300).map((p) => (
-                <li key={p.id}>
-                  <Link href={urlDaParagem(rid, p.id)}>
-                    <span className="nome">{p.nome}</span>
-                    {p.linhas.length > 0 && (
-                      <span className="linhas-da-paragem">
-                        <span className="so-para-leitores">Linhas </span>
-                        {p.linhas.map((codigo) => (
-                          <Distintivo key={codigo} codigo={codigo} cor={corDe.get(codigo)} />
-                        ))}
-                      </span>
-                    )}
-                  </Link>
+            {/* POR LOCALIDADE (`porLocalidade`): o nome da terra uma vez, e por
+                baixo o que distingue cada paragem nela. */}
+            <ul className="localidades">
+              {porLocalidade(ps.slice(0, 300)).map((g) => (
+                <li key={g.localidade}>
+                  {(g.paragens.length > 1 || g.paragens[0].dentro) && (
+                    <span className="localidade">{g.localidade}</span>
+                  )}
+                  <ul className="lista paragens-com-linhas">
+                    {g.paragens.map(({ p, dentro }) => (
+                      <li key={p.id}>
+                        <Link href={urlDaParagem(rid, p.id)}>
+                          <span className="nome">
+                            {dentro ? (
+                              <>
+                                <span className="so-para-leitores">{g.localidade}, </span>
+                                {dentro}
+                              </>
+                            ) : (
+                              p.nome
+                            )}
+                          </span>
+                          {p.linhas.length > 0 && (
+                            <span className="linhas-da-paragem">
+                              <span className="so-para-leitores">Linhas </span>
+                              {p.linhas.map((codigo) => (
+                                <Distintivo key={codigo} codigo={codigo} cor={corDe.get(codigo)} />
+                              ))}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
                 </li>
               ))}
             </ul>

@@ -4,7 +4,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { saidasDoConcelho } from '../src/lib/concelho.ts';
+import { porLocalidade, saidasDoConcelho } from '../src/lib/concelho.ts';
 import type { LinhaDetalhe, Paragem } from '../src/lib/formato.ts';
 
 const paragem = (id: string, concelho: string | null, partidas = 1): Paragem => ({
@@ -118,4 +118,23 @@ test('uma linha que não passa no concelho não é uma saída dele', () => {
     { sentido: '0', variantes: 1, viagens: 1, viagens_deste_percurso: 1, paragens: ps },
   ]);
   assert.deepEqual(saidasDoConcelho('cima', [l], PARAGENS, NOMES), []);
+});
+
+test('as paragens juntam-se pela terra, e cada uma fica com o que a distingue', () => {
+  const g = porLocalidade([
+    { nome: 'Vila Alta (Terminal)' },
+    { nome: 'Alto da Brisa' },
+    { nome: 'Vila Alta (Câmara Municipal)' },
+    { nome: 'Vila Alta' },
+    { nome: 'Vale (Estação)' },
+  ]);
+  assert.deepEqual(
+    g.map((x) => x.localidade),
+    ['Alto da Brisa', 'Vale', 'Vila Alta'],
+  );
+  // A paragem com o nome da terra sozinho vem primeiro, e o resto por nome.
+  assert.deepEqual(
+    g[2].paragens.map((x) => x.dentro),
+    ['', 'Câmara Municipal', 'Terminal'],
+  );
 });

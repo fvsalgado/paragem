@@ -46,7 +46,8 @@ const maiuscula = (s: string): string => (s ? s[0].toUpperCase() + s.slice(1) : 
  *     servidor (`quandoVale`).
  *
  * A gravidade decide a cor e mais nada: `SEVERE` leva o vermelho de alerta,
- * `WARNING` o âmbar, o resto o azul da marca.
+ * `WARNING` o laranja de atenção, o resto uma borda neutra. A cor da marca não
+ * faz de estado, e a de um modo também não (o âmbar era o do a pedido).
  */
 export function CartaoDeAviso({
   aviso,
@@ -75,7 +76,7 @@ export function CartaoDeAviso({
   const paragens = aviso.paragens.map((id) => ({ id, nome: catalogo.paragens.get(id) ?? id }));
   const soModos = linhas.length === 0 && paragens.length === 0 && aviso.modos.length > 0;
   const porque = causaDeclarada(aviso.causa) ? maiuscula(nomeDaCausa(aviso.causa)) : '';
-  const rodape = [quandoVale(aviso, fuso), porque].filter(Boolean).join(' · ');
+  const prazo = quandoVale(aviso, fuso);
 
   return (
     <article className={`aviso${gravidade}`} id={ligacoes ? `aviso-${aviso.id}` : undefined}>
@@ -83,6 +84,10 @@ export function CartaoDeAviso({
         <p className="etiqueta-do-aviso">{maiuscula(nomeDoEfeito(aviso.efeito))}</p>
       )}
       <Titulo className="titulo-do-aviso">{aviso.titulo || 'Sem título'}</Titulo>
+      {/* O PRAZO À CABEÇA, logo a seguir ao título: «desde quando, até
+          quando» é a segunda pergunta de quem lê. Estava no fim do cartão,
+          depois do texto todo. */}
+      {prazo && <p className="prazo-do-aviso">{prazo}</p>}
       {linhas.length > 0 && (
         <ul className="linhas-do-aviso" aria-label="Linhas afetadas">
           {linhas.map((l) => {
@@ -106,7 +111,7 @@ export function CartaoDeAviso({
         </ul>
       )}
       {aviso.texto && <p className="texto-do-aviso">{aviso.texto}</p>}
-      {rodape && <p className="secundario">{rodape}</p>}
+      {porque && <p className="secundario">{porque}</p>}
       {paragens.length > 0 && (
         <p className="secundario">
           {paragens.length === 1 ? 'Paragem afetada: ' : 'Paragens afetadas: '}

@@ -17,17 +17,17 @@ interface Props {
 
 const PROBLEMAS: Record<Exclude<LeituraDaLigacao['estado'], 'valida'>, string> = {
   invalida:
-    'Esta ligação não é válida. Confirma que a copiaste inteira — é comprida —, ou pede uma nova a quem te convidou.',
+    'Esta ligação não é válida. Confirme que a copiou inteira — é comprida —, ou peça uma nova a quem o convidou.',
   usada:
     'Esta ligação já foi usada. Se já escolheste a palavra-passe, entra com ela; se a esqueceste, pede uma ligação nova a quem te convidou.',
-  expirada: 'Esta ligação expirou: valem sete dias. Pede uma nova a quem te convidou.',
+  expirada: 'Esta ligação expirou: valem sete dias. Peça uma nova a quem o convidou.',
   desativada: 'Esta conta está desativada. Fala com quem gere o painel.',
   'por-aplicar': 'O painel desta instalação ainda não tem contas por pessoa.',
 };
 
 const ERROS: Record<string, string> = {
   curta: `A palavra-passe tem de ter pelo menos ${COMPRIMENTO_MINIMO} caracteres.`,
-  diferentes: 'As duas palavras-passe não são iguais. Escreve a mesma nas duas caixas.',
+  diferentes: 'As duas palavras-passe não são iguais. Escreva a mesma nas duas caixas.',
 };
 
 /**
@@ -66,12 +66,9 @@ export default async function Ativar({ searchParams }: Props) {
     <>
       <h1>{leitura.jaAtivada ? 'Escolher uma palavra-passe nova' : 'Escolher a palavra-passe'}</h1>
       <p className="entrada">
-        Olá, {leitura.nome}. Vais entrar no painel com o email <strong>{leitura.email}</strong> e a
-        palavra-passe que escolheres aqui. Esta ligação serve uma vez, até {porExtenso(leitura.ate)}
-        {leitura.jaAtivada
-          ? ', e a palavra-passe antiga deixa de valer quando escolheres esta'
-          : ''}
-        .
+        Olá, {leitura.nome}. Vai entrar no painel com o email <strong>{leitura.email}</strong> e a
+        palavra-passe que escolher aqui. Esta ligação serve uma vez, até {porExtenso(leitura.ate)}
+        {leitura.jaAtivada ? ', e a palavra-passe antiga deixa de valer quando escolher esta' : ''}.
       </p>
       {problema ? (
         <p role="alert" className="faixa alerta">
@@ -101,8 +98,8 @@ export default async function Ativar({ searchParams }: Props) {
           aria-describedby="senha-ajuda"
         />
         <p id="senha-ajuda" className="secundario-texto">
-          Pelo menos {COMPRIMENTO_MINIMO} caracteres. Uma frase que só tu saibas serve melhor do que
-          uma palavra com símbolos.
+          Pelo menos {COMPRIMENTO_MINIMO} caracteres. Uma frase que só quem a escolhe saiba serve
+          melhor do que uma palavra com símbolos.
         </p>
         <label htmlFor="confirmacao">A mesma palavra-passe, outra vez</label>
         <input

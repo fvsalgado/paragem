@@ -113,7 +113,7 @@ export async function convidarPessoa(
     if (comPapel.length === 0) {
       return {
         ok: false,
-        erro: 'Escolhe pelo menos uma região e o papel nela — sem papel, a pessoa entrava e não via nada.',
+        erro: 'Escolha pelo menos uma região e o papel nela — sem papel, a pessoa entrava e não via nada.',
         campos,
       };
     }

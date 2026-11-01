@@ -323,14 +323,14 @@ const PARTIDA = umaPartidaFutura();
 test.describe('com o relógio numa hora de serviço', () => {
   test.use({ timezoneId: fusoDaRegiao() });
 
-  test('o «Perto de ti» aberto também passa no axe', async ({ page, context }) => {
-    // A lista do «Perto de ti» só existe depois de alguém carregar no botão, e
+  test('o «Aqui perto» aberto também passa no axe', async ({ page, context }) => {
+    // A lista do «Aqui perto» só existe depois de alguém carregar no botão, e
     // um teste que só veja a página fechada não vê metade do componente —
     // as ligações, as distâncias e as horas aparecem todas depois.
     await context.grantPermissions(['geolocation']);
     await context.setGeolocation(ONDE);
     if (PARTIDA) await page.clock.setFixedTime(PARTIDA.quando);
-    // Em `/rede/`: a raiz da região passou a ser o mapa, e o «Perto de ti» é
+    // Em `/rede/`: a raiz da região passou a ser o mapa, e o «Aqui perto» é
     // o caminho SEM mapa — o equivalente acessível do ponto azul.
     await page.goto(`/rede/`);
     await page.getByRole('button', { name: /paragens perto de mim/i }).click();

@@ -328,3 +328,29 @@ function juntar(nomes: string[]): string {
   if (nomes.length <= 1) return nomes[0] ?? '';
   return `${nomes.slice(0, -1).join(', ')} e ${nomes[nomes.length - 1]}`;
 }
+
+// --- o filtro da página de avisos -------------------------------------------
+
+/** A que linhas e concelhos um aviso diz respeito — o que o filtro compara. */
+export type AlcanceDoAviso = {
+  linhas: string[];
+  concelhos: string[];
+  /** Sem linhas nem paragens: vale para tudo, e aparece em qualquer filtro. */
+  todos: boolean;
+};
+
+/**
+ * Se um aviso fica à vista com este filtro (`''` é «todas»/«todos»). Um aviso
+ * da rede toda, ou de um modo inteiro, diz respeito a qualquer linha e a
+ * qualquer concelho: escondê-lo de quem filtrou pela sua linha era esconder o
+ * aviso que mais lhe importa.
+ */
+export function ficaComOFiltro(
+  a: AlcanceDoAviso,
+  filtro: { linha: string; concelho: string },
+): boolean {
+  if (a.todos) return true;
+  if (filtro.linha && !a.linhas.includes(filtro.linha)) return false;
+  if (filtro.concelho && !a.concelhos.includes(filtro.concelho)) return false;
+  return true;
+}

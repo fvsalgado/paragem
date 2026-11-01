@@ -232,7 +232,7 @@ export function concelhoComMaisParagens(regiao = REGIAO): Concelho {
 }
 
 /**
- * Onde pôr o ponto azul para o «Perto de ti» ter o que mostrar: em cima da
+ * Onde pôr o ponto azul para o «Aqui perto» ter o que mostrar: em cima da
  * paragem com mais partidas, que é onde há mais para responder à volta.
  */
 export function ondeHaParagens(regiao = REGIAO): { latitude: number; longitude: number } {

@@ -550,6 +550,7 @@ export default function Mapa({
   modosDesligados = [],
   limites = null,
   lembrarVista = null,
+  perto = null,
 }: {
   centro: [number, number];
   zoom?: number;
@@ -617,6 +618,17 @@ export default function Mapa({
   limites?: Limites | null;
   /** A chave onde guardar a última vista; sem ela, não se guarda nem se lê. */
   lembrarVista?: string | null;
+  /**
+   * «PERTO DE MIM» NO MAPA: onde a pessoa está e as paragens mais perto, com
+   * o número que têm na lista da folha. O mapa enquadra-as todas e numera-as
+   * — a lista e o mapa são a mesma coisa. `comPonto` é `false` quando quem
+   * deu a posição foi o botão do mapa, que já desenha o seu ponto azul.
+   */
+  perto?: {
+    aqui: [number, number];
+    comPonto: boolean;
+    paragens: { lat: number; lon: number; n: number }[];
+  } | null;
 }) {
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<MapaLibre | null>(null);
@@ -1230,6 +1242,66 @@ export default function Mapa({
       marca?.remove();
     };
   }, [etiqueta, estado]);
+
+  // PERTO DE MIM: a pessoa e as paragens mais perto, numeradas como na lista,
+  // e o mapa a enquadrá-las. O mapa não se mexia, e as paragens da lista não
+  // se encontravam nele — «a 250 m» de quê, para que lado? Os números não se
+  // tocam (`pointer-events: none`): o toque cai na paragem por baixo, que
+  // abre o cartão dela, como tocar na lista.
+  useEffect(() => {
+    const m = mapa.current;
+    if (!m || estado !== 'pronto' || !perto) return;
+    let vivo = true;
+    const marcas: InstanceType<Biblioteca['Marker']>[] = [];
+    carregarMapLibre().then(({ Marker }) => {
+      if (!vivo) return;
+      if (perto.comPonto) {
+        const el = document.createElement('div');
+        el.className = 'aqui-no-mapa';
+        el.setAttribute('aria-hidden', 'true');
+        marcas.push(new Marker({ element: el }).setLngLat([perto.aqui[1], perto.aqui[0]]).addTo(m));
+      }
+      for (const p of perto.paragens) {
+        const el = document.createElement('div');
+        el.className = 'numero-no-mapa';
+        el.textContent = String(p.n);
+        // A lista, em HTML, já diz o número e o nome: aqui seria a segunda vez.
+        el.setAttribute('aria-hidden', 'true');
+        marcas.push(
+          new Marker({ element: el, anchor: 'bottom', offset: [0, -8] })
+            .setLngLat([p.lon, p.lat])
+            .addTo(m),
+        );
+      }
+    });
+    const lons = [perto.aqui[1], ...perto.paragens.map((p) => p.lon)];
+    const lats = [perto.aqui[0], ...perto.paragens.map((p) => p.lat)];
+    const caixaDePerto: Limites = [
+      [Math.min(...lons), Math.min(...lats)],
+      [Math.max(...lons), Math.max(...lats)],
+    ];
+    const enquadrarPerto = () => {
+      if (!vivo) return;
+      vistaDecidida.current = true;
+      // O respiro de cima é o do número, que se desenha por cima da paragem —
+      // e, num telemóvel, o da procura e da fila das camadas, que flutuam no
+      // alto sem tirar margem ao mapa: o número 2 ficava por baixo delas.
+      const estreito = m.getContainer().clientWidth < 1024;
+      m.fitBounds(caixaDePerto, {
+        padding: { top: estreito ? 150 : 56, bottom: 40, left: 40, right: 72 },
+        duration: semMovimento() ? 0 : 900,
+        maxZoom: 17,
+      });
+    };
+    // Quem carregou no botão do mapa vê-o voar até si: enquadra-se depois.
+    if (m.isMoving()) m.once('moveend', enquadrarPerto);
+    else enquadrarPerto();
+    return () => {
+      vivo = false;
+      m.off('moveend', enquadrarPerto);
+      for (const marca of marcas) marca.remove();
+    };
+  }, [perto, estado]);
 
   // E o mapa enquadra-o todo: mostrar o percurso e deixar metade fora do ecrã
   // é pior do que não o mostrar, porque parece que acaba ali.

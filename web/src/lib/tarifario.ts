@@ -61,3 +61,61 @@ export function ajudaParaEscolher(titulos: Titulo[]): AjudaDeUmaRede[] {
     })
     .filter((r) => r.aCadaUso.length + r.porPeriodo.length + r.semPagar.length > 0);
 }
+
+// --- quando é que um passe compensa -----------------------------------------
+//
+// O tarifário punha cada preço duas vezes — na ajuda e na tabela — e não
+// respondia à pergunta que faz alguém abrir esta página: «com as viagens que
+// faço, compensa o passe?». A conta é só dos preços: um título de período
+// custa X por mês; cada viagem, Y com o bilhete que se pagaria. Passa a
+// compensar à viagem em que X fica abaixo de N × Y. Que linhas o passe cobre,
+// ou quem tem direito a ele, não está nos dados, e a página di-lo.
+
+/** Quanto custa por mês um título de período; `null` num período que não se converte. */
+export function porMes(t: Pick<Titulo, 'valor' | 'periodo'>): number | null {
+  if (typeof t.valor !== 'number') return null;
+  if (t.periodo === 'mes') return t.valor;
+  if (t.periodo === 'ano') return t.valor / 12;
+  if (t.periodo === 'semana') return (t.valor * 52) / 12;
+  return null;
+}
+
+/** A partir de quantas viagens por mês o título de período sai mais barato do que pagar cada uma. */
+export function compensaAPartirDe(mensal: number, porViagem: number): number | null {
+  if (!(porViagem > 0) || !(mensal >= 0)) return null;
+  return Math.floor(mensal / porViagem) + 1;
+}
+
+/** Uma rede, com o que o escolhedor precisa — só números e nomes, para ir para o navegador. */
+export type EscolhaDeUmaRede = {
+  rede: string;
+  /** Os títulos de cada uso, do mais caro (o preço inteiro) ao mais barato. */
+  bilhetes: { id: string; nome: string; valor: number }[];
+  /** Os de período que se convertem num preço por mês. */
+  periodos: { id: string; nome: string; valor: number; periodo: string; mensal: number }[];
+  /** Os que não se pagam, com a condição que a fonte escreve. */
+  semPagar: { id: string; nome: string; nota?: string }[];
+};
+
+/**
+ * As redes em que há conta a fazer: as que têm um título de cada uso e um de
+ * período. As outras ficam só na tabela — sem bilhete não há com que
+ * comparar.
+ */
+export function escolhasDoTarifario(titulos: Titulo[]): EscolhaDeUmaRede[] {
+  return ajudaParaEscolher(titulos)
+    .map((a) => ({
+      rede: a.rede,
+      bilhetes: [...a.aCadaUso]
+        .sort((x, y) => y.valor! - x.valor!)
+        .map((t) => ({ id: t.id, nome: t.nome, valor: t.valor! })),
+      periodos: a.porPeriodo.flatMap((t) => {
+        const mensal = porMes(t);
+        return mensal === null
+          ? []
+          : [{ id: t.id, nome: t.nome, valor: t.valor!, periodo: t.periodo!, mensal }];
+      }),
+      semPagar: a.semPagar.map((t) => ({ id: t.id, nome: t.nome, nota: t.nota })),
+    }))
+    .filter((e) => e.bilhetes.length > 0 && e.periodos.length > 0);
+}

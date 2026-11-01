@@ -3,8 +3,10 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import Link from '@/componentes/Ligacao';
 import EscolherPonto from './EscolherPonto';
+import PegaDaFolha, { type Altura } from './PegaDaFolha';
 import type { PontosNoNavegador } from '@/lib/pontos-do-navegador';
 import Distintivo from './Distintivo';
+import { traco } from '@/lib/cor';
 import {
   APe,
   Bicicleta as IconeBicicleta,
@@ -40,7 +42,7 @@ import {
   type Capacidade,
 } from '@/lib/planeador';
 import { arrumarParaMostrar, contarTransbordos } from '@/lib/viagens';
-import { FUSO, instanteNaRegiao } from '@/lib/fuso';
+import { FUSO, instanteNaRegiao, relogioNoFuso } from '@/lib/fuso';
 import { aPedidoNasPontas, type PropostaAPedido } from '@/lib/a-pedido';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { comoProcura, escreverViagem } from '@/lib/endereco-da-viagem';
@@ -157,8 +159,8 @@ export default function Direccoes({
   aoFechar,
   aoMudar,
   variante = 'pagina',
-  encolhido = false,
-  aoEncolher,
+  altura = 'media',
+  aoMudarAltura,
   modosDesligados = [],
   motorDaRegiao = '',
   servicosSemDatas = 0,
@@ -205,9 +207,11 @@ export default function Direccoes({
   /** Cada mudança na pergunta — para o endereço a acompanhar (P2-027). */
   aoMudar?: (v: ViagemAgora) => void;
   variante?: 'pagina' | 'mapa';
-  encolhido?: boolean;
-  aoEncolher?: (sim: boolean) => void;
+  /** A altura da folha no mapa (`PegaDaFolha`): baixa, a meio, ou quase inteira. */
+  altura?: Altura;
+  aoMudarAltura?: (a: Altura) => void;
 }) {
+  const encolhido = altura === 'baixa';
   const agora = new Date();
   const [de, setDe] = useState<Ponto | null>(deInicial);
   const [para, setPara] = useState<Ponto | null>(paraInicial);
@@ -713,6 +717,23 @@ export default function Direccoes({
 
   const podePartilhar = !!para && !Number.isNaN(para.lat) && estado.tipo === 'resultados';
 
+  /**
+   * «MAIS CEDO» E «MAIS TARDE»: a mesma pergunta, uma hora antes da primeira
+   * opção, ou logo a seguir à última. Para ver as opções seguintes era preciso
+   * abrir o «Partir às», escolher «Noutra altura» e escrever uma hora — três
+   * gestos para o que no papel é virar a página.
+   *
+   * O dia e a hora saem do instante da opção, no relógio da região: a última
+   * opção de uma noite pode ser já de amanhã.
+   */
+  function irPara(instante: number) {
+    const { chave, hora: h } = relogioNoFuso(instante);
+    setQuando('marcado');
+    setData(comHifens(chave));
+    setHora(h);
+  }
+  const daLista = modo === 'transporte' && estado.tipo === 'resultados' && !problema ? lista : [];
+
   return (
     <>
       {/* ---- O CARTÃO DE CIMA: de onde, para onde. Sempre à vista. ---- */}
@@ -737,7 +758,7 @@ export default function Direccoes({
             // vazios, distinguidos só por um ponto e um alfinete — e o
             // alfinete não diz qual é a partida. A sugestão dá nome à caixa
             // sem lhe roubar altura, que é o que o cartão do mapa não tem.
-            sugestao="De onde partes"
+            sugestao="De onde parte"
             pontos={osPontos}
             aoTentarDeNovo={aoTentarOsPontos}
             valor={de}
@@ -758,7 +779,7 @@ export default function Direccoes({
             className="sem-rotulo"
             regiao={regiao}
             etiqueta="Para"
-            sugestao="Para onde vais"
+            sugestao="Para onde vai"
             pontos={osPontos}
             aoTentarDeNovo={aoTentarOsPontos}
             valor={para}
@@ -778,9 +799,9 @@ export default function Direccoes({
           <p className="secundario aviso-localizacao">
             {localizacao === 'a-perguntar' && 'A localizar…'}
             {localizacao === 'recusada' &&
-              'Sem acesso à localização. Escreve o sítio de onde partes — funciona na mesma.'}
+              'Sem acesso à localização. Escreva o sítio de onde parte — funciona na mesma.'}
             {localizacao === 'sem' &&
-              'Este navegador não dá a localização. Escreve o sítio de onde partes.'}
+              'Este navegador não dá a localização. Escreva o sítio de onde parte.'}
           </p>
         )}
       </div>
@@ -789,21 +810,21 @@ export default function Direccoes({
       <section
         className={`folha${encolhido ? ' encolhida' : ''}${noMapa ? '' : ' em-pagina'}`}
         aria-labelledby="folha-titulo"
+        data-altura={noMapa ? altura : undefined}
       >
-        {/* A pega do Maps, que aqui é um BOTÃO. Um arrasto não funciona com
-            teclado, com comando de voz nem com leitor de ecrã; uma pega que
-            também é botão funciona com tudo. */}
-        {noMapa && aoEncolher && (
-          <button
-            type="button"
-            className="pega"
-            onClick={() => aoEncolher(!encolhido)}
-            aria-expanded={!encolhido}
-          >
-            <span className="so-para-leitores">
-              {encolhido ? 'Ver as opções' : 'Ver o mapa, escondendo as opções'}
-            </span>
-          </button>
+        {/* A pega do Maps, que aqui arrasta E é um botão. Um arrasto não
+            funciona com teclado, com comando de voz nem com leitor de ecrã;
+            uma pega que também é botão funciona com tudo. */}
+        {noMapa && aoMudarAltura && (
+          <PegaDaFolha
+            altura={altura}
+            aoMudar={aoMudarAltura}
+            rotulos={{
+              baixa: 'Ver as opções',
+              media: 'Ver mais opções',
+              alta: 'Ver o mapa, escondendo as opções',
+            }}
+          />
         )}
 
         <div className="folha-titulo">
@@ -987,7 +1008,7 @@ export default function Direccoes({
               uma em vez de serem despejadas todas de uma vez (P3-017). */}
           <div aria-live="polite" aria-busy={estado.tipo === 'a-procurar'}>
             {estado.tipo === 'parado' && !problema && (!de || !para) && (
-              <p className="secundario">Escolhe de onde partes e para onde vais.</p>
+              <p className="secundario">Escolha de onde parte e para onde vai.</p>
             )}
             {estado.tipo === 'a-procurar' && !problema && (
               <p className="a-procurar">A procurar viagens…</p>
@@ -999,7 +1020,7 @@ export default function Direccoes({
               <div className="faixa alerta">
                 <h3>Não foi possível descarregar os horários</h3>
                 <p>
-                  Pode ser da ligação à Internet. Não quer dizer que não haja viagem: tenta de novo
+                  Pode ser da ligação à Internet. Não quer dizer que não haja viagem: tente de novo
                   daqui a pouco.
                 </p>
                 <p>
@@ -1013,7 +1034,7 @@ export default function Direccoes({
             {(problema === 'motor' || problema === 'outro') && (
               <div className="faixa alerta">
                 <h3>O planeador não respondeu</h3>
-                <p>Tenta daqui a pouco. Os horários de cada paragem continuam a funcionar.</p>
+                <p>Tente daqui a pouco. Os horários de cada paragem continuam a funcionar.</p>
                 <AsDuasParagens de={de} para={para} />
                 <p>
                   <button type="button" className="botao" onClick={tentarDeNovo}>
@@ -1031,7 +1052,7 @@ export default function Direccoes({
                   <h3>Não temos os horários desse dia</h3>
                   <p>
                     Os horários carregados vão de {dataCompleta(periodo!.inicio)} a{' '}
-                    {dataCompleta(periodo!.fim)}. Escolhe um dia nesse período.
+                    {dataCompleta(periodo!.fim)}. Escolha um dia nesse período.
                   </p>
                 </div>
               ) : estado.data < dataDoCampo(new Date()) ? (
@@ -1148,6 +1169,27 @@ export default function Direccoes({
                 </li>
               ))}
             </ul>
+          )}
+
+          {daLista.length > 0 && (
+            <p className="mais-cedo-ou-tarde">
+              <button
+                type="button"
+                className="etiqueta"
+                onClick={() => irPara(Math.min(...daLista.map((it) => it.startTime)) - 60 * 60_000)}
+              >
+                <Seta tamanho={14} className="para-tras" />
+                Mais cedo
+              </button>
+              <button
+                type="button"
+                className="etiqueta"
+                onClick={() => irPara(Math.max(...daLista.map((it) => it.startTime)) + 60_000)}
+              >
+                Mais tarde
+                <Seta tamanho={14} />
+              </button>
+            </p>
           )}
 
           {/* OS DESVIOS À PARTE, e não apagados (P2-009): continuam a ser
@@ -1274,49 +1316,75 @@ function Opcao({
          * se apanha e quanto demora. Lê-se de relance, que é o que se faz
          * com o autocarro à porta. */
         <ol className="percurso">
-          {it.legs.map((p, j) => (
-            <Fragment key={j}>
-              <li className="paragem">
-                <span className="hora">{horaDe(p.startTime)}</span>
-                <span className={`no ${j === 0 ? 'primeiro' : ''}`} aria-hidden="true" />
-                <span className="onde">{p.from.name}</span>
-              </li>
-              <li
-                className={`troco ${p.modo === 'expresso' ? 'modo-expresso' : (CLASSE_DO_MODO[p.mode] ?? '')}`}
-              >
-                <span className="hora" />
-                <span className="fio" aria-hidden="true" />
-                <span className="oque">
-                  {/* O ÍCONE É AJUDA PARA QUEM VÊ, NUNCA A INFORMAÇÃO. Com
+          {it.legs.map((p, j) => {
+            const antes = j > 0 ? it.legs[j - 1] : null;
+            // A ESPERA DE CADA TRANSBORDO, À VISTA. A linha do tempo dava
+            // a hora a que o segundo autocarro parte, e não a hora a que o
+            // primeiro chega: os 11 min parados no terminal não apareciam
+            // em lado nenhum — e são o que decide se o transbordo serve a
+            // quem tem frio, pressa ou uma criança pela mão.
+            const espera = antes ? Math.round((p.startTime - antes.endTime) / 60_000) : 0;
+            // CADA TROÇO NA COR DA SUA LINHA, como no mapa: a 2 e a 1 eram
+            // dois fios do mesmo azul, e o transbordo não se via.
+            const cor = p.modo === 'expresso' ? null : traco(corDaPerna(p));
+            return (
+              <Fragment key={j}>
+                <li className="paragem">
+                  {/* Num transbordo, a hora da paragem é a de CHEGADA; a de
+                      partida vai no troço, depois da espera. */}
+                  <span className="hora">{horaDe(antes ? antes.endTime : p.startTime)}</span>
+                  <span className={`no ${j === 0 ? 'primeiro' : ''}`} aria-hidden="true" />
+                  <span className="onde">{p.from.name}</span>
+                </li>
+                {espera >= 1 && (
+                  <li className="espera">
+                    <span className="hora" />
+                    <span className="fio" aria-hidden="true" />
+                    <span className="oque">Espera {duracaoLegivel(espera * 60)}</span>
+                  </li>
+                )}
+                <li
+                  className={`troco ${p.modo === 'expresso' ? 'modo-expresso' : (CLASSE_DO_MODO[p.mode] ?? '')}`}
+                  style={
+                    cor && p.mode !== 'WALK' && p.mode !== 'BICYCLE'
+                      ? ({ '--cor-do-troco': cor } as React.CSSProperties)
+                      : undefined
+                  }
+                >
+                  <span className="hora">{espera >= 1 ? horaDe(p.startTime) : ''}</span>
+                  <span className="fio" aria-hidden="true" />
+                  <span className="oque">
+                    {/* O ÍCONE É AJUDA PARA QUEM VÊ, NUNCA A INFORMAÇÃO. Com
                       leitor de ecrã ouvia-se «547 · 12 min», sem se saber que
                       é um autocarro. */}
-                  <DoModo modo={p.modo === 'expresso' ? 'expresso' : p.mode} />
-                  <span className="so-para-leitores">{nomeDaPerna(p)} </span>
-                  {p.route?.shortName ? (
-                    <Distintivo codigo={p.route.shortName} cor={corDaPerna(p)} />
-                  ) : null}
-                  <span className="secundario">
-                    {minutos(p.duration)} min
-                    {(p.mode === 'WALK' || p.mode === 'BICYCLE') &&
-                      ` · ${Math.round(p.distance)} m`}
-                  </span>
-                  {/* O EXPRESSO É DE UM OPERADOR PRIVADO, e diz-se aqui
+                    <DoModo modo={p.modo === 'expresso' ? 'expresso' : p.mode} />
+                    <span className="so-para-leitores">{nomeDaPerna(p)} </span>
+                    {p.route?.shortName ? (
+                      <Distintivo codigo={p.route.shortName} cor={corDaPerna(p)} />
+                    ) : null}
+                    <span className="secundario">
+                      {minutos(p.duration)} min
+                      {(p.mode === 'WALK' || p.mode === 'BICYCLE') &&
+                        ` · ${Math.round(p.distance)} m`}
+                    </span>
+                    {/* O EXPRESSO É DE UM OPERADOR PRIVADO, e diz-se aqui
                       (P2-010): quem seguia a opção chegava ao terminal sem
                       bilhete, a contar com o passe da rede. A página do modo
                       diz quem são os operadores e onde se compra. Uma vez por
                       opção, no primeiro: dois expressos seguidos eram a mesma
                       frase duas vezes. */}
-                  {p.modo === 'expresso' && j === primeiroExpresso && (
-                    <span className="nota-do-troco">
-                      Expresso de um operador privado: o bilhete é à parte e compra-se antes, ao
-                      operador — os passes da rede não servem.{' '}
-                      <Link href="/modos/expresso/">Os expressos e onde se compra</Link>
-                    </span>
-                  )}
-                </span>
-              </li>
-            </Fragment>
-          ))}
+                    {p.modo === 'expresso' && j === primeiroExpresso && (
+                      <span className="nota-do-troco">
+                        Expresso de um operador privado: o bilhete é à parte e compra-se antes, ao
+                        operador — os passes da rede não servem.{' '}
+                        <Link href="/modos/expresso/">Os expressos e onde se compra</Link>
+                      </span>
+                    )}
+                  </span>
+                </li>
+              </Fragment>
+            );
+          })}
           <li className="paragem">
             <span className="hora">{horaDe(it.endTime)}</span>
             <span className="no ultimo" aria-hidden="true" />
@@ -1501,7 +1569,7 @@ function DiaPassado({
   return (
     <div className="faixa">
       <h3>Esse dia já passou</h3>
-      <p>Escolhe um dia a partir de hoje.</p>
+      <p>Escolha um dia a partir de hoje.</p>
       {(!fim || k <= fim) && (
         <p>
           <button type="button" className="botao" onClick={() => aoEscolher(comHifens(k))}>
@@ -1544,11 +1612,24 @@ export function resumoDe(it: Itinerario): string {
   const aPe = it.legs
     .filter((p) => p.mode === 'WALK')
     .reduce((soma, p) => soma + p.duration / 60, 0);
+  const espera = esperaDe(it);
   const partes = [
     t === 0 ? 'sem transbordos' : t === 1 ? '1 transbordo' : `${t} transbordos`,
+    // A ESPERA CONTA. Duas opções de 46 min, uma com 2 min de transbordo e
+    // outra com 20 parado num terminal, não são a mesma viagem.
+    espera >= 1 ? `${duracaoLegivel(espera * 60)} à espera` : null,
     aPe >= 1 ? `${Math.round(aPe)} min a pé` : null,
   ].filter(Boolean);
   return partes.join(' · ');
+}
+
+/** Os minutos parados entre pernas — à espera do veículo seguinte —, somados. */
+export function esperaDe(it: Itinerario): number {
+  let total = 0;
+  for (let j = 1; j < it.legs.length; j++) {
+    total += Math.max(0, it.legs[j].startTime - it.legs[j - 1].endTime);
+  }
+  return Math.round(total / 60_000);
 }
 
 /** O ponto a meio do percurso, para lá pousar a bolha com o tempo. */
@@ -1585,12 +1666,17 @@ function meioDe(
  */
 export function emPalavras(it: Itinerario): string {
   const pernas = it.legs
-    .filter((p) => !(p.mode === 'WALK' && minutos(p.duration) < 1))
-    .map((p) => {
+    .map((p, j) => ({ p, espera: j > 0 ? (p.startTime - it.legs[j - 1].endTime) / 60_000 : 0 }))
+    .filter(({ p }) => !(p.mode === 'WALK' && minutos(p.duration) < 1))
+    .map(({ p, espera }) => {
       const min = minutos(p.duration);
       const quanto = `${min} ${min === 1 ? 'minuto' : 'minutos'}`;
-      if (p.mode === 'WALK') return `a pé ${quanto}`;
-      if (p.mode === 'BICYCLE') return `de bicicleta ${quanto}`;
+      // A espera ouve-se antes da perna que se espera: «espera 11 minutos,
+      // autocarro 1 até Almeão».
+      const e = Math.round(espera);
+      const antes = e >= 1 ? `espera ${e} ${e === 1 ? 'minuto' : 'minutos'}, ` : '';
+      if (p.mode === 'WALK') return `${antes}a pé ${quanto}`;
+      if (p.mode === 'BICYCLE') return `${antes}de bicicleta ${quanto}`;
       const curto = p.route?.shortName ?? '';
       const linha =
         p.mode === 'RAIL' && curto.length <= 3 && p.route?.longName
@@ -1598,7 +1684,7 @@ export function emPalavras(it: Itinerario): string {
           : curto
             ? ` ${curto}`
             : '';
-      return `${nomeDaPerna(p).toLowerCase()}${linha} até ${p.to.name}`;
+      return `${antes}${nomeDaPerna(p).toLowerCase()}${linha} até ${p.to.name}`;
     });
   return `${duracaoLegivel(it.duration)}, das ${horaDe(it.startTime)} às ${horaDe(
     it.endTime,

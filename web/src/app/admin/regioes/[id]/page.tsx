@@ -542,7 +542,7 @@ export default async function FichaDaRegiao({ params, searchParams }: Props) {
         <section aria-labelledby="titulo-pessoas" id="pessoas" className="cartao">
           <h2 id="titulo-pessoas">Quem trabalha nesta região</h2>
           {pessoas.length === 0 ? (
-            <p>Ninguém, além de ti.</p>
+            <p>Ninguém, além de quem gere o painel.</p>
           ) : (
             <ul className="lista-simples">
               {pessoas.map((p) => (

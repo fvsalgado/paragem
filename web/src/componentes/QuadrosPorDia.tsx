@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { calendarioDe, chaveDoDia, servicosNoDia, type Calendario } from '@/lib/dias';
+import { calendarioDe, chaveDoDia, diaDaSemana, servicosNoDia, type Calendario } from '@/lib/dias';
 
 /** Um quadro de horário de um tipo de dia, com o conteúdo já desenhado. */
 export type QuadroDoDia = {
@@ -35,6 +35,7 @@ export default function QuadrosPorDia({
   regiao,
   quadros,
   noServidor = null,
+  semHoje = 'nenhum destes quadros vale',
 }: {
   regiao: string;
   quadros: QuadroDoDia[];
@@ -44,7 +45,13 @@ export default function QuadrosPorDia({
    * as contas, e o horário saltava por baixo do dedo (P3-010). O navegador
    * refaz a conta com o seu relógio, e só mexe se o dia for outro.
    */
-  noServidor?: { hoje: string; abertos: string[] } | null;
+  noServidor?: { hoje: string; abertos: string[]; sabido?: boolean } | null;
+  /**
+   * O que se diz quando, HOJE, nenhum quadro vale: «esta linha não tem
+   * viagens neste sentido», «não há partidas desta paragem». Só quando se
+   * sabe — fora do período dos horários, não se diz nada.
+   */
+  semHoje?: string;
 }) {
   const [calendario, setCalendario] = useState<Calendario | null | undefined>(undefined);
   useEffect(() => {
@@ -92,13 +99,26 @@ export default function QuadrosPorDia({
   }, [pronto, jaAbriu, quadros]);
 
   const algumHoje = quadros.some(valeHoje);
+  // «HOJE NÃO CIRCULA», DITO, e não deixado a quem lê. Os quadros vinham
+  // todos fechados e nenhum marcado — e um domingo sem autocarros lia-se como
+  // uma página que não sabia que dia era. Antes de o navegador saber, vale o
+  // que o servidor sabia; depois, o relógio de quem lê.
+  const diaDeHoje = hoje ?? noServidor?.hoje ?? null;
+  const nenhumHoje = deHoje
+    ? !algumHoje
+    : !calendario && !!noServidor?.sabido && noServidor.abertos.length === 0;
 
   return (
     <>
+      {nenhumHoje && diaDeHoje && (
+        <p className="hoje-nao">
+          Hoje, {diaDaSemana(diaDeHoje)}, {semHoje}.
+        </p>
+      )}
       <p className="secundario">
         {quadros.length === 1
-          ? 'Toca no quadro para o abrir.'
-          : `Um quadro por tipo de dia${algumHoje ? '; os que valem hoje estão abertos e marcados' : ''}. Toca num para o abrir.`}
+          ? 'Toque no quadro para o abrir.'
+          : `Um quadro por tipo de dia${algumHoje ? '; os que valem hoje estão abertos e marcados' : ''}. Toque num para o abrir.`}
       </p>
       {quadros.map((q) => {
         const vale = valeHoje(q);

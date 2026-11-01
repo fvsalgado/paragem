@@ -637,12 +637,12 @@ test.describe('a abertura de uma região', () => {
     await expect(page).toHaveURL(new RegExp(`/modos/${comPagina}/?$`));
   });
 
-  test('«Para onde vais?» abre as direções com o foco no destino', async ({ page }) => {
+  test('«Para onde quer ir?» abre as direções com o foco no destino', async ({ page }) => {
     // A primeira pergunta da página inicial (§6), onde o polegar chega. A
     // nota que lá estava mandava escrever primeiro DE ONDE se parte — o
     // contrário do que o cartão fazia (P2-001).
     await page.goto('/');
-    await page.getByRole('button', { name: 'Para onde vais?' }).click();
+    await page.getByRole('button', { name: 'Para onde quer ir?' }).click();
     await expect(page.getByRole('combobox', { name: 'Para', exact: true })).toBeFocused();
     // E a partida oferece logo «A minha localização», sem a pedir sozinha.
     const de = page.getByRole('combobox', { name: 'De', exact: true });
@@ -653,7 +653,7 @@ test.describe('a abertura de uma região', () => {
   });
 
   test('«Paragens perto de mim» diz no mapa o que passa ali perto', async ({ page, context }) => {
-    // O botão da localização só punha um ponto azul, e o «Perto de ti» vivia
+    // O botão da localização só punha um ponto azul, e o «Aqui perto» vivia
     // em «A rede» (P2-016). As duas portas dão agora ao mesmo sítio: a folha
     // diz que paragens estão perto e o que passa nelas, e tocar numa abre-a.
     await context.grantPermissions(['geolocation']);
@@ -667,8 +667,21 @@ test.describe('a abertura de uma região', () => {
     const perto = bloco.locator('button.perto-paragem');
     await expect(perto.first()).toBeVisible({ timeout: 15_000 });
     expect(await perto.count(), 'a folha é pequena: três chegam').toBeLessThanOrEqual(3);
-    // A distância, em metros — e não num mapa que é preciso saber ler.
-    await expect(perto.first()).toContainText(/\d+\s?m|\d+,\d\s?km/);
+    // A distância, em metros, E O TEMPO A PÉ — «a 250 m» não diz se dá tempo.
+    // Quem está em cima da primeira lê «Aqui mesmo», e não «0 m».
+    await expect(perto.first().locator('.perto-distancia')).toHaveText(
+      /^(Aqui mesmo|(\d+\s?m|\d+,\d\s?km) · uns \d+ min a pé)$/,
+    );
+    await expect(bloco).toContainText(/(\d+\s?m|\d+,\d\s?km) · uns \d+ min a pé/);
+    // O MAPA MOSTRA AS MESMAS, COM OS MESMOS NÚMEROS: a paragem 2 da lista é a
+    // que tem um 2 por cima no mapa.
+    const quantas = await perto.count();
+    await expect(page.locator('.numero-no-mapa')).toHaveText(
+      Array.from({ length: quantas }, (_, i) => String(i + 1)),
+    );
+    await expect(perto.locator('.numero-perto')).toHaveText(
+      Array.from({ length: quantas }, (_, i) => String(i + 1)),
+    );
     if (partida) {
       // Cada partida diz PARA ONDE VAI (P2-017): numa paragem com os dois
       // sentidos, o número da linha sozinho não diz qual é o nosso.
@@ -679,7 +692,11 @@ test.describe('a abertura de uma região', () => {
 
     const nome = (await perto.first().locator('.perto-nome').innerText()).trim();
     await perto.first().click();
-    await expect(page.locator('section.cartao-de-baixo h2')).toHaveText(nome);
+    // Uma estação tem um nome só no cartão: o «(estação)» da lista sai, que a
+    // linha de baixo já diz o que ela é.
+    await expect(page.locator('section.cartao-de-baixo h2')).toHaveText(
+      nome.replace(/\s*\(estação\)$/i, ''),
+    );
   });
 
   test('a caixa de procura diz o que se escreve nela', async ({ page }) => {

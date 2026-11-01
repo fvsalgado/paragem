@@ -438,15 +438,18 @@ export const calendarioDaRegiao = cache(async (r: string): Promise<Calendario | 
 export async function quadrosDeHoje(
   r: string,
   quadros: { chave: string; servicos: string[] }[],
-): Promise<{ hoje: string; abertos: string[] } | null> {
+): Promise<{ hoje: string; abertos: string[]; sabido: boolean } | null> {
   const cal = await calendarioDaRegiao(r);
   if (!cal) return null;
   const hoje = diaNoFuso(new Date()).replace(/-/g, '');
   const deHoje = servicosNoDia(cal, hoje);
-  if (!deHoje) return { hoje, abertos: [] };
+  // FORA DO PERÍODO DOS HORÁRIOS NÃO SE SABE, e «hoje não há» seria mentir:
+  // o `sabido` é o que deixa a página dizer uma coisa e calar a outra.
+  if (!deHoje) return { hoje, abertos: [], sabido: false };
   return {
     hoje,
     abertos: quadros.filter((q) => q.servicos.some((s) => deHoje.has(s))).map((q) => q.chave),
+    sabido: true,
   };
 }
 

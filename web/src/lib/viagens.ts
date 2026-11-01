@@ -27,6 +27,7 @@
  * mais quer — «e sem mudar de autocarro?» — sem a procurar à parte.
  */
 import { descodificarLinha, type Itinerario, type Perna } from './otp.ts';
+import { DESVIO_POR_OMISSAO, METROS_POR_SEGUNDO } from './a-pe.ts';
 
 // --- o que se lê do disco --------------------------------------------------
 
@@ -73,8 +74,7 @@ export type Lugar = { nome: string; lat: number; lon: number };
  */
 const FOLGA_SEGUNDOS = 120;
 
-/** A velocidade a pé do OTP. Mudá-la aqui muda as estimativas, não os transbordos. */
-const METROS_POR_SEGUNDO = 1.33;
+// A velocidade a pé vive em `a-pe.ts`, para o «Perto de mim» contar como aqui.
 
 /** Até onde se anda para apanhar a primeira paragem. Mais do que isto e é outra viagem. */
 const RAIO_INICIAL_METROS = 1500;
@@ -185,7 +185,7 @@ export function prepararRede(
     padroes,
     porParagem,
     aPe,
-    fatorDeDesvio: t.fator_de_desvio || 1.4,
+    fatorDeDesvio: t.fator_de_desvio || DESVIO_POR_OMISSAO,
     precisao: { pelo_motor: t.pelo_motor ?? 0, em_linha_reta: t.em_linha_reta ?? 0 },
   };
 }

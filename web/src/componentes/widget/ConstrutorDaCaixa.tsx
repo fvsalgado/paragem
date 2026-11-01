@@ -26,7 +26,7 @@ export default function ConstrutorDaCaixa({
   origem: string | null;
   concelhos: Record<string, string>;
   modosDesligados: string[];
-  /** Uma região sem autocarros não tem paragens com partidas: só «Para onde vais?». */
+  /** Uma região sem autocarros não tem paragens com partidas: só «Para onde quer ir?». */
   comParagens: boolean;
 }) {
   const [tipo, setTipo] = useState<'paragem' | 'viagem'>(comParagens ? 'paragem' : 'viagem');
@@ -81,7 +81,7 @@ export default function ConstrutorDaCaixa({
   const titulo =
     tipo === 'paragem'
       ? `Próximas partidas: ${opcoes.find((o) => o.valor === id)?.rotulo ?? 'paragem'}`
-      : 'Para onde vais?';
+      : 'Para onde quer ir?';
 
   const linha = [
     '<script',
@@ -132,7 +132,7 @@ export default function ConstrutorDaCaixa({
                 checked={tipo === 'viagem'}
                 onChange={() => setTipo('viagem')}
               />
-              «Para onde vais?», que abre o planeador
+              «Para onde quer ir?», que abre o planeador
             </label>
           </fieldset>
         ) : null}

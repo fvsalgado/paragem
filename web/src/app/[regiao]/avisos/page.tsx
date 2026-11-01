@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import { CartaoDeAviso } from '@/componentes/Avisos';
-import { avisosEmVigor } from '@/lib/avisos';
+import FiltroDosAvisos from '@/componentes/FiltroDosAvisos';
+import { avisosEmVigor, redeToda, type AlcanceDoAviso, type Aviso } from '@/lib/avisos';
 import { catalogoDosAvisos } from '@/lib/avisos-do-sitio';
-import { exigirRegiao, regiao } from '@/lib/dados';
+import { concelhos, exigirRegiao, paragens, regiao } from '@/lib/dados';
 import { aAutoridade } from '@/lib/prosa';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
@@ -39,6 +40,10 @@ export default async function Avisos({ params }: { params: Promise<{ regiao: str
     avisosEmVigor(rid),
     catalogoDosAvisos(rid),
   ]);
+  // O FILTRO SÓ COM AVISOS QUE CHEGUEM PARA ISSO: com um ou dois, duas caixas
+  // de escolha por cima são mais ruído do que ajuda.
+  const comFiltro = (as?.length ?? 0) >= 3;
+  const filtro = comFiltro ? await alcancesDosAvisos(rid, as!, catalogo.linhas) : null;
 
   return (
     <>
@@ -60,8 +65,8 @@ export default async function Avisos({ params }: { params: Promise<{ regiao: str
         <div className="faixa alerta">
           <p>
             <strong>Não foi possível ler os avisos.</strong> Isto não quer dizer que não haja
-            nenhum: quer dizer que não conseguimos perguntar. Tenta daqui a pouco; entretanto,
-            confirma com a autoridade de transportes antes de contar com o serviço.
+            nenhum: quer dizer que não conseguimos perguntar. Tente daqui a pouco; entretanto,
+            confirme com a autoridade de transportes antes de contar com o serviço.
           </p>
         </div>
       ) : as.length === 0 ? (
@@ -86,6 +91,16 @@ export default async function Avisos({ params }: { params: Promise<{ regiao: str
             </p>
           )}
         </>
+      ) : filtro ? (
+        <FiltroDosAvisos
+          linhas={filtro.linhas}
+          concelhos={filtro.concelhos}
+          alcances={filtro.alcances}
+        >
+          {as.map((a) => (
+            <CartaoDeAviso key={a.id} aviso={a} catalogo={catalogo} />
+          ))}
+        </FiltroDosAvisos>
       ) : (
         as.map((a) => <CartaoDeAviso key={a.id} aviso={a} catalogo={catalogo} />)
       )}
@@ -108,4 +123,49 @@ export default async function Avisos({ params }: { params: Promise<{ regiao: str
       </p>
     </>
   );
+}
+
+/**
+ * A que linhas e concelhos diz respeito cada aviso, para o filtro: as linhas
+ * que nomeia, e os concelhos das paragens que nomeia e das paragens dessas
+ * linhas. Um aviso sem linhas nem paragens (a rede toda, ou um modo inteiro)
+ * vale para tudo.
+ */
+async function alcancesDosAvisos(
+  rid: string,
+  as: Aviso[],
+  linhasDoCatalogo: ReadonlyMap<string, { codigo: string; nome: string }>,
+): Promise<{
+  linhas: { id: string; nome: string }[];
+  concelhos: { id: string; nome: string }[];
+  alcances: AlcanceDoAviso[];
+}> {
+  const [ps, cs] = await Promise.all([paragens(rid), concelhos(rid)]);
+  const concelhoDe = new Map(ps.map((p) => [p.id, p.concelho]));
+  const nomeDoConcelho = new Map(cs.map((c) => [c.id, c.nome]));
+  const alcances = as.map((a): AlcanceDoAviso => {
+    const codigos = new Set(a.linhas.map((id) => linhasDoCatalogo.get(id)?.codigo).filter(Boolean));
+    const daqui = new Set<string>();
+    for (const id of a.paragens) {
+      const c = concelhoDe.get(id);
+      if (c) daqui.add(c);
+    }
+    for (const p of ps)
+      if (p.concelho && p.linhas.some((c) => codigos.has(c))) daqui.add(p.concelho);
+    return {
+      linhas: a.linhas,
+      concelhos: [...daqui],
+      todos: redeToda(a) || (a.linhas.length === 0 && a.paragens.length === 0),
+    };
+  });
+  const linhas = [...new Set(alcances.flatMap((a) => a.linhas))]
+    .map((id) => {
+      const l = linhasDoCatalogo.get(id);
+      return { id, nome: l ? `${l.codigo} — ${l.nome}` : id };
+    })
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt', { numeric: true }));
+  const concelhosNosAvisos = [...new Set(alcances.flatMap((a) => a.concelhos))]
+    .map((id) => ({ id, nome: nomeDoConcelho.get(id) ?? id }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt'));
+  return { linhas, concelhos: concelhosNosAvisos, alcances };
 }

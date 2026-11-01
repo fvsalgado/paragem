@@ -8,7 +8,7 @@
  */
 import { test, expect } from '@playwright/test';
 
-import { estacoes, fusoDaRegiao, SEM } from './dados-da-regiao';
+import { estacoes, fusoDaRegiao, temMosaicos, SEM } from './dados-da-regiao';
 
 const COM_AUTOCARRO = estacoes().find((e) => e.sem_ligacao === false);
 const SEM_AUTOCARRO = estacoes().find((e) => e.sem_ligacao === true);
@@ -37,4 +37,23 @@ test('sem autocarro perto, di-lo sem o vermelho dos alertas', async ({ page }) =
   const faixa = page.locator('.faixa', { hasText: 'Não há paragem de autocarro' });
   await expect(faixa).toBeVisible();
   await expect(faixa).not.toHaveClass(/alerta/);
+});
+
+test('no mapa, o cartão de uma estação diz o que parte a seguir, com um nome só', async ({
+  page,
+}) => {
+  // O cartão de uma paragem tinha «A seguir» e o de uma estação não tinha
+  // nada; e o título dizia «X (estação)» ao lado da paragem «X (Estação)».
+  const e = COM_AUTOCARRO ?? SEM_AUTOCARRO;
+  test.skip(!e, SEM.comboio);
+  test.skip(!temMosaicos(), SEM.mosaicos);
+  await page.goto(`/?ponto=${encodeURIComponent(e!.id)}`);
+  const cartao = page.locator('section.cartao-de-baixo');
+  await expect(cartao.locator('h2')).toHaveText(e!.nome.replace(/\s*\(esta[cç][aã]o\)$/i, ''));
+  await expect(cartao.locator('h2')).not.toContainText('(estação)');
+  // As horas chegam, ou chega a frase que diz porque não há — nunca o vazio.
+  await expect(cartao.locator('ul.partidas, .a-seguir-reservado p, p')).not.toHaveCount(0);
+  await expect(cartao.locator('.a-seguir-reservado[aria-busy="true"]')).toHaveCount(0, {
+    timeout: 15_000,
+  });
 });

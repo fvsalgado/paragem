@@ -116,7 +116,7 @@ test('uma pessoa da região A não vê nem escreve na região B', async ({ brows
     .locator('form:has(textarea[name="texto"]) input[name="regiao"]')
     .evaluate((el, b) => ((el as HTMLInputElement).value = b), B);
   await pessoa.locator('form:has(textarea[name="texto"]) button[type="submit"]').first().click();
-  await expect(pessoa.getByText('não tens permissão para isto nesta região')).toBeVisible();
+  await expect(pessoa.getByText('não tem permissão para isto nesta região')).toBeVisible();
 
   // NEM CHAMANDO AS AÇÕES DIRETAMENTE, por HTTP, com a sessão dela: a ação de
   // apagar e a de publicar de A, com o aviso de B — primeiro com a região B,
@@ -143,7 +143,7 @@ test('uma pessoa da região A não vê nem escreve na região B', async ({ brows
     expect([303, 307, 200]).toContain(resposta.status());
     const destino = new URL(resposta.headers()['location'] ?? '/', PRODUTO);
     expect(destino.searchParams.get('aviso'), `publicar com a região ${regiao}`).toMatch(
-      /Não foi possível: (não tens permissão|não há aviso com esse identificador nesta região)/,
+      /Não foi possível: (não tem permissão|não há aviso com esse identificador nesta região)/,
     );
   }
 
@@ -163,7 +163,7 @@ test('uma pessoa da região A não vê nem escreve na região B', async ({ brows
       maxRedirects: 0,
     });
     const destino = new URL(resposta.headers()['location'] ?? '/', PRODUTO);
-    expect(destino.searchParams.get('aviso')).toMatch(/Não foi possível: não tens permissão/);
+    expect(destino.searchParams.get('aviso')).toMatch(/Não foi possível: não tem permissão/);
   }
 
   // E O AVISO DE B CONTINUA COMO ESTAVA, publicado — visto pelo dono.

@@ -32,7 +32,7 @@ export default function ProcurarTerra({
 
   return (
     <div className="procurar-terra">
-      <label htmlFor={campo}>Escreve o nome da tua terra</label>
+      <label htmlFor={campo}>Escreva o nome da sua terra</label>
       <input
         id={campo}
         type="search"
@@ -47,7 +47,7 @@ export default function ProcurarTerra({
             Não encontrámos «{escrita}» nos circuitos que conhecemos.{' '}
             {telefone ? (
               <>
-                Liga para o <a href={`tel:${telefone}`}>{telefoneApresentado ?? telefone}</a>, que
+                Ligue para o <a href={`tel:${telefone}`}>{telefoneApresentado ?? telefone}</a>, que
                 serve todas as zonas: pode haver serviço e ainda não estar aqui.
               </>
             ) : (

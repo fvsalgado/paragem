@@ -24,7 +24,7 @@ const CODIGO = `(function () {
   if (paragem && quantas >= 1 && quantas <= 10) caminho += '?quantas=' + quantas;
   var f = document.createElement('iframe');
   f.src = origem + caminho;
-  f.title = d.titulo || (paragem ? 'Próximas partidas' : 'Para onde vais?');
+  f.title = d.titulo || (paragem ? 'Próximas partidas' : 'Para onde quer ir?');
   f.loading = 'lazy';
   f.style.border = '0';
   f.style.width = '100%';

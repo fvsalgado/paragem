@@ -228,7 +228,7 @@ test('uma paragem continua a abrir as horas', async ({ page }) => {
   await expect(cartao.getByRole('link', { name: 'Horário completo' })).toBeVisible();
 });
 
-test('«Perto de ti» continua a ser só paragens e estações', async ({ page }) => {
+test('«Aqui perto» continua a ser só paragens e estações', async ({ page }) => {
   // O índice passou a trazer bicicletas, táxis e urbanos. Aqui não servem:
   // este bloco responde «a que horas passa o próximo», e nenhum deles tem
   // partidas — entravam como sítios mudos a empurrar para fora as paragens
@@ -269,7 +269,7 @@ test('«Perto de ti» continua a ser só paragens e estações', async ({ page }
   );
   expect(
     destinos.filter((h) => outros.has(idDe(h))),
-    'um ponto sem partidas entrou no «Perto de ti»',
+    'um ponto sem partidas entrou no «Aqui perto»',
   ).toEqual([]);
 });
 

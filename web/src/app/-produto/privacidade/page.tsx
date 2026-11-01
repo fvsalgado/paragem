@@ -112,7 +112,7 @@ export default function PrivacidadeDoProduto() {
         , e serve para lhe responder.
       </p>
 
-      <DireitosDePrivacidade voz="voce" mede={mede} identificada={identificada} email={CONTACTO} />
+      <DireitosDePrivacidade mede={mede} identificada={identificada} email={CONTACTO} />
 
       <h2>Quem responde</h2>
       <p>

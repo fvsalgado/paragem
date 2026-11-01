@@ -30,6 +30,39 @@ export function contraste(a: string, b: string): number {
   return (x + 0.05) / (y + 0.05);
 }
 
+/** O mínimo da WCAG 2.1 AA para o que não é texto: um traço, um ícone (1.4.11). */
+export const MINIMO_DE_UM_TRACO = 3;
+
+/**
+ * A COR DE UMA LINHA PARA SE DESENHAR SOBRE O BRANCO: a mesma, escurecida até
+ * ter os 3:1 de um traço. `null` quando não há cor — ou quando é branco, que
+ * no GTFS quer dizer «sem cor» (o comboio nacional declara `FFFFFF` em quase
+ * todas as linhas).
+ *
+ * O traço do percurso no mapa vai sobre um contorno branco, e o fio da linha
+ * do tempo sobre o branco da folha. Um `route_color` claro (há linhas a
+ * `#CA9E67`, que dá 2,27:1) desaparecia nos dois; escurecido, continua a ser
+ * a cor da linha.
+ */
+export function traco(cor?: string | null, fundo = '#ffffff'): string | null {
+  const original = normalizar(cor);
+  if (!original || original === '#ffffff') return null;
+  const rgb = [1, 3, 5].map((i) => parseInt(original.slice(i, i + 2), 16));
+  for (let fator = 1; fator >= 0; fator -= 0.05) {
+    const tentativa =
+      '#' +
+      rgb
+        .map((v) =>
+          Math.round(v * fator)
+            .toString(16)
+            .padStart(2, '0'),
+        )
+        .join('');
+    if (contraste(tentativa, fundo) >= MINIMO_DE_UM_TRACO) return tentativa;
+  }
+  return '#000000';
+}
+
 // --- a luminosidade que o olho lê (CIELAB) --------------------------------------
 //
 // A luminância da WCAG diz se um texto se lê; não diz se duas cores se

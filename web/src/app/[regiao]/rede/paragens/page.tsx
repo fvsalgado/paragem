@@ -44,7 +44,7 @@ export default async function Paragens({ params }: { params: Promise<{ regiao: s
     <>
       <h1>Paragens</h1>
       <p>
-        {plural(ps.length, 'paragem', 'paragens')}. {dasParagens ? `${dasParagens} ` : ''}Procura
+        {plural(ps.length, 'paragem', 'paragens')}. {dasParagens ? `${dasParagens} ` : ''}Procure
         pela inicial, ou pelo concelho.
       </p>
 

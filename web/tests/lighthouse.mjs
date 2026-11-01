@@ -237,13 +237,23 @@ try {
  * do mapa nos dois temas vai na folha de todas as páginas (0,2 KiB): a rede e
  * o tarifário, que estavam a um KiB do teto, passaram-no por uma décima entre
  * duas medições iguais — sobem 5 KiB, para não reprovarem ao acaso.
+ *
+ * A 1/11/2026, A RONDA DAS PÁGINAS passou-o de propósito, em dois sítios, e só
+ * no total. «Como chegar» ganhou a espera em cada transbordo, cada troço na
+ * cor da sua linha («traco», em `lib/cor.ts`), o «Mais cedo / Mais tarde» e a
+ * pega das três alturas, que vai com o componente das direções: ficou a 300,7
+ * de 300 (e a 181,5 de 185 no HTML e JS). A linha ganhou o esquema do percurso
+ * em SVG e as ligações de cada paragem — as linhas que lá param, com a cor
+ * delas —, que vão no HTML e outra vez no que o Next manda para a hidratação:
+ * ficou a 206,1 de 205 (e a 150,7 de 155). Medido numa máquina local com as
+ * regiões de prova; sobem 5 KiB os dois totais.
  */
 const ORCAMENTO = {
   início: { htmlEJs: 520, total: 770 },
   'a rede': { htmlEJs: 170, total: 220 },
-  'como chegar': { htmlEJs: 185, total: 300 },
+  'como chegar': { htmlEJs: 185, total: 305 },
   paragem: { htmlEJs: 170, total: 220 },
-  linha: { htmlEJs: 155, total: 205 },
+  linha: { htmlEJs: 155, total: 210 },
   tarifário: { htmlEJs: 170, total: 220 },
 };
 

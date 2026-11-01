@@ -110,22 +110,22 @@ export default async function Acessibilidade({ params }: { params: Promise<{ reg
           ? `Responde por esta declaração ${DO_PRODUTO.responsavel}, enquanto ${aAutoridade(r, 'com_artigo')} não indicar o seu contacto. `
           : null}
         Para comunicar um problema de acessibilidade neste sítio, ou pedir num formato acessível a
-        informação que aqui está, escreve para <a href={`mailto:${email}`}>{email}</a>
+        informação que aqui está, escreva para <a href={`mailto:${email}`}>{email}</a>
         {telefone ? (
           <>
             {' '}
-            ou liga para <a href={`tel:${telefoneParaMarcar(telefone)}`}>{telefone}</a>
+            ou ligue para <a href={`tel:${telefoneParaMarcar(telefone)}`}>{telefone}</a>
           </>
         ) : null}
         .
       </p>
       {reclamar ? (
         <p>
-          Se a resposta não chegar, ou não resolver o problema, podes apresentar uma reclamação em{' '}
+          Se a resposta não chegar, ou não resolver o problema, pode apresentar uma reclamação em{' '}
           <a href={reclamar}>{new URL(reclamar).hostname}</a>.
         </p>
       ) : null}
-      <QueixasDeAcessibilidade voz="tu" />
+      <QueixasDeAcessibilidade />
     </>
   );
 }

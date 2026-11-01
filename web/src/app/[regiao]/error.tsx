@@ -32,7 +32,7 @@ export default function ErroNaPagina({
       <h1>Algo correu mal ao abrir esta página</h1>
       <p>
         Pode ser da ligação à Internet, ou de uma parte da página que não chegou. Os horários não se
-        perderam: tenta de novo.
+        perderam: tente de novo.
       </p>
       <p className="cartao-accoes">
         <button type="button" className="botao" onClick={() => window.location.reload()}>
