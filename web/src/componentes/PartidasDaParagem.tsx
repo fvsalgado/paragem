@@ -45,7 +45,7 @@ export default function PartidasDaParagem({
   cores: Record<string, string | null>;
   quadros: QuadroDoDia[];
   /** Os quadros que valiam hoje quando a página se fez — ver `QuadrosPorDia`. */
-  quadrosDeHoje?: { hoje: string; abertos: string[] } | null;
+  quadrosDeHoje?: { hoje: string; abertos: string[]; sabido?: boolean } | null;
 }) {
   return (
     <div className="em-colunas partidas-e-horario">
@@ -61,7 +61,12 @@ export default function PartidasDaParagem({
 
       <section aria-labelledby="horario" className="coluna-principal">
         <h2 id="horario">Horário completo</h2>
-        <QuadrosPorDia regiao={regiao} quadros={quadros} noServidor={quadrosDeHoje} />
+        <QuadrosPorDia
+          regiao={regiao}
+          quadros={quadros}
+          noServidor={quadrosDeHoje}
+          semHoje="não há partidas desta paragem"
+        />
       </section>
     </div>
   );

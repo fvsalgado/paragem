@@ -790,6 +790,19 @@ details.lista-fechada[open] > summary::after {
   left: 0;
   background: var(--fundo);
 }
+/* A PRIMEIRA COLUNA FICA, e diz que fica. O nome da paragem já não rolava com
+   as horas; o «Paragem» do cabeçalho rolava, e nada separava a coluna presa
+   das horas que passavam por baixo dela. */
+.rolar-na-horizontal thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--fundo);
+}
+.rolar-na-horizontal th[scope='row'],
+.rolar-na-horizontal thead th:first-child {
+  box-shadow: inset -1px 0 0 var(--linhas);
+}
 .rolar-na-horizontal thead th {
   font-weight: 700;
   border-bottom: 2px solid var(--linhas);
@@ -1362,13 +1375,11 @@ ol.percurso-da-linha li::before {
   bottom: 0;
   width: 4px;
   border-radius: 2px;
-  background: var(--cor-da-linha, var(--autocarro));
-}
-ol.percurso-da-linha li.primeira::before {
-  top: 50%;
-}
-ol.percurso-da-linha li.ultima::before {
-  bottom: 50%;
+  background: color-mix(
+    in oklab,
+    var(--cor-da-linha, var(--autocarro)) var(--mistura-dos-tracos),
+    #fff
+  );
 }
 ol.percurso-da-linha li.primeira.ultima::before {
   display: none;
@@ -1377,16 +1388,116 @@ ol.percurso-da-linha li::after {
   content: '';
   position: absolute;
   left: 0.3rem;
-  top: 50%;
+  top: 1.375rem;
   width: 0.85rem;
   height: 0.85rem;
   margin-top: -0.425rem;
   border-radius: 999px;
-  border: 3px solid var(--cor-da-linha, var(--autocarro));
+  border: 3px solid
+    color-mix(in oklab, var(--cor-da-linha, var(--autocarro)) var(--mistura-dos-tracos), #fff);
   background: var(--superficie);
 }
 ol.percurso-da-linha li.ponta::after {
-  background: var(--cor-da-linha, var(--autocarro));
+  background: color-mix(
+    in oklab,
+    var(--cor-da-linha, var(--autocarro)) var(--mistura-dos-tracos),
+    #fff
+  );
+}
+ol.percurso-da-linha li.primeira::before {
+  top: 1.375rem;
+}
+ol.percurso-da-linha li.ultima::before {
+  bottom: auto;
+  height: 1.375rem;
+}
+/* As ligações de cada paragem: as outras linhas que lá param, pequenas, a
+   seguir ao nome. */
+ol.percurso-da-linha a {
+  flex-wrap: wrap;
+  gap: 0.15rem 0.5rem;
+}
+.ligacoes-da-paragem {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem;
+  font-weight: 400;
+}
+/* UMA PARAGEM QUE UM AVISO NOMEIA: riscada, com o nó e a etiqueta na cor de
+   alerta — um estado, e não a cor da linha nem a da marca. */
+ol.percurso-da-linha li.afetada .nome-no-percurso {
+  text-decoration: line-through;
+  text-decoration-color: var(--alerta-texto);
+  text-decoration-thickness: 2px;
+}
+ol.percurso-da-linha li.afetada::after {
+  border-color: var(--alerta-texto);
+}
+a.aviso-no-percurso {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+  margin: 0 0 0.35rem;
+  padding: 0 0.5rem;
+  border-radius: 999px;
+  background: var(--alerta-fundo);
+  color: var(--alerta-texto);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* O ESQUEMA DA LINHA: as paragens pela ordem, num SVG pequeno no alto. */
+figure.esquema-da-linha {
+  margin: 0.5rem 0 1rem;
+}
+figure.esquema-da-linha svg {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
+  height: auto;
+  max-height: 11rem;
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  background: var(--superficie-suave);
+}
+.esquema-traco {
+  fill: none;
+  stroke: color-mix(in oklab, var(--cor-do-esquema) var(--mistura-dos-tracos), #fff);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.esquema-paragem,
+.esquema-ponta {
+  stroke: color-mix(in oklab, var(--cor-do-esquema) var(--mistura-dos-tracos), #fff);
+  stroke-width: 2px;
+}
+.esquema-paragem {
+  fill: var(--superficie);
+}
+.esquema-ponta {
+  fill: color-mix(in oklab, var(--cor-do-esquema) var(--mistura-dos-tracos), #fff);
+}
+/* Os nomes das pontas, com um halo da cor do fundo para se lerem por cima
+   do traço. O tamanho é do desenho, que nunca passa de 24 rem de largo. */
+.esquema-nome {
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--texto);
+  stroke: var(--superficie-suave);
+  stroke-width: 3px;
+  paint-order: stroke;
+}
+figure.esquema-da-linha figcaption {
+  margin-top: 0.3rem;
+  font-size: 0.85rem;
+}
+
+/* «Hoje não há»: uma frase a cheio, antes dos quadros. */
+.hoje-nao {
+  font-weight: 700;
+  margin: 0.5rem 0;
 }
 ol.percurso-da-linha a {
   display: flex;

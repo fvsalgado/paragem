@@ -6,6 +6,9 @@ import {
   exigirModo,
   horaLegivel,
   linhaDetalhe,
+  linhas as linhasDaRegiao,
+  paragens as paragensDaRegiao,
+  temMosaicos,
   quadrosDeHoje,
   urlDaParagem,
   NAO_ENCONTRADA,
@@ -20,6 +23,8 @@ import { AvisosDaPagina } from '@/componentes/Avisos';
 import { avisosDaLinha, catalogoDosAvisos } from '@/lib/avisos-do-sitio';
 import { lista, plural } from '@/lib/prosa';
 import Distintivo, { corDoTraco } from '@/componentes/Distintivo';
+import EsquemaDaLinha from '@/componentes/EsquemaDaLinha';
+import { traco } from '@/lib/cor';
 import QuadrosPorDia, { type QuadroDoDia } from '@/componentes/QuadrosPorDia';
 import { metadadosDaRegiao } from '@/lib/metadados';
 import { cartaoDaLinha } from '@/lib/partilha';
@@ -208,14 +213,36 @@ export default async function Linha({
   // OS AVISOS DESTA LINHA, antes do horário (P4-019): os que a nomeiam, os de
   // uma paragem do percurso, e os do modo dela. Quem abria a linha desviada
   // para ver a hora não sabia que ela estava desviada.
-  const [avisos, catalogo] = await Promise.all([
+  const [avisos, catalogo, todasAsParagens, todasAsLinhas, comMapa] = await Promise.all([
     avisosDaLinha(rid, {
       id: l.id,
       modo: l.modo,
       paragens: l.sentidos.flatMap((s) => s.paragens.map((p) => p.id)),
     }),
     catalogoDosAvisos(rid),
+    paragensDaRegiao(rid),
+    linhasDaRegiao(rid),
+    temMosaicos(rid),
   ]);
+  const daParagem = new Map(todasAsParagens.map((p) => [p.id, p]));
+  const onde = new Map(
+    todasAsParagens
+      .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon))
+      .map((p) => [p.id, [p.lat, p.lon] as [number, number]]),
+  );
+  // AS LIGAÇÕES DE CADA PARAGEM: as outras linhas que lá param, com o número
+  // e a cor delas. É o que um esquema de rede diz em cada estação — e quem
+  // está a meio do percurso quer saber onde pode mudar, sem abrir paragem a
+  // paragem.
+  const corDoCodigo = new Map<string, string | null>();
+  for (const x of todasAsLinhas) if (!corDoCodigo.has(x.codigo)) corDoCodigo.set(x.codigo, x.cor);
+  const ligacoesDe = (id: string) =>
+    (daParagem.get(id)?.linhas ?? []).filter((c) => c !== l.codigo);
+  // AS PARAGENS QUE UM AVISO NOMEIA, RISCADAS NO PERCURSO, e a levar ao aviso.
+  // O aviso estava em cima e o percurso em baixo, e quem procurava a sua
+  // paragem não sabia que era ela a afetada.
+  const avisoDaParagem = new Map<string, string>();
+  for (const a of avisos) for (const p of a.paragens) avisoDaParagem.set(p, a.id);
   const sentidos = await Promise.all(
     l.sentidos.map(async (s, i) => {
       const titulo = tituloDoSentido(s);
@@ -250,6 +277,13 @@ export default async function Linha({
           </>
         )}
       </p>
+      <EsquemaDaLinha
+        sentidos={l.sentidos.map((s) => s.paragens)}
+        onde={onde}
+        cor={traco(l.cor) ?? '#0a5c7a'}
+        codigo={l.codigo}
+        comMapa={comMapa}
+      />
       <MarcaDeDados
         regiao={rid}
         modos={[l.modo]}
@@ -296,7 +330,12 @@ export default async function Linha({
               <div className="coluna-principal">
                 <h3 className="parte-do-sentido">Horário</h3>
                 {quadros.length > 0 ? (
-                  <QuadrosPorDia regiao={rid} quadros={quadros} noServidor={hoje} />
+                  <QuadrosPorDia
+                    regiao={rid}
+                    quadros={quadros}
+                    noServidor={hoje}
+                    semHoje="esta linha não tem viagens neste sentido"
+                  />
                 ) : (
                   // DADOS DE ANTES DO HORÁRIO DA LINHA: diz-se onde estão as
                   // horas, em vez de deixar a secção vazia a parecer que não há.
@@ -321,16 +360,42 @@ export default async function Linha({
                 numerada, com o número de ordem à direita a fazer de ruído, e
                 a cor da linha não aparecia em lado nenhum além do distintivo. */}
                 <ol className="percurso-da-linha" style={cor}>
-                  {s.paragens.map((p, i) => (
-                    <li
-                      key={`${p.id}-${i}`}
-                      className={
-                        i === 0 ? 'ponta primeira' : i === ultima ? 'ponta ultima' : undefined
-                      }
-                    >
-                      <Link href={urlDaParagem(rid, p.id)}>{p.nome}</Link>
-                    </li>
-                  ))}
+                  {s.paragens.map((p, i) => {
+                    const ligacoes = ligacoesDe(p.id);
+                    const aviso = avisoDaParagem.get(p.id);
+                    const classes = [
+                      i === 0 ? 'ponta primeira' : i === ultima ? 'ponta ultima' : '',
+                      aviso ? 'afetada' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ');
+                    return (
+                      <li key={`${p.id}-${i}`} className={classes || undefined}>
+                        <Link href={urlDaParagem(rid, p.id)}>
+                          <span className="nome-no-percurso">{p.nome}</span>
+                          {ligacoes.length > 0 && (
+                            <span className="ligacoes-da-paragem">
+                              <span className="so-para-leitores">
+                                ,{' '}
+                                {ligacoes.length === 1 ? 'também a linha' : 'também as linhas'}{' '}
+                              </span>
+                              {ligacoes.slice(0, 5).map((c) => (
+                                <Distintivo key={c} codigo={c} cor={corDoCodigo.get(c)} />
+                              ))}
+                              {ligacoes.length > 5 && (
+                                <span className="secundario">+{ligacoes.length - 5}</span>
+                              )}
+                            </span>
+                          )}
+                        </Link>
+                        {aviso && (
+                          <a className="aviso-no-percurso" href={`#aviso-${aviso}`}>
+                            Aviso<span className="so-para-leitores"> sobre esta paragem</span>
+                          </a>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ol>
               </div>
             </div>
