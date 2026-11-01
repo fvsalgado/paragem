@@ -141,6 +141,18 @@ def test_a_forma_vem_do_percurso_da_linha_e_nao_de_outra(tmp_path: Path):
     assert max(lat for lat, _ in _descodificar(poli)) > LAT + 0.003, "a curva perdeu-se"
 
 
+def test_as_formas_finas_ganham_aos_percursos(tmp_path: Path):
+    a, b = (LAT, LON), (LAT, LON + 0.01)
+    pasta = tmp_path / "percursos"
+    pasta.mkdir()
+    grossa = [a, b]
+    fina = [a, (LAT + 0.0005, LON + 0.003), (LAT + 0.0005, LON + 0.007), b]
+    (pasta / "0.json").write_text(json.dumps({"linha": "1", "trocos": {"0>1": codificar(grossa)}}))
+    g = _grelha([a, b], [("1", "autocarro")], [(0, 0, [0, 1])], SEMANA)
+    ((_, _, poli),) = construir(g, pasta, finas={("rede:p0", "rede:p1"): fina})["trocos"]
+    assert len(_descodificar(poli)) == 4
+
+
 def test_os_trocos_seguidos_iguais_sao_um_traco_e_partem_onde_outra_linha_entra():
     # Linha 1: p0→p1→p2→p3, duas viagens. Linha 2 junta-se em p2→p3, com uma.
     g = _grelha(

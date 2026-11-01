@@ -36,9 +36,9 @@ dela, e não mais (§2: nunca cortar a linha NA fronteira).
 
 **O TAMANHO.** Os troços que seguem uns aos outros com o mesmo modo e as mesmas
 viagens juntam-se num traço só, e a geometria vai em polilinha do Google, que o
-navegador já sabe ler (`descodificarLinha`). Medido numa região real de 145
-linhas: ver o relatório do PR que trouxe isto, e o `pipeline sitio`, que
-imprime o tamanho deste ficheiro como imprime o dos outros.
+navegador já sabe ler (`descodificarLinha`). A forma é a do traçado da
+operadora a 8 m (`TOLERANCIA_FINA`), e não a dos percursos do planeador, a 25.
+Medido numa região real de 145 linhas: 1 607 traços, 113 kB comprimidos.
 
 Não sabe o que é uma região: recebe a grelha, a pasta dos percursos e uma
 caixa, e devolve o que desenhar.
@@ -75,6 +75,16 @@ JUNTAS_METROS = 40.0
 #: separava. Acima de 50 m é outra rua — o sentido único de um centro de vila,
 #: em que a ida e a volta passam por ruas diferentes e têm de ficar as duas.
 PARECIDOS_METROS = 50.0
+
+#: A que distância a forma de um troço pode afastar-se do traçado da operadora.
+#:
+#: Os percursos do planeador vêm a 25 m (`percursos.TOLERANCIA_METROS`), e para
+#: desenhar uma viagem chega; para desenhar a REDE de perto não: a z16 vinte e
+#: cinco metros são vinte e sete píxeis, e os traços atravessavam quarteirões a
+#: direito. A 8 m são nove píxeis, e a forma segue a rua. Medido numa região
+#: real de 145 linhas: 76 kB comprimidos a 25 m, 113 kB a 8 m — e o ficheiro é
+#: um só, pedido uma vez.
+TOLERANCIA_FINA = 8.0
 
 #: Um troço por desenhar: (modo, viagens, sítio de partida, sítio de chegada, [(lat, lon)…]).
 Aresta = tuple[str, int | None, int, int, list[tuple[float, float]]]
@@ -269,12 +279,15 @@ def construir(
     percursos: Path | None,
     caixa: tuple[float, float, float, float] | None = None,
     outros: Iterable[tuple[str, list[tuple[float, float]]]] = (),
+    finas: dict[tuple[str, str], list[tuple[float, float]]] | None = None,
 ) -> dict[str, Any]:
     """O que o mapa desenha: um traço por troço, com o modo e as viagens.
 
     `caixa` é (lat_min, lat_max, lon_min, lon_max): fica cada troço com pelo
     menos uma ponta dentro dela. `outros` são traçados sem horário — (modo,
-    [(lat, lon)…]) —, que entram com `viagens` desconhecidas.
+    [(lat, lon)…]) —, que entram com `viagens` desconhecidas. `finas` são as
+    formas dos troços com mais pormenor do que as dos percursos, pelas chaves
+    da grelha (`TOLERANCIA_FINA`); onde não houver, vale a do percurso.
     """
     paragens = grelha.get("paragens") or []
     linhas = grelha.get("linhas") or []
@@ -330,8 +343,10 @@ def construir(
         sa, sb = sitio[a], sitio[b]
         if sa == sb:
             continue  # dentro do mesmo sítio: não se vê, e não liga nada
-        forma: list[tuple[float, float]] | None = None
-        for linha in por_onde[(modo, a, b)]:
+        forma: list[tuple[float, float]] | None = (finas or {}).get(
+            (str(paragens[a][0]), str(paragens[b][0]))
+        )
+        for linha in [] if forma else por_onde[(modo, a, b)]:
             texto = formas.get(linha, {}).get(f"{a}>{b}")
             if texto:
                 forma = _descodificar(texto)
@@ -503,12 +518,36 @@ def _tracados_sem_horario(s: Any, modos_com_horario: set[str]) -> list[tuple[str
     return saida
 
 
+def _formas_finas(s: Any) -> dict[tuple[str, str], list[tuple[float, float]]]:
+    """As formas dos troços a `TOLERANCIA_FINA`, dos feeds que trazem traçado.
+
+    Pelas chaves da grelha, com o prefixo de cada feed — o mesmo que o
+    `sitio._percursos` usa —, e a rede própria primeiro: um troço que dois
+    ficheiros desenhem fica com o dela.
+    """
+    from .percursos import _trocos_do_feed
+
+    partilha = s.paragens_partilhadas
+    nomes = [str(n).split("/")[-1] for n in ((s.regiao.motor or {}).get("gtfs") or [])]
+    nomes.sort(key=lambda nome: nome != s.feed_proprio)
+    finas: dict[tuple[str, str], list[tuple[float, float]]] = {}
+    for nome in nomes:
+        feed = s._feed(nome)
+        if feed is None or "shapes.txt" not in feed:
+            continue
+        chave = nome.removesuffix(".zip")
+        prefixo = f"{partilha.get(chave, chave)}:"
+        for (a, b), forma in _trocos_do_feed(feed, TOLERANCIA_FINA).items():
+            finas.setdefault((prefixo + a, prefixo + b), forma)
+    return finas
+
+
 def escrever(s: Any, g: Any) -> None:
     """A chamada do `pipeline sitio`: lê o que ele já escreveu e junta a rede.
 
     `s` é o `Sitio` (o destino, a região, as saídas e as notas), `g` a grelha
     que ele acabou de escrever. Os percursos lêem-se do disco, de onde o
-    `_percursos` os pôs.
+    `_percursos` os pôs; as formas finas, dos mesmos feeds que ele leu.
     """
     from .sitio import Saida
 
@@ -520,6 +559,7 @@ def escrever(s: Any, g: Any) -> None:
         s.destino / "percursos",
         (c.lat_min, c.lat_max, c.lon_min, c.lon_max),
         _tracados_sem_horario(s, com_horario),
+        _formas_finas(s),
     )
     if not rede["trocos"]:
         return
