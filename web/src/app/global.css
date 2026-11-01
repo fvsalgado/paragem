@@ -2006,7 +2006,7 @@ button.trocar:hover {
      tapado é uma lista com um cabeçalho caro. A metade vêem-se duas opções e
      o percurso ao mesmo tempo, que é a comparação que interessa; o resto
      desliza dentro dela. */
-  max-height: 56%;
+  max-height: var(--folha-agora, 56%);
   overflow-y: auto;
   /* O deslize não sai daqui: sem isto, chegar ao fim da folha continuava a
      deslizar a página — e a página, por baixo do mapa, tem rodapé. */
@@ -2024,38 +2024,98 @@ button.trocar:hover {
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
 }
-/* Descida: ficam à vista a pega, o título, a fila dos modos e a opção
-   escolhida — que é o resumo todo, com o mapa a ocupar o resto. */
-.folha.encolhida {
-  max-height: 12rem;
+/* --- AS TRÊS ALTURAS DAS FOLHAS (`PegaDaFolha`) ------------------------- */
+
+/* No telemóvel, as folhas que sobem do fundo do mapa param em três sítios:
+   em baixo, só a cabeça; a meio, que é onde abrem; e em cima, quase até à
+   procura. A de abertura abria a 62 % e tapava 55 % do ecrã — sobravam
+   390 × 210 px de mapa. A meio passa a 42 %, e o resto está a um arrasto.
+
+   QUANTO É CADA UMA DIZ-SE AQUI E SÓ AQUI. A pega lê estas variáveis para
+   saber onde assentar um arrasto; a folha vem do servidor já a meio, sem
+   esperar pelo JavaScript. Numa janela larga e com o telemóvel deitado, as
+   regras do fim deste ficheiro trocam as folhas por painéis, e estas alturas
+   deixam de contar. */
+.app-mapa {
+  --folha-baixa: 9.5rem;
+  --folha-media: 42%;
+  /* Até à procura, que fica à vista: é a outra porta. */
+  --folha-alta: calc(100% - 4.75rem);
+}
+/* O cartão de um ponto: em baixo, o nome e os dois gestos. */
+.cartao-de-baixo {
+  --folha-baixa: 12.5rem;
+  --folha-media: 50%;
+}
+/* As direções: em baixo, a pega, o título, a fila dos modos e a opção
+   escolhida — o resumo todo, com o mapa a ocupar o resto. Em cima, até ao
+   cartão de onde e para onde, que o `AppDoMapa` mede. */
+.folha {
+  --folha-baixa: 12rem;
+  --folha-media: 50%;
+  --folha-alta: calc(100% - var(--cartao-de-cima, 10.5rem) - 0.5rem);
+}
+[data-altura] {
+  --folha-agora: var(--folha-media);
+}
+[data-altura='baixa'] {
+  --folha-agora: var(--folha-baixa);
+}
+[data-altura='alta'] {
+  --folha-agora: var(--folha-alta);
+}
+.folha-de-abertura,
+.cartao-de-baixo,
+.folha:not(.em-pagina) {
+  transition: max-height 0.2s ease-out;
+}
+/* Com o dedo na pega, a folha segue o dedo e não o relógio. */
+[data-a-arrastar] {
+  transition: none;
 }
 
-/* A PEGA. No Maps arrasta-se; aqui também é um botão, porque um arrasto não
-   funciona com teclado, com comando de voz nem com leitor de ecrã. A área
-   tátil é a largura toda e 44 px de altura; o que se vê é a barrinha. */
-button.pega {
-  display: block;
+/* A PEGA arrasta-se, como no Maps, e é um botão — o toque, as setas e o
+   Enter fazem o mesmo, para quem não arrasta. O alvo é a largura toda e os
+   44 px do §4.5; o que se vê é a barrinha. Fica presa ao alto da folha
+   quando o que está dentro desliza: é por ela que a folha desce. */
+button.pega-da-folha {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   min-height: 0;
-  height: 1.75rem;
+  height: var(--alvo);
+  margin: 0;
   padding: 0;
   border: 0;
   border-radius: 1rem 1rem 0 0;
-  background: transparent;
+  background: var(--superficie);
   cursor: grab;
+  /* O arrasto é da pega: sem isto, o navegador desliza a página ou recarrega-a. */
+  touch-action: none;
 }
-button.pega::before {
+button.pega-da-folha:active {
+  cursor: grabbing;
+}
+/* A barrinha na borda dos campos, e não na das linhas: é ela que diz que
+   isto se arrasta, e o critério 1.4.11 pede-lhe 3:1. */
+button.pega-da-folha::before {
   content: '';
   display: block;
   width: 2.75rem;
   height: 0.3rem;
-  margin: 0.65rem auto 0;
   border-radius: 999px;
-  background: var(--linhas);
+  background: var(--borda-campo);
 }
-button.pega:hover::before,
-button.pega:focus-visible::before {
-  background: var(--texto-secundario);
+button.pega-da-folha:hover::before,
+button.pega-da-folha:focus-visible::before {
+  background: var(--texto);
+}
+button.pega-da-folha:focus-visible {
+  outline-offset: -3px;
 }
 
 .folha-titulo {
@@ -3464,7 +3524,7 @@ main.pagina:has(.app-mapa) {
   left: 0;
   right: 0;
   bottom: 0;
-  max-height: 60%;
+  max-height: var(--folha-agora, 50%);
   overflow-y: auto;
   /* O DESLIZE NÃO SAI DAQUI. Sem isto, chegar ao fim do cartão continua a
      deslizar a PÁGINA — e a página, por baixo do mapa, tem rodapé. Quem
@@ -3473,8 +3533,13 @@ main.pagina:has(.app-mapa) {
   background: var(--superficie);
   border-top: 1px solid var(--linhas);
   border-radius: var(--raio) var(--raio) 0 0;
-  padding: 1rem;
+  /* Sem margem em cima: é a pega que ocupa o alto. */
+  padding: 0 1rem 1rem;
   box-shadow: 0 -2px 8px rgb(16 44 63 / 12%);
+}
+.cartao-de-baixo > .pega-da-folha {
+  margin: 0 -1rem 0.25rem;
+  width: calc(100% + 2rem);
 }
 
 @media (min-width: 40rem) {
@@ -3486,21 +3551,10 @@ main.pagina:has(.app-mapa) {
     max-height: calc(100% - 6rem);
     border: 1px solid var(--linhas);
     border-radius: var(--raio);
+    padding-top: 1rem;
   }
-}
-
-/* A PEGA: diz que isto é uma folha, e que há mais por baixo. */
-.pega {
-  display: block;
-  width: 2.25rem;
-  height: 4px;
-  margin: -0.35rem auto 0.6rem;
-  border-radius: 2px;
-  background: var(--linhas);
-}
-@media (min-width: 40rem) {
   /* Numa janela larga isto não é uma folha, é um cartão ao lado do mapa. */
-  .pega {
+  .cartao-de-baixo > .pega-da-folha {
     display: none;
   }
 }
@@ -3795,7 +3849,12 @@ button.botao-menu:focus-visible {
   background: var(--superficie);
   border-radius: 1rem 1rem 0 0;
   box-shadow: 0 -2px 14px rgb(16 44 63 / 16%);
-  padding: 0.9rem 0.5rem 1rem;
+  /* Sem margem em cima: é a pega que ocupa o alto. */
+  padding: 0 0.5rem 1rem;
+}
+.folha-de-abertura > .pega-da-folha {
+  margin: 0 -0.5rem;
+  width: calc(100% + 1rem);
 }
 
 /* A FOLHA SÓ SE PINTA INTEIRA.
@@ -4540,9 +4599,10 @@ dialog.menu-do-mapa .lista .secundario {
 /* --- a folha de abertura: «Para onde vais?» e o que há ------------------ */
 
 /* A folha desliza por dentro quando cresce — com o «Perto de ti» aberto
-   passa da metade do ecrã, e o mapa não pode desaparecer por baixo dela. */
+   passa da metade do ecrã, e o mapa não pode desaparecer por baixo dela. A
+   altura é a das três (`--folha-agora`, mais acima). */
 .folha-de-abertura {
-  max-height: 62%;
+  max-height: var(--folha-agora, 42%);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -4590,12 +4650,9 @@ button.para-onde-vais svg {
   min-height: var(--alvo);
   font-weight: 700;
 }
-/* A marca da rede no alto da folha (P1-008). Numa linha, e com a folha a
-   começar mais acima: cada linha da folha é uma linha de mapa a menos — e é
-   por isso que a do produto fica no menu, e não no fundo da folha. */
-.folha-de-abertura:has(.assinatura-da-folha) {
-  padding-top: 0.6rem;
-}
+/* A marca da rede no alto da folha (P1-008), numa linha e logo por baixo da
+   pega: cada linha da folha é uma linha de mapa a menos — e é por isso que a
+   do produto fica no menu, e não no fundo da folha. */
 .folha-de-abertura .assinatura-da-folha {
   margin: 0 0.6rem 0.5rem;
 }
@@ -4940,6 +4997,12 @@ a[href^='mailto:'] {
   .folha-de-abertura {
     top: auto;
     max-height: calc(100% - 8rem);
+    padding-top: 0.6rem;
+  }
+  /* Um painel ao lado do mapa não sobe nem desce: a pega sai. A das
+     direções fica — desce o painel para se ver o percurso. */
+  .folha-de-abertura > .pega-da-folha {
+    display: none;
   }
   .folha:not(.em-pagina) {
     max-height: calc(100% - 10.5rem);
@@ -4982,6 +5045,11 @@ a[href^='mailto:'] {
   .folha-de-abertura,
   .cartao-de-baixo {
     max-height: calc(100% - 4.5rem);
+    padding-top: 0.6rem;
+  }
+  .folha-de-abertura > .pega-da-folha,
+  .cartao-de-baixo > .pega-da-folha {
+    display: none;
   }
   .folha:not(.em-pagina) {
     max-height: calc(100% - 9rem);

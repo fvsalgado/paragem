@@ -16,6 +16,7 @@ import DisponibilidadeBicicletas, {
 } from '@/componentes/DisponibilidadeBicicletas';
 import Link from '@/componentes/Ligacao';
 import MenuDoMapa from '@/componentes/MenuDoMapa';
+import PegaDaFolha, { type Altura } from '@/componentes/PegaDaFolha';
 import { Chegada, DoModo, Hamburguer, Lista } from '@/componentes/Icones';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { usePontos } from '@/lib/pontos-do-navegador';
@@ -338,10 +339,15 @@ export default function AppDoMapa({
   /** O que o endereço pediu e não se pôde abrir — dito em vez de calado. */
   const [avisoDoEndereco, setAvisoDoEndereco] = useState<string | null>(null);
   const [percurso, setPercurso] = useState<Percurso | null>(null);
-  // O PAINEL DESCE PARA SE VER O MAPA. No Maps arrasta-se a folha para baixo;
-  // aqui é um botão, que faz o mesmo e funciona com teclado, com comando de
-  // voz e com leitor de ecrã — coisas que um arrasto não faz.
-  const [encolhido, setEncolhido] = useState(false);
+  // AS FOLHAS TÊM TRÊS ALTURAS NO TELEMÓVEL, e arrastam-se (`PegaDaFolha`).
+  // A de abertura tapava 55 % do ecrã e a pega não arrastava nada: sobravam
+  // 390 × 210 px de mapa num ecrã que se chama «mapa». Abrem a meio, descem
+  // até ficar só a cabeça e sobem até quase ao alto. A pega também é um
+  // botão — o toque, as setas e o Enter fazem o que o arrasto faz, para quem
+  // usa teclado, comando de voz ou leitor de ecrã.
+  const [alturaDaAbertura, setAlturaDaAbertura] = useState<Altura>('media');
+  const [alturaDoCartao, setAlturaDoCartao] = useState<Altura>('media');
+  const [alturaDasDirecoes, setAlturaDasDirecoes] = useState<Altura>('media');
   /**
    * ONDE ESTÁ QUEM PERGUNTA, quando o disse — pelo botão do mapa ou pelo
    * «Paragens perto de mim» da folha. A folha passa a responder «o que passa
@@ -445,9 +451,19 @@ export default function AppDoMapa({
       const emCimaDasDirecoes = cartaoDeCima
         ? Math.max(0, Math.round(cartaoDeCima.getBoundingClientRect().bottom - base.top))
         : 0;
-      setTapadoEmCima((antes) =>
-        Math.abs(antes - emCimaDasDirecoes) > 4 ? emCimaDasDirecoes : antes,
-      );
+      // A folha das direções sobe até ao fundo do cartão de cima, e não por
+      // cima dele: o CSS lê daqui quanto é isso (`--folha-alta` da `.folha`).
+      el.style.setProperty('--cartao-de-cima', `${emCimaDasDirecoes}px`);
+      // UMA FOLHA A MEXER-SE NÃO MEXE O MAPA. Cada margem nova é um salto da
+      // câmara (`setPadding`) e um enquadramento do percurso; a cada imagem
+      // de um arrasto, o mapa tremia por baixo do dedo. Os cantos seguem a
+      // folha; as margens esperam que ela assente (`PegaDaFolha`).
+      const emMovimento = !!el.querySelector('[data-a-arrastar], [data-a-assentar]');
+      if (!emMovimento) {
+        setTapadoEmCima((antes) =>
+          Math.abs(antes - emCimaDasDirecoes) > 4 ? emCimaDasDirecoes : antes,
+        );
+      }
       const deBordaABorda = folhas.filter((q) => q.width >= base.width * 0.6);
       const emBaixo = deBordaABorda.length
         ? Math.max(0, ...deBordaABorda.map((q) => Math.round(base.bottom - q.top)))
@@ -458,7 +474,9 @@ export default function AppDoMapa({
       // vez, já com a folha do tamanho final. Esperar que ela assentasse fazia
       // o contrário: o percurso enquadrava-se com a folha pequena, e outra vez
       // um segundo depois.
-      setTapadoEmBaixo((antes) => (Math.abs(antes - emBaixo) > 8 ? emBaixo : antes));
+      if (!emMovimento) {
+        setTapadoEmBaixo((antes) => (Math.abs(antes - emBaixo) > 8 ? emBaixo : antes));
+      }
       const alto = el.querySelector<HTMLElement>('.maplibregl-ctrl-top-right');
       if (alto) {
         // A posição de partida é a de sempre, encostada ao alto; desce até ao
@@ -514,8 +532,15 @@ export default function AppDoMapa({
       el.querySelectorAll<HTMLElement>(NO_ALTO).forEach((f) => tamanhos.observe(f));
       pedir();
     };
+    // E quando uma folha começa ou acaba de se mexer: depois de assentar já
+    // não muda de tamanho, e sem isto a medida final nunca se fazia.
     const entradas = new MutationObserver(vigiar);
-    entradas.observe(el, { childList: true, subtree: true });
+    entradas.observe(el, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-a-arrastar', 'data-a-assentar', 'data-altura'],
+    });
     vigiar();
     return () => {
       entradas.disconnect();
@@ -523,9 +548,9 @@ export default function AppDoMapa({
       if (pedido) cancelAnimationFrame(pedido);
     };
   }, []);
-  function encolher(sim: boolean) {
-    setEncolhido(sim);
-    if (!sim) return;
+  function mudarAlturaDasDirecoes(a: Altura) {
+    setAlturaDasDirecoes(a);
+    if (a !== 'baixa') return;
     // Ao descer, a folha rola até à OPÇÃO ESCOLHIDA — que é a que está
     // desenhada no mapa. Deixá-la onde estava mostrava um pedaço de outra
     // opção qualquer, e a barra deixava de dizer o que o mapa mostra.
@@ -571,10 +596,11 @@ export default function AppDoMapa({
    */
   function mostrarCartao(p: Marca | Ponto) {
     setEscolhido(p as Marca);
+    setAlturaDoCartao('media');
     setPartidas(null);
     setDirecoes(null);
     setPercurso(null);
-    setEncolhido(false);
+    setAlturaDasDirecoes('media');
     if (p.tipo !== 'paragem') return;
     carregarPartidas(p);
     // Uma vez por sessão. Sem isto o distintivo sai cinzento, que é o que
@@ -604,7 +630,7 @@ export default function AppDoMapa({
     setAvisoDoEndereco(null);
     setDirecoes((antes) => ({ de, para, dia: null, hora: null, foco, vez: (antes?.vez ?? 0) + 1 }));
     setPercurso(null);
-    setEncolhido(false);
+    setAlturaDasDirecoes('media');
     escrever('direcoes', `/${comoProcura(escreverViagem({ de, para }))}`, true);
   }
 
@@ -630,7 +656,7 @@ export default function AppDoMapa({
     // está outro sítio, e fechar deixa o mapa.
     setDirecoes(null);
     setPercurso(null);
-    setEncolhido(false);
+    setAlturaDasDirecoes('media');
     escrever(
       escolhido ? 'cartao' : null,
       escolhido ? `/?ponto=${encodeURIComponent(escolhido.id)}` : '/',
@@ -675,7 +701,7 @@ export default function AppDoMapa({
     if (v.de || v.para) {
       setEscolhido(null);
       setPercurso(null);
-      setEncolhido(false);
+      setAlturaDasDirecoes('media');
       setAvisoDoEndereco(avisoDe(v.de, v.para, emDaRegiao));
       setDirecoes((antes) => ({
         de: ponto(v.de),
@@ -701,7 +727,7 @@ export default function AppDoMapa({
     else {
       setEscolhido(null);
       setPercurso(null);
-      setEncolhido(false);
+      setAlturaDasDirecoes('media');
     }
   }
 
@@ -827,11 +853,15 @@ export default function AppDoMapa({
           <section
             className={`cartao-de-baixo${escolhido.tipo === 'paragem' ? ' com-horas' : ''}`}
             aria-labelledby="escolhido"
+            data-altura={alturaDoCartao}
             onFocus={() => (tinhaFoco.current = true)}
           >
-            {/* A PEGA. Não arrasta nada — diz que isto é uma folha e que há
-              mais por baixo. É o sinal que o Maps usa, e custa 4 px. */}
-            <span className="pega" aria-hidden="true" />
+            {/* A PEGA arrasta a folha entre as três alturas, e é um botão. */}
+            <PegaDaFolha
+              altura={alturaDoCartao}
+              aoMudar={setAlturaDoCartao}
+              rotulos={{ baixa: 'Mostrar as horas', media: 'Mostrar o cartão inteiro' }}
+            />
 
             <div className="cartao-cabecalho">
               {/* Sem nome no mapa, o título é o que a coisa É. Oito das nove
@@ -993,8 +1023,8 @@ export default function AppDoMapa({
             focoInicial={direcoes.foco}
             aviso={avisoDoEndereco}
             variante="mapa"
-            encolhido={encolhido}
-            aoEncolher={encolher}
+            altura={alturaDasDirecoes}
+            aoMudarAltura={mudarAlturaDasDirecoes}
             aoFechar={() => {
               tinhaFoco.current = true;
               fecharDirecoes();
@@ -1011,7 +1041,7 @@ export default function AppDoMapa({
               // Escolher uma opção é pedir para a VER: a folha desce. A
               // primeira, que se desenha sozinha, não desce — quem acabou de
               // procurar está a ler as opções.
-              if (p && origem === 'escolha') encolher(true);
+              if (p && origem === 'escolha') mudarAlturaDasDirecoes('baixa');
             }}
           />
         )}
@@ -1118,7 +1148,16 @@ export default function AppDoMapa({
          * É o que responde a quem abre isto sem saber o que aqui há. A procura
          * serve quem já sabe o nome; isto serve quem não sabe. */}
         {!direcoes && !escolhido && (
-          <section className="folha-de-abertura" aria-labelledby="abertura">
+          <section
+            className="folha-de-abertura"
+            aria-labelledby="abertura"
+            data-altura={alturaDaAbertura}
+          >
+            <PegaDaFolha
+              altura={alturaDaAbertura}
+              aoMudar={setAlturaDaAbertura}
+              rotulos={{ baixa: 'Mostrar o que há perto e os modos' }}
+            />
             {/* A MARCA DA REDE NO PRIMEIRO ECRÃ (P1-008). O mapa ocupa o ecrã
               todo e o cabeçalho sai da frente; sem isto, quem abria o sítio
               da sua autoridade de transportes não via de quem ele era — e o

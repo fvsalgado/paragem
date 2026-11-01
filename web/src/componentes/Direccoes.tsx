@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import Link from '@/componentes/Ligacao';
 import EscolherPonto from './EscolherPonto';
+import PegaDaFolha, { type Altura } from './PegaDaFolha';
 import type { PontosNoNavegador } from '@/lib/pontos-do-navegador';
 import Distintivo from './Distintivo';
 import {
@@ -157,8 +158,8 @@ export default function Direccoes({
   aoFechar,
   aoMudar,
   variante = 'pagina',
-  encolhido = false,
-  aoEncolher,
+  altura = 'media',
+  aoMudarAltura,
   modosDesligados = [],
   motorDaRegiao = '',
   servicosSemDatas = 0,
@@ -205,9 +206,11 @@ export default function Direccoes({
   /** Cada mudança na pergunta — para o endereço a acompanhar (P2-027). */
   aoMudar?: (v: ViagemAgora) => void;
   variante?: 'pagina' | 'mapa';
-  encolhido?: boolean;
-  aoEncolher?: (sim: boolean) => void;
+  /** A altura da folha no mapa (`PegaDaFolha`): baixa, a meio, ou quase inteira. */
+  altura?: Altura;
+  aoMudarAltura?: (a: Altura) => void;
 }) {
+  const encolhido = altura === 'baixa';
   const agora = new Date();
   const [de, setDe] = useState<Ponto | null>(deInicial);
   const [para, setPara] = useState<Ponto | null>(paraInicial);
@@ -789,21 +792,21 @@ export default function Direccoes({
       <section
         className={`folha${encolhido ? ' encolhida' : ''}${noMapa ? '' : ' em-pagina'}`}
         aria-labelledby="folha-titulo"
+        data-altura={noMapa ? altura : undefined}
       >
-        {/* A pega do Maps, que aqui é um BOTÃO. Um arrasto não funciona com
-            teclado, com comando de voz nem com leitor de ecrã; uma pega que
-            também é botão funciona com tudo. */}
-        {noMapa && aoEncolher && (
-          <button
-            type="button"
-            className="pega"
-            onClick={() => aoEncolher(!encolhido)}
-            aria-expanded={!encolhido}
-          >
-            <span className="so-para-leitores">
-              {encolhido ? 'Ver as opções' : 'Ver o mapa, escondendo as opções'}
-            </span>
-          </button>
+        {/* A pega do Maps, que aqui arrasta E é um botão. Um arrasto não
+            funciona com teclado, com comando de voz nem com leitor de ecrã;
+            uma pega que também é botão funciona com tudo. */}
+        {noMapa && aoMudarAltura && (
+          <PegaDaFolha
+            altura={altura}
+            aoMudar={aoMudarAltura}
+            rotulos={{
+              baixa: 'Ver as opções',
+              media: 'Ver mais opções',
+              alta: 'Ver o mapa, escondendo as opções',
+            }}
+          />
         )}
 
         <div className="folha-titulo">
