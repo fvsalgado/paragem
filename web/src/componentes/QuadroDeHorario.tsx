@@ -1,5 +1,5 @@
 import type { QuadroDeCartaz, ViagemDeCartaz } from '@/lib/formato';
-import { nomeDoSistema } from '@/lib/prosa';
+import { nomeDoSistema, regraLegivel } from '@/lib/prosa';
 
 /**
  * A grelha de um horário lido de um cartaz: paragens em linha, viagens em coluna.
@@ -28,32 +28,47 @@ export default function QuadroDeHorario({
   quadro,
   titulo,
   id,
+  aberto = false,
 }: {
   quadro: QuadroDeCartaz;
   /** O nome da linha ou do circuito. Vai para a legenda da tabela. */
   titulo: string;
   /** Para uma ligação poder apontar este quadro (`#q-…`). */
   id?: string;
+  /** Aberto à chegada — quando é o único quadro da página, não há o que escolher. */
+  aberto?: boolean;
 }) {
   const nomeDoQuadro = quadro.nome ? nomeDoSistema(quadro.nome) : '';
   const nome = nomeDoQuadro ? `${titulo} — ${nomeDoQuadro}` : titulo;
-  if (quadro.tipo === 'partidas') return <Partidas quadro={quadro} titulo={nome} id={id} />;
+  if (quadro.tipo === 'partidas')
+    return <Partidas quadro={quadro} titulo={nome} id={id} aberto={aberto} />;
 
   const viagens = quadro.viagens;
   if (viagens.length === 0) return null;
   const primeira = viagens[0];
   const rotulo = rotuloComum(viagens);
+  const contagem = `${viagens.length} ${viagens.length === 1 ? 'viagem' : 'viagens'}${
+    rotulo ? ` · ${rotulo}` : ''
+  }`;
+  // «NA PARAGEM …», e não «da …»: a contração tem de concordar com o nome que
+  // vem a seguir, e um cartaz não diz o género de ninguém — lia-se «da Centro
+  // de Saúde», «da Bairro da Cabrita».
+  const aPrimeira = `a primeira às ${primeira.passagens[0][1]}, na paragem ${primeira.passagens[0][0]}`;
 
   return (
-    <details className="quadro-de-horario" id={id}>
+    <details className="quadro-de-horario" id={id} open={aberto || undefined}>
+      {/* O NOME NA PRIMEIRA LINHA, O RESTO NA SEGUNDA. Era uma frase inteira a
+          negrito na cor das ligações — «Vale · 2 viagens — a primeira às 8:00,
+          na paragem Largo da Fonte» —, oito cartões iguais em que o nome
+          do circuito se perdia no meio (auditoria de 1/11/2026). A seta diz
+          que abre. */}
       <summary>
-        {nomeDoQuadro ? `${nomeDoQuadro} · ` : ''}
-        {viagens.length} {viagens.length === 1 ? 'viagem' : 'viagens'}
-        {rotulo ? ` · ${rotulo}` : ''} — a primeira às {primeira.passagens[0][1]}, na paragem{' '}
-        {/* «NA PARAGEM …», e não «da …»: a contração tem de concordar com o
-            nome que vem a seguir, e um cartaz não diz o género de ninguém —
-            lia-se «da Centro de Saúde», «da Bairro da Cabrita». */}
-        {primeira.passagens[0][0]}
+        <span className="resumo-do-quadro">
+          <span className="nome-do-quadro">{nomeDoQuadro || contagem}</span>
+          <span className="secundario">
+            {nomeDoQuadro ? `${contagem} · ${aPrimeira}` : aPrimeira}
+          </span>
+        </span>
       </summary>
       <div
         className="rolar-na-horizontal"
@@ -98,16 +113,30 @@ export default function QuadroDeHorario({
  * quer saber a que horas pode sair da terra onde está, e é isso que a linha
  * dela diz.
  */
-function Partidas({ quadro, titulo, id }: { quadro: QuadroDeCartaz; titulo: string; id?: string }) {
+function Partidas({
+  quadro,
+  titulo,
+  id,
+  aberto,
+}: {
+  quadro: QuadroDeCartaz;
+  titulo: string;
+  id?: string;
+  aberto: boolean;
+}) {
   const horas = quadro.horas ?? [];
   if (quadro.paragens.length === 0) return null;
   const colunas = Math.max(0, ...horas.map((h) => h.length));
+  const contagem = `${quadro.paragens.length} ${quadro.paragens.length === 1 ? 'local' : 'locais'} · ${colunas} ${colunas === 1 ? 'partida por dia' : 'partidas por dia'}`;
+  const nomeDoQuadro = quadro.nome ? nomeDoSistema(quadro.nome) : '';
 
   return (
-    <details className="quadro-de-horario" id={id}>
+    <details className="quadro-de-horario" id={id} open={aberto || undefined}>
       <summary>
-        {quadro.paragens.length} {quadro.paragens.length === 1 ? 'local' : 'locais'} · {colunas}{' '}
-        {colunas === 1 ? 'partida por dia' : 'partidas por dia'}
+        <span className="resumo-do-quadro">
+          <span className="nome-do-quadro">{nomeDoQuadro || contagem}</span>
+          {nomeDoQuadro && <span className="secundario">{contagem}</span>}
+        </span>
       </summary>
       <p className="nota">
         Isto é uma tabela de partidas e não um percurso: cada linha diz a que horas se parte desse
@@ -148,13 +177,16 @@ function Partidas({ quadro, titulo, id }: { quadro: QuadroDeCartaz; titulo: stri
   );
 }
 
-/** As regras que a folha escreve por baixo do quadro. Não se interpretam. */
+/**
+ * As regras que a folha escreve por baixo do quadro. Não se interpretam — só
+ * se escrevem como o resto do sítio (`regraLegivel`).
+ */
 function Regras({ regras }: { regras?: string[] }) {
   if (!regras || regras.length === 0) return null;
   return (
     <ul className="regras-do-quadro">
       {regras.map((r, i) => (
-        <li key={i}>{r}</li>
+        <li key={i}>{regraLegivel(r)}</li>
       ))}
     </ul>
   );

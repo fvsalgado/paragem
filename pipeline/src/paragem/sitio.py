@@ -2812,6 +2812,11 @@ def _horarios_a_pedido(
                 # todas as zonas do concelho. É daqui que a página sabe se a
                 # reserva online o serve (`reserva_online` de cada zona).
                 "zonas": [str(z) for z in decl.params.get("zonas") or []],
+                # OS TÍTULOS DO TARIFÁRIO QUE SE PAGAM AQUI, quando a receita os
+                # diz (`tarifas`, os `id` do `tarifas.yaml`): a página de um folheto
+                # de ligações não dizia quanto custa, e o preço só estava no
+                # tarifário.
+                "tarifas": [str(t) for t in decl.params.get("tarifas") or []],
                 "regras": d.get("regras") or [],
                 "paragens": sorted({n for q in quadros for n in q.get("paragens", [])}),
                 "viagens": sum(len(q.get("viagens") or []) for q in quadros),

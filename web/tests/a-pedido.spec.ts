@@ -246,7 +246,7 @@ test('a grelha de um circuito abre e tem as horas', async ({ page }) => {
   // A hora como a folha a escreve: «9:06» e «09:06» são a mesma. O resumo diz
   // «a primeira às 7:30, na paragem …», e não «da … às 7:30»: a contração
   // saía «da» antes de nomes masculinos.
-  const resumo = page.getByText(/viagens? — a primeira às \d{1,2}:\d{2}, na paragem /).first();
+  const resumo = page.getByText(/a primeira às \d{1,2}:\d{2}, na paragem /).first();
   await resumo.click();
   await expect(page.getByRole('table').first()).toBeVisible();
 });
@@ -261,10 +261,15 @@ test('uma tabela de partidas não se faz passar por um percurso', async ({ page 
   await page.goto(`/a-pedido/${COM_PARTIDAS!.id}/`);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(COM_PARTIDAS!.nome);
   await expect(page.locator('main')).toContainText('tabela de partidas');
-  await page
-    .getByText(/partidas por dia/)
-    .first()
-    .click();
+  // UMA TABELA SÓ VEM ABERTA: não há o que escolher, e as horas eram o
+  // segundo toque de quem chegava (auditoria de 1/11/2026).
+  const quadro = page.locator('details.quadro-de-horario').first();
+  if (COM_PARTIDAS!.quadros.length === 1) await expect(quadro).toHaveAttribute('open', '');
+  else
+    await page
+      .getByText(/partidas por dia/)
+      .first()
+      .click();
   await expect(page.getByText(/e não um percurso/).first()).toBeVisible();
 });
 

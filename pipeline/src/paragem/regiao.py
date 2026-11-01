@@ -547,6 +547,20 @@ class Regiao:
                     "de zona."
                 )
 
+        # OS TÍTULOS QUE UM HORÁRIO A PEDIDO DIZ QUE SE PAGAM NELE têm de estar
+        # no tarifário: um `id` trocado tirava o preço à página, em silêncio.
+        titulos = {str(t.get("id")) for t in (self.tarifas or {}).get("titulos") or []}
+        for s in self.saidas:
+            pedidos = s.params.get("tarifas") if s.modo == "a-pedido" else None
+            if not pedidos:
+                continue
+            estranhos = sorted({str(t) for t in pedidos} - titulos)
+            if not isinstance(pedidos, list) or estranhos:
+                raise ErroDeRegiao(
+                    f"{self.id}: {s.saida} declara `tarifas` que o `tarifas.yaml` não tem — "
+                    f"{', '.join(estranhos) or pedidos!r}. É uma lista de `id` de títulos."
+                )
+
         _verificar_redes_do_tarifario(self.id, self.tarifas)
 
         fora_dos_modos = sorted({x["modo"] for x in self.servicos_sem_dados} - set(self.modos))

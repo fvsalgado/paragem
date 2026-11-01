@@ -92,6 +92,25 @@ export function horariosDaZona(d: APedido, z: ZonaAPedido): HorarioAPedido[] {
 }
 
 /**
+ * DE QUE CONCELHO É UM CIRCUITO, pela zona onde o catálogo o põe — para o
+ * nome dele dizer onde é quando o grupo não é de concelho nenhum.
+ *
+ * Os circuitos que vêm do sítio de reservas chamavam-se «Circuito Amarelo»,
+ * «Circuito Azul», sem dizer de que concelho são (auditoria de 1/11/2026). O concelho sai da zona que os declara —
+ * é o próprio sistema de reservas a dizê-lo —, e não do nome. Vazio quando
+ * nenhuma zona o tem, ou quando duas de concelhos diferentes o têm.
+ */
+export function concelhoDoCircuito(d: APedido, circuito: string): string {
+  const k = simples(circuito);
+  const nomes = new Set(
+    d.zonas
+      .filter((z) => z.concelho_nome && z.circuitos.some((c) => simples(c.nome) === k))
+      .map((z) => z.concelho_nome),
+  );
+  return nomes.size === 1 ? [...nomes][0] : '';
+}
+
+/**
  * Um circuito onde se pode procurar: o nome, onde é (o concelho ou a zona,
  * quando se sabe), e para onde levar — o horário dele nesta página, ou o
  * folheto da autoridade, ou nada, quando nenhuma fonte publica as horas.

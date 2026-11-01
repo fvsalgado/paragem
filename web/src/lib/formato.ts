@@ -830,6 +830,11 @@ export type HorarioAPedido = {
    * (`reservaOnlineDoHorario`).
    */
   zonas?: string[];
+  /**
+   * Os títulos do tarifário que se pagam aqui (`id` do `tarifas.yaml`), quando
+   * a receita os diz. Ausente em dados de antes disto.
+   */
+  tarifas?: string[];
   regras: string[];
   paragens: string[];
   viagens: number;

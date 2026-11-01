@@ -791,8 +791,19 @@ code {
   align-items: center;
   position: relative;
   list-style: none;
+}
+/* O NOME A NEGRITO NA PRIMEIRA LINHA, e por baixo, em texto secundário, as
+   viagens e a primeira hora (auditoria de 1/11/2026): era tudo uma frase a
+   negrito na cor das ligações, e o nome do circuito perdia-se no meio. */
+.quadro-de-horario .resumo-do-quadro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.quadro-de-horario .nome-do-quadro {
   font-weight: 700;
-  color: var(--marca-texto);
+  color: var(--texto);
 }
 /* A SETA QUE O `display: flex` TIRAVA. Com ele, o Chromium deixa de desenhar
    o triângulo do `<details>`, e o resumo («26 viagens — da Centro de Saúde às

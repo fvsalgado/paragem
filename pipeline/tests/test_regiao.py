@@ -481,3 +481,22 @@ def test_um_servico_sem_dados_mal_declarado_recusa_se(tmp_path, servicos, erro):
     pasta = _regiao_minima(tmp_path / "x", modos=["expresso"], servicos_sem_dados=servicos)
     with pytest.raises(ErroDeRegiao, match=erro):
         Regiao.carregar(pasta)
+
+
+def test_um_horario_a_pedido_diz_que_titulos_se_pagam_nele(tmp_path):
+    """A página de um folheto de ligações não dizia quanto custa; um `id` trocado tirava-lho."""
+    pasta = _com_a_pedido(tmp_path / "x", ["norte"])
+    d = yaml.safe_load((pasta / "fontes.yaml").read_text(encoding="utf-8"))
+    d["saidas"][0]["params"]["tarifas"] = ["viagem"]
+    (pasta / "fontes.yaml").write_text(yaml.safe_dump(d), encoding="utf-8")
+    r = yaml.safe_load((pasta / "regiao.yaml").read_text(encoding="utf-8"))
+    r["inclui"]["tarifas"] = "tarifas.yaml"
+    (pasta / "regiao.yaml").write_text(yaml.safe_dump(r), encoding="utf-8")
+    titulos = {"titulos": [{"id": "viagem", "rede": "X", "nome": "Viagem", "valor": 3}]}
+    (pasta / "tarifas.yaml").write_text(yaml.safe_dump(titulos), encoding="utf-8")
+    assert Regiao.carregar(pasta).saidas[0].params["tarifas"] == ["viagem"]
+
+    d["saidas"][0]["params"]["tarifas"] = ["viagem", "outra"]
+    (pasta / "fontes.yaml").write_text(yaml.safe_dump(d), encoding="utf-8")
+    with pytest.raises(ErroDeRegiao, match="outra"):
+        Regiao.carregar(pasta)
