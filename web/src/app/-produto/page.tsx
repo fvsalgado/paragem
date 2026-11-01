@@ -87,7 +87,7 @@ const INCLUI: { titulo: string; itens: string[] }[] = [
   {
     titulo: 'Para todos',
     itens: [
-      'Feito para as WCAG 2.1 AA, com testes automáticos de acessibilidade em cada alteração — o axe-core e o Lighthouse, nos dois temas — e declaração de acessibilidade (Decreto-Lei n.º 83/2018). Ainda sem avaliação manual: a declaração diz o que foi verificado e como.',
+      'Feito para as WCAG 2.1 AA, com testes automáticos de acessibilidade em cada alteração — o axe-core e o Lighthouse, nos dois temas — e declaração de acessibilidade (Decreto-Lei n.º 83/2018). Parcialmente conforme, por autoavaliação: a declaração diz o que foi verificado e como.',
       'Sem cookies e sem contas para quem viaja: mede-se o que se procura — as páginas vistas e as viagens pedidas, pelo nome das paragens —, e não quem procura. A página de privacidade diz o que se regista.',
       'Dados para descarregar — GTFS, GBFS e GeoJSON —, cada ficheiro com a origem e os termos.',
       'Código livre, sob AGPL.',

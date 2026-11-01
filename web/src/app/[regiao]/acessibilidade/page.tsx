@@ -81,20 +81,24 @@ export default async function Acessibilidade({ params }: { params: Promise<{ reg
 
       <h2>Estado de conformidade</h2>
       {/* «PARCIALMENTE CONFORME», E NÃO «CONFORME»: os testes automáticos
-          passam, mas há conteúdos que não estão conformes (os de baixo), e a
-          avaliação manual ainda não foi feita. «Plenamente conforme» exige
-          todos os requisitos cumpridos, sem exceções — e há exceções. */}
+          passam, mas há conteúdos que não estão conformes (os de baixo).
+          «Plenamente conforme» exige todos os requisitos cumpridos, sem
+          exceções — e há exceções. A FRASE É A MESMA DA AGENDA CULTURAL que
+          se apresenta ao lado deste sítio (decisão de 1/11/2026: «unifica»):
+          duas declarações da mesma casa a dizerem o mesmo estado por palavras
+          diferentes liam-se como dois estados. */}
       <p>
-        Este sítio está <strong>parcialmente conforme</strong> com o Decreto-Lei n.º 83/2018, que
-        pede as WCAG 2.1 de nível AA. Os testes automáticos descritos abaixo passam; os conteúdos
-        que não estão conformes estão listados mais abaixo, e ainda não houve avaliação manual — nem
-        de ponta a ponta, nem por uma entidade externa, nem com pessoas com deficiência.
+        <strong>Parcialmente conforme</strong> com o Decreto-Lei n.º 83/2018 e com as WCAG 2.1,
+        nível AA, devido às limitações enumeradas abaixo. O estado resulta de uma autoavaliação —
+        testes automáticos a cada alteração e verificação manual durante o desenvolvimento —, sem
+        auditoria externa nem testes com pessoas que usam tecnologias de apoio.
       </p>
 
       <h2>Elaboração desta declaração</h2>
       <p>
         Declaração revista a {REVISTA_EM.dia} de {REVISTA_EM.mes} de {REVISTA_EM.ano}, por
-        autoavaliação, com os testes automáticos descritos abaixo.
+        autoavaliação: os testes automáticos descritos abaixo e verificação manual durante o
+        desenvolvimento.
       </p>
 
       <h2>O que foi verificado, e como</h2>
@@ -119,8 +123,10 @@ export default async function Acessibilidade({ params }: { params: Promise<{ reg
           Onde os ligamos, a informação está também em HTML.
         </li>
         <li>
-          <strong>Não houve avaliação manual, nem por pessoas com deficiência.</strong> Um teste
-          automático apanha uma parte do que interessa; o resto vê-se com quem usa.
+          <strong>
+            Não houve auditoria externa, nem testes com pessoas que usam tecnologias de apoio.
+          </strong>{' '}
+          Um teste automático apanha uma parte do que interessa; o resto vê-se com quem usa.
         </li>
       </ul>
 

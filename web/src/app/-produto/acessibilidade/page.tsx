@@ -45,15 +45,17 @@ export default function AcessibilidadeDoProduto() {
         oferece às autoridades que o licenciam.
       </p>
 
-      {/* NÃO SE DECLARA CONFORME O QUE NÃO FOI AVALIADO. Dizia «o objetivo é a
-          conformidade» e a montra dizia «Acessível: WCAG 2.1 AA»: a segunda
-          frase afirmava o que só uma avaliação manual pode afirmar. */}
+      {/* NÃO SE DECLARA CONFORME O QUE NÃO FOI AVALIADO. A montra dizia
+          «Acessível: WCAG 2.1 AA», o que só uma avaliação completa pode
+          afirmar. Depois dizia «Por avaliar», que não é nenhuma das três
+          classificações do modelo do decreto (auditoria de 1/11/2026). A
+          frase é a das regiões, palavra por palavra. */}
       <h2>Estado de conformidade</h2>
       <p>
-        <strong>Por avaliar.</strong> O objetivo é a conformidade com as WCAG 2.1 nível AA, mas o
-        sítio ainda não foi avaliado à mão — nem de ponta a ponta por nós, nem por uma entidade
-        externa, nem com pessoas com deficiência —, e por isso não se declara conforme. O que se
-        sabe é o que os testes automáticos verificam.
+        <strong>Parcialmente conforme</strong> com o Decreto-Lei n.º 83/2018 e com as WCAG 2.1,
+        nível AA, devido às limitações enumeradas abaixo. O estado resulta de uma autoavaliação —
+        testes automáticos a cada alteração e verificação manual durante o desenvolvimento —, sem
+        auditoria externa nem testes com pessoas que usam tecnologias de apoio.
       </p>
 
       <h2>O que foi verificado, e como</h2>
@@ -62,13 +64,18 @@ export default function AcessibilidadeDoProduto() {
       <h2>O que não está conforme, ou ainda não se sabe</h2>
       <ul>
         <li>
-          <strong>Não houve avaliação manual, nem por pessoas com deficiência.</strong> Um teste
-          automático apanha uma parte do que interessa; o resto vê-se com quem usa.
+          <strong>
+            Não houve auditoria externa, nem testes com pessoas que usam tecnologias de apoio.
+          </strong>{' '}
+          Um teste automático apanha uma parte do que interessa; o resto vê-se com quem usa.
         </li>
       </ul>
 
       <h2>Como foi preparada</h2>
-      <p>Por autoavaliação, só com os testes automáticos descritos acima. Revista a {REVISTA_A}.</p>
+      <p>
+        Por autoavaliação: os testes automáticos descritos acima e verificação manual durante o
+        desenvolvimento. Revista a {REVISTA_A}.
+      </p>
 
       <h2>Contacto</h2>
       <p>
