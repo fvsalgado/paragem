@@ -750,6 +750,12 @@ export default function Mapa({
         localizacao.on('geolocate', (pos) =>
           localizar.current?.(pos.coords.latitude, pos.coords.longitude),
         );
+        // A ESCALA EM BAIXO À DIREITA, por cima da atribuição. Estava em
+        // baixo à esquerda — e na secretária esse canto é o da coluna das
+        // folhas: a escala ficava a meio da coluna, a flutuar sobre o painel.
+        // Os controlos de baixo empilham-se do último para o primeiro: a
+        // escala antes do botão da localização fica entre ele e a atribuição.
+        criado.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-right');
         criado.addControl(localizacao, 'bottom-right');
         // O BOTÃO NASCE SEM NOME. O MapLibre cria-o desativado e só lhe dá o
         // nome quando o navegador responde se sabe dar a localização — e nesse
@@ -763,8 +769,6 @@ export default function Mapa({
           botaoDaLocalizacao.setAttribute('aria-label', nome);
           botaoDaLocalizacao.setAttribute('title', nome);
         }
-
-        criado.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left');
 
         // O erro vai para a consola: um mapa que falha em silêncio é uma
         // caixa cinzenta que ninguém consegue diagnosticar.
