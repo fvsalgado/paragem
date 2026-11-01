@@ -25,7 +25,8 @@ import { avisosEmVigor } from '@/lib/avisos';
 import { catalogoDosAvisos } from '@/lib/avisos-do-sitio';
 import { motorDaRegiao } from '@/lib/enderecos';
 import { dataDosHorarios } from '@/lib/formato';
-import { fraseDosOperadores, lista, plural } from '@/lib/prosa';
+import { daRede, fraseDosOperadores, lista, numero, plural } from '@/lib/prosa';
+import { quantosNoModo as contarNoModo } from '@/lib/por-modo';
 
 /**
  * O CATÁLOGO: todas as paragens, linhas, estações e concelhos, em listas.
@@ -71,12 +72,25 @@ export default async function CatalogoDaRegiao({
     const caminho = caminhoDoModo(m, temPagina);
     return caminho ? url(r, caminho) : null;
   };
+  // DE QUEM SÃO AS LINHAS, quando não são todas da rede (auditoria de
+  // 1/11/2026, #16). «Autocarro — 145 linhas» não era o número que a
+  // autoridade de transportes conhece — o caderno dela tem 122 —, e nada
+  // dizia de onde vinham as outras 23: são de outros operadores que entram na
+  // região. Os números são os do `numeros.json`, que a raiz confere.
+  const n = await lerNumeros(rid);
+  const linhasDaRede = n?.linhas_da_rede?.valor;
+  const deFora = linhasDaRede != null && linhasDaRede < ls.length ? ls.length - linhasDaRede : 0;
+  const nasParagens = n?.paragens_nos_concelhos?.valor;
   const quantosNoModo: Record<string, string> = {
-    autocarro: plural(ls.length, 'linha', 'linhas'),
+    autocarro: deFora
+      ? `${plural(linhasDaRede!, 'linha', 'linhas')} ${daRede(r)}, e ${numero(deFora)} de outros operadores`
+      : plural(ls.length, 'linha', 'linhas'),
     comboio: plural(es.length, 'estação', 'estações'),
     ...(pedido ? { 'a-pedido': plural(pedido.zonas.length, 'zona', 'zonas') } : {}),
+    // CADA NÚMERO COM A SUA UNIDADE (#109): «81 estações», «9 praças» — e não
+    // «81» e «9», que não diziam de quê.
     ...Object.fromEntries(
-      Object.entries(dosModos).map(([m, d]) => [m, d.quantos ? String(d.quantos) : 'por levantar']),
+      Object.entries(dosModos).map(([m, d]) => [m, contarNoModo(m, d) || 'por levantar']),
     ),
   };
 
@@ -84,7 +98,7 @@ export default async function CatalogoDaRegiao({
   // listas estão mais abaixo, e esta é a resposta de relance a «o que há?».
   // DE QUEM SÃO, quando não são todas da rede: as listas levam as dos outros
   // operadores que param na região, e o número sozinho lia-se como um erro.
-  const dosOperadores = fraseDosOperadores(await lerNumeros(rid));
+  const dosOperadores = fraseDosOperadores(n);
   const oQueHa = [
     ps.length ? plural(ps.length, 'paragem', 'paragens') : '',
     ls.length ? plural(ls.length, 'linha', 'linhas') : '',
@@ -227,16 +241,28 @@ export default async function CatalogoDaRegiao({
       <section aria-labelledby={inicio ? 'listas' : 'procurar'}>
         <h2 id={inicio ? 'listas' : 'procurar'}>{inicio ? 'As listas' : 'Procurar'}</h2>
         <ul className="lista">
+          {/* OS MESMOS NÚMEROS DAS LISTAS, e com o separador de milhares da
+              casa (#16, #109): «3047» aqui e «3 047» na página seguinte. As
+              paragens contam-se as dos concelhos da região, que é o que a
+              lista abre a dizer; as de fora estão lá, mais abaixo. */}
           <li>
             <Link href={urlRede(rid, 'paragens/')}>
               <span>Paragens</span>
-              <span className="secundario">{ps.length}</span>
+              <span className="secundario">
+                {nasParagens != null && nasParagens < ps.length
+                  ? `${numero(nasParagens)} na região`
+                  : numero(ps.length)}
+              </span>
             </Link>
           </li>
           <li>
             <Link href={urlRede(rid, 'linhas/')}>
               <span>Linhas</span>
-              <span className="secundario">{ls.length}</span>
+              <span className="secundario">
+                {deFora
+                  ? `${numero(linhasDaRede!)} da rede, ${numero(deFora)} de outros operadores`
+                  : numero(ls.length)}
+              </span>
             </Link>
           </li>
           {/* Só quando a região tem comboio — e o painel não o desligou. */}
@@ -244,7 +270,7 @@ export default async function CatalogoDaRegiao({
             <li>
               <Link href={urlRede(rid, 'estacoes/')}>
                 <span>Estações de comboio</span>
-                <span className="secundario">{es.length}</span>
+                <span className="secundario">{numero(es.length)}</span>
               </Link>
             </li>
           )}

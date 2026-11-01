@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { exigirModo, linhas, operadorCurto, urlRede, regiao } from '@/lib/dados';
-import { plural, maiuscula } from '@/lib/prosa';
+import { daRede, maiuscula, nomeDaRede, plural } from '@/lib/prosa';
 import FiltroDasLinhas from '@/componentes/FiltroDasLinhas';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
@@ -23,36 +23,45 @@ export async function generateMetadata({
 export default async function Linhas({ params }: { params: Promise<{ regiao: string }> }) {
   const { regiao: rid } = await params;
   await exigirModo(rid, 'autocarro');
+  const r = await regiao(rid);
   const ls = await linhas(rid);
-  // DOIS OPERADORES COM O MESMO NÚMERO DE CARREIRA. Acontece: a rede da região
-  // tem uma 1109 e a concessão vizinha tem outra, que não têm nada a ver uma
-  // com a outra. O identificador distingue-as e o distintivo não — quem lê a
-  // lista vê dois «1109» e não sabe qual escolheu. Nestes casos, e só nestes,
-  // o operador aparece ao lado: é o §1 outra vez, a entidade como informação
-  // secundária que só se mostra quando é precisa para decidir.
-  //
-  // Só na de FORA: a rede da região não se anuncia, e não precisa — basta uma
-  // das duas estar identificada para que a outra deixe de ser ambígua. E
-  // escrever aqui o nome da rede da casa era cravar no código o nome de um
-  // cliente, que é o que o §11.1 proíbe.
-  const quantas = new Map<string, number>();
-  for (const l of ls) quantas.set(l.codigo, (quantas.get(l.codigo) ?? 0) + 1);
+  // A REDE DA REGIÃO E AS LINHAS DE OUTROS OPERADORES, em dois grupos, e quantas
+  // são de cada (auditoria de 1/11/2026, #16 e #97). A lista misturava as
+  // carreiras de fora — oito com o mesmo nome, de um terminal a outro, sem cor
+  // e sem operador — com as da rede, e o mesmo número de carreira aparecia duas
+  // vezes, uma de cada concessão, sem dizer qual era qual. As de fora levam todas o
+  // nome de quem as gere, e cada uma vive no seu grupo.
+  const daRegiao = ls.filter((l) => !l.operador);
+  const deFora = ls.filter((l) => l.operador);
+  const comoItem = (l: (typeof ls)[number]) => ({
+    id: l.id,
+    href: urlRede(rid, `linhas/${l.id}/`),
+    codigo: l.codigo,
+    nome: l.nome,
+    cor: l.cor ?? null,
+    operador: l.operador ? operadorCurto(l.operador) : null,
+    viagens: l.viagens,
+  });
+  const rede = r ? nomeDaRede(r) : 'A rede';
 
   return (
     <>
       <h1>Linhas</h1>
-      <p>{plural(ls.length, 'linha', 'linhas')}.</p>
+      <p>
+        {deFora.length
+          ? `${plural(daRegiao.length, 'linha', 'linhas')} ${r ? daRede(r) : 'da rede'}, e ${plural(deFora.length, 'linha', 'linhas')} de outros operadores que entram na região.`
+          : `${plural(ls.length, 'linha', 'linhas')}.`}
+      </p>
       <FiltroDasLinhas
-        linhas={ls.map((l) => ({
-          id: l.id,
-          href: urlRede(rid, `linhas/${l.id}/`),
-          codigo: l.codigo,
-          nome: l.nome,
-          cor: l.cor ?? null,
-          operador:
-            (quantas.get(l.codigo) ?? 0) > 1 && l.operador ? operadorCurto(l.operador) : null,
-          viagens: l.viagens,
-        }))}
+        grupos={[
+          { id: 'rede', titulo: rede, linhas: daRegiao.map(comoItem) },
+          {
+            id: 'outros',
+            titulo: 'Outras linhas que entram na região',
+            nota: 'Geridas por outros operadores, com paragens na região.',
+            linhas: deFora.map(comoItem),
+          },
+        ]}
       />
     </>
   );

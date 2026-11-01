@@ -50,7 +50,14 @@ export type Paragem = {
   partidas: number;
   concelho: string;
 };
-type Linha = { id: string; codigo: string; nome: string; modo: string; viagens: number };
+type Linha = {
+  id: string;
+  codigo: string;
+  nome: string;
+  modo: string;
+  viagens: number;
+  operador?: string;
+};
 type Concelho = { id: string; nome: string; paragens: number };
 type Estacao = {
   id: string;

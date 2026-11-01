@@ -14,6 +14,7 @@ import {
   urlRede,
   urlDaParagem,
   NAO_ENCONTRADA,
+  paragensPertoPorNome,
   regiao,
   temMosaicos,
 } from '@/lib/dados';
@@ -74,15 +75,9 @@ export default async function Estacao({
   // «<terra> (Estação) · 125 m» — os dois lados da estrada, que para
   // quem sai do comboio são o mesmo sítio —, e nenhuma partida. Junta-se por
   // nome, com as partidas das duas, e a distância da mais perto.
-  const porNome = new Map<string, { ids: string[]; metros: number }>();
-  for (const p of e.paragens_perto) {
-    const g = porNome.get(p.nome) ?? { ids: [], metros: p.metros };
-    g.ids.push(p.id);
-    g.metros = Math.min(g.metros, p.metros);
-    porNome.set(p.nome, g);
-  }
+  // A mesma regra da lista das estações (`paragensPertoPorNome`).
   const aPorta = await Promise.all(
-    [...porNome.entries()].map(async ([nome, g]) => {
+    paragensPertoPorNome(e.paragens_perto).map(async ({ nome, ...g }) => {
       const fichas = (await Promise.all(g.ids.map((i) => lerParagem(rid, i)))).filter(
         (f): f is NonNullable<typeof f> => !!f,
       );
@@ -106,18 +101,6 @@ export default async function Estacao({
         )}
         .
       </p>
-      <p className="cartao-accoes">
-        <Link className="botao" href={url(rid, `/viagem/?para=${encodeURIComponent(e.nome)}`)}>
-          Como chegar aqui
-        </Link>
-        {/* Só onde há mapa: numa região sem mosaicos o início não tem mapa. */}
-        {temMapa && <a href={url(rid, `/?ponto=${encodeURIComponent(e.id)}`)}>Ver no mapa</a>}
-      </p>
-      <MarcaDeDados
-        regiao={rid}
-        modos={['comboio']}
-        feeds={feedsDosServicos((ficha?.partidas ?? []).map((d) => d.servico_id))}
-      />
 
       {/* OS COMBOIOS QUE O SÍTIO JÁ TEM. A página dizia «os horários da CP não
           são publicados aqui», e o planeador do mesmo sítio propunha comboios
@@ -146,6 +129,24 @@ export default async function Estacao({
         )}
         <OperadorFerroviario operador={e.operador} demonstracao={!!r?.demonstracao} />
       </section>
+
+      {/* O QUE SE PROCURA PRIMEIRO, E O RESTO DEPOIS (auditoria de 1/11/2026,
+          #80). O primeiro comboio aparecia a 70 % do primeiro ecrã do
+          telemóvel, depois dos botões e da nota sobre os dados. A nota fica
+          logo a seguir às horas, que é a quem ela responde — «não é tempo
+          real» —, e os botões a seguir a ela. */}
+      <MarcaDeDados
+        regiao={rid}
+        modos={['comboio']}
+        feeds={feedsDosServicos((ficha?.partidas ?? []).map((d) => d.servico_id))}
+      />
+      <p className="cartao-accoes">
+        <Link className="botao" href={url(rid, `/viagem/?para=${encodeURIComponent(e.nome)}`)}>
+          Como chegar aqui
+        </Link>
+        {/* Só onde há mapa: numa região sem mosaicos o início não tem mapa. */}
+        {temMapa && <a href={url(rid, `/?ponto=${encodeURIComponent(e.id)}`)}>Ver no mapa</a>}
+      </p>
 
       <section aria-labelledby="autocarro">
         <h2 id="autocarro">Autocarro à porta</h2>

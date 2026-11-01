@@ -15,7 +15,10 @@ import {
   servicosSemDatas,
   url,
   NOME_DOS_MODOS,
+  tarifas,
 } from '@/lib/dados';
+import { porPeriodo, precosDaAbertura } from '@/lib/tarifario';
+import { fraseDoQueJunta } from '@/lib/prosa';
 import { dataDosHorarios, type Ponto } from '@/lib/formato';
 import { limitesDaRede } from '@/lib/pontos-no-mapa';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
@@ -137,7 +140,8 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
   // não sabe o que é uma região, e não é aqui que vai passar a saber. O que
   // lhe chega é uma lista de nomes e endereços.
   const comPagina = await lerModos(rid);
-  const temAPedido = !!(await aPedido(rid));
+  const pedido = await aPedido(rid);
+  const temAPedido = !!pedido;
   const modos = r.modos
     .map((m) => {
       const caminho = caminhoDoModo(m, (x) => x in comPagina);
@@ -168,6 +172,28 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
       return { id, codigo: l?.codigo ?? id, cor: l?.cor ?? null, modo: l?.modo };
     }),
   }));
+
+  // QUANTO CUSTA E COMO SE PEDE O A PEDIDO, na folha do mapa (auditoria de
+  // 1/11/2026, #90). São as duas perguntas de quem decide, e a folha não
+  // respondia a nenhuma: o tarifário estava a duas páginas, e o telefone do
+  // transporte a pedido só em «A rede».
+  const t = await tarifas(rid);
+  const moeda = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: t.moeda });
+  const precos =
+    precosDaAbertura(t.titulos, r.rede?.nome)
+      .map(
+        (p) => `${p.nome} ${moeda.format(p.valor)}${p.periodo ? ` ${porPeriodo(p.periodo)}` : ''}`,
+      )
+      .join(' · ') || null;
+  const reservas = pedido?.reservas;
+  const aPedidoNaFolha =
+    reservas?.telefone && temAPedido
+      ? {
+          telefone: reservas.telefone,
+          apresentado: reservas.telefone_apresentado ?? reservas.telefone,
+          nota: reservas.telefone_nota ?? null,
+        }
+      : null;
 
   return (
     <>
@@ -208,6 +234,12 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
         servicosSemDatas={servicosSemDatas(await lacunas(rid))}
         dadosDe={dataDosHorarios(r)}
         avisos={avisos}
+        precos={precos}
+        aPedidoNaFolha={aPedidoNaFolha}
+        oQueJunta={fraseDoQueJunta(
+          r,
+          modos.map((m) => m.id),
+        )}
       />
     </>
   );

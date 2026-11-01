@@ -36,8 +36,8 @@ test('a página começa pelo que passa a seguir, com a espera e a hora', async (
   await expect(primeira.locator('.quando-passa strong')).toHaveText(/agora|\d+ min/);
   await expect(primeira.locator('.relogio')).toHaveText(PARTIDA!.hora);
 
-  // A resposta antes do pormenor: o «A seguir» vem antes do horário completo.
-  const horario = page.getByRole('heading', { name: 'Horário completo' });
+  // A resposta antes do pormenor: o «A seguir» vem antes das partidas do dia.
+  const horario = page.getByRole('heading', { name: 'Partidas do dia' });
   expect((await aSeguir.boundingBox())!.y).toBeLessThan((await horario.boundingBox())!.y);
 });
 
@@ -48,6 +48,8 @@ test('o horário vem por tipo de dia, e o de hoje abre-se e diz «hoje»', async
 
   const quadros = page.locator('details.quadro-do-dia');
   await expect(quadros.first()).toBeAttached();
+  // Os quadros da operadora ficam por baixo da lista do dia, fechados (#14).
+  await page.locator('details.todos-os-quadros > summary').click();
   const deHoje = page.locator('details.quadro-do-dia[open]');
   await expect(deHoje.first()).toBeVisible({ timeout: 10_000 });
   await expect(deHoje.first().locator('summary .hoje')).toHaveText(/hoje/);
@@ -67,10 +69,45 @@ test('os quadros fechados abrem-se ao toque', async ({ page }) => {
   await expect(page.locator('section[aria-labelledby="a-seguir"]')).not.toContainText(
     'A ver o que passa',
   );
+  await page.locator('details.todos-os-quadros > summary').click();
   const quadro = page.locator('details.quadro-do-dia').first();
   const aberto = await quadro.evaluate((d) => (d as HTMLDetailsElement).open);
   await quadro.locator('summary').click();
   await expect.poll(() => quadro.evaluate((d) => (d as HTMLDetailsElement).open)).toBe(!aberto);
+});
+
+test('as partidas do dia vêm numa lista só, pela hora, e mudam com o dia', async ({ page }) => {
+  // Para saber o que passa numa segunda era preciso somar três quadros
+  // (auditoria de 1/11/2026, #14). A lista junta os que valem no dia.
+  test.skip(!PARTIDA, 'esta região não tem uma única partida num dia com serviço');
+  await page.clock.setFixedTime(PARTIDA!.quando);
+  await page.goto(`/rede/paragens/${PARAGEM.id}/`);
+  const doDia = page.locator('section[aria-labelledby="horario"] .partidas-do-dia');
+  await expect(doDia.locator('.dia-escolhido')).toContainText(/^Hoje, /);
+  const horas = await doDia.locator('tbody td .hora').allInnerTexts();
+  expect(horas.length).toBeGreaterThan(0);
+  expect(horas, 'pela hora').toEqual([...horas].sort());
+  expect(horas).toContain(PARTIDA!.hora);
+  // Os quadros ficam, fechados, por baixo.
+  await expect(page.locator('details.todos-os-quadros')).not.toHaveAttribute('open', '');
+
+  await doDia.getByRole('radio', { name: 'Amanhã' }).check();
+  // Amanhã, ou a frase que diz que os horários não chegam lá — nunca o vazio.
+  await expect(doDia.locator('[aria-live]')).toContainText(/Amanhã|horários carregados/);
+  await doDia.getByRole('radio', { name: 'Outro dia' }).check();
+  await expect(doDia.getByLabel('Data')).toBeVisible();
+});
+
+test('as linhas que param aqui levam à página de cada uma', async ({ page }) => {
+  // Para saber se a linha X passa ali era preciso abrir os quadros (#100).
+  await page.goto(`/rede/paragens/${PARAGEM.id}/`);
+  const linhas = page.getByRole('region', { name: /linhas? que para/ });
+  const primeira = linhas.getByRole('link').first();
+  await expect(primeira).toBeVisible();
+  await expect(primeira).toHaveAttribute('href', /\/rede\/linhas\/[^/]+\/$/);
+  expect(await linhas.getByRole('link').count()).toBeGreaterThanOrEqual(
+    Math.min(PARAGEM.linhas.length, 1),
+  );
 });
 
 test('«Ver no mapa» abre o mapa do sítio nesta paragem, com o cartão dela', async ({ page }) => {

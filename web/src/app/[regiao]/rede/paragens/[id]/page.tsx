@@ -16,6 +16,9 @@ import {
   urlDaParagem,
   temMosaicos,
   quadrosDeHoje,
+  calendarioDaRegiao,
+  paragens as todasAsParagens,
+  type Paragem as ParagemDaLista,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import FeriadoMunicipalDoConcelho from '@/componentes/FeriadoMunicipal';
@@ -26,8 +29,11 @@ import PartidasDaParagem from '@/componentes/PartidasDaParagem';
 import type { QuadroDoDia } from '@/componentes/QuadrosPorDia';
 import { metadadosDaRegiao } from '@/lib/metadados';
 import { cartaoDaParagem } from '@/lib/partilha';
-import { linhasNumaFrase } from '@/lib/prosa';
+import { linhasNumaFrase, lista, numero } from '@/lib/prosa';
 import { feedsDosServicos } from '@/lib/formato';
+import { servicosNoDia } from '@/lib/dias';
+import { diaNoFuso } from '@/lib/fuso';
+import { doMesmoSitio, metrosEntre, paraOnde } from '@/lib/lista-de-paragens';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -199,6 +205,48 @@ export default async function Paragem({
     ),
   }));
 
+  // AS PARTIDAS DO DIA DE HOJE JÁ NO HTML (`PartidasDoDia`): os serviços desta
+  // paragem que andam no dia em que a página se faz, pela tabela dos dias do
+  // servidor. O navegador refaz a conta com o seu relógio.
+  const nomesDosServicos = Object.fromEntries(
+    partidas.filter((d) => d.servico_id).map((d) => [d.servico_id!, d.servico_nome]),
+  );
+  const calendario = await calendarioDaRegiao(rid);
+  const hojeNoServidor = diaNoFuso(new Date()).replace(/-/g, '');
+  const ativosHoje = calendario ? servicosNoDia(calendario, hojeNoServidor) : null;
+  const doDiaNoServidor = ativosHoje
+    ? {
+        hoje: hojeNoServidor,
+        servicos: Object.keys(nomesDosServicos).filter((s) => ativosHoje.has(s)),
+      }
+    : null;
+
+  // AS LINHAS QUE PARAM AQUI, cada uma a levar à página dela (auditoria de
+  // 1/11/2026, #100). Para saber se a linha X passa ali era preciso abrir os
+  // quadros um a um. Pelo identificador, das partidas — há números que se
+  // repetem entre operadores —, e as que a ficha nomeia sem partida aqui (uma
+  // paragem só de chegada) pelo número, quando o número é de uma linha só.
+  const porId = new Map(catalogoDeLinhas.map((l) => [l.id, l]));
+  const linhasAqui = [...idsDasLinhas]
+    .map((i) => porId.get(i))
+    .filter((l): l is NonNullable<typeof l> => !!l)
+    .sort((a, b) => a.codigo.localeCompare(b.codigo, 'pt', { numeric: true }));
+  const repetidos = new Set(
+    [...porCodigo.entries()].filter(([, ids]) => ids.length > 1).map(([c]) => c),
+  );
+
+  // AS OUTRAS DO MESMO SÍTIO: o mesmo nome, a poucos metros — quase sempre o
+  // outro lado da estrada. A lista das paragens mostra uma por sítio e leva à
+  // mais servida (#15); é aqui que se veem as outras, e para onde vai cada uma.
+  const outras = await Promise.all(
+    doMesmoSitio(p as ParagemDaLista, await todasAsParagens(rid)).map(async (o) => ({
+      paragem: o,
+      metros: Math.round(metrosEntre(p, o) / 10) * 10,
+      para: paraOnde((await lerParagem(rid, o.id))?.partidas ?? [], o.nome),
+    })),
+  );
+  const paraAqui = outras.length ? paraOnde(partidas, p.nome) : [];
+
   // O «Ver no mapa» abre o mapa do próprio sítio nesta paragem, com o cartão
   // dela. É uma ligação a sério (`<a>`) e não uma navegação por dentro: o
   // mapa lê o endereço ao abrir.
@@ -241,6 +289,33 @@ export default async function Paragem({
         </Link>
         {noMapa && <a href={noMapa}>Ver no mapa</a>}
       </p>
+      {outras.length > 0 && (
+        <section aria-labelledby="mesmo-sitio" className="mesmo-sitio">
+          <h2 id="mesmo-sitio" className="titulo-pequeno">
+            {outras.length === 1
+              ? 'Há outra paragem com este nome aqui perto'
+              : `Há mais ${outras.length} paragens com este nome aqui perto`}
+          </h2>
+          {paraAqui.length > 0 && (
+            <p className="secundario">Esta serve quem vai para {lista(paraAqui)}.</p>
+          )}
+          <ul className="lista">
+            {outras.map(({ paragem: o, metros, para }) => (
+              <li key={o.id}>
+                <Link href={urlDaParagem(rid, o.id)}>
+                  <span>
+                    {para.length ? `Para ${lista(para)}` : 'Só chegadas, sem partidas'}
+                    <span className="so-para-leitores"> — {o.nome}</span>
+                  </span>
+                  <span className="secundario contagem">
+                    {metros < 10 ? 'ao lado' : `a ${numero(metros)} m`}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <MarcaDeDados
         regiao={rid}
         modos={[...modosDaParagem]}
@@ -263,6 +338,36 @@ export default async function Paragem({
           cores={cores}
           quadros={quadros}
           quadrosDeHoje={await quadrosDeHoje(rid, quadros)}
+          nomesDosServicos={nomesDosServicos}
+          doDiaNoServidor={doDiaNoServidor}
+          caminhoDasLinhas={urlRede(rid, 'linhas/')}
+          aoLado={
+            linhasAqui.length > 0 && (
+              <section aria-labelledby="linhas-aqui" className="linhas-aqui">
+                <h2 id="linhas-aqui">
+                  {linhasAqui.length === 1
+                    ? 'A linha que para aqui'
+                    : `As ${linhasAqui.length} linhas que param aqui`}
+                </h2>
+                <ul className="distintivos-das-linhas">
+                  {linhasAqui.map((l) => (
+                    <li key={l.id}>
+                      <Link href={urlRede(rid, `linhas/${l.id}/`)} title={l.nome}>
+                        <span className="so-para-leitores">Linha </span>
+                        <Distintivo codigo={l.codigo} cor={l.cor} tamanho="medio" />
+                        <span className="so-para-leitores">, {l.nome}</span>
+                        {/* O MESMO NÚMERO EM DOIS OPERADORES diz-se de quem é
+                            (#97): sem isso, o mesmo número era duas linhas. */}
+                        {repetidos.has(l.codigo) && l.operador && (
+                          <span className="secundario"> {operadorCurto(l.operador)}</span>
+                        )}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )
+          }
         />
       )}
 

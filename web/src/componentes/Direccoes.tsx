@@ -44,6 +44,8 @@ import {
 import { arrumarParaMostrar, contarTransbordos } from '@/lib/viagens';
 import { FUSO, instanteNaRegiao, relogioNoFuso } from '@/lib/fuso';
 import { aPedidoNasPontas, type PropostaAPedido } from '@/lib/a-pedido';
+import { fraseDoPrazo, prazoDaReserva, type RegraDeReserva } from '@/lib/prazo-da-reserva';
+import { fraseDaEspera } from '@/lib/espera';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { comoProcura, escreverViagem } from '@/lib/endereco-da-viagem';
 import {
@@ -715,6 +717,26 @@ export default function Direccoes({
     );
   })();
 
+  /**
+   * «Depois das 09:00, a primeira ligação é às 12:35 — 3 h 35 min de espera.»
+   * Só com transportes, com opções no dia pedido, e quando a primeira parte
+   * mais de uma hora depois da hora perguntada. Conta-se da hora PERGUNTADA,
+   * no relógio da região (`referencia`).
+   */
+  const esperaGrande = (() => {
+    if (estado.tipo !== 'resultados' || problema || naProxima || modo !== 'transporte') return '';
+    if (!lista.length) return '';
+    const primeira = lista.reduce((a, b) => (b.startTime < a.startTime ? b : a));
+    return fraseDaEspera({
+      pedida: referencia,
+      parte: primeira.startTime,
+      agora: quando === 'agora',
+      horaPedida: estado.hora,
+      horaDaPartida: horaDe(primeira.startTime),
+      dia: diaDe(primeira.startTime, referencia, FUSO, Date.now()),
+    });
+  })();
+
   const podePartilhar = !!para && !Number.isNaN(para.lat) && estado.tipo === 'resultados';
 
   /**
@@ -1136,6 +1158,11 @@ export default function Direccoes({
             {/* QUANTAS SÃO, E QUANDO PARTE A RECOMENDADA — só para quem
                 ouve; quem vê conta-as de relance. */}
             {resumoFalado && <p className="so-para-leitores">{resumoFalado}</p>}
+            {/* A ESPERA, À VISTA, quando a primeira ligação parte muito depois
+                da hora pedida (auditoria de 1/11/2026, #119). Pedia-se às
+                9h00 e o primeiro cartão era das 12:35, sem uma palavra: quem
+                via pensava que o planeador tinha ignorado a hora. */}
+            {esperaGrande && <p className="espera-grande">{esperaGrande}</p>}
           </div>
 
           {/* O ESQUELETO DE TRÊS OPÇÕES enquanto se procura: o lugar que as
@@ -1231,7 +1258,13 @@ export default function Direccoes({
           )}
 
           {/* O TRANSPORTE A PEDIDO, QUANDO SERVE AS PONTAS (P2-036). */}
-          {propostas.length > 0 && <PropostasAPedido propostas={propostas} d={aPedidoDaRegiao!} />}
+          {propostas.length > 0 && (
+            <PropostasAPedido
+              propostas={propostas}
+              d={aPedidoDaRegiao!}
+              dia={estado.tipo === 'resultados' ? estado.data : data}
+            />
+          )}
         </div>
       </section>
     </>
@@ -1489,10 +1522,27 @@ const VER: Record<PropostaAPedido['oQue'], string> = {
   zonas: 'Ver as zonas',
 };
 
-function PropostasAPedido({ propostas, d }: { propostas: PropostaAPedido[]; d: APedido }) {
+function PropostasAPedido({
+  propostas,
+  d,
+  dia,
+}: {
+  propostas: PropostaAPedido[];
+  d: APedido;
+  /** O dia da viagem, `AAAA-MM-DD` — para o prazo da reserva DESSE dia. */
+  dia: string;
+}) {
   const v = d.reservas;
   const online =
     !!v.online && propostas.some((p) => p.reservaOnline === true || p.reservaOnline === null);
+  // O PRAZO PARA O DIA ESCOLHIDO, e não a regra genérica (#121): num domingo
+  // à noite, para segunda, o prazo tinha fechado na sexta. Calcula-se no
+  // navegador, com o relógio de quem lê — a folha não vem da cache.
+  const [agora, setAgora] = useState<Date | null>(null);
+  useEffect(() => setAgora(new Date()), []);
+  const prazo = agora
+    ? prazoDaReserva(dia, (v as { gtfs?: RegraDeReserva[] }).gtfs, v.prazo, agora)
+    : null;
   return (
     <section className="faixa a-pedido propostas-a-pedido" aria-labelledby="a-pedido-proposto">
       <h3 id="a-pedido-proposto">Transporte a pedido</h3>
@@ -1522,9 +1572,17 @@ function PropostasAPedido({ propostas, d }: { propostas: PropostaAPedido[]; d: A
         <strong>Só passa se for reservado</strong>
         {v.prazo ? `: ${v.prazo.charAt(0).toLowerCase()}${v.prazo.slice(1)}.` : '.'}
       </p>
+      {prazo && agora && (
+        <p className={prazo.fechou ? 'prazo-fechado' : 'prazo-aberto'}>
+          <strong>{fraseDoPrazo(prazo, chaveDoDia(agora))}</strong>
+        </p>
+      )}
+      {/* COM O PRAZO FECHADO, LIGAR DEIXA DE SER O BOTÃO PRINCIPAL: para
+          aquele dia já não serve, e o botão cheio dizia o contrário. Fica à
+          mão, para outro dia. */}
       <p className="cartao-accoes">
         {v.telefone && (
-          <a className="botao" href={`tel:${v.telefone}`}>
+          <a className={prazo?.fechou ? undefined : 'botao'} href={`tel:${v.telefone}`}>
             Ligar {v.telefone_apresentado ?? v.telefone}
           </a>
         )}

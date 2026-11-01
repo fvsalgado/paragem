@@ -57,3 +57,29 @@ test('no mapa, o cartão de uma estação diz o que parte a seguir, com um nome 
     timeout: 15_000,
   });
 });
+
+test('os comboios vêm antes dos botões e da nota sobre os dados', async ({ page }) => {
+  // O primeiro comboio aparecia a 70 % do primeiro ecrã do telemóvel, depois
+  // de «Como chegar aqui» e da cápsula dos dados (auditoria de 1/11/2026, #80).
+  const e = COM_AUTOCARRO ?? SEM_AUTOCARRO;
+  test.skip(!e, SEM.comboio);
+  await page.goto(`/rede/estacoes/${seguro(e!.id)}/`);
+  // Mede-se depois de as horas chegarem: o título é redesenhado quando chegam.
+  await expect(page.locator('section.a-seguir .fantasma-das-partidas')).toHaveCount(0);
+  const comboios = (await page.getByRole('heading', { name: 'Comboios a seguir' }).boundingBox())!;
+  const botao = (await page.getByRole('link', { name: 'Como chegar aqui' }).boundingBox())!;
+  const nota = (await page.locator('.marca-dados').first().boundingBox())!;
+  expect(comboios.y).toBeLessThan(botao.y);
+  expect(comboios.y).toBeLessThan(nota.y);
+});
+
+test('na lista, as estações sem autocarro perto ficam juntas, à parte', async ({ page }) => {
+  test.skip(!SEM_AUTOCARRO, SEM.comboio);
+  await page.goto('/rede/estacoes/');
+  const grupo = page.getByRole('region', { name: 'Sem autocarro a menos de 300 m' });
+  await expect(grupo.getByRole('link', { name: new RegExp(SEM_AUTOCARRO!.nome) })).toBeVisible();
+  // E a faixa leva lá.
+  await expect(page.locator('.faixa a[href="#sem-autocarro"]')).toBeVisible();
+  // Todas as que não têm autocarro perto, e só essas.
+  await expect(grupo.getByRole('link')).toHaveCount(estacoes().filter((e) => e.sem_ligacao).length);
+});

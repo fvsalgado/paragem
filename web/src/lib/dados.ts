@@ -213,7 +213,14 @@ async function regiaoLigada(r: string): Promise<boolean> {
 // Os tipos e as funções puras vivem em `formato.ts` — ver lá porquê.
 export * from './formato';
 // O `export *` reexporta, mas não traz os nomes para ESTE ficheiro.
-import { IDENTIFICADOR, pontosDaProcura, seguro, type ProcuraCrua } from './formato';
+import {
+  IDENTIFICADOR,
+  pontosDaProcura,
+  pontosDosSitios,
+  seguro,
+  type ProcuraCrua,
+  type SitiosCrus,
+} from './formato';
 import type {
   APedido,
   Concelho,
@@ -467,6 +474,17 @@ export const procura = cache(async (r: string): Promise<Ponto[]> => {
   // ti» — é este índice que os três leem.
   return semModulosDesligados(pontosDaProcura(d), await modulosDesligados(r));
 });
+
+/**
+ * OS SÍTIOS DO OPENSTREETMAP, no servidor: é de onde sai a terra mais perto
+ * que distingue duas paragens com o mesmo nome em sítios diferentes, na lista
+ * das paragens (`homonimos.ts`). O navegador lê o mesmo ficheiro à primeira
+ * tecla da procura.
+ */
+export const sitios = cache(
+  async (r: string): Promise<Ponto[]> =>
+    pontosDosSitios(await ler<SitiosCrus>(r, 'sitios.json', { sitios: [] })),
+);
 
 /**
  * A FICHA DE UMA PARAGEM: a paragem e as partidas dela, num ficheiro só.

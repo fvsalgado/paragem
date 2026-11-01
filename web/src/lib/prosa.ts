@@ -89,6 +89,15 @@ export function aRede(r: Pick<Regiao, 'rede'>): string {
   return /^rede\b/i.test(nome) ? `a ${nome}` : `a rede ${nome}`;
 }
 
+/**
+ * A rede depois de «de»: «da rede Sável Bus», «da Rede Alta» — a mesma regra
+ * do `aRede`. «Rede» é sempre feminino; a contração é do substantivo, e não
+ * do nome da rede, que fica como vem.
+ */
+export function daRede(r: Pick<Regiao, 'rede'>): string {
+  return `d${aRede(r)}`;
+}
+
 const AUTORIDADE_SEM_ARTIGO = {
   com_artigo: 'a autoridade de transportes',
   de: 'da autoridade de transportes',
@@ -212,19 +221,61 @@ export function fraseDosOperadores(n: Numeros | null | undefined): string | null
 }
 
 /**
- * As paragens da lista, desdobradas: as da rede, as de outros operadores, e as
- * que ficam nos concelhos da região — que é a soma das páginas de concelho.
+ * A ABERTURA DO ÍNDICE DAS PARAGENS: quantas ficam nos concelhos da região, e
+ * quantas fora deles — numa frase que se lê à primeira (auditoria de
+ * 1/11/2026, #105).
+ *
+ * Eram quatro números: o total, o da rede, o dos outros operadores e o dos
+ * concelhos — e o da rede e o dos concelhos (1 928 e 1 946) pareciam o mesmo
+ * número com um erro. A divisão por operador é para quem confere os dados, e
+ * está nos dados abertos.
+ *
+ * Sem os números da região (dados de antes deles), o total e mais nada.
  */
-export function fraseDasParagens(n: Numeros | null | undefined): string | null {
-  const p = n?.paragens?.valor;
-  const pr = n?.paragens_da_rede?.valor;
+export function fraseDoIndiceDasParagens(
+  n: Numeros | null | undefined,
+  concelhos: number,
+  total: number,
+): string {
   const nc = n?.paragens_nos_concelhos?.valor;
-  if (p == null || pr == null) return null;
-  const partes: string[] = [];
-  if (pr < p)
-    partes.push(
-      `${numero(pr)} são da rede da região e ${numero(p - pr)} de outros operadores que param nela`,
-    );
-  if (nc != null && nc < p) partes.push(`${numero(nc)} ficam nos concelhos da região`);
-  return partes.length ? `${maiuscula(partes.join('; '))}.` : null;
+  const p = n?.paragens?.valor ?? total;
+  if (nc == null || nc >= p) return `${maiuscula(plural(p, 'paragem', 'paragens'))}.`;
+  // «nos 13 concelhos da região»; com um só, a região e o concelho são o
+  // mesmo sítio, e diz-se a região.
+  const [onde, foraDe] =
+    concelhos > 1
+      ? [`nos ${numero(concelhos)} concelhos da região`, 'deles']
+      : ['na região', 'dela'];
+  return (
+    `${maiuscula(plural(nc, 'paragem', 'paragens'))} ${onde}. ` +
+    `A lista inclui também ${plural(p - nc, 'paragem', 'paragens')} fora ${foraDe}, ` +
+    'nas linhas que entram na região ou saem dela.'
+  );
+}
+
+/** Os modos no plural, como se dizem numa frase: «autocarros», «táxis». */
+const MODOS_NUMA_FRASE: Record<string, string> = {
+  'a-pedido': 'transporte a pedido',
+  comboio: 'comboios',
+  'urbano-municipal': 'urbanos municipais',
+  bicicleta: 'bicicletas partilhadas',
+  expresso: 'expressos',
+  taxi: 'táxis',
+};
+
+/**
+ * O QUE O SÍTIO JUNTA, numa frase — para quem chega pela primeira vez, ou para
+ * o decisor a ver num projetor (auditoria de 1/11/2026, #173): «Autocarros da
+ * rede Sável Bus, comboios, transporte a pedido e táxis — tudo num só sítio.»
+ *
+ * Dos modos que a região tem, pela ordem dela; os autocarros com o nome da
+ * rede, que é a dela. `null` com menos de dois modos: um sítio só de
+ * autocarros não «junta» nada, e a frase seria uma promessa vazia.
+ */
+export function fraseDoQueJunta(r: Pick<Regiao, 'rede'>, modos: readonly string[]): string | null {
+  const nomes = modos
+    .map((m) => (m === 'autocarro' ? `autocarros ${daRede(r)}` : MODOS_NUMA_FRASE[m]))
+    .filter((x): x is string => !!x);
+  if (nomes.length < 2) return null;
+  return `${maiuscula(lista(nomes))} — tudo num só sítio.`;
 }

@@ -1,4 +1,4 @@
-import { contraste, MINIMO, normalizar } from '@/lib/cor';
+import { contraste, MINIMO, normalizar, somemNoEscuro } from '@/lib/cor';
 
 /**
  * O número da linha, com a cor que o feed lhe dá.
@@ -66,7 +66,7 @@ export default function Distintivo({
   const fundo = comContrasteSuficiente(original);
   return (
     <span
-      className={classe}
+      className={somemNoEscuro(fundo) ? `${classe} some-no-escuro` : classe}
       style={{ background: fundo, color: textoSobre(fundo), borderColor: fundo }}
     >
       {codigo}

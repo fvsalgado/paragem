@@ -244,6 +244,38 @@ h3 {
 
 /* --- estrutura ----------------------------------------------------------- */
 
+/* O TRILHO DAS PÁGINAS DA REDE (`Trilho.tsx`): «A rede › Paragens», por cima
+   do título. As ligações levam os 44 px de qualquer ligação autónoma; a
+   margem negativa devolve ao título a folga de cima que elas comem. */
+.trilho {
+  margin: -0.85rem 0 0.25rem;
+  font-size: 0.95rem;
+}
+.trilho ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.trilho li {
+  display: inline-flex;
+  align-items: center;
+}
+/* O separador é do desenho e não do texto: o leitor de ecrã já anuncia uma
+   lista ordenada dentro de uma navegação, e «maior que» a cada passo era ruído. */
+.trilho li + li::before {
+  content: '›' / '';
+  margin: 0 0.4rem;
+  color: var(--texto-secundario);
+}
+.trilho a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+}
+
 .pagina {
   max-width: var(--medida);
   margin: 0 auto;
@@ -382,6 +414,41 @@ code {
   justify-content: space-between;
   gap: 0 1.5rem;
 }
+/* NUM TELEMÓVEL, O INTERRUPTOR SOBE PARA A FILA DA ASSINATURA, e a segunda
+   fila fica só para as três ligações (auditoria de 1/11/2026, #101): com o
+   «Como chegar» ao lado de «Mapa» e «A rede», o interruptor já não cabia na
+   mesma fila. A grelha desfaz-se a partir de 48 rem, onde tudo é uma fila só.
+   A ordem do foco é a do HTML — a assinatura, as ligações, o interruptor. */
+@media (max-width: 47.99rem) {
+  .cabecalho-da-regiao .interior {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'marca tema'
+      'navegacao navegacao';
+    align-items: center;
+    padding: 0.25rem 1rem 0;
+  }
+  .cabecalho-da-regiao a.marca-da-regiao {
+    grid-area: marca;
+    min-height: var(--alvo);
+  }
+  .cabecalho-da-regiao .acoes-do-cabecalho {
+    display: contents;
+  }
+  .cabecalho-da-regiao .acoes-do-cabecalho nav {
+    grid-area: navegacao;
+  }
+  .cabecalho-da-regiao .acoes-do-cabecalho .botao-do-tema {
+    grid-area: tema;
+  }
+  .cabecalho-da-regiao nav ul {
+    gap: 0 0.75rem;
+  }
+  .cabecalho-da-regiao nav li:first-child a {
+    padding-left: 0;
+  }
+}
 .cabecalho-da-regiao a {
   color: inherit;
 }
@@ -401,6 +468,13 @@ code {
 }
 .cabecalho-da-regiao nav ul {
   flex-wrap: nowrap;
+}
+/* Abaixo dos 360 px as três ligações não cabem numa fila sem a página
+   deslizar para o lado: partem-se em duas, em vez de saírem do ecrã. */
+@media (max-width: 22.4rem) {
+  .cabecalho-da-regiao nav ul {
+    flex-wrap: wrap;
+  }
 }
 @media (min-width: 48rem) {
   .cabecalho-da-regiao .interior {
@@ -890,8 +964,12 @@ details.lista-fechada[open] > summary::after {
      empurrava a página para fora do ecrã nos concelhos com nomes de paragem
      compridos. Encolhe, e o que não couber parte a linha. */
   flex-shrink: 1;
-  min-width: 0;
-  overflow-wrap: anywhere;
+  /* MAS NÃO ABAIXO DA PALAVRA MAIS COMPRIDA (auditoria de 1/11/2026, #107):
+     com `overflow-wrap: anywhere` e `min-width: 0`, a coluna encolhia até
+     uma letra e o concelho saía «Abrante / s». Encolhe até à palavra mais
+     comprida dela, e quem parte a linha é o nome, à esquerda. */
+  min-width: auto;
+  overflow-wrap: break-word;
 }
 
 .lista a > span:first-child {
@@ -1132,6 +1210,18 @@ details.lista-fechada[open] > summary::after {
   padding: 0.2rem 0.65rem;
   border-radius: 8px;
   min-width: 2.9em;
+}
+/* NO TEMA ESCURO, UM ARO NOS DISTINTIVOS QUE SE PERDIAM NO FUNDO
+   (`Distintivo.tsx`, `somemNoEscuro`). É uma sombra e não a borda: a borda
+   vem na cor da linha, no próprio elemento, e uma regra daqui não lhe ganha
+   sem `!important`. O aro é o dos campos — 5,6:1 sobre a página. */
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-tema='claro'])) .distintivo.some-no-escuro {
+    box-shadow: 0 0 0 1px var(--borda-campo);
+  }
+}
+:where(:root[data-tema='escuro']) .distintivo.some-no-escuro {
+  box-shadow: 0 0 0 1px var(--borda-campo);
 }
 
 /* --- tabelas de horário -------------------------------------------------- */
@@ -5790,4 +5880,311 @@ pre.codigo-para-copiar {
   flex-shrink: 0;
   overflow-wrap: normal;
   white-space: nowrap;
+}
+
+/* AS INICIAIS DO ÍNDICE DAS PARAGENS, numa grelha de botões (auditoria de
+   1/11/2026, #104): eram 23 linhas de lista a toda a largura, dois ecrãs do
+   telemóvel, e não pareciam ligações. Seis por fila num telemóvel, com a
+   contagem pequena por baixo de cada letra; os alvos têm 48 px. */
+.grelha-de-iniciais ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(3rem, 1fr));
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0.5rem 0 1rem;
+  padding: 0;
+}
+.grelha-de-iniciais a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio);
+  background: var(--superficie);
+  color: var(--marca-texto);
+  text-decoration: none;
+  line-height: 1.1;
+}
+.grelha-de-iniciais a:hover {
+  border-color: var(--marca-texto);
+}
+.grelha-de-iniciais .letra {
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+.grelha-de-iniciais .quantas {
+  font-size: 0.75rem;
+  color: var(--texto-secundario);
+}
+/* A barra compacta, no alto de cada página de letra: só as letras, e a de
+   agora cheia na cor das ligações. Num telemóvel é UMA fila que desliza para
+   o lado — em grelha eram quatro filas, 200 px por cima da lista que se veio
+   procurar; num ecrã largo cabe numa fila e não desliza. */
+.grelha-de-iniciais.compacta ul {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  scroll-padding-inline: 1rem;
+}
+.grelha-de-iniciais.compacta li {
+  flex: none;
+}
+.grelha-de-iniciais.compacta a {
+  min-height: var(--alvo);
+  min-width: var(--alvo);
+  font-weight: 700;
+}
+.grelha-de-iniciais a[aria-current='page'] {
+  background: var(--marca-texto);
+  border-color: var(--marca-texto);
+  color: var(--fundo);
+}
+
+/* As paragens de fora da região, no fim da página da letra e fechadas (#106). */
+details.fora-da-regiao {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--linhas);
+}
+
+/* «‹ Z · Todas as iniciais · B ›», no fim da página de uma letra (#108). */
+.letras-vizinhas ul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+}
+.letras-vizinhas a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+}
+
+/* --- a paragem: as linhas, o mesmo sítio, as partidas do dia ------------- */
+
+/* AS LINHAS QUE PARAM AQUI (auditoria de 1/11/2026, #100), por baixo do «A
+   seguir»: os números a levar à página de cada linha. Cada ligação é um alvo
+   de 44 px. */
+.linhas-aqui > h2 {
+  font-size: 1.05rem;
+  margin: 1.25rem 0 0.25rem;
+}
+.distintivos-das-linhas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.distintivos-das-linhas a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: var(--alvo);
+  min-width: var(--alvo);
+  text-decoration: none;
+}
+.distintivos-das-linhas a:hover .distintivo {
+  outline: 2px solid var(--marca-texto);
+  outline-offset: 1px;
+}
+
+/* As outras paragens do mesmo sítio — quase sempre o outro lado da estrada. */
+.mesmo-sitio {
+  margin: 0.5rem 0 1rem;
+}
+.mesmo-sitio > .titulo-pequeno {
+  font-size: 1.05rem;
+  margin: 1rem 0 0.25rem;
+}
+.mesmo-sitio > p {
+  margin: 0 0 0.25rem;
+}
+
+/* AS PARTIDAS DE UM DIA (#14): a escolha do dia, em rádios à vista como o
+   «Quando» do planeador, e a lista pela hora. */
+.escolha-do-dia {
+  border: 0;
+  padding: 0;
+  margin: 0 0 0.5rem;
+  min-width: 0;
+}
+.escolha-do-dia legend {
+  font-size: 0.9rem;
+  color: var(--texto-secundario);
+  padding: 0;
+}
+.opcoes-do-dia {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.25rem;
+}
+.opcoes-do-dia label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: var(--alvo);
+  margin: 0;
+  color: var(--texto);
+  cursor: pointer;
+}
+.opcoes-do-dia input[type='radio'] {
+  min-height: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--marca-texto);
+}
+.outro-dia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  margin: 0.25rem 0 0;
+}
+.outro-dia label {
+  margin: 0;
+}
+.dia-escolhido {
+  margin: 0.5rem 0;
+}
+/* As que já passaram hoje ficam, mas apagadas: o dia inteiro está lá. */
+.partidas-do-dia-tabela tr.passou td {
+  color: var(--texto-secundario);
+}
+details.todos-os-quadros {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--linhas);
+}
+details.todos-os-quadros > summary {
+  min-height: 3rem;
+}
+
+/* --- a linha: as pontas, o esquema por sentido, o percurso ---------------- */
+
+/* As pontas da linha pela ordem do caminho, por baixo do título (#92). */
+.pontas-da-linha {
+  margin: -0.25rem 0 0.5rem;
+}
+
+/* «Neste sentido só se conhecem as paragens com hora marcada» (#93). */
+.faixa.so-pontos {
+  font-size: 0.9rem;
+}
+
+/* O MEIO DE UM PERCURSO COMPRIDO, fechado (#95). O resumo continua o fio da
+   linha, tracejado, para se ver que o percurso segue por ali. */
+details.meio-do-percurso > summary {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: var(--alvo);
+  padding-left: 2rem;
+  color: var(--marca-texto);
+  font-weight: 700;
+  cursor: pointer;
+}
+details.meio-do-percurso > summary::before {
+  content: '';
+  position: absolute;
+  left: 0.55rem;
+  top: 0;
+  bottom: 0;
+  border-left: 4px dotted
+    color-mix(in oklab, var(--cor-da-linha, var(--autocarro)) var(--mistura-dos-tracos), #fff);
+}
+details.meio-do-percurso > ol.percurso-da-linha {
+  margin-top: 0;
+}
+details.meio-do-percurso + ol.percurso-da-linha {
+  margin-top: 0;
+}
+
+/* NOS CARTÕES DOS MODOS, O NOME NÃO SE PARTE: com a contagem comprida à
+   direita («122 linhas da rede …, e 23 de outros operadores»), «Autocarro»
+   saía «Autocar / ro». Quem parte a linha é a contagem. */
+.lista a.cartao > span:first-child {
+  flex-shrink: 0;
+}
+
+/* --- a folha do mapa: o que junta, o a pedido, os preços (#90, #173) ------- */
+
+/* O que o sítio junta, numa frase, por baixo da assinatura — só no painel de
+   um ecrã largo: no telemóvel, cada linha da folha é uma linha de mapa a
+   menos. */
+.folha-de-abertura .o-que-junta {
+  display: none;
+}
+@media (min-width: 64rem) {
+  .folha-de-abertura .o-que-junta {
+    display: block;
+    margin: 0 0.6rem 0.75rem;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    color: var(--texto);
+  }
+}
+/* O transporte a pedido, na cor dele (§6), e compacto: o telefone é o botão. */
+.folha-de-abertura .a-pedido-na-folha {
+  margin: 0.75rem 0.6rem 0;
+  padding: 0.6rem 0.75rem 0.4rem;
+  border-left: 4px solid var(--a-pedido);
+  border-radius: var(--raio);
+  background: var(--a-pedido-fundo);
+  color: var(--a-pedido-texto);
+}
+.folha-de-abertura .a-pedido-na-folha h2 {
+  margin: 0 0 0.25rem;
+  padding: 0;
+  font-size: 1rem;
+}
+.folha-de-abertura .a-pedido-na-folha p {
+  margin: 0 0 0.4rem;
+}
+.folha-de-abertura .a-pedido-na-folha .secundario {
+  color: var(--a-pedido-texto);
+  font-size: 0.85rem;
+}
+/* Os dois preços, a levar ao tarifário: o preço numa linha, a pergunta na
+   seguinte. Um alvo só, de 44 px. */
+.folha-de-abertura .precos-na-folha {
+  margin: 0.75rem 0.6rem 0;
+}
+.folha-de-abertura .precos-na-folha a {
+  display: flex;
+  flex-direction: column;
+  min-height: var(--alvo);
+  justify-content: center;
+  text-decoration: none;
+}
+.folha-de-abertura .precos-na-folha .precos {
+  color: var(--texto);
+}
+.folha-de-abertura .precos-na-folha .qual {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+/* --- o planeador: a espera grande e o prazo da reserva (#119, #121) ------- */
+
+/* A espera até à primeira ligação, quando passa de uma hora: à vista, por
+   cima dos cartões, e não só para quem ouve. */
+.espera-grande {
+  margin: 0.5rem 0;
+  padding: 0 0.75rem;
+  font-weight: 700;
+}
+/* O prazo da reserva para o dia escolhido. Fechado, diz-se na cor do a pedido
+   e com um traço à esquerda — o estado não depende só da cor. */
+.propostas-a-pedido .prazo-fechado,
+.propostas-a-pedido .prazo-aberto {
+  margin: 0.25rem 0 0.5rem;
+  padding-left: 0.6rem;
+  border-left: 3px solid currentColor;
 }
