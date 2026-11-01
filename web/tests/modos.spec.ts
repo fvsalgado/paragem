@@ -265,7 +265,9 @@ test('a primeira hora lê-se sem abrir a grelha', async ({ page }) => {
     .first()
     .locator('summary');
   await expect(resumo).toContainText(`${QUADRO!.viagens} viagens`);
-  await expect(resumo).toContainText(`${QUADRO!.paragem} às ${QUADRO!.hora}`);
+  await expect(resumo).toContainText(
+    `a primeira às ${QUADRO!.hora}, na paragem ${QUADRO!.paragem}`,
+  );
 });
 
 test('diz de cada linha quantas paragens estão no mapa, e nomeia as que não', async ({ page }) => {

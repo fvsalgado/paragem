@@ -179,8 +179,10 @@ test('a grelha de um circuito abre e tem as horas', async ({ page }) => {
   await page.locator('section[aria-labelledby="horarios"]').getByRole('link').first().click();
   await expect(page).toHaveURL(/\/a-pedido\/[^/]+\/$/);
   await page.goto(`/a-pedido/${COM_VIAGENS!.id}/`);
-  // A hora como a folha a escreve: «9:06» e «09:06» são a mesma.
-  const resumo = page.getByText(/viagens? — da .* às \d{1,2}:\d{2}/).first();
+  // A hora como a folha a escreve: «9:06» e «09:06» são a mesma. O resumo diz
+  // «a primeira às 7:30, na paragem …», e não «da … às 7:30»: a contração
+  // saía «da» antes de nomes masculinos.
+  const resumo = page.getByText(/viagens? — a primeira às \d{1,2}:\d{2}, na paragem /).first();
   await resumo.click();
   await expect(page.getByRole('table').first()).toBeVisible();
 });
