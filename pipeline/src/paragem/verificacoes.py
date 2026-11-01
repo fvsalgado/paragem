@@ -588,8 +588,6 @@ def _numeros_do_sitio(r: Resultado, raiz: Path, id_regiao: str, esperados: dict)
     caminho = Path(raiz) / "build" / id_regiao / "sitio" / "numeros.json"
     if not caminho.exists():
         return
-    import json
-
     feitos = json.loads(caminho.read_text(encoding="utf-8"))
     for chave, decl in esperados.items():
         if isinstance(decl, dict) and decl.get("afirmado") is False:
