@@ -79,6 +79,30 @@ test('com a localização, mostra as paragens mais próximas e as horas', async 
   await expect(primeira).toHaveAttribute('href', /^\/rede\/(paragens|estacoes)\//);
 });
 
+test('longe da rede, diz-se — e o tempo a pé deixa de se contar', async ({ page, context }) => {
+  // Quem abriu o mapa a 70 km da rede lia «69,5 km · uns 1219 min a pé»
+  // debaixo de «Aqui perto» (1/11/2026). A lista continua — diz
+  // para que lado fica a rede —, mas a frase de cima explica, e a distância
+  // vai sem o tempo a pé. Um grau de latitude são uns 111 km: mais do que a
+  // ponta a ponta de qualquer região de prova.
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ latitude: ONDE.latitude - 1, longitude: ONDE.longitude });
+  await page.goto(`${REDE}/`);
+  await page.getByRole('button', { name: /paragens perto de mim/i }).click();
+
+  const bloco = page.locator('section[aria-labelledby="perto"]');
+  await expect(bloco).toContainText(
+    /Não há paragens a uma distância que se faça a pé: a mais perto fica a \d+,\d km em linha reta\./,
+    { timeout: 15_000 },
+  );
+  await expect(bloco).toContainText(/\d+,\d km em linha reta/);
+  await expect(bloco).not.toContainText('min a pé');
+  await expect(bloco.getByRole('link').first()).toHaveAttribute(
+    'href',
+    /^\/rede\/(paragens|estacoes)\//,
+  );
+});
+
 test('quando a localização é recusada, diz-se em vez de encolher os ombros', async ({
   page,
   context,

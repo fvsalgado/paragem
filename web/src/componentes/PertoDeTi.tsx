@@ -70,6 +70,15 @@ function distanciaLegivel(metros: number): string {
 }
 
 /**
+ * ATÉ ONDE SE DIZ «A PÉ». Para lá disto, o tempo a pé deixa de ser resposta
+ * e passa a ser ruído: quem abriu o mapa a 70 km da rede lia «69,5 km · uns
+ * 1219 min a pé», debaixo de um título que diz «Aqui perto».
+ * Dois quilómetros são uns 35 minutos com as voltas das ruas — o que ainda se
+ * anda até uma paragem numa aldeia, e pouco mais.
+ */
+const A_PE_ATE_METROS = 2000;
+
+/**
  * «250 m · uns 4 min a pé». A distância sozinha não responde à pergunta de
  * quem vai a pé — se dá tempo —, e a conta é a do planeador (`a-pe.ts`): a
  * linha reta mais as voltas das ruas. «Uns» porque é isso que é.
@@ -77,6 +86,7 @@ function distanciaLegivel(metros: number): string {
 function distanciaEAPe(metros: number): string {
   // Em cima dela, «0 m · uns 1 min a pé» dizia duas coisas que não se dizem.
   if (metros < 15) return 'Aqui mesmo';
+  if (metros > A_PE_ATE_METROS) return `${distanciaLegivel(metros)} em linha reta`;
   return `${distanciaLegivel(metros)} · uns ${minutosAPe(metros)} min a pé`;
 }
 
@@ -309,14 +319,24 @@ export default function PertoDeTi({
 
         {estado.tipo === 'perto' && (
           <>
-            {!noMapa && (
-              <p>
-                {estado.pontos.length === 1
-                  ? 'A paragem mais perto.'
-                  : `As ${estado.pontos.length} paragens mais perto.`}{' '}
-                As distâncias são em linha reta; o tempo a pé conta com as voltas das ruas, e é uma
-                estimativa.
+            {/* LONGE DA REDE, DIZ-SE PRIMEIRO. A lista continua — diz para que
+              lado fica a rede —, mas «Aqui perto» por cima de uma paragem a
+              dezenas de quilómetros não pode ficar sem explicação. */}
+            {(estado.pontos[0]?.metros ?? 0) > A_PE_ATE_METROS ? (
+              <p className={noMapa ? 'secundario perto-longe' : undefined}>
+                Não há paragens a uma distância que se faça a pé: a mais perto fica a{' '}
+                {distanciaLegivel(estado.pontos[0].metros)} em linha reta.
               </p>
+            ) : (
+              !noMapa && (
+                <p>
+                  {estado.pontos.length === 1
+                    ? 'A paragem mais perto.'
+                    : `As ${estado.pontos.length} paragens mais perto.`}{' '}
+                  As distâncias são em linha reta; o tempo a pé conta com as voltas das ruas, e é
+                  uma estimativa.
+                </p>
+              )
             )}
             <ul className={noMapa ? 'perto-lista' : 'lista perto-lista'}>
               {estado.pontos.map((p) => {

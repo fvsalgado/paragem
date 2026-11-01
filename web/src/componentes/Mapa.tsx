@@ -767,9 +767,20 @@ export default function Mapa({
         // sem largar o telemóvel, e é onde toda a gente já a foi procurar
         // mil vezes noutra aplicação. Continua a só perguntar quando se
         // carrega — o controlo do MapLibre não pede nada sozinho.
+        // UM PEDIDO POR TOQUE, E NÃO UM SEGUIMENTO (`trackUserLocation:
+        // false`). A seguir, o controlo voltava a centrar o mapa na pessoa a
+        // CADA posição nova que o telemóvel desse — e cada posição nova punha
+        // o «Aqui perto» a enquadrar outra vez a pessoa e as paragens. Os dois
+        // puxavam o mapa à vez, sem fim: perto, longe, perto, longe, visto num
+        // telemóvel a 1/11/2026. O MapLibre não larga o seguimento quando
+        // quem move o mapa é um `fitBounds` que também aproxima (só larga
+        // quando o movimento é de outra natureza), e por isso não havia como
+        // os pôr de acordo. Aqui a pergunta é «o que passa perto de mim
+        // agora», e responde-se a cada toque; o ponto azul fica onde a
+        // resposta o pôs.
         const localizacao = new GeolocateControl({
           positionOptions: { enableHighAccuracy: false },
-          trackUserLocation: true,
+          trackUserLocation: false,
           showAccuracyCircle: true,
           // A z15 na pessoa: vê-se a rua e as paragens dela. Sem deslizar para
           // quem pediu ao sistema menos movimento.

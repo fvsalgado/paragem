@@ -132,18 +132,33 @@ test('a faixa de uma proposta contrai a autoridade como a região a declara', ()
     },
   });
   assert.equal(comArtigo.titulo, 'Proposta independente.');
-  assert.match(comArtigo.texto, /^Este sítio ainda não é um serviço da Comunidade Intermunicipal/);
-  assert.match(comArtigo.texto, /o que o Paragem\.pt faz com a informação pública da região\.$/);
+  assert.equal(comArtigo.texto, 'Ainda não é um serviço da Comunidade Intermunicipal da Serra.');
 
   // O município é «o»: «do Município», e não «da Município».
   const municipio = fraseDaProposta({
     autoridade: { nome: 'Município de Sável', de: 'do Município de Sável' },
   });
-  assert.match(municipio.texto, /serviço do Município de Sável:/);
+  assert.equal(municipio.texto, 'Ainda não é um serviço do Município de Sável.');
 
   // Sem artigo declarado, o substantivo comum leva a contração e o nome não.
   const semArtigo = fraseDaProposta({ autoridade: { nome: 'Comunidade X' } });
-  assert.match(semArtigo.texto, /serviço da autoridade de transportes \(Comunidade X\):/);
+  assert.equal(
+    semArtigo.texto,
+    'Ainda não é um serviço da autoridade de transportes (Comunidade X).',
+  );
+});
+
+test('a faixa de uma proposta é curta: está em todas as páginas', () => {
+  // Num telemóvel eram quatro linhas antes do mapa (1/11/2026). Com o nome de
+  // autoridade mais comprido que uma região de prova declara, cabe em duas
+  // linhas de um ecrã de 360 px — uns 45 carateres cada.
+  const { titulo, texto } = fraseDaProposta({
+    autoridade: {
+      nome: 'Comunidade Intermunicipal da Serra da Pedra Alta',
+      de: 'da Comunidade Intermunicipal da Serra da Pedra Alta',
+    },
+  });
+  assert.ok(`${titulo} ${texto}`.length <= 100, `${titulo} ${texto}`);
 });
 
 test('um nome do sistema de reservas escreve-se sem o traço baixo', async () => {
