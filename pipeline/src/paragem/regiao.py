@@ -524,6 +524,22 @@ class Regiao:
                 "uma secção que o produto diz não ter."
             )
 
+        # AS ZONAS QUE UM HORÁRIO A PEDIDO DECLARA têm de existir: é por elas
+        # que a página do horário sabe se a reserva online o serve, e um nome
+        # trocado tirava-lhe o botão em silêncio.
+        zonas_a_pedido = {str(z.get("id")) for z in (self.a_pedido or {}).get("zonas") or []}
+        for s in self.saidas:
+            declaradas = s.params.get("zonas") if s.modo == "a-pedido" else None
+            if not declaradas:
+                continue
+            estranhas = sorted({str(z) for z in declaradas} - zonas_a_pedido)
+            if not isinstance(declaradas, list) or estranhas:
+                raise ErroDeRegiao(
+                    f"{self.id}: {s.saida} declara `zonas` que o `a-pedido.yaml` não tem — "
+                    f"{', '.join(estranhas) or declaradas!r}. É uma lista de identificadores "
+                    "de zona."
+                )
+
         if self.urbanos_da_rede:
             if "urbano-municipal" not in self.modos:
                 raise ErroDeRegiao(

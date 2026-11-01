@@ -760,6 +760,13 @@ export type HorarioAPedido = {
   concelho_nome: string;
   /** «Mouriscas», quando a brochura é de uma zona dentro do concelho. */
   circuito_de: string;
+  /**
+   * As zonas de que este grupo é, quando a receita o declara — um folheto de
+   * ligações entre cidades não é de concelho nenhum. Ausente em dados de antes
+   * disto, e onde se sabem pelo concelho e pelos circuitos ligados
+   * (`reservaOnlineDoHorario`).
+   */
+  zonas?: string[];
   regras: string[];
   paragens: string[];
   viagens: number;

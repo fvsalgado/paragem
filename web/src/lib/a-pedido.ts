@@ -3,7 +3,7 @@
  *
  * Funções puras, sem leituras: a página dá-lhes o que leu do `a-pedido.json`.
  */
-import type { APedido } from './formato';
+import type { APedido, HorarioAPedido, ZonaAPedido } from './formato';
 import { simples } from './letras.ts';
 
 /** O endereço do horário de um grupo de circuitos — uma brochura, um folheto. */
@@ -14,6 +14,63 @@ export const idDoQuadro = (nome: string): string =>
   `q-${simples(nome)
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')}`;
+
+/**
+ * SE A RESERVA ONLINE SERVE UMA ZONA — o que a fonte diz dela, e o que se
+ * conclui quando não diz.
+ *
+ * A reserva online nem sempre serve tudo: quando a região declara o que ela
+ * serve (`com_reserva_online`), uma zona que a fonte não marca não está nessa
+ * lista, e reserva-se pelo telefone — a página geral di-lo com todas as
+ * letras. Sem essa lista, uma zona sem marca fica `null`: a fonte não diz, e
+ * não se adivinha.
+ */
+export function reservaOnlineDaZona(d: APedido, z: ZonaAPedido): boolean | null {
+  if (typeof z.reserva_online === 'boolean') return z.reserva_online;
+  return d.reservas.com_reserva_online?.length ? false : null;
+}
+
+/** As zonas de um grupo de circuitos: as que a receita declara, ou as que se sabem. */
+function zonasDoHorario(d: APedido, h: HorarioAPedido): ZonaAPedido[] {
+  if (h.zonas?.length) return d.zonas.filter((z) => h.zonas!.includes(z.id));
+  return d.zonas.filter(
+    (z) =>
+      (!!h.concelho && z.concelho === h.concelho) ||
+      z.circuitos.some((c) => c.horario?.grupo === h.id),
+  );
+}
+
+/**
+ * SE A RESERVA ONLINE SERVE OS CIRCUITOS DE UM HORÁRIO — uma brochura, um
+ * folheto (`/a-pedido/<grupo>/`).
+ *
+ * A página de cada grupo mostrava «Reservar online» sempre que a região tinha
+ * reserva online, e a página geral dizia, na mesma região, que ela só servia
+ * quatro serviços: quem seguisse a ligação a partir de um circuito que ela não
+ * serve não conseguia reservar. As zonas do grupo são as que a receita lhe
+ * declara (`zonas`), ou, sem isso, as do concelho dele e as que têm circuitos
+ * ligados a ele.
+ *
+ * - `serve`: `true` se a reserva online serve pelo menos uma dessas zonas;
+ *   `false` se a região diz o que ela serve e nenhuma está lá; `null` se a
+ *   fonte não diz nada;
+ * - `so`: os nomes das zonas servidas, quando são só PARTE das do grupo — para
+ *   a página dizer que os outros circuitos se reservam pelo telefone.
+ */
+export function reservaOnlineDoHorario(
+  d: APedido,
+  h: HorarioAPedido,
+): { serve: boolean | null; so: string[] } {
+  const zonas = zonasDoHorario(d, h);
+  const servidas = zonas.filter((z) => reservaOnlineDaZona(d, z) === true);
+  if (servidas.length > 0) {
+    return { serve: true, so: servidas.length < zonas.length ? servidas.map((z) => z.nome) : [] };
+  }
+  if (d.reservas.com_reserva_online?.length) return { serve: false, so: [] };
+  const todasDizemQueNao =
+    zonas.length > 0 && zonas.every((z) => reservaOnlineDaZona(d, z) === false);
+  return { serve: todasDizemQueNao ? false : null, so: [] };
+}
 
 /**
  * Um circuito onde se pode procurar: o nome, onde é (o concelho ou a zona,
@@ -223,7 +280,7 @@ export function aPedidoNasPontas(
         horario: url(`a-pedido/#z-${z.id}`),
         liga: 'as-duas',
         oQue: 'ligacao',
-        reservaOnline: z.reserva_online ?? null,
+        reservaOnline: reservaOnlineDaZona(d, z),
       });
     }
   }
@@ -256,7 +313,7 @@ export function aPedidoNasPontas(
         horario: url(`${caminhoDoHorario(h.id)}#${idDoQuadro(nome)}`),
         liga,
         oQue: 'circuito',
-        reservaOnline: null,
+        reservaOnline: reservaOnlineDoHorario(d, h).serve,
       });
     }
   }
@@ -284,9 +341,9 @@ export function aPedidoNasPontas(
         horario: url(`a-pedido/#z-${zonas[0].id}`),
         liga,
         oQue: zonas.length === 1 ? 'zona' : 'zonas',
-        reservaOnline: zonas.every((z) => z.reserva_online === true)
+        reservaOnline: zonas.every((z) => reservaOnlineDaZona(d, z) === true)
           ? true
-          : zonas.some((z) => z.reserva_online === false)
+          : zonas.some((z) => reservaOnlineDaZona(d, z) === false)
             ? false
             : null,
       });

@@ -360,3 +360,52 @@ def test_as_regioes_de_prova_nao_sao_propostas(raiz):
     for r in carregar_todas(raiz):
         if r.demonstracao:
             assert not r.proposta, r.id
+
+
+def _com_a_pedido(pasta, zonas_do_horario):
+    """Uma região com duas zonas a pedido e um horário que diz de que zonas é."""
+    pasta = _regiao_minima(
+        pasta,
+        modos=["a-pedido"],
+        inclui={"a_pedido": "a-pedido.yaml", "fontes": "fontes.yaml"},
+    )
+    (pasta / "a-pedido.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "zonas": [
+                    {"id": "norte", "nome": "Norte", "concelho": None, "reserva_online": True},
+                    {"id": "sul", "nome": "Sul", "concelho": None},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    (pasta / "fontes.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "saidas": [
+                    {
+                        "fonte": "x",
+                        "leitor": "horarios-manuais",
+                        "saida": "tap/ligacoes.json",
+                        "modo": "a-pedido",
+                        "params": {"id": "ligacoes", "zonas": zonas_do_horario},
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    return pasta
+
+
+def test_um_horario_a_pedido_pode_dizer_de_que_zonas_e(tmp_path):
+    """Um folheto de ligações não é de concelho nenhum: diz-se de que zonas é."""
+    r = Regiao.carregar(_com_a_pedido(tmp_path / "x", ["norte"]))
+    assert r.saidas[0].params["zonas"] == ["norte"]
+
+
+def test_um_horario_a_pedido_nao_pode_apontar_para_uma_zona_que_nao_ha(tmp_path):
+    """Um nome trocado tirava à página o botão de reservar, em silêncio."""
+    with pytest.raises(ErroDeRegiao, match="nordeste"):
+        Regiao.carregar(_com_a_pedido(tmp_path / "x", ["norte", "nordeste"]))

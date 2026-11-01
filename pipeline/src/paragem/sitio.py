@@ -2767,6 +2767,13 @@ def _horarios_a_pedido(
                 "concelho": concelho,
                 "concelho_nome": nomes.get(concelho, ""),
                 "circuito_de": decl.params.get("circuito_de", ""),
+                # AS ZONAS DE QUE ESTE GRUPO É, quando a receita o diz. Sem
+                # isto, a página do horário só as sabe pelo concelho e pelos
+                # circuitos ligados — e um folheto de ligações entre cidades
+                # não é de concelho nenhum, nem uma brochura de um serviço é de
+                # todas as zonas do concelho. É daqui que a página sabe se a
+                # reserva online o serve (`reserva_online` de cada zona).
+                "zonas": [str(z) for z in decl.params.get("zonas") or []],
                 "regras": d.get("regras") or [],
                 "paragens": sorted({n for q in quadros for n in q.get("paragens", [])}),
                 "viagens": sum(len(q.get("viagens") or []) for q in quadros),

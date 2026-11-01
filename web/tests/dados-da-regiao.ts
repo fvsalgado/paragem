@@ -145,13 +145,16 @@ export type APedido = {
     nome: string;
     concelho: string;
     concelho_nome: string;
-    circuitos: unknown[];
+    reserva_online?: boolean;
+    circuitos: { nome: string; horario?: { grupo: string; quadro: string } }[];
   }[];
   sem_zona: { id: string; nome: string }[];
   horarios: {
     id: string;
     nome: string;
     concelho: string;
+    /** As zonas do grupo, quando a receita as declara. */
+    zonas?: string[];
     quadros: {
       nome?: string;
       paragens: string[];

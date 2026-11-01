@@ -26,6 +26,29 @@ const ZONA = TAP?.zonas.find((z) => z.circuitos.length > 0 && z.concelho) ?? nul
 /** Uma grelha de viagens e uma tabela de partidas: são coisas diferentes. */
 const COM_VIAGENS = TAP?.horarios.find((h) => h.quadros.some((q) => q.viagens?.length)) ?? null;
 const COM_PARTIDAS = TAP?.horarios.find((h) => h.quadros.some((q) => q.horas?.length)) ?? null;
+/**
+ * A RESERVA ONLINE QUE NÃO SERVE TUDO: os grupos de circuitos de um concelho
+ * cujas zonas a fonte não marca como servidas, e os de um concelho onde
+ * marca. Pelo que os dados dizem — a declaração da região e as zonas —, e não
+ * pelo nome de um concelho.
+ */
+const RESTRITA = !!TAP?.reservas.online && !!TAP?.reservas.com_reserva_online?.length;
+const zonasDe = (h: NonNullable<typeof TAP>['horarios'][number]) =>
+  (TAP?.zonas ?? []).filter((z) =>
+    h.zonas?.length
+      ? h.zonas.includes(z.id)
+      : (!!h.concelho && z.concelho === h.concelho) ||
+        z.circuitos.some((c) => c.horario?.grupo === h.id),
+  );
+const SEM_ONLINE = RESTRITA
+  ? (TAP!.horarios.find((h) => {
+      const zs = zonasDe(h);
+      return zs.length > 0 && zs.every((z) => z.reserva_online !== true);
+    }) ?? null)
+  : null;
+const COM_ONLINE = RESTRITA
+  ? (TAP!.horarios.find((h) => zonasDe(h).some((z) => z.reserva_online === true)) ?? null)
+  : null;
 
 test('a página diz como se reserva antes de dizer o que existe', async ({ page }) => {
   test.skip(!TAP, SEM.aPedido);
@@ -74,6 +97,30 @@ test('não promete reserva online para o que não a tem', async ({ page }) => {
   // onde não encontra o que procura.
   await page.goto(`/a-pedido/`);
   await expect(page.getByText(/A reserva online só serve/)).toBeVisible();
+});
+
+test('um circuito que a reserva online não serve não oferece «Reservar online»', async ({
+  page,
+}) => {
+  // A página geral dizia que a reserva online só servia alguns serviços, e a
+  // página de um circuito que ela não serve mostrava a ligação na mesma: quem
+  // a seguisse não conseguia reservar. Fica o telefone, com o horário dele.
+  test.skip(!RESTRITA, 'nesta região a reserva online, se houver, serve todos os circuitos');
+  test.skip(!SEM_ONLINE, 'todos os grupos de circuitos desta região têm reserva online');
+  await page.goto(`/a-pedido/${SEM_ONLINE!.id}/`);
+  const faixa = page.locator('main .faixa.a-pedido').first();
+  await expect(faixa.getByRole('link', { name: 'Reservar online' })).toHaveCount(0);
+  await expect(faixa.getByRole('link', { name: /Ligar/ })).toHaveAttribute(
+    'href',
+    `tel:${TELEFONE}`,
+  );
+  await expect(faixa).toContainText(/reserva(m)?-se pelo telefone/);
+
+  test.skip(!COM_ONLINE, 'nenhum grupo de circuitos desta região tem reserva online');
+  await page.goto(`/a-pedido/${COM_ONLINE!.id}/`);
+  await expect(
+    page.locator('main .faixa.a-pedido').first().getByRole('link', { name: 'Reservar online' }),
+  ).toHaveAttribute('href', TAP!.reservas.online!);
 });
 
 test('conta as zonas por levantar em vez de as esconder', async ({ page }) => {

@@ -219,6 +219,13 @@ def test_um_horario_transcrito_a_mao_chega_ao_sitio(raiz, tmp_path):
     esperados = {Path(s.saida).stem for s in catalogo if s.saida}
     assert esperados <= ids, f"{r.id}: faltam {sorted(esperados - ids)}"
 
+    # As zonas que a receita diz de cada grupo chegam tal e qual: é por elas
+    # que a página do grupo sabe se a reserva online o serve.
+    declaradas = {Path(s.saida).stem: s.params.get("zonas") or [] for s in catalogo if s.saida}
+    for h in d["horarios"]:
+        if h["id"] in declaradas:
+            assert h["zonas"] == declaradas[h["id"]], h["id"]
+
     # E quem transcreveu fica no ficheiro: o guarda prova que a hora está no
     # PDF; que está na paragem certa mediu-o uma pessoa, uma vez.
     a_mao = {Path(s.saida).stem for s in catalogo if s.leitor == "horarios-manuais" and s.saida}
