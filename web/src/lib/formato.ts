@@ -82,6 +82,12 @@ export type Regiao = {
   nome: string;
   /** Uma rede inventada. Marca-se em todas as páginas — ver §4.4. */
   demonstracao?: boolean;
+  /**
+   * Uma rede REAL num sítio que a autoridade de transportes ainda não adotou.
+   * Marca-se em todas as páginas, e o sítio não fala em nome dela
+   * (`MarcaDeProposta`). Ausente em dados de antes disto.
+   */
+  proposta?: boolean;
   artigo: string;
   /** «a Serra da Pedra Alta», «o Baixo Sável» — escrito, não adivinhado. */
   nome_com_artigo: string;

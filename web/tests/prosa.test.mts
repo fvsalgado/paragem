@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import {
   aAutoridade,
   aRede,
+  fraseDaProposta,
   linhasNumaFrase,
   lista,
   nomeDaRede,
@@ -121,4 +122,26 @@ test('as linhas de uma paragem cabem numa frase, também num terminal com dezena
   assert.equal(linhasNumaFrase(['1', '2', '3']), 'linhas 1, 2 e 3');
   const muitas = Array.from({ length: 20 }, (_, i) => String(i + 1));
   assert.equal(linhasNumaFrase(muitas), 'linhas 1, 2, 3, 4, 5 e mais 15');
+});
+
+test('a faixa de uma proposta contrai a autoridade como a região a declara', () => {
+  const comArtigo = fraseDaProposta({
+    autoridade: {
+      nome: 'Comunidade Intermunicipal da Serra',
+      de: 'da Comunidade Intermunicipal da Serra',
+    },
+  });
+  assert.equal(comArtigo.titulo, 'Proposta independente.');
+  assert.match(comArtigo.texto, /^Este sítio ainda não é um serviço da Comunidade Intermunicipal/);
+  assert.match(comArtigo.texto, /o que o Paragem\.pt faz com a informação pública da região\.$/);
+
+  // O município é «o»: «do Município», e não «da Município».
+  const municipio = fraseDaProposta({
+    autoridade: { nome: 'Município de Sável', de: 'do Município de Sável' },
+  });
+  assert.match(municipio.texto, /serviço do Município de Sável:/);
+
+  // Sem artigo declarado, o substantivo comum leva a contração e o nome não.
+  const semArtigo = fraseDaProposta({ autoridade: { nome: 'Comunidade X' } });
+  assert.match(semArtigo.texto, /serviço da autoridade de transportes \(Comunidade X\):/);
 });

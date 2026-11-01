@@ -194,6 +194,16 @@ class Regiao:
     #: O LOGÓTIPO da rede ou da autoridade: um ficheiro ao lado do
     #: `regiao.yaml`, publicado com os dados. Sem ele, o nome por extenso.
     logotipo: Path | None = None
+    #: UMA PROPOSTA, e não um serviço da autoridade de transportes.
+    #:
+    #: A região é real, os dados são públicos e a rede existe — mas o sítio foi
+    #: feito por nós para mostrar à autoridade o que o produto faz, e ela ainda
+    #: não o adotou. Quem o abre tem de o saber antes de mais nada: um sítio com
+    #: o nome da rede, as paragens dela e o logótipo dela lê-se como sendo DELA,
+    #: e falar em nome de uma autoridade que não nos deu essa voz é o que o
+    #: §4.4 e o §7 não deixam. É o irmão do `demonstracao`, que é para uma rede
+    #: que não existe; as duas coisas não se juntam.
+    proposta: bool = False
 
     # --- prosa -----------------------------------------------------------
 
@@ -395,6 +405,7 @@ class Regiao:
             dominio_env=d.get("dominio_env"),
             dominio=(str(d["dominio"]).strip().lower() or None) if d.get("dominio") else None,
             demonstracao=bool(d.get("demonstracao", False)),
+            proposta=bool(d.get("proposta", False)),
             municipios_membros=int(terr.get("municipios_membros", len(concelhos))),
             concelhos_servidos=int(terr.get("concelhos_servidos", len(concelhos))),
             caixa=caixa,
@@ -426,6 +437,12 @@ class Regiao:
         incompleta, ou o número que o produto vai anunciar é falso. «Onze
         municípios» impresso ao lado de dez linhas é uma mentira por omissão.
         """
+        if self.demonstracao and self.proposta:
+            raise ErroDeRegiao(
+                f"{self.id}: declara `demonstracao` e `proposta` ao mesmo tempo. Uma demonstração "
+                "é uma rede inventada; uma proposta é uma rede real que a autoridade ainda não "
+                "adotou. A faixa de cima de cada página não pode dizer as duas coisas."
+            )
         if len(self.concelhos) != self.concelhos_servidos:
             raise ErroDeRegiao(
                 f"{self.id}: declara servir {self.concelhos_servidos} concelhos e a lista tem "
