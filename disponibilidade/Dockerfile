@@ -7,7 +7,7 @@
 # Não há dependências para instalar — o serviço são três ficheiros e a
 # biblioteca-padrão do Node. Por isso não há `npm install`, e a imagem é
 # só o runtime e o código.
-FROM docker.io/library/node:22.12-alpine
+FROM docker.io/library/node:26.13-alpine
 
 WORKDIR /app
 COPY analisar.mjs nucleo.mjs servidor.mjs ./
