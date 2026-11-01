@@ -3,6 +3,7 @@ import { dadosAbertos, exigirRegiao, lacunas, regiao } from '@/lib/dados';
 import { enderecoDaDescarga } from '@/lib/descargas';
 import { tamanho, type Descarga } from '@/lib/formato';
 import { aAutoridade } from '@/lib/prosa';
+import { disponibilidadeDaRegiao } from '@/lib/enderecos';
 import { dataCompleta } from '@/lib/dias';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
@@ -43,8 +44,10 @@ const GRUPOS: { id: string; titulo: string; texto: string }[] = [
   {
     id: 'bicicletas',
     titulo: 'Bicicletas partilhadas',
-    texto:
-      'GBFS estático: onde ficam as estações. Sem disponibilidade, que não é pública — e prometê-la seria inventá-la.',
+    // O TEXTO DEPENDE DE O SÍTIO LER AS CONTAGENS, e é decidido na página
+    // (`textoDasBicicletas`): dizia «sem disponibilidade, que não é pública»
+    // ao lado de um modo que as mostra ao vivo.
+    texto: 'GBFS estático: onde ficam as estações.',
   },
   {
     id: 'geometria',
@@ -63,6 +66,22 @@ const GRUPOS: { id: string; titulo: string; texto: string }[] = [
     texto: 'O que a última construção contou, e o que ficou por saber.',
   },
 ];
+
+/**
+ * O que se diz das bicicletas, conforme o sítio leia ou não as contagens.
+ *
+ * Dizia «sem disponibilidade, que não é pública — e prometê-la seria
+ * inventá-la», e a página do modo mostrava as bicicletas e as docas livres de
+ * cada estação, lidas no momento da página de estações que o próprio sistema
+ * publica (`disponibilidade/`, ligada por decisão do dono). As duas coisas são
+ * verdade ao mesmo tempo, e é isso que se escreve: o ficheiro é estático e não
+ * as leva; o sítio lê-as ao vivo, e não as guarda nem as redistribui.
+ */
+function textoDasBicicletas(lidasAoVivo: boolean): string {
+  return lidasAoVivo
+    ? 'GBFS estático: onde ficam as estações, sem a disponibilidade. As bicicletas e as docas livres que a página das bicicletas mostra são lidas no momento, da página de estações que o próprio sistema publica — não se guardam nem se redistribuem daqui, e quando essa página não responde as estações aparecem sem contagem, em vez de uma contagem adivinhada.'
+    : 'GBFS estático: onde ficam as estações. Sem disponibilidade: este sítio não a lê, e não a promete.';
+}
 
 const TERMOS: Record<string, string> = {
   nosso: 'obra da casa, sob licença aberta — leve-se sem perguntar',
@@ -220,7 +239,11 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
         return (
           <section key={g.id}>
             <h2>{g.titulo}</h2>
-            <p>{g.texto}</p>
+            <p>
+              {g.id === 'bicicletas'
+                ? textoDasBicicletas(disponibilidadeDaRegiao(rid, r.demonstracao) !== '')
+                : g.texto}
+            </p>
             <ul className="descargas">
               {doGrupo.map((d) => (
                 <Ficheiro key={d.caminho ?? d.ficheiro} d={d} />
