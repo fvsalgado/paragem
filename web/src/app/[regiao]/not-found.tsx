@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from '@/componentes/Ligacao';
 import { NAO_ENCONTRADA } from '@/lib/formato';
+import ProcurarParagem from '@/componentes/ProcurarParagem';
 
 export const metadata: Metadata = { title: NAO_ENCONTRADA };
 
@@ -27,15 +28,17 @@ export default function PaginaQueNaoExiste() {
   return (
     <>
       <h1>Esta página não existe</h1>
-      <p>
-        Pode ter mudado de endereço quando os horários foram atualizados: as paragens e as linhas
-        mudam de identificador de tempos a tempos, e as ligações antigas deixam de levar aqui.
-      </p>
+      {/* NA LÍNGUA DE QUEM CHEGOU, e não na de quem o programou (#152):
+          «identificador» é palavra de programador. E a procura logo aqui: quem
+          chega por uma ligação antiga sabe o nome do que procurava, e era
+          mais um toque até poder escrevê-lo. */}
+      <p>Os horários foram atualizados, e algumas ligações antigas deixaram de funcionar.</p>
+      <ProcurarParagem />
       <p className="cartao-accoes">
         <Link className="botao" href="/">
           Ir para o mapa
         </Link>
-        <Link href="/rede/paragens/">Procurar uma paragem</Link>
+        <Link href="/rede/paragens/">Todas as paragens</Link>
         <Link href="/rede/">Ver a rede</Link>
       </p>
     </>

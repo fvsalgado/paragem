@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test';
 
 import { PRODUTO } from './anfitrioes';
 
-test('numa região, responde 404 em português, com a casa à volta e três saídas', async ({
+test('numa região, responde 404 em português, com a casa à volta, a procura e três saídas', async ({
   page,
 }) => {
   // Uma ficha que não existe (a página chama `notFound()`) e um caminho que
@@ -26,7 +26,10 @@ test('numa região, responde 404 em português, com a casa à volta e três saí
     await expect(page.locator('header.cabecalho')).toBeVisible();
     await expect(page.locator('footer.rodape')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Ir para o mapa' })).toHaveAttribute('href', '/');
-    await expect(page.getByRole('link', { name: 'Procurar uma paragem' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Todas as paragens' })).toBeVisible();
+    // E a procura logo ali, sem passar por outra página (#152).
+    await expect(page.getByRole('searchbox', { name: 'Procurar paragem ou linha' })).toBeVisible();
+    await expect(page.getByText(/identificador/)).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Ver a rede' })).toBeVisible();
     await expect(page.getByText(/could not be found/i)).toHaveCount(0);
   }
