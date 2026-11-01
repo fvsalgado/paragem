@@ -1,4 +1,5 @@
 import type { LayerSpecification, StyleSpecification } from 'maplibre-gl';
+import type { Sede } from './sedes';
 
 /**
  * O estilo do mapa, escrito por nós.
@@ -242,12 +243,22 @@ export const ATRIBUICAO_OSM =
 export const FONTE_REGULAR = ['Atkinson Hyperlegible Regular'];
 export const FONTE_NEGRITO = ['Atkinson Hyperlegible Bold'];
 
+/** O nome da fonte das sedes de concelho, que o estilo traz já com os pontos. */
+export const FONTE_DAS_SEDES = 'sedes';
+
 export function estiloDoMapa(
   urlDosMosaicos: string,
   atribuicao: string = ATRIBUICAO_OSM,
   tema: TemaDoMapa = 'claro',
+  sedes: readonly Sede[] = [],
 ): StyleSpecification {
   const P = PALETA[tema];
+  // OS NOMES DAS SEDES SAEM DO MAPA DE BASE quando a região os traz: escritos
+  // duas vezes, um em cima do outro, liam-se borrados; e o do mapa de base só
+  // existe a alguns zooms. Ver `nomes-das-sedes`, no fim.
+  const naoESede: unknown[] = sedes.length
+    ? ['!', ['in', ['get', 'name'], ['literal', sedes.map((x) => x.nome)]]]
+    : ['literal', true];
   const estradas = (['contorno', 'enchimento'] as const).flatMap((parte): LayerSpecification[] =>
     ESTRADAS.map((e) => {
       const risco = e.rapida ? P.RAPIDA_RISCO : P.ESTRADA_RISCO;
@@ -284,6 +295,19 @@ export function estiloDoMapa(
         type: 'vector',
         url: `pmtiles://${urlDosMosaicos}`,
         attribution: atribuicao,
+      },
+      // As sedes de concelho, já no estilo: nascem com o mapa e não esperam
+      // por pedido nenhum. São poucas (uma por concelho), e vêm da página.
+      [FONTE_DAS_SEDES]: {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: sedes.map((x) => ({
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [x.lon, x.lat] },
+            properties: { nome: x.nome, peso: x.peso },
+          })),
+        },
       },
     },
     // OS GLIFOS SÃO NOSSOS, e não de um servidor de terceiro: o MapLibre
@@ -507,9 +531,13 @@ export function estiloDoMapa(
         'source-layer': 'place',
         minzoom: 11,
         filter: [
-          'any',
-          ['in', ['get', 'class'], ['literal', ['village', 'suburb']]],
-          ['all', ['==', ['get', 'class'], 'hamlet'], ['>=', ['zoom'], 14]],
+          'all',
+          naoESede,
+          [
+            'any',
+            ['in', ['get', 'class'], ['literal', ['village', 'suburb']]],
+            ['all', ['==', ['get', 'class'], 'hamlet'], ['>=', ['zoom'], 14]],
+          ],
         ],
         layout: {
           'text-field': ['get', 'name'],
@@ -529,12 +557,25 @@ export function estiloDoMapa(
       // tamanho dependia só da classe, e entre duas vilas que colidiam
       // ganhava a que calhava: agora ganha a de menor `rank` — a sede de
       // concelho à freguesia vizinha.
+      //
+      // E AS VILAS SÓ A PARTIR DE z9. De longe, o recorte traz meia dúzia de
+      // vilas fora da região e nenhuma das de dentro que não seja sede — e as
+      // sedes têm camada própria. Uma vila a 60 km da rede a tirar o lugar a
+      // uma cidade da região era ruído no ecrã que mostra a região inteira.
       {
         id: 'nomes-de-sitios',
         type: 'symbol',
         source: 'osm',
         'source-layer': 'place',
-        filter: ['in', ['get', 'class'], ['literal', ['city', 'town']]],
+        filter: [
+          'all',
+          naoESede,
+          [
+            'any',
+            ['==', ['get', 'class'], 'city'],
+            ['all', ['==', ['get', 'class'], 'town'], ['>=', ['zoom'], 9]],
+          ],
+        ],
         layout: {
           'text-field': ['get', 'name'],
           'text-font': FONTE_NEGRITO,
@@ -543,9 +584,9 @@ export function estiloDoMapa(
             ['linear'],
             ['zoom'],
             8,
-            ['match', ['get', 'class'], 'city', 16, 14],
+            ['match', ['get', 'class'], 'city', 14, 13],
             12,
-            ['match', ['get', 'class'], 'city', 20, 17],
+            ['match', ['get', 'class'], 'city', 19, 16],
           ],
           'text-max-width': 8,
           'text-padding': 6,
@@ -559,6 +600,31 @@ export function estiloDoMapa(
           'text-color': P.TEXTO,
           'text-halo-color': P.TEXTO_HALO,
           'text-halo-width': 1.8,
+        },
+      },
+      // AS SEDES DE CONCELHO, POR CIMA DE TUDO, A TODOS OS ZOOMS (`sedes.ts`).
+      // São o que orienta quem abre a região inteira num telemóvel, e o mapa
+      // de base só as trazia a partir de z9 ou z10. A camada de cima é a
+      // primeira a escolher onde se põe: entre uma sede e outra terra que não
+      // cabem as duas, fica a sede. Um pouco maiores do que as cidades de
+      // fora, e com o halo mais largo, para se lerem por cima da rede.
+      {
+        id: 'nomes-das-sedes',
+        type: 'symbol',
+        source: FONTE_DAS_SEDES,
+        layout: {
+          'text-field': ['get', 'nome'],
+          'text-font': FONTE_NEGRITO,
+          'text-size': ['interpolate', ['linear'], ['zoom'], 6, 13, 8, 14, 11, 17, 14, 20],
+          'text-max-width': 8,
+          'text-padding': 3,
+          // Entre duas sedes que não cabem, fica a do concelho mais servido.
+          'symbol-sort-key': ['-', 0, ['coalesce', ['get', 'peso'], 0]],
+        },
+        paint: {
+          'text-color': P.TEXTO,
+          'text-halo-color': P.TEXTO_HALO,
+          'text-halo-width': 2,
         },
       },
     ],

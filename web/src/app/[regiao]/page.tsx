@@ -16,7 +16,10 @@ import {
   url,
   NOME_DOS_MODOS,
   tarifas,
+  concelhos,
+  sitios,
 } from '@/lib/dados';
+import { sedesDosConcelhos } from '@/lib/sedes';
 import { porPeriodo, precosDaAbertura } from '@/lib/tarifario';
 import { fraseDoQueJunta } from '@/lib/prosa';
 import { dataDosHorarios, type Ponto } from '@/lib/formato';
@@ -195,6 +198,11 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
         }
       : null;
 
+  // AS SEDES DE CONCELHO, NOMEADAS NO MAPA A TODOS OS ZOOMS (`sedes.ts`): o
+  // sítio de cada uma é o do lugar do OpenStreetMap com o nome do concelho.
+  // Uma dúzia de pontos, que vão no HTML — o mapa nasce já com eles.
+  const sedes = sedesDosConcelhos(await concelhos(rid), await sitios(rid));
+
   return (
     <>
       {/* O ECRÃ DO MAPA DIZ-SE NO `<head>`, antes de uma linha do corpo.
@@ -240,6 +248,7 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
           r,
           modos.map((m) => m.id),
         )}
+        sedes={sedes}
       />
     </>
   );

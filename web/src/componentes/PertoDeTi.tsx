@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Distintivo from '@/componentes/Distintivo';
 import {
   esperaLegivel,
@@ -23,6 +23,7 @@ import {
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { pedirPontos } from '@/lib/pontos-do-navegador';
 import { minutosAPe } from '@/lib/a-pe';
+import { Localizacao } from '@/componentes/Icones';
 
 /**
  * As paragens mais perto, e o que passa nelas a seguir (§6, «Perto de ti»).
@@ -226,11 +227,48 @@ export default function PertoDeTi({
 
   // A LOCALIZAÇÃO QUE O MAPA JÁ TEM não se volta a pedir: o botão do mapa
   // perguntou, o navegador respondeu, e a folha mostra o que há ali perto.
+  //
+  // UMA POSIÇÃO QUASE IGUAL À QUE JÁ SE MOSTROU NÃO REFAZ NADA. A folha e o
+  // botão do mapa podem perguntar os dois (ver em baixo), e cada resposta
+  // nova enquadrava o mapa outra vez: dois voos seguidos para o mesmo sítio.
+  const ultima = useRef<[number, number] | null>(null);
+  function mostrarPertoSeMudou(aqui: [number, number]) {
+    if (ultima.current && metrosEntre(ultima.current, aqui) < 30) return;
+    ultima.current = aqui;
+    mostrarPerto(aqui);
+  }
   useEffect(() => {
-    if (posicao) mostrarPerto(posicao);
+    if (posicao) mostrarPertoSeMudou(posicao);
     // `mostrarPerto` muda a cada renderização; o que decide é a posição.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [posicao?.[0], posicao?.[1]]);
+
+  // COM A LOCALIZAÇÃO JÁ DADA, a folha responde sem se tocar em nada: as
+  // paragens mais perto e o que passa nelas aparecem logo. Só quando a
+  // pessoa já a deu a este sítio — perguntar ao abrir era um diálogo do
+  // sistema antes de se ver o que fosse, e quem recusa tem a página inteira
+  // na mesma. Não espera pelo mapa: num telemóvel lento ele chega segundos
+  // depois, e a resposta à pergunta «o que passa aqui» não depende dele.
+  useEffect(() => {
+    if (!noMapa || typeof navigator === 'undefined') return;
+    let vivo = true;
+    navigator.permissions
+      ?.query({ name: 'geolocation' as PermissionName })
+      .then((p) => {
+        if (!vivo || p.state !== 'granted' || !navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(
+          (pos) => vivo && mostrarPertoSeMudou([pos.coords.latitude, pos.coords.longitude]),
+          () => {},
+          { enableHighAccuracy: false, timeout: 15_000, maximumAge: 60_000 },
+        );
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+    // Só à entrada: depois disso, é o botão.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function procurar() {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -239,7 +277,11 @@ export default function PertoDeTi({
     }
     setEstado({ tipo: 'a-perguntar' });
     navigator.geolocation.getCurrentPosition(
-      (pos) => mostrarPerto([pos.coords.latitude, pos.coords.longitude]),
+      (pos) => {
+        // Um toque é um pedido: responde-se mesmo que seja o mesmo sítio.
+        ultima.current = null;
+        mostrarPertoSeMudou([pos.coords.latitude, pos.coords.longitude]);
+      },
       (erro) => {
         if (erro.code === erro.PERMISSION_DENIED) setEstado({ tipo: 'recusado' });
         else setEstado({ tipo: 'falhou', razao: erro.message });
@@ -262,35 +304,38 @@ export default function PertoDeTi({
   const proximasDe = (suas: Partida[]) =>
     calendario === undefined ? null : proximas(suas, hoje, agora, calendario, noMapa ? 2 : 3);
 
-  const comLista = estado.tipo === 'perto';
   // O identificador da página é o de sempre: é por ele que os testes e a
   // ligação de salto encontram o bloco.
   const idDoTitulo = noMapa ? 'perto-no-mapa' : 'perto';
 
   return (
-    <section
-      aria-labelledby={noMapa && !comLista ? undefined : idDoTitulo}
-      aria-label={noMapa && !comLista ? 'Aqui perto' : undefined}
-      className={noMapa ? 'perto-no-mapa' : undefined}
-    >
-      {/* No mapa o título só aparece com a lista: antes dela, o bloco é um
-          botão, e um título por cima de um botão só ocupava a folha. */}
-      {(!noMapa || comLista) && <h2 id={idDoTitulo}>Aqui perto</h2>}
-
-      {estado.tipo === 'parado' && (
-        <>
-          {!noMapa && (
-            <p>
-              As paragens mais próximas e o que passa nelas a seguir. Só com a sua localização, e só
-              se a quiser dar.
-            </p>
+    <section aria-labelledby={idDoTitulo} className={noMapa ? 'perto-no-mapa' : undefined}>
+      {/* «AQUI PERTO» À VISTA, TAMBÉM NO MAPA (§6). Era só um botão, e a
+          estrutura da página inicial pede a secção pelo nome: no mapa, o
+          título e o botão partilham uma linha, para não custar mais altura à
+          folha do que o botão sozinho custava. */}
+      {noMapa ? (
+        <div className="perto-cabeca">
+          <h2 id={idDoTitulo}>Aqui perto</h2>
+          {estado.tipo === 'parado' && (
+            <button type="button" className="botao secundario perto-botao" onClick={procurar}>
+              <Localizacao tamanho={18} />
+              Usar a localização
+            </button>
           )}
-          <button
-            type="button"
-            className={noMapa ? 'botao secundario perto-botao' : undefined}
-            onClick={procurar}
-          >
-            {noMapa ? 'Paragens perto de mim' : 'Ver as paragens perto de mim'}
+        </div>
+      ) : (
+        <h2 id={idDoTitulo}>Aqui perto</h2>
+      )}
+
+      {estado.tipo === 'parado' && !noMapa && (
+        <>
+          <p>
+            As paragens mais próximas e o que passa nelas a seguir. Só com a sua localização, e só
+            se a quiser dar.
+          </p>
+          <button type="button" onClick={procurar}>
+            Ver as paragens perto de mim
           </button>
         </>
       )}

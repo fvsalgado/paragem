@@ -17,11 +17,12 @@ import DisponibilidadeBicicletas, {
 import Link from '@/componentes/Ligacao';
 import MenuDoMapa from '@/componentes/MenuDoMapa';
 import PegaDaFolha, { type Altura } from '@/componentes/PegaDaFolha';
-import { Chegada, DoModo, Hamburguer, Lista } from '@/componentes/Icones';
+import { Aviso as IconeDeAviso, Chegada, DoModo, Hamburguer, Lista } from '@/componentes/Icones';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { usePontos } from '@/lib/pontos-do-navegador';
 import AssinaturaDaRegiao from '@/componentes/AssinaturaDaRegiao';
 import type { Assinatura, Marca as MarcaDaRegiao } from '@/lib/marca';
+import type { Sede } from '@/lib/sedes';
 import {
   avisoDe,
   comoProcura,
@@ -202,6 +203,7 @@ export default function AppDoMapa({
   precos = null,
   aPedidoNaFolha = null,
   oQueJunta = null,
+  sedes = [],
 }: {
   regiao: string;
   /**
@@ -260,6 +262,8 @@ export default function AppDoMapa({
   aPedidoNaFolha?: { telefone: string; apresentado: string; nota: string | null } | null;
   /** O que o sítio junta, numa frase (`fraseDoQueJunta`) — por baixo da assinatura. */
   oQueJunta?: string | null;
+  /** As sedes de concelho, para o mapa as nomear a todos os zooms (`sedes.ts`). */
+  sedes?: Sede[];
 }) {
   const [menu, setMenu] = useState(false);
 
@@ -1195,6 +1199,7 @@ export default function AppDoMapa({
           limites={limites}
           lembrarVista={`paragem:vista-do-mapa:${regiao}`}
           perto={!direcoes && !escolhido ? perto : null}
+          sedes={sedes}
         />
 
         {/* A FOLHA DE ABERTURA: por onde se pode ir, antes de se perguntar nada.
@@ -1217,6 +1222,47 @@ export default function AppDoMapa({
               aoMudar={setAlturaDaAbertura}
               rotulos={{ baixa: 'Mostrar o que há perto e os modos' }}
             />
+            {/* A FAIXA DE AVISOS, NO ALTO DA FOLHA, quando os há (§6). Vinha a
+              seguir a «Para onde quer ir?», e com a folha a meio ficava na
+              dobra: o aviso que muda os planos de alguém lia-se depois do
+              botão que os fazia. Uma faixa na cor do estado, com o ícone e a
+              palavra — o estado não depende só da cor —, os graves primeiro,
+              dois à vista e o resto a uma ligação. Sem avisos, não ocupa nada. */}
+            {avisos.length > 0 && (
+              <section className="avisos-na-abertura" aria-labelledby="avisos-agora">
+                <h2 id="avisos-agora">
+                  <IconeDeAviso tamanho={18} />
+                  {avisos.length === 1 ? 'Um aviso em vigor' : `${avisos.length} avisos em vigor`}
+                </h2>
+                <ul>
+                  {avisos.slice(0, 2).map((a) => (
+                    <li key={a.id} className={a.gravidade === 'SEVERE' ? 'grave' : undefined}>
+                      <a href={`/avisos/#aviso-${encodeURIComponent(a.id)}`}>
+                        {a.distintivos.length > 0 && (
+                          <span className="distintivos-do-aviso">
+                            <span className="so-para-leitores">
+                              {a.distintivos.length === 1 ? 'Linha ' : 'Linhas '}
+                            </span>
+                            {a.distintivos.slice(0, 3).map((l) => (
+                              <Distintivo key={l.id} codigo={l.codigo} cor={l.cor} modo={l.modo} />
+                            ))}
+                            {a.distintivos.length > 3 && (
+                              <span className="secundario">+{a.distintivos.length - 3}</span>
+                            )}
+                          </span>
+                        )}
+                        <span className="titulo-do-aviso">{a.titulo}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+                {avisos.length > 2 && (
+                  <p>
+                    <a href="/avisos/">Ver os {avisos.length} avisos</a>
+                  </p>
+                )}
+              </section>
+            )}
             {/* A MARCA DA REDE NO PRIMEIRO ECRÃ (P1-008). O mapa ocupa o ecrã
               todo e o cabeçalho sai da frente; sem isto, quem abria o sítio
               da sua autoridade de transportes não via de quem ele era — e o
@@ -1262,45 +1308,6 @@ export default function AppDoMapa({
               botão da localização do mapa só punha um ponto azul. Agora as duas
               portas dão ao mesmo: o botão de texto, para quem não reconhece o
               ícone, e o do mapa — e a folha diz o que passa ali perto. */}
-            {/* A FAIXA DE AVISOS, onde o §6 a põe: logo a seguir a «Para onde quer
-              ir?». O aviso publicado no painel não aparecia no ecrã
-              principal (P4-019) — e é aqui que toda a gente começa. Dois à
-              vista, os graves primeiro; o resto a uma ligação. */}
-            {avisos.length > 0 && (
-              <section className="avisos-na-abertura" aria-labelledby="avisos-agora">
-                <h2 id="avisos-agora">
-                  {avisos.length === 1 ? 'Um aviso em vigor' : `${avisos.length} avisos em vigor`}
-                </h2>
-                <ul>
-                  {avisos.slice(0, 2).map((a) => (
-                    <li key={a.id} className={a.gravidade === 'SEVERE' ? 'grave' : undefined}>
-                      <a href={`/avisos/#aviso-${encodeURIComponent(a.id)}`}>
-                        {a.distintivos.length > 0 && (
-                          <span className="distintivos-do-aviso">
-                            <span className="so-para-leitores">
-                              {a.distintivos.length === 1 ? 'Linha ' : 'Linhas '}
-                            </span>
-                            {a.distintivos.slice(0, 3).map((l) => (
-                              <Distintivo key={l.id} codigo={l.codigo} cor={l.cor} modo={l.modo} />
-                            ))}
-                            {a.distintivos.length > 3 && (
-                              <span className="secundario">+{a.distintivos.length - 3}</span>
-                            )}
-                          </span>
-                        )}
-                        <span className="titulo-do-aviso">{a.titulo}</span>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-                {avisos.length > 2 && (
-                  <p className="secundario">
-                    <a href="/avisos/">Ver os {avisos.length} avisos</a>
-                  </p>
-                )}
-              </section>
-            )}
-
             <PertoDeTi
               regiao={regiao}
               pontos={pontos}

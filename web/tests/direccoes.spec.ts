@@ -652,16 +652,20 @@ test.describe('a abertura de uma região', () => {
     );
   });
 
-  test('«Paragens perto de mim» diz no mapa o que passa ali perto', async ({ page, context }) => {
+  test('«Aqui perto» diz no mapa o que passa ali perto', async ({ page, context }) => {
     // O botão da localização só punha um ponto azul, e o «Aqui perto» vivia
     // em «A rede» (P2-016). As duas portas dão agora ao mesmo sítio: a folha
     // diz que paragens estão perto e o que passa nelas, e tocar numa abre-a.
-    await context.grantPermissions(['geolocation']);
     await context.setGeolocation(ondeHaParagens());
     const partida = umaPartidaFutura();
     if (partida) await page.clock.setFixedTime(partida.quando);
     await page.goto('/');
-    await page.getByRole('button', { name: 'Paragens perto de mim' }).click();
+    // A permissão chega DEPOIS de a página abrir, como quando se responde ao
+    // diálogo do sistema: com ela já dada à entrada, a folha responde sozinha
+    // (o teste seguinte), e não haveria botão para carregar.
+    await expect(page.getByRole('heading', { name: 'Aqui perto' })).toBeVisible();
+    await context.grantPermissions(['geolocation']);
+    await page.getByRole('button', { name: 'Usar a localização' }).click();
 
     const bloco = page.locator('section.perto-no-mapa');
     const perto = bloco.locator('button.perto-paragem');
@@ -756,11 +760,16 @@ test.describe('a abertura de uma região', () => {
       },
       [onde.latitude, onde.longitude],
     );
-    // SEM TOCAR NO BOTÃO: com a permissão dada, é o próprio mapa que pergunta
-    // ao abrir — e foi assim que aconteceu. Um toque aqui desligava o
-    // seguimento que o mapa tinha acabado de ligar, e escondia o erro.
+    // SEM TOCAR NO BOTÃO: com a permissão dada, a folha pergunta ao abrir —
+    // e foi com a pergunta feita ao abrir que o erro aconteceu. Um toque aqui
+    // escondia-o.
     await page.goto('/');
     await expect(page.locator('.numero-no-mapa').first()).toBeVisible({ timeout: 15_000 });
+    // A FOLHA RESPONDE SEM SE TOCAR EM NADA: as paragens mais perto e o que
+    // passa nelas, e o botão já não faz falta.
+    const bloco = page.locator('section.perto-no-mapa');
+    await expect(bloco.locator('button.perto-paragem').first()).toBeVisible();
+    await expect(bloco.getByRole('button', { name: 'Usar a localização' })).toHaveCount(0);
 
     type Vista = { z: number; c: [number, number] } | null;
     const vista = () =>

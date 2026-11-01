@@ -139,10 +139,15 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
         <li>
           a localização. Só é pedida ao navegador quando se carrega{' '}
           {comMapa
-            ? 'no botão da localização do mapa, em «Paragens perto de mim»'
-            : 'em «Paragens perto de mim»'}{' '}
+            ? 'no botão da localização do mapa, em «Usar a localização»'
+            : 'em «Ver as paragens perto de mim»'}{' '}
           ou em «A minha localização», e serve para {comMapa ? 'a pôr no mapa, ' : ''}encontrar as
           paragens mais perto ou partir dali.{' '}
+          {/* A FOLHA DO MAPA PERGUNTA AO ABRIR, quando a pessoa já deu a
+              localização a este sítio — e a frase de cima, sozinha, passava
+              a dizer menos do que o sítio faz. */}
+          {comMapa &&
+            'Se já deu a localização a este sítio, o mapa usa-a ao abrir para mostrar o que passa perto — sem a voltar a pedir, e sem a guardar. '}
           {comMotor
             ? 'Para calcular uma viagem que parta de onde está, a coordenada vai no pedido ao motor de viagens deste sítio; nas medições, essa partida conta só como «A minha localização»;'
             : 'A coordenada fica no seu navegador, e nas medições essa partida conta só como «A minha localização»;'}

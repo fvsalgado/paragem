@@ -28,6 +28,7 @@ import { DENSIDADE, LADO, imagemDaPlaca } from '@/lib/icones-do-mapa';
 import type { Ponto } from '@/lib/formato';
 import { descodificarLinha, type PercursoGeo } from '@/lib/otp';
 import { ouvirTema, temaEfetivo } from '@/lib/tema';
+import type { Sede } from '@/lib/sedes';
 
 /**
  * O mapa. Não é um componente numa página — é a página.
@@ -58,6 +59,9 @@ import { ouvirTema, temaEfetivo } from '@/lib/tema';
  */
 
 export type Marca = Ponto & { partidas?: number };
+
+/** Uma lista vazia que é sempre a mesma, para o valor por omissão não mudar a cada pintura. */
+const SEM_SEDES: readonly Sede[] = [];
 
 /** O que o MapLibre escreve nos controlos que este mapa usa, em português. */
 const NOMES_DOS_CONTROLOS = {
@@ -551,6 +555,7 @@ export default function Mapa({
   limites = null,
   lembrarVista = null,
   perto = null,
+  sedes = SEM_SEDES,
 }: {
   centro: [number, number];
   zoom?: number;
@@ -629,6 +634,12 @@ export default function Mapa({
     comPonto: boolean;
     paragens: { lat: number; lon: number; n: number }[];
   } | null;
+  /**
+   * As sedes de concelho, com o sítio do lugar delas no OpenStreetMap
+   * (`sedes.ts`): o mapa nomeia-as a todos os zooms, por cima das outras
+   * terras. Sem elas, os nomes são só os do mapa de base.
+   */
+  sedes?: readonly Sede[];
 }) {
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<MapaLibre | null>(null);
@@ -716,7 +727,7 @@ export default function Mapa({
           // O MAPA NO TEMA DA PÁGINA, como o resto dela (P1-044): um mapa
           // claro no meio de uma página escura encandeava exatamente onde o
           // tema escuro devia poupar os olhos.
-          style: estiloDoMapa(mosaicos, atribuicao || undefined, temaDaPagina()),
+          style: estiloDoMapa(mosaicos, atribuicao || undefined, temaDaPagina(), sedes),
           center: [inicio.centro[1], inicio.centro[0]],
           zoom: inicio.zoom,
           // A ATRIBUIÇÃO JÁ ESCRITA QUANDO O CONTROLO NASCE. Vinha só da fonte
@@ -1004,20 +1015,13 @@ export default function Mapa({
             guardarVista(lembrarVista, { lon: c.lng, lat: c.lat, zoom: criado!.getZoom() });
           });
 
-          // COM A LOCALIZAÇÃO JÁ CONCEDIDA, o mapa abre na pessoa, a z15. Só
-          // quando já foi dada — perguntar à entrada era um diálogo do sistema
-          // antes de se ver o que quer que fosse —, e só se o endereço não
-          // pediu outra coisa (um ponto, uma viagem).
-          const pedido = new URLSearchParams(window.location.search);
-          if (lembrarVista && !['ponto', 'de', 'para'].some((k) => pedido.has(k))) {
-            navigator.permissions
-              ?.query({ name: 'geolocation' as PermissionName })
-              .then((estadoDaPermissao) => {
-                if (!vivo || estadoDaPermissao.state !== 'granted') return;
-                if (localizacao.trigger()) vistaDecidida.current = true;
-              })
-              .catch(() => {});
-          }
+          // COM A LOCALIZAÇÃO JÁ CONCEDIDA, quem pergunta é a folha, e não o
+          // mapa (`PertoDeTi`): o mapa abria na pessoa a z15 e a folha, logo
+          // a seguir, enquadrava-a com as paragens mais perto — dois voos
+          // seguidos, e o primeiro a desfazer o segundo quando chegava
+          // depois. A folha diz o que passa ali e o mapa mostra-o, numerado,
+          // num movimento só (`perto`). O botão continua a perguntar quando
+          // se carrega.
 
           setEstado('pronto');
         });
@@ -1301,7 +1305,9 @@ export default function Mapa({
       m.fitBounds(caixaDePerto, {
         padding: { top: estreito ? 150 : 56, bottom: 40, left: 40, right: 72 },
         duration: semMovimento() ? 0 : 900,
-        maxZoom: 17,
+        // A z16 e não mais perto: a z17 a rede da rua enchia o ecrã, e
+        // perdia-se para que lado ficava o resto da terra.
+        maxZoom: 16,
       });
     };
     // Quem carregou no botão do mapa vê-o voar até si: enquadra-se depois.

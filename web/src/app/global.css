@@ -1118,24 +1118,35 @@ details.lista-fechada[open] > summary::after {
   min-height: var(--alvo);
 }
 
-/* OS AVISOS NO ECRÃ DO MAPA (P4-019): na folha de abertura, logo a seguir a
-   «Para onde quer ir?», que é onde o §6 põe a faixa; e no cartão da paragem
-   afetada, antes das horas. Títulos que levam à página de avisos. */
+/* OS AVISOS NO ECRÃ DO MAPA (P4-019): no alto da folha de abertura, numa
+   faixa na cor do estado, e no cartão da paragem afetada, antes das horas.
+   Títulos que levam à página de avisos. O ícone e a palavra dizem o estado;
+   a cor só o confirma. */
 .avisos-na-abertura {
-  margin: 0 0.6rem 0.6rem;
-  border: 1px solid var(--linhas);
-  border-left: 6px solid var(--atencao);
+  margin: 0 0.6rem 0.5rem;
+  border-left: 4px solid var(--atencao);
   border-radius: var(--raio);
-  padding: 0.35rem 0.75rem;
-  background: var(--superficie);
+  padding: 0.3rem 0.75rem 0.15rem;
+  background: var(--atencao-fundo);
 }
 .avisos-na-abertura:has(li.grave) {
   border-left-color: var(--alerta);
+  background: var(--alerta-fundo);
 }
 .folha-de-abertura .avisos-na-abertura h2 {
-  margin: 0.25rem 0 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.2rem 0 0;
   padding: 0;
-  font-size: 0.95rem;
+  font-size: var(--letra-pequena, 0.9rem);
+}
+.avisos-na-abertura h2 svg {
+  flex: none;
+  color: var(--atencao);
+}
+.avisos-na-abertura:has(li.grave) h2 svg {
+  color: var(--alerta-texto);
 }
 .avisos-na-abertura ul,
 .avisos-no-cartao {
@@ -5150,11 +5161,27 @@ button.para-onde-vais svg {
   margin: 0.25rem 0 0.4rem;
   font-size: 1.05rem;
 }
+/* «AQUI PERTO» E O BOTÃO NUMA LINHA: o título à vista, como o §6 pede, sem
+   custar à folha mais altura do que o botão sozinho custava. Num ecrã estreito
+   de mais para os dois, o botão passa para baixo do título. */
+.perto-cabeca {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+}
+.folha-de-abertura .perto-cabeca h2 {
+  margin: 0;
+  padding: 0;
+}
 button.perto-botao {
-  width: 100%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.4rem;
+  min-height: var(--alvo);
+  padding: 0.35rem 0.9rem;
 }
 ul.perto-lista {
   list-style: none;
@@ -6292,4 +6319,26 @@ details.meio-do-percurso + ol.percurso-da-linha {
   margin: 0.25rem 0 0.5rem;
   padding-left: 0.6rem;
   border-left: 3px solid currentColor;
+}
+
+/* --- o mapa por baixo das folhas: o que o compositor não pode saltar ------ */
+
+/* AS FOLHAS QUE DESLIZAM POR CIMA DO MAPA NÃO SÃO OPACAS — a 99,6 %, e não a
+   100 % (auditoria de 1/11/2026, #11). Com o fundo opaco, o Chromium com o
+   desenho por Vulkan dava a folha por «tapa o que está por baixo» e deixava de
+   pintar um retângulo do mapa — mas o retângulo errado: o reflexo vertical do
+   conteúdo da folha, no ALTO do ecrã. No telemóvel, o primeiro ecrã abria com
+   o mapa vazio entre a procura e a folha, nos dois temas e em qualquer zoom.
+   Medido: tirar o fundo, ou a deslocação, ou a folha, devolvia o mapa; e um
+   fundo com uma fração de transparência também — que é o que não se vê. O
+   compositor não esconde nada por baixo de uma camada que não é opaca. Um
+   teste a 390 × 844 vê se a metade de cima do mapa tem mais do que uma cor
+   (`tests/primeiro-ecra.spec.ts`). */
+.folha-de-abertura,
+.cartao-de-baixo,
+.folha:not(.em-pagina),
+.folha-de-abertura > .pega-da-folha,
+.cartao-de-baixo > .pega-da-folha,
+.folha:not(.em-pagina) > .pega-da-folha {
+  background-color: color-mix(in srgb, var(--superficie) 99.6%, transparent);
 }

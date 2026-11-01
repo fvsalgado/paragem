@@ -320,3 +320,38 @@ export function Lua(p: Props) {
     </Svg>
   );
 }
+
+/**
+ * A mira da localização: o mesmo sinal do botão do mapa, para o «Aqui perto»
+ * da folha se reconhecer como a mesma porta.
+ */
+export function Localizacao(p: Props) {
+  return (
+    <Svg {...p}>
+      <circle cx="12" cy="12" r="6.5" />
+      <circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" />
+      <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" />
+    </Svg>
+  );
+}
+
+/** Um visto num círculo: o estado que está bem («a funcionar», «confirmado»). */
+export function Certo(p: Props) {
+  return (
+    <Svg {...p}>
+      <circle cx="12" cy="12" r="9.5" />
+      <path d="m7.8 12.3 2.8 2.8 5.6-5.8" />
+    </Svg>
+  );
+}
+
+/** Um «i» num círculo: uma nota que informa, sem pedir cuidado. */
+export function Informacao(p: Props) {
+  return (
+    <Svg {...p}>
+      <circle cx="12" cy="12" r="9.5" />
+      <path d="M12 11v6" />
+      <circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none" />
+    </Svg>
+  );
+}
