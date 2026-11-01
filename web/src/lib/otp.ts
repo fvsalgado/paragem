@@ -12,6 +12,7 @@
  * há é um motor desligado é mentir a quem está à espera do autocarro.
  */
 import { FUSO, relogioNoFuso } from './fuso.ts';
+import { traco } from './cor.ts';
 
 /**
  * DOZE HORAS, e é a decisão que mais pesa nesta página.
@@ -335,7 +336,17 @@ export function percursoDe(it: Itinerario): PercursoGeo {
           // O EXPRESSO PRIVADO NÃO LEVA A COR DA REDE (§6, P1-037): era
           // desenhado com a cor dos autocarros da autoridade, e quem olhava
           // para o mapa lia-o como parte dela. Vai a neutro.
-          cor: p.modo === 'expresso' ? '#4a5c66' : (COR_DO_MODO[p.mode] ?? '#0a5c7a'),
+          //
+          // E CADA TROÇO NA COR DA SUA LINHA. Um transbordo entre a 2 e a 1
+          // desenhava-se num traço azul só, e quem olhava para o mapa não via
+          // onde se muda. A cor é a da linha, escurecida até se ver sobre o
+          // contorno branco (`traco`); sem cor, a do modo.
+          cor:
+            p.modo === 'expresso'
+              ? '#4a5c66'
+              : p.mode === 'WALK' || p.mode === 'BICYCLE'
+                ? (COR_DO_MODO[p.mode] ?? '#4a5c66')
+                : (traco(p.route?.color) ?? COR_DO_MODO[p.mode] ?? '#0a5c7a'),
           linha: p.route?.shortName ?? '',
           aproximado: !!p.aproximado,
         },

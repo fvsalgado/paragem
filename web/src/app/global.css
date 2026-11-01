@@ -59,6 +59,10 @@
   --realce: #e8f1f4;
   --realce-forte: #dfeaef;
   --fundo-do-mapa: #eef0eb;
+  /* Quanto da cor de uma linha fica nos traços dela (o fio da viagem, o
+     percurso da linha): toda, no claro; no escuro, misturada com branco, para
+     um azul-escuro não desaparecer sobre a folha escura. */
+  --mistura-dos-tracos: 100%;
   --marca-texto: var(--marca);
   --marca-texto-hover: var(--marca-hover);
   --alerta-texto: var(--alerta);
@@ -98,6 +102,7 @@
     --realce: #1f3a47;
     --realce-forte: #21404f;
     --fundo-do-mapa: #172127;
+    --mistura-dos-tracos: 58%;
     --texto: #e6edf0;
     --texto-secundario: #a9b8bf;
     --linhas: #2a3a43;
@@ -126,6 +131,7 @@
   --realce: #1f3a47;
   --realce-forte: #21404f;
   --fundo-do-mapa: #172127;
+  --mistura-dos-tracos: 58%;
   --texto: #e6edf0;
   --texto-secundario: #a9b8bf;
   --linhas: #2a3a43;
@@ -2218,6 +2224,19 @@ button.modo.activo {
   flex: 1 1 auto;
   min-width: 0;
 }
+/* E QUANDO NÃO CABEM AS DUAS, AS ETIQUETAS DESCEM, em vez de a fila dos modos
+   encolher e cortar o tempo a meio («46 mi») — na página da viagem, a 390 px,
+   a folha é mais estreita do que no mapa. */
+.linha-de-controlos {
+  flex-wrap: wrap;
+}
+.linha-de-controlos .modos {
+  flex: 1 0 auto;
+  max-width: 100%;
+}
+.linha-de-controlos .etiquetas {
+  margin-left: auto;
+}
 .etiquetas {
   display: flex;
   gap: 0.4rem;
@@ -2248,6 +2267,22 @@ button.etiqueta[aria-expanded='true'] {
   border-color: var(--marca-texto);
   color: var(--marca-texto);
   font-weight: 700;
+}
+/* «MAIS CEDO» E «MAIS TARDE», depois das opções: virar a página do horário. */
+.mais-cedo-ou-tarde {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0.5rem 1rem;
+}
+.mais-cedo-ou-tarde button.etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: var(--alvo);
+}
+.mais-cedo-ou-tarde .para-tras {
+  transform: scaleX(-1);
 }
 button.etiqueta.so-icone {
   padding: 0;
@@ -2691,7 +2726,25 @@ ol.percurso .fio {
   min-height: 2.1rem;
   height: 100%;
   border-radius: 2px;
-  background: var(--autocarro);
+  /* A COR DA LINHA, como no mapa (`--cor-do-troco`, posta pela opção). */
+  background: color-mix(
+    in oklab,
+    var(--cor-do-troco, var(--autocarro)) var(--mistura-dos-tracos),
+    #fff
+  );
+}
+/* A ESPERA: um fio de pontos, sem cor de modo — ninguém está a andar. */
+ol.percurso li.espera .fio {
+  width: 0;
+  min-height: 1.6rem;
+  border-left: 3px dotted var(--borda-campo);
+  border-radius: 0;
+  background: none;
+}
+ol.percurso li.espera .oque {
+  padding: 0.15rem 0;
+  color: var(--texto-secundario);
+  font-size: 0.9rem;
 }
 ol.percurso li.troco {
   align-items: stretch;
@@ -2739,7 +2792,11 @@ ol.percurso li.troco .secundario {
    a linha do tempo e o mapa se leiam um ao outro. A pé é tracejado, como no
    mapa. */
 ol.percurso li.modo-comboio .fio {
-  background: var(--comboio);
+  background: color-mix(
+    in oklab,
+    var(--cor-do-troco, var(--comboio)) var(--mistura-dos-tracos),
+    #fff
+  );
 }
 ol.percurso li.modo-a-pe .fio,
 ol.percurso li.modo-bicicleta .fio {

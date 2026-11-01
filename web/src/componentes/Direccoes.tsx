@@ -6,6 +6,7 @@ import EscolherPonto from './EscolherPonto';
 import PegaDaFolha, { type Altura } from './PegaDaFolha';
 import type { PontosNoNavegador } from '@/lib/pontos-do-navegador';
 import Distintivo from './Distintivo';
+import { traco } from '@/lib/cor';
 import {
   APe,
   Bicicleta as IconeBicicleta,
@@ -41,7 +42,7 @@ import {
   type Capacidade,
 } from '@/lib/planeador';
 import { arrumarParaMostrar, contarTransbordos } from '@/lib/viagens';
-import { FUSO, instanteNaRegiao } from '@/lib/fuso';
+import { FUSO, instanteNaRegiao, relogioNoFuso } from '@/lib/fuso';
 import { aPedidoNasPontas, type PropostaAPedido } from '@/lib/a-pedido';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { comoProcura, escreverViagem } from '@/lib/endereco-da-viagem';
@@ -716,6 +717,23 @@ export default function Direccoes({
 
   const podePartilhar = !!para && !Number.isNaN(para.lat) && estado.tipo === 'resultados';
 
+  /**
+   * «MAIS CEDO» E «MAIS TARDE»: a mesma pergunta, uma hora antes da primeira
+   * opção, ou logo a seguir à última. Para ver as opções seguintes era preciso
+   * abrir o «Partir às», escolher «Noutra altura» e escrever uma hora — três
+   * gestos para o que no papel é virar a página.
+   *
+   * O dia e a hora saem do instante da opção, no relógio da região: a última
+   * opção de uma noite pode ser já de amanhã.
+   */
+  function irPara(instante: number) {
+    const { chave, hora: h } = relogioNoFuso(instante);
+    setQuando('marcado');
+    setData(comHifens(chave));
+    setHora(h);
+  }
+  const daLista = modo === 'transporte' && estado.tipo === 'resultados' && !problema ? lista : [];
+
   return (
     <>
       {/* ---- O CARTÃO DE CIMA: de onde, para onde. Sempre à vista. ---- */}
@@ -1153,6 +1171,27 @@ export default function Direccoes({
             </ul>
           )}
 
+          {daLista.length > 0 && (
+            <p className="mais-cedo-ou-tarde">
+              <button
+                type="button"
+                className="etiqueta"
+                onClick={() => irPara(Math.min(...daLista.map((it) => it.startTime)) - 60 * 60_000)}
+              >
+                <Seta tamanho={14} className="para-tras" />
+                Mais cedo
+              </button>
+              <button
+                type="button"
+                className="etiqueta"
+                onClick={() => irPara(Math.max(...daLista.map((it) => it.startTime)) + 60_000)}
+              >
+                Mais tarde
+                <Seta tamanho={14} />
+              </button>
+            </p>
+          )}
+
           {/* OS DESVIOS À PARTE, e não apagados (P2-009): continuam a ser
               viagens que existem — mas não as que se mostram primeiro. Fora da
               lista: com só desvios, e nenhuma ligação direta nos dias seguintes,
@@ -1277,49 +1316,75 @@ function Opcao({
          * se apanha e quanto demora. Lê-se de relance, que é o que se faz
          * com o autocarro à porta. */
         <ol className="percurso">
-          {it.legs.map((p, j) => (
-            <Fragment key={j}>
-              <li className="paragem">
-                <span className="hora">{horaDe(p.startTime)}</span>
-                <span className={`no ${j === 0 ? 'primeiro' : ''}`} aria-hidden="true" />
-                <span className="onde">{p.from.name}</span>
-              </li>
-              <li
-                className={`troco ${p.modo === 'expresso' ? 'modo-expresso' : (CLASSE_DO_MODO[p.mode] ?? '')}`}
-              >
-                <span className="hora" />
-                <span className="fio" aria-hidden="true" />
-                <span className="oque">
-                  {/* O ÍCONE É AJUDA PARA QUEM VÊ, NUNCA A INFORMAÇÃO. Com
+          {it.legs.map((p, j) => {
+            const antes = j > 0 ? it.legs[j - 1] : null;
+            // A ESPERA DE CADA TRANSBORDO, À VISTA. A linha do tempo dava
+            // a hora a que o segundo autocarro parte, e não a hora a que o
+            // primeiro chega: os 11 min parados no terminal não apareciam
+            // em lado nenhum — e são o que decide se o transbordo serve a
+            // quem tem frio, pressa ou uma criança pela mão.
+            const espera = antes ? Math.round((p.startTime - antes.endTime) / 60_000) : 0;
+            // CADA TROÇO NA COR DA SUA LINHA, como no mapa: a 2 e a 1 eram
+            // dois fios do mesmo azul, e o transbordo não se via.
+            const cor = p.modo === 'expresso' ? null : traco(corDaPerna(p));
+            return (
+              <Fragment key={j}>
+                <li className="paragem">
+                  {/* Num transbordo, a hora da paragem é a de CHEGADA; a de
+                      partida vai no troço, depois da espera. */}
+                  <span className="hora">{horaDe(antes ? antes.endTime : p.startTime)}</span>
+                  <span className={`no ${j === 0 ? 'primeiro' : ''}`} aria-hidden="true" />
+                  <span className="onde">{p.from.name}</span>
+                </li>
+                {espera >= 1 && (
+                  <li className="espera">
+                    <span className="hora" />
+                    <span className="fio" aria-hidden="true" />
+                    <span className="oque">Espera {duracaoLegivel(espera * 60)}</span>
+                  </li>
+                )}
+                <li
+                  className={`troco ${p.modo === 'expresso' ? 'modo-expresso' : (CLASSE_DO_MODO[p.mode] ?? '')}`}
+                  style={
+                    cor && p.mode !== 'WALK' && p.mode !== 'BICYCLE'
+                      ? ({ '--cor-do-troco': cor } as React.CSSProperties)
+                      : undefined
+                  }
+                >
+                  <span className="hora">{espera >= 1 ? horaDe(p.startTime) : ''}</span>
+                  <span className="fio" aria-hidden="true" />
+                  <span className="oque">
+                    {/* O ÍCONE É AJUDA PARA QUEM VÊ, NUNCA A INFORMAÇÃO. Com
                       leitor de ecrã ouvia-se «547 · 12 min», sem se saber que
                       é um autocarro. */}
-                  <DoModo modo={p.modo === 'expresso' ? 'expresso' : p.mode} />
-                  <span className="so-para-leitores">{nomeDaPerna(p)} </span>
-                  {p.route?.shortName ? (
-                    <Distintivo codigo={p.route.shortName} cor={corDaPerna(p)} />
-                  ) : null}
-                  <span className="secundario">
-                    {minutos(p.duration)} min
-                    {(p.mode === 'WALK' || p.mode === 'BICYCLE') &&
-                      ` · ${Math.round(p.distance)} m`}
-                  </span>
-                  {/* O EXPRESSO É DE UM OPERADOR PRIVADO, e diz-se aqui
+                    <DoModo modo={p.modo === 'expresso' ? 'expresso' : p.mode} />
+                    <span className="so-para-leitores">{nomeDaPerna(p)} </span>
+                    {p.route?.shortName ? (
+                      <Distintivo codigo={p.route.shortName} cor={corDaPerna(p)} />
+                    ) : null}
+                    <span className="secundario">
+                      {minutos(p.duration)} min
+                      {(p.mode === 'WALK' || p.mode === 'BICYCLE') &&
+                        ` · ${Math.round(p.distance)} m`}
+                    </span>
+                    {/* O EXPRESSO É DE UM OPERADOR PRIVADO, e diz-se aqui
                       (P2-010): quem seguia a opção chegava ao terminal sem
                       bilhete, a contar com o passe da rede. A página do modo
                       diz quem são os operadores e onde se compra. Uma vez por
                       opção, no primeiro: dois expressos seguidos eram a mesma
                       frase duas vezes. */}
-                  {p.modo === 'expresso' && j === primeiroExpresso && (
-                    <span className="nota-do-troco">
-                      Expresso de um operador privado: o bilhete é à parte e compra-se antes, ao
-                      operador — os passes da rede não servem.{' '}
-                      <Link href="/modos/expresso/">Os expressos e onde se compra</Link>
-                    </span>
-                  )}
-                </span>
-              </li>
-            </Fragment>
-          ))}
+                    {p.modo === 'expresso' && j === primeiroExpresso && (
+                      <span className="nota-do-troco">
+                        Expresso de um operador privado: o bilhete é à parte e compra-se antes, ao
+                        operador — os passes da rede não servem.{' '}
+                        <Link href="/modos/expresso/">Os expressos e onde se compra</Link>
+                      </span>
+                    )}
+                  </span>
+                </li>
+              </Fragment>
+            );
+          })}
           <li className="paragem">
             <span className="hora">{horaDe(it.endTime)}</span>
             <span className="no ultimo" aria-hidden="true" />
@@ -1547,11 +1612,24 @@ export function resumoDe(it: Itinerario): string {
   const aPe = it.legs
     .filter((p) => p.mode === 'WALK')
     .reduce((soma, p) => soma + p.duration / 60, 0);
+  const espera = esperaDe(it);
   const partes = [
     t === 0 ? 'sem transbordos' : t === 1 ? '1 transbordo' : `${t} transbordos`,
+    // A ESPERA CONTA. Duas opções de 46 min, uma com 2 min de transbordo e
+    // outra com 20 parado num terminal, não são a mesma viagem.
+    espera >= 1 ? `${duracaoLegivel(espera * 60)} à espera` : null,
     aPe >= 1 ? `${Math.round(aPe)} min a pé` : null,
   ].filter(Boolean);
   return partes.join(' · ');
+}
+
+/** Os minutos parados entre pernas — à espera do veículo seguinte —, somados. */
+export function esperaDe(it: Itinerario): number {
+  let total = 0;
+  for (let j = 1; j < it.legs.length; j++) {
+    total += Math.max(0, it.legs[j].startTime - it.legs[j - 1].endTime);
+  }
+  return Math.round(total / 60_000);
 }
 
 /** O ponto a meio do percurso, para lá pousar a bolha com o tempo. */
@@ -1588,12 +1666,17 @@ function meioDe(
  */
 export function emPalavras(it: Itinerario): string {
   const pernas = it.legs
-    .filter((p) => !(p.mode === 'WALK' && minutos(p.duration) < 1))
-    .map((p) => {
+    .map((p, j) => ({ p, espera: j > 0 ? (p.startTime - it.legs[j - 1].endTime) / 60_000 : 0 }))
+    .filter(({ p }) => !(p.mode === 'WALK' && minutos(p.duration) < 1))
+    .map(({ p, espera }) => {
       const min = minutos(p.duration);
       const quanto = `${min} ${min === 1 ? 'minuto' : 'minutos'}`;
-      if (p.mode === 'WALK') return `a pé ${quanto}`;
-      if (p.mode === 'BICYCLE') return `de bicicleta ${quanto}`;
+      // A espera ouve-se antes da perna que se espera: «espera 11 minutos,
+      // autocarro 1 até Almeão».
+      const e = Math.round(espera);
+      const antes = e >= 1 ? `espera ${e} ${e === 1 ? 'minuto' : 'minutos'}, ` : '';
+      if (p.mode === 'WALK') return `${antes}a pé ${quanto}`;
+      if (p.mode === 'BICYCLE') return `${antes}de bicicleta ${quanto}`;
       const curto = p.route?.shortName ?? '';
       const linha =
         p.mode === 'RAIL' && curto.length <= 3 && p.route?.longName
@@ -1601,7 +1684,7 @@ export function emPalavras(it: Itinerario): string {
           : curto
             ? ` ${curto}`
             : '';
-      return `${nomeDaPerna(p).toLowerCase()}${linha} até ${p.to.name}`;
+      return `${antes}${nomeDaPerna(p).toLowerCase()}${linha} até ${p.to.name}`;
     });
   return `${duracaoLegivel(it.duration)}, das ${horaDe(it.startTime)} às ${horaDe(
     it.endTime,
