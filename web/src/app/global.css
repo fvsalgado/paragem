@@ -1586,6 +1586,17 @@ table.saidas th[scope='row'] a {
   align-items: center;
   min-height: var(--alvo);
 }
+table.saidas .linhas-da-saida {
+  gap: 0.2rem;
+}
+/* Dois distintivos por fila, pelo menos, quando há largura: a coluna encolhia
+   até caber um só, e um destino com seis linhas ocupava seis filas. A 320 px
+   não há, e a página não pode deslizar para o lado. */
+@media (min-width: 25rem) {
+  table.saidas .linhas-da-saida {
+    min-width: 6.5rem;
+  }
+}
 table.saidas .horas-da-saida .secundario {
   display: block;
   font-size: 0.8rem;

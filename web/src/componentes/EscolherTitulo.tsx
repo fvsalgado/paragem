@@ -35,7 +35,7 @@ export default function EscolherTitulo({
   const n = Number.isFinite(viagens) && viagens > 0 ? Math.min(Math.round(viagens), 999) : 0;
   const aCadaViagem = n * b.valor;
   const maisBarato = e.periodos.reduce(
-    (m, p) => (p.mensal < m.custo ? { nome: `o «${p.nome}»`, custo: p.mensal } : m),
+    (m, p) => (p.mensal < m.custo ? { nome: `«${p.nome}»`, custo: p.mensal } : m),
     { nome: 'pagar cada viagem', custo: aCadaViagem },
   );
 
@@ -97,8 +97,11 @@ export default function EscolherTitulo({
         {n > 0 ? (
           <>
             <p>
+              {/* «O mais barato é», e não «sai mais barato o»: o nome de um
+                  título tanto é «o passe» como «a assinatura», e o artigo
+                  não se adivinha. */}
               <strong>
-                Com {n} {n === 1 ? 'viagem' : 'viagens'}, sai mais barato {maisBarato.nome}
+                Com {n} {n === 1 ? 'viagem' : 'viagens'} por mês, o mais barato é {maisBarato.nome}
               </strong>{' '}
               ({euros.format(maisBarato.custo)} por mês).
             </p>

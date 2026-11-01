@@ -216,10 +216,12 @@ export default async function Concelho({
                           <span className="so-para-leitores">: como chegar</span>
                         </Link>
                       </th>
-                      <td className="linhas-da-saida">
-                        {sd.linhas.map((l) => (
-                          <Distintivo key={l.id} codigo={l.codigo} cor={l.cor} />
-                        ))}
+                      <td>
+                        <span className="linhas-da-saida">
+                          {sd.linhas.map((l) => (
+                            <Distintivo key={l.id} codigo={l.codigo} cor={l.cor} />
+                          ))}
+                        </span>
                       </td>
                       <td className="horas-da-saida">
                         {dia ? (
