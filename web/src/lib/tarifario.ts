@@ -119,3 +119,36 @@ export function escolhasDoTarifario(titulos: Titulo[]): EscolhaDeUmaRede[] {
     }))
     .filter((e) => e.bilhetes.length > 0 && e.periodos.length > 0);
 }
+
+// --- os dois preços da página inicial ----------------------------------------
+
+/**
+ * OS DOIS PREÇOS QUE SE PERGUNTAM PRIMEIRO, para a página inicial (auditoria
+ * de 1/11/2026, #90): o bilhete de cada viagem e o passe mais largo, da rede
+ * da região — «Bilhete simples 1,50 € · Passe de rede 40,00 € por mês». A
+ * folha do mapa não dizia quanto custa andar de autocarro, que é a primeira
+ * pergunta de quem decide.
+ *
+ * As mesmas regras da ajuda do tarifário (`ajudaParaEscolher`): o de cada uso
+ * é o mais caro, que é o preço inteiro e não um desconto; o de período é o
+ * mais caro, que é o que cobre mais. SÓ OS CONFIRMADOS: um preço por
+ * confirmar fica no tarifário, que o marca, e não na primeira página. Vazio
+ * quando a rede não tem nenhum dos dois.
+ *
+ * `rede` é o nome da rede da região (`regiao.rede.nome`); sem ela, ou sem
+ * títulos dela, a primeira rede do tarifário.
+ */
+export function precosDaAbertura(
+  titulos: Titulo[],
+  rede: string | null | undefined,
+): { nome: string; valor: number; periodo?: string }[] {
+  const confirmados = titulos.filter((t) => t.confirmado);
+  const ajuda = ajudaParaEscolher(confirmados);
+  const daRede = ajuda.find((a) => a.rede === rede) ?? ajuda[0];
+  if (!daRede) return [];
+  const maisCaro = <T extends Titulo>(ts: T[]): T | null =>
+    ts.reduce<T | null>((m, t) => (!m || t.valor! > m.valor! ? t : m), null);
+  return [maisCaro(daRede.aCadaUso), maisCaro(daRede.porPeriodo)]
+    .filter((t): t is Titulo => !!t)
+    .map((t) => ({ nome: t.nome, valor: t.valor!, ...(t.periodo ? { periodo: t.periodo } : {}) }));
+}

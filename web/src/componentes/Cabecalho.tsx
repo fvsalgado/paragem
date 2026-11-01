@@ -21,9 +21,10 @@ import { assinaturaDaRegiao, marcaDaRegiao } from '@/lib/marca';
  * região ficou na barra do navegador e na régua de três linhas que fecha o
  * cabeçalho.
  *
- * Ficam duas ligações: **o mapa**, que é a aplicação, e **a rede**, que é o
- * catálogo onde tudo o resto continua a viver — e continua a ser o caminho
- * de quem não pode ou não quer usar um mapa.
+ * Ficam três ligações: **o mapa**, que é a aplicação; **como chegar**, o
+ * planeador, que não tinha entrada própria fora da folha do mapa (auditoria de
+ * 1/11/2026, #84); e **a rede**, que é o catálogo onde tudo o resto continua a
+ * viver — e continua a ser o caminho de quem não pode ou não quer usar um mapa.
  *
  * E o interruptor do tema escuro (`BotaoDoTema.tsx`), no fim da fila: o
  * sítio é de quem o usa de noite numa paragem tanto como de dia.
@@ -52,6 +53,9 @@ export default async function Cabecalho({ regiao: id }: { regiao: string }) {
             <ul>
               <li>
                 <Link href={url(id)}>{temMapa ? 'Mapa' : 'Início'}</Link>
+              </li>
+              <li>
+                <Link href={url(id, 'viagem/')}>Como chegar</Link>
               </li>
               <li>
                 <Link href={url(id, 'rede/')}>A rede</Link>

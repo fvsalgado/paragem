@@ -199,6 +199,9 @@ export default function AppDoMapa({
   servicosSemDatas = 0,
   dadosDe = null,
   avisos = [],
+  precos = null,
+  aPedidoNaFolha = null,
+  oQueJunta = null,
 }: {
   regiao: string;
   /**
@@ -248,6 +251,15 @@ export default function AppDoMapa({
    * principal, nem no cartão da paragem afetada.
    */
   avisos?: AvisoNoMapa[];
+  /**
+   * Os dois preços da rede — «Bilhete simples 1,50 € · Passe de rede 40,00 €
+   * por mês» —, a levar ao tarifário (`precosDaAbertura`). `null` sem eles.
+   */
+  precos?: string | null;
+  /** O telefone das reservas do transporte a pedido, quando a região o tem. */
+  aPedidoNaFolha?: { telefone: string; apresentado: string; nota: string | null } | null;
+  /** O que o sítio junta, numa frase (`fraseDoQueJunta`) — por baixo da assinatura. */
+  oQueJunta?: string | null;
 }) {
   const [menu, setMenu] = useState(false);
 
@@ -1221,6 +1233,12 @@ export default function AppDoMapa({
                 emLinha
               />
             </p>
+            {/* O QUE ISTO JUNTA, NUMA FRASE (auditoria de 1/11/2026, #173): a
+              única explicação era o nome da região ao lado do logótipo, e
+              quem chega pela primeira vez — ou o decisor a ver num projetor —
+              não lia que ali estão os modos todos, de várias entidades. Só
+              num ecrã largo: no telemóvel, a folha não tem linha a perder. */}
+            {oQueJunta && <p className="o-que-junta">{oQueJunta}</p>}
             <h2 id="abertura" className="so-para-leitores">
               Por onde começar
             </h2>
@@ -1312,6 +1330,30 @@ export default function AppDoMapa({
                 </li>
               ))}
             </ul>
+            {/* O TRANSPORTE A PEDIDO E O PREÇO, por baixo dos modos (#90): as
+              duas perguntas de quem decide — como se pede o a pedido, e quanto
+              custa andar na rede —, a que a folha não respondia. */}
+            {aPedidoNaFolha && (
+              <section className="a-pedido-na-folha" aria-labelledby="a-pedido-na-folha">
+                <h2 id="a-pedido-na-folha">Transporte a pedido</h2>
+                <p>Há circuitos que só circulam se alguém os reservar.</p>
+                <p className="cartao-accoes">
+                  <a className="botao" href={`tel:${aPedidoNaFolha.telefone}`}>
+                    Ligar {aPedidoNaFolha.apresentado}
+                  </a>
+                  <Link href="/a-pedido/">Como funciona</Link>
+                </p>
+                {aPedidoNaFolha.nota && <p className="secundario">{aPedidoNaFolha.nota}</p>}
+              </section>
+            )}
+            {precos && (
+              <p className="precos-na-folha">
+                <Link href="/rede/tarifario/">
+                  <span className="precos">{precos}</span>
+                  <span className="qual">Que título me serve?</span>
+                </Link>
+              </p>
+            )}
             {/* O ÚLTIMO FILHO DA FOLHA, e tem de continuar a sê-lo: o CSS só
                 pinta a folha quando ele já chegou (`global.css`, «A FOLHA SÓ SE
                 PINTA INTEIRA») — presa ao fundo, uma folha a meio subia ao

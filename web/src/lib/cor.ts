@@ -34,6 +34,24 @@ export function contraste(a: string, b: string): number {
 export const MINIMO_DE_UM_TRACO = 3;
 
 /**
+ * OS FUNDOS DO TEMA ESCURO: o da página e o dos cartões (`global.css`). Estão
+ * aqui porque a conta se faz no servidor, e o CSS só decide quando a aplica.
+ */
+const FUNDOS_ESCUROS = ['#0f1a20', '#16242c'] as const;
+
+/**
+ * UM DISTINTIVO QUE DESAPARECE NO TEMA ESCURO: a cor dele não chega aos 3:1 de
+ * um objeto (WCAG 1.4.11) contra algum dos fundos escuros. Era uma linha
+ * a `#1D1D1B` sobre a página `#0F1A20` — 1,0:1: o contorno sumia e ficava só o
+ * número a flutuar, no título da linha, no planeador e no «A seguir». O CSS
+ * dá-lhe um aro na cor da borda dos campos, só no tema escuro; no claro, a
+ * mesma cor escura contrasta de sobra e não leva nada.
+ */
+export function somemNoEscuro(fundo: string): boolean {
+  return FUNDOS_ESCUROS.some((f) => contraste(fundo, f) < MINIMO_DE_UM_TRACO);
+}
+
+/**
  * A COR DE UMA LINHA PARA SE DESENHAR SOBRE O BRANCO: a mesma, escurecida até
  * ter os 3:1 de um traço. `null` quando não há cor — ou quando é branco, que
  * no GTFS quer dizer «sem cor» (o comboio nacional declara `FFFFFF` em quase

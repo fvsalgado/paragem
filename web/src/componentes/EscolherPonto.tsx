@@ -8,7 +8,7 @@ import Distintivo from './Distintivo';
 // jeito aqui. Dois tipos com o mesmo nome e campos diferentes divergem, e
 // a divergência aparece como um ponto que o mapa abre e a procura não.
 export type { Ponto } from '@/lib/formato';
-import type { Ponto } from '@/lib/formato';
+import { pontosDosSitios, type Ponto, type SitiosCrus } from '@/lib/formato';
 import type { PontosNoNavegador } from '@/lib/pontos-do-navegador';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { aUmaLetra } from '@/lib/letras';
@@ -210,24 +210,7 @@ export default function EscolherPonto({
     aPedir.current = true;
     fetch(enderecoDosDados(regiao, `sitios.json`))
       .then((r) => (r.ok ? r.json() : { sitios: [] }))
-      .then((d: { campos?: string[]; sitios: unknown[][] }) => {
-        // Pelos CAMPOS que o ficheiro declara, e não pela posição: um
-        // ficheiro de antes do concelho não o traz, e continua a servir.
-        const campos = d.campos ?? ['nome', 'lat', 'lon', 'tipo', 'classe'];
-        const i = (nome: string) => campos.indexOf(nome);
-        setSitios(
-          (d.sitios ?? []).map((s) => ({
-            nome: String(s[i('nome')] ?? ''),
-            lat: Number(s[i('lat')]),
-            lon: Number(s[i('lon')]),
-            tipo: 'sitio',
-            id: '',
-            concelho: i('concelho') >= 0 ? String(s[i('concelho')] ?? '') : '',
-            descricao: String(s[i('tipo')] ?? ''),
-            classe: String(s[i('classe')] ?? ''),
-          })),
-        );
-      })
+      .then((d: SitiosCrus) => setSitios(pontosDosSitios(d)))
       .catch(() => setSitios([]));
     fetch(enderecoDosDados(regiao, 'concelhos.json'))
       .then((r) => (r.ok ? r.json() : []))

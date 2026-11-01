@@ -25,3 +25,11 @@ test('sem acentos nem maiúsculas, antes de comparar', () => {
   assert.equal(simples('Sável'), 'savel');
   assert.ok(aUmaLetra(simples('savell'), simples('Sável')));
 });
+
+test('a letra de antes e a de depois saltam as que não têm paragens', async () => {
+  const { vizinhas } = await import('../src/lib/letras.ts');
+  assert.deepEqual(vizinhas('C', ['A', 'C', 'F']), { antes: 'A', depois: 'F' });
+  assert.deepEqual(vizinhas('A', ['A', 'C']), { antes: null, depois: 'C' });
+  assert.deepEqual(vizinhas('Z', ['A', 'Z', '#']), { antes: 'A', depois: '#' });
+  assert.deepEqual(vizinhas('Q', ['A']), { antes: null, depois: null });
+});

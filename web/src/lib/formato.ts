@@ -77,6 +77,33 @@ export function pontosDaProcura(d: ProcuraCrua): Ponto[] {
   }));
 }
 
+/** O `sitios.json` tal como o pipeline o escreve: as chaves no cabeçalho, os sítios em listas. */
+export type SitiosCrus = { campos?: string[]; sitios?: unknown[][] };
+
+/**
+ * Os sítios do OpenStreetMap — lugares, cafés, escolas —, a partir do
+ * `sitios.json`. Pelos CAMPOS que o ficheiro declara, e não pela posição: um
+ * ficheiro de antes do concelho não o traz, e continua a servir.
+ *
+ * Num sítio só, para o navegador (a procura) e para o servidor (a lista das
+ * paragens, que distingue os homónimos pela terra mais perto): duas leituras
+ * do mesmo formato divergem.
+ */
+export function pontosDosSitios(d: SitiosCrus): Ponto[] {
+  const campos = d.campos ?? ['nome', 'lat', 'lon', 'tipo', 'classe'];
+  const i = (nome: string) => campos.indexOf(nome);
+  return (d.sitios ?? []).map((s) => ({
+    nome: String(s[i('nome')] ?? ''),
+    lat: Number(s[i('lat')]),
+    lon: Number(s[i('lon')]),
+    tipo: 'sitio',
+    id: '',
+    concelho: i('concelho') >= 0 ? String(s[i('concelho')] ?? '') : '',
+    descricao: String(s[i('tipo')] ?? ''),
+    classe: String(s[i('classe')] ?? ''),
+  }));
+}
+
 export type Regiao = {
   id: string;
   nome: string;
@@ -613,6 +640,28 @@ export type Estacao = {
   /** Quem opera os comboios, tirado do feed. Ausente nos dados de antes. */
   operador?: { nome: string; sitio: string | null } | null;
 };
+
+/**
+ * AS PARAGENS PERTO DE UMA ESTAÇÃO, UMA POR NOME: os dois lados da estrada são
+ * o mesmo sítio para quem sai do comboio. Com os identificadores todas, e a
+ * distância da mais perto.
+ *
+ * Num sítio só porque a lista das estações contava-as em bruto e a página da
+ * estação juntava-as pelo nome — «2 paragens perto» na lista e uma na página
+ * (auditoria de 1/11/2026, #85). Pela ordem em que chegam, que é a da distância.
+ */
+export function paragensPertoPorNome(
+  perto: Estacao['paragens_perto'],
+): { nome: string; ids: string[]; metros: number }[] {
+  const porNome = new Map<string, { nome: string; ids: string[]; metros: number }>();
+  for (const p of perto) {
+    const g = porNome.get(p.nome) ?? { nome: p.nome, ids: [], metros: p.metros };
+    g.ids.push(p.id);
+    g.metros = Math.min(g.metros, p.metros);
+    porNome.set(p.nome, g);
+  }
+  return [...porNome.values()];
+}
 
 export type Titulo = {
   id: string;

@@ -247,14 +247,24 @@ try {
  * delas —, que vão no HTML e outra vez no que o Next manda para a hidratação:
  * ficou a 206,1 de 205 (e a 150,7 de 155). Medido numa máquina local com as
  * regiões de prova; sobem 5 KiB os dois totais.
+ *
+ * A 1/11/2026, A AUDITORIA VISUAL (fase 1, páginas da rede) passou-o de
+ * propósito, e outra vez só no total. A paragem ganhou a lista das partidas
+ * de um dia, com o seletor de dia e a tabela dos dias que o navegador pede
+ * (`PartidasDoDia.tsx`), e as linhas que lá param: ficou a 223,8 de 220 (e a
+ * 167,3 de 170 no HTML e JS), e sobe 10 KiB — a lista é o que a página passou
+ * a responder, e o lote seguinte ainda lhe acrescenta CSS. A rede e o
+ * tarifário só pagam o CSS das páginas novas, que vai na folha de todas
+ * (trilho, listas por letra, estações): ficaram a 220,4 e 221,8 de 220, e
+ * sobem 5 KiB. Medido no CI do PR #53.
  */
 const ORCAMENTO = {
   início: { htmlEJs: 520, total: 770 },
-  'a rede': { htmlEJs: 170, total: 220 },
+  'a rede': { htmlEJs: 170, total: 225 },
   'como chegar': { htmlEJs: 185, total: 305 },
-  paragem: { htmlEJs: 170, total: 220 },
+  paragem: { htmlEJs: 170, total: 230 },
   linha: { htmlEJs: 155, total: 210 },
-  tarifário: { htmlEJs: 170, total: 220 },
+  tarifário: { htmlEJs: 170, total: 225 },
 };
 
 const daDemonstracao = (r) => {

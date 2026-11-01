@@ -17,6 +17,21 @@ export function letraDe(nome: string): string {
 }
 
 /**
+ * A inicial de antes e a de depois, entre as que TÊM paragens — para o fim de
+ * uma página de letra levar à seguinte sem voltar ao índice (auditoria de
+ * 1/11/2026, #108). `null` nas pontas.
+ */
+export function vizinhas(
+  letra: string,
+  comParagens: readonly string[],
+): { antes: string | null; depois: string | null } {
+  const ordem = LETRAS.filter((l) => comParagens.includes(l));
+  const i = ordem.indexOf(letra as (typeof LETRAS)[number]);
+  if (i < 0) return { antes: null, depois: null };
+  return { antes: ordem[i - 1] ?? null, depois: ordem[i + 1] ?? null };
+}
+
+/**
  * A letra como pedaço de endereço, e o caminho de volta.
  *
  * Vivem aqui, juntas, porque estavam em duas páginas diferentes e

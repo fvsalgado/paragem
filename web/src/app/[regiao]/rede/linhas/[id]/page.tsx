@@ -11,6 +11,7 @@ import {
   temMosaicos,
   quadrosDeHoje,
   urlDaParagem,
+  url,
   NAO_ENCONTRADA,
   type PontaDoSentido,
   type Sentido,
@@ -21,7 +22,7 @@ import {
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import { AvisosDaPagina } from '@/componentes/Avisos';
 import { avisosDaLinha, catalogoDosAvisos } from '@/lib/avisos-do-sitio';
-import { lista, plural } from '@/lib/prosa';
+import { lista, numero, plural } from '@/lib/prosa';
 import Distintivo, { corDoTraco } from '@/componentes/Distintivo';
 import EsquemaDaLinha from '@/componentes/EsquemaDaLinha';
 import { traco } from '@/lib/cor';
@@ -29,6 +30,7 @@ import QuadrosPorDia, { type QuadroDoDia } from '@/componentes/QuadrosPorDia';
 import { metadadosDaRegiao } from '@/lib/metadados';
 import { cartaoDaLinha } from '@/lib/partilha';
 import { feedsDosServicos } from '@/lib/formato';
+import { pontas, pontasDaLinha, soPontosDeHorario, tituloDoSentido } from '@/lib/sentidos';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -60,30 +62,9 @@ export async function generateMetadata({
   });
 }
 
-/** As pontas de um sentido: as das viagens, se os dados as trazem; senão, as do percurso. */
-function pontas(s: Sentido): { origens: PontaDoSentido[]; destinos: PontaDoSentido[] } {
-  if (s.origens?.length && s.destinos?.length) return { origens: s.origens, destinos: s.destinos };
-  const primeira = s.paragens[0]?.nome ?? '';
-  const ultima = s.paragens[s.paragens.length - 1]?.nome ?? '';
-  return {
-    origens: primeira ? [{ nome: primeira, viagens: s.viagens }] : [],
-    destinos: ultima ? [{ nome: ultima, viagens: s.viagens }] : [],
-  };
-}
-
-/**
- * O TÍTULO DE UM SENTIDO É PARA ONDE ELE VAI. Era «Ida» e «Volta», que não
- * dizem nada a quem está na paragem — e numa linha chamada «A - B», a «Ida»
- * começava numa terceira terra. Quando a maior parte das viagens parte e
- * acaba no mesmo sítio, é uma circular, e diz-se.
- */
-function tituloDoSentido(s: Sentido): string {
-  const { origens, destinos } = pontas(s);
-  const para = destinos[0]?.nome;
-  if (!para) return `Sentido ${s.sentido}`;
-  if (origens[0]?.nome === para) return `Circular, a partir de ${para}`;
-  return `Para ${para}`;
-}
+/** Até quantas paragens o percurso se mostra inteiro; num maior, quantas de cada ponta. */
+const PERCURSO_INTEIRO = 14;
+const PERCURSO_PONTAS = 5;
 
 /**
  * «Terminal A (5 viagens), Terminal B (4) e Terminal C (2)». As
@@ -257,6 +238,8 @@ export default async function Linha({
     }),
   );
 
+  const daLinha = pontasDaLinha(l.sentidos);
+
   return (
     <>
       <h1 className="titulo-da-linha">
@@ -277,13 +260,20 @@ export default async function Linha({
           </>
         )}
       </p>
-      <EsquemaDaLinha
-        sentidos={l.sentidos.map((s) => s.paragens)}
-        onde={onde}
-        cor={traco(l.cor) ?? '#0a5c7a'}
-        codigo={l.codigo}
-        comMapa={comMapa}
-      />
+      {daLinha && (
+        <p className="pontas-da-linha">
+          {daLinha.pontas.join(' – ')}.
+          {daLinha.maisComum && (
+            <>
+              {' '}
+              <span className="secundario">
+                {numero(daLinha.maisComum.viagens)} das {numero(daLinha.maisComum.de_total)} viagens
+                fazem só {daLinha.maisComum.de} – {daLinha.maisComum.a}.
+              </span>
+            </>
+          )}
+        </p>
+      )}
       <MarcaDeDados
         regiao={rid}
         modos={[l.modo]}
@@ -307,7 +297,7 @@ export default async function Linha({
         </nav>
       )}
 
-      {sentidos.map(({ s, ancora, titulo, quadros, hoje }) => {
+      {sentidos.map(({ s, ancora, titulo, quadros, hoje }, i) => {
         const ultima = s.paragens.length - 1;
         return (
           <section key={s.sentido} aria-labelledby={ancora}>
@@ -322,6 +312,16 @@ export default async function Linha({
               <dd>{pontasEmTexto(pontas(s).destinos)}</dd>
             </dl>
             <p className="secundario">{plural(s.viagens, 'viagem', 'viagens')} neste sentido.</p>
+            <EsquemaDaLinha
+              sentidos={l.sentidos.map((x) => x.paragens)}
+              qual={i}
+              onde={onde}
+              cor={traco(l.cor) ?? '#0a5c7a'}
+              codigo={l.codigo}
+              noMapa={
+                comMapa ? (paragemId) => url(rid, `/?ponto=${encodeURIComponent(paragemId)}`) : null
+              }
+            />
 
             {/* NUM ECRÃ LARGO, O HORÁRIO E O PERCURSO LADO A LADO (P1-014). Era
                 uma coluna de 608 px num ecrã de 1440, com 400 px vazios de
@@ -348,6 +348,13 @@ export default async function Linha({
 
               <div className="coluna-lateral">
                 <h3 className="parte-do-sentido">Percurso</h3>
+                {soPontosDeHorario(s, l.sentidos) && (
+                  <p className="faixa informacao so-pontos">
+                    Neste sentido só se conhecem as paragens com hora marcada no horário da
+                    operadora. As do caminho entre elas não estão nos dados — no sentido contrário
+                    estão — e não se inventam.
+                  </p>
+                )}
                 {s.variantes > 1 && (
                   <p className="secundario">
                     {s.variantes} percursos diferentes neste sentido. Mostra-se o mais servido (
@@ -359,8 +366,12 @@ export default async function Linha({
                 um fio com um nó por paragem, cheio nas pontas. Era uma lista
                 numerada, com o número de ordem à direita a fazer de ruído, e
                 a cor da linha não aparecia em lado nenhum além do distintivo. */}
-                <ol className="percurso-da-linha" style={cor}>
-                  {s.paragens.map((p, i) => {
+                {/* O PERCURSO COMPRIDO ENCOLHE PELO MEIO (#95): as primeiras e as
+                    últimas paragens à vista, e as do meio num botão. Num ecrã
+                    largo, o horário acabava aos 1 180 px e o percurso descia
+                    mais 2 500, ao lado de uma coluna vazia. */}
+                {(() => {
+                  const item = (p: { id: string; nome: string }, i: number) => {
                     const ligacoes = ligacoesDe(p.id);
                     const aviso = avisoDaParagem.get(p.id);
                     const classes = [
@@ -395,8 +406,41 @@ export default async function Linha({
                         )}
                       </li>
                     );
-                  })}
-                </ol>
+                  };
+                  const todas = s.paragens.map((p, i) => ({ p, i }));
+                  if (todas.length <= PERCURSO_INTEIRO) {
+                    return (
+                      <ol className="percurso-da-linha" style={cor}>
+                        {todas.map(({ p, i }) => item(p, i))}
+                      </ol>
+                    );
+                  }
+                  const inicio = todas.slice(0, PERCURSO_PONTAS);
+                  const meio = todas.slice(PERCURSO_PONTAS, -PERCURSO_PONTAS);
+                  const fim = todas.slice(-PERCURSO_PONTAS);
+                  return (
+                    <>
+                      <ol className="percurso-da-linha" style={cor}>
+                        {inicio.map(({ p, i }) => item(p, i))}
+                      </ol>
+                      <details className="meio-do-percurso" style={cor}>
+                        <summary>
+                          Mais {plural(meio.length, 'paragem', 'paragens')} pelo meio
+                        </summary>
+                        <ol className="percurso-da-linha" start={PERCURSO_PONTAS + 1}>
+                          {meio.map(({ p, i }) => item(p, i))}
+                        </ol>
+                      </details>
+                      <ol
+                        className="percurso-da-linha"
+                        style={cor}
+                        start={todas.length - PERCURSO_PONTAS + 1}
+                      >
+                        {fim.map(({ p, i }) => item(p, i))}
+                      </ol>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </section>
