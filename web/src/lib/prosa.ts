@@ -144,11 +144,17 @@ export function redeEQuemAGere(r: Pick<Regiao, 'rede' | 'autoridade'>): string {
 /**
  * A faixa de uma PROPOSTA: a rede é real, e o sítio ainda não é da autoridade.
  *
- * «Este sítio ainda não é um serviço da Comunidade…» — com a contração que a
- * região declara para a autoridade (`aAutoridade`), e sem ela «da autoridade
- * de transportes (…)». Diz o que é e para que serve, sem tom de erro: quem a
- * lê primeiro é quem decide, e uma faixa que se lê como avaria é a primeira
- * coisa errada que essa pessoa vê.
+ * «Ainda não é um serviço da Comunidade…» — com a contração que a região
+ * declara para a autoridade (`aAutoridade`), e sem ela «da autoridade de
+ * transportes (…)». Diz o que é sem tom de erro: quem a lê primeiro é quem
+ * decide, e uma faixa que se lê como avaria é a primeira coisa errada que
+ * essa pessoa vê.
+ *
+ * CURTA, porque está em todas as páginas. Dizia também «mostra o que o
+ * Paragem.pt faz com a informação pública da região», e num telemóvel eram
+ * quatro linhas antes do mapa (visto a 1/11/2026; o dono decidiu encurtá-la,
+ * como a do Coreto). O «Falar connosco» ao lado continua lá para quem queira
+ * saber mais.
  */
 export function fraseDaProposta(r: Pick<Regiao, 'autoridade'>): {
   titulo: string;
@@ -156,9 +162,7 @@ export function fraseDaProposta(r: Pick<Regiao, 'autoridade'>): {
 } {
   return {
     titulo: 'Proposta independente.',
-    texto:
-      `Este sítio ainda não é um serviço ${aAutoridade(r, 'de')}: mostra o que o Paragem.pt ` +
-      'faz com a informação pública da região.',
+    texto: `Ainda não é um serviço ${aAutoridade(r, 'de')}.`,
   };
 }
 
