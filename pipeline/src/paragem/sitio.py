@@ -346,6 +346,10 @@ class Sitio:
             # Uma rede real num sítio que a autoridade ainda não adotou: o
             # sítio di-lo em todas as páginas, e não fala em nome dela.
             "proposta": r.proposta,
+            # E O QUE A FAIXA DIZ, quando a região o declara: a relação com a
+            # autoridade é dela, e o sítio escreve-a tal e qual. `None` dá a
+            # frase genérica (`Regiao.faixa_da_proposta`).
+            "faixa_da_proposta": r.faixa_da_proposta,
             "modos": r.modos,
             # Os que a região mostra e não gere — ver `modos_de_terceiros`.
             # É por esta lista que o painel sabe sobre que modos é que a

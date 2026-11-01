@@ -244,6 +244,51 @@ def test_uma_proposta_declara_se_e_por_omissao_nao_e(tmp_path):
     assert Regiao.carregar(_regiao_minima(tmp_path / "sem-nada")).proposta is False
 
 
+def test_a_faixa_da_proposta_declara_se_na_regiao_ou_fica_a_generica(tmp_path):
+    """A relação com a autoridade é da região: o produto não a escreve por ela."""
+    generica = Regiao.carregar(_regiao_minima(tmp_path / "generica", proposta=True))
+    assert generica.faixa_da_proposta is None
+
+    faixa = {"titulo": "Proposta à Comunidade X.", "texto": "Ainda não é um serviço oficial."}
+    declarada = Regiao.carregar(_regiao_minima(tmp_path / "declarada", proposta=faixa))
+    assert declarada.proposta is True
+    assert declarada.faixa_da_proposta == faixa
+
+
+def test_a_faixa_da_proposta_chega_ao_sitio_tal_e_qual(raiz, tmp_path):
+    """O sítio escreve-a como a região a declara; sem ela, `None` e a frase genérica."""
+    import dataclasses
+
+    from paragem.sitio import Sitio
+
+    prova = regiao_ou_salta("prova")
+    faixa = {"titulo": "Proposta à Comunidade X.", "texto": "Ainda não é um serviço oficial."}
+    proposta = dataclasses.replace(
+        prova, demonstracao=False, proposta=True, faixa_da_proposta=faixa
+    )
+    j = Sitio(raiz, proposta, tmp_path).regiao_json()
+    assert j["proposta"] is True
+    assert j["faixa_da_proposta"] == faixa
+    assert Sitio(raiz, prova, tmp_path).regiao_json()["faixa_da_proposta"] is None
+
+
+@pytest.mark.parametrize(
+    "faixa",
+    [
+        {"titulo": "Proposta à Comunidade X."},
+        {"texto": "Ainda não é um serviço oficial."},
+        {"titulo": "Proposta.", "texto": "  "},
+        # Uma chave mal escrita passava a frase genérica sem ninguém dar por isso.
+        {"title": "Proposta.", "texto": "Ainda não é um serviço oficial."},
+        {"titulo": "Proposta.", "texto": "Ainda não.", "ligacao": "/contacto/"},
+    ],
+)
+def test_a_faixa_da_proposta_a_meio_recusa_se(tmp_path, faixa):
+    pasta = _regiao_minima(tmp_path / "a-meio", proposta=faixa)
+    with pytest.raises(ErroDeRegiao, match="`titulo` e `texto`"):
+        Regiao.carregar(pasta)
+
+
 def test_uma_demonstracao_nao_pode_ser_tambem_uma_proposta(tmp_path):
     pasta = _regiao_minima(tmp_path / "as-duas", proposta=True, demonstracao=True)
     with pytest.raises(ErroDeRegiao, match="ao mesmo tempo"):

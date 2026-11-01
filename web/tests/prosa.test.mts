@@ -148,6 +148,30 @@ test('a faixa de uma proposta contrai a autoridade como a região a declara', ()
   );
 });
 
+test('a faixa de uma proposta é a que a região declara, quando a declara', () => {
+  // A relação com a autoridade é da região: o produto escreve-a tal e qual.
+  const autoridade = {
+    nome: 'Comunidade Intermunicipal da Serra',
+    de: 'da Comunidade Intermunicipal da Serra',
+  };
+  const declarada = fraseDaProposta({
+    autoridade,
+    faixa_da_proposta: {
+      titulo: 'Proposta à Comunidade da Serra.',
+      texto: 'Ainda não é um serviço oficial.',
+    },
+  });
+  assert.equal(declarada.titulo, 'Proposta à Comunidade da Serra.');
+  assert.equal(declarada.texto, 'Ainda não é um serviço oficial.');
+
+  // Sem ela — ou a meio, de dados de antes —, a genérica de sempre.
+  for (const faixa of [undefined, null, { titulo: 'Proposta.', texto: ' ' }]) {
+    const generica = fraseDaProposta({ autoridade, faixa_da_proposta: faixa });
+    assert.equal(generica.titulo, 'Proposta independente.');
+    assert.equal(generica.texto, 'Ainda não é um serviço da Comunidade Intermunicipal da Serra.');
+  }
+});
+
 test('a faixa de uma proposta é curta: está em todas as páginas', () => {
   // Num telemóvel eram quatro linhas antes do mapa (1/11/2026). Com o nome de
   // autoridade mais comprido que uma região de prova declara, cabe em duas

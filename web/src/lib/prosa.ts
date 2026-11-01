@@ -155,11 +155,21 @@ export function redeEQuemAGere(r: Pick<Regiao, 'rede' | 'autoridade'>): string {
  * quatro linhas antes do mapa (visto a 1/11/2026; o dono decidiu encurtá-la,
  * como a do Coreto). O «Falar connosco» ao lado continua lá para quem queira
  * saber mais.
+ *
+ * A REGIÃO PODE ESCREVÊ-LA, e então é a dela que vale (`faixa_da_proposta`).
+ * A relação com uma autoridade concreta — a quem é proposta, se já a viu — não
+ * é coisa que o produto saiba, e há regiões onde ela já está dita noutro
+ * produto da casa com outras palavras: duas fórmulas para a mesma relação, na
+ * mesma reunião, são uma a mais.
  */
-export function fraseDaProposta(r: Pick<Regiao, 'autoridade'>): {
+export function fraseDaProposta(r: Pick<Regiao, 'autoridade' | 'faixa_da_proposta'>): {
   titulo: string;
   texto: string;
 } {
+  const declarada = r.faixa_da_proposta;
+  if (declarada?.titulo?.trim() && declarada.texto?.trim()) {
+    return { titulo: declarada.titulo.trim(), texto: declarada.texto.trim() };
+  }
   return {
     titulo: 'Proposta independente.',
     texto: `Ainda não é um serviço ${aAutoridade(r, 'de')}.`,

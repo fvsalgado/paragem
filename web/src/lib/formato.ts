@@ -88,6 +88,13 @@ export type Regiao = {
    * (`MarcaDeProposta`). Ausente em dados de antes disto.
    */
   proposta?: boolean;
+  /**
+   * O que a faixa da proposta diz, quando a região o declara no `regiao.yaml`
+   * (`proposta: {titulo, texto}`). A relação com a autoridade é da região, e o
+   * produto escreve-a tal e qual; ausente ou `null`, a frase genérica
+   * (`prosa.ts`, `fraseDaProposta`).
+   */
+  faixa_da_proposta?: { titulo: string; texto: string } | null;
   artigo: string;
   /** «a Serra da Pedra Alta», «o Baixo Sável» — escrito, não adivinhado. */
   nome_com_artigo: string;

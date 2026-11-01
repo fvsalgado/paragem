@@ -219,6 +219,17 @@ class Regiao:
     #: §4.4 e o §7 não deixam. É o irmão do `demonstracao`, que é para uma rede
     #: que não existe; as duas coisas não se juntam.
     proposta: bool = False
+    #: O QUE A FAIXA DA PROPOSTA DIZ, quando a região o declara.
+    #:
+    #: `proposta: true` dá a frase genérica, feita da autoridade («Proposta
+    #: independente. Ainda não é um serviço da …»). Mas a relação com uma
+    #: autoridade concreta — a quem é proposta, se ela já a viu — é da região,
+    #: e há regiões onde a mesma relação já está escrita noutro produto da casa
+    #: com outras palavras: duas fórmulas na mesma reunião são uma a mais. Por
+    #: isso `proposta:` aceita também `{titulo, texto}`, e o produto escreve-o
+    #: tal e qual. O produto não pode dizê-lo por ela: o nome de uma autoridade
+    #: só se escreve dentro de `regioes/<id>/` (CLAUDE.md, §7).
+    faixa_da_proposta: dict[str, str] | None = None
 
     # --- prosa -----------------------------------------------------------
 
@@ -419,6 +430,7 @@ class Regiao:
             dominio=(str(d["dominio"]).strip().lower() or None) if d.get("dominio") else None,
             demonstracao=bool(d.get("demonstracao", False)),
             proposta=bool(d.get("proposta", False)),
+            faixa_da_proposta=_faixa_da_proposta(d["id"], d.get("proposta")),
             municipios_membros=int(terr.get("municipios_membros", len(concelhos))),
             concelhos_servidos=int(terr.get("concelhos_servidos", len(concelhos))),
             caixa=caixa,
@@ -512,6 +524,27 @@ def _marca(pasta: Path, d: dict[str, Any]) -> tuple[str | None, Path | None]:
     except MarcaInvalida as e:
         raise ErroDeRegiao(str(e)) from None
     return cor, logotipo
+
+
+def _faixa_da_proposta(id_regiao: str, valor: Any) -> dict[str, str] | None:
+    """O que a faixa da proposta diz, quando a região o escreve (`Regiao.faixa_da_proposta`).
+
+    `proposta: true` (ou nada) dá `None`, e o sítio escreve a frase genérica.
+    `proposta: {titulo, texto}` dá os dois, e têm de vir os dois: um título sem
+    texto, ou o contrário, deixava a faixa a meio em todas as páginas — e uma
+    chave mal escrita (`title:`) passava a frase genérica sem ninguém dar por
+    isso. Recusa-se em vez de se adivinhar.
+    """
+    if not isinstance(valor, dict):
+        return None
+    faixa = {chave: str(valor.get(chave) or "").strip() for chave in ("titulo", "texto")}
+    sobra = sorted(set(valor) - set(faixa))
+    if sobra or not all(faixa.values()):
+        raise ErroDeRegiao(
+            f"{id_regiao}: `proposta:` declara a faixa com `titulo` e `texto`, os dois e mais "
+            f"nada — tem {sorted(valor)}. Para a frase genérica, `proposta: true`."
+        )
+    return faixa
 
 
 def _ler_yaml(caminho: Path) -> dict[str, Any]:
