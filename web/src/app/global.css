@@ -6369,3 +6369,34 @@ ul.sentidos-no-cartao li {
 ul.sentidos-no-cartao li:last-child {
   border-bottom: 0;
 }
+
+/* --- o planeador com o mapa ao lado (#122) --------------------------------- */
+
+/* NUM ECRÃ LARGO, AS OPÇÕES E O MAPA LADO A LADO: a coluna das opções com a
+   largura de ler, e o mapa com o resto, preso ao alto enquanto se desce pelas
+   opções. Num telemóvel não há mapa aqui — o mapa com as direções é a página
+   inicial —, e a caixa nem se desenha. */
+.mapa-da-viagem {
+  display: none;
+}
+@media (min-width: 64rem) {
+  .em-colunas.viagem-e-mapa {
+    grid-template-columns: minmax(0, 30rem) minmax(0, 1fr);
+  }
+  .mapa-da-viagem {
+    display: block;
+    position: sticky;
+    top: 1rem;
+    height: calc(100dvh - 2rem);
+    min-height: 28rem;
+    border: 1px solid var(--linhas);
+    border-radius: var(--raio);
+    overflow: hidden;
+    background: var(--fundo-do-mapa);
+  }
+  .mapa-da-viagem .mapa-caixa,
+  .mapa-da-viagem .mapa {
+    position: absolute;
+    inset: 0;
+  }
+}
