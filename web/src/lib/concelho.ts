@@ -81,6 +81,42 @@ export function quantosComUnidade(modo: string, n: number): string {
 }
 
 /**
+ * O QUE UM CONCELHO TEM, NUMA LINHA — a lista dos concelhos.
+ *
+ * Dizia só «10 paragens», e lido por quem é de um concelho com estação de
+ * comboio, urbano e dezassete estações de bicicletas parecia pouco: escondia
+ * tudo o que não é autocarro (auditoria de 1/11/2026). Cada modo pelo que
+ * conta, só os que há, pela ordem da grelha dos modos.
+ */
+export function resumoDoConcelho(c: {
+  paragens: number;
+  estacoes: number;
+  aPedido: boolean;
+  /** `[modo, quantos]`, dos «outros transportes» (`quantosNoConcelho`). */
+  modos: [string, number][];
+}): string {
+  const partes: string[] = [];
+  if (c.paragens)
+    partes.push(
+      `${c.paragens.toLocaleString('pt-PT')} ${c.paragens === 1 ? 'paragem' : 'paragens'} de autocarro`,
+    );
+  if (c.estacoes)
+    partes.push(`${c.estacoes} ${c.estacoes === 1 ? 'estação' : 'estações'} de comboio`);
+  if (c.aPedido) partes.push('transporte a pedido');
+  const ordem = ['urbano-municipal', 'bicicleta', 'expresso', 'taxi'];
+  const nomes: Record<string, (n: number) => string> = {
+    'urbano-municipal': () => 'urbano',
+    bicicleta: (n) => `${quantosComUnidade('bicicleta', n)} de bicicletas`,
+    expresso: () => 'expressos',
+    taxi: (n) => `${n} ${n === 1 ? 'praça' : 'praças'} de táxis`,
+  };
+  for (const [modo, n] of [...c.modos].sort((a, b) => ordem.indexOf(a[0]) - ordem.indexOf(b[0]))) {
+    if (n > 0 && nomes[modo]) partes.push(nomes[modo](n));
+  }
+  return partes.join(' · ');
+}
+
+/**
  * «Distrito de Santarém», «Distrito do Porto», «Distrito da Guarda».
  *
  * A frase dizia «Distrito Santarém» (auditoria de 1/11/2026). Dos dezoito

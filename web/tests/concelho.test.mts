@@ -213,3 +213,25 @@ test('o distrito diz-se com a preposição certa', async () => {
   assert.equal(fraseDoDistrito('Região Autónoma da Madeira'), 'Região Autónoma da Madeira.');
   assert.equal(fraseDoDistrito(''), '');
 });
+
+test('a lista dos concelhos diz o que cada um tem, e não só as paragens', async () => {
+  const { resumoDoConcelho } = await import('../src/lib/concelho.ts');
+  assert.equal(
+    resumoDoConcelho({
+      paragens: 10,
+      estacoes: 1,
+      aPedido: false,
+      modos: [
+        ['taxi', 0],
+        ['bicicleta', 17],
+        ['urbano-municipal', 3],
+      ],
+    }),
+    '10 paragens de autocarro · 1 estação de comboio · urbano · 17 estações de bicicletas',
+  );
+  assert.equal(
+    resumoDoConcelho({ paragens: 1, estacoes: 0, aPedido: true, modos: [['taxi', 2]] }),
+    '1 paragem de autocarro · transporte a pedido · 2 praças de táxis',
+  );
+  assert.equal(resumoDoConcelho({ paragens: 0, estacoes: 0, aPedido: false, modos: [] }), '');
+});

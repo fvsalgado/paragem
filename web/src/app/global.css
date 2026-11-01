@@ -1766,6 +1766,20 @@ ul.zonas-do-concelho a {
   align-items: center;
   min-height: var(--alvo);
 }
+/* A LISTA DOS CONCELHOS: o nome em cima e o que ele tem por baixo. Lado a
+   lado, o resumo comprido espremia o nome até o partir letra a letra. */
+.lista.concelhos-com-resumo a {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.15rem;
+}
+.lista.concelhos-com-resumo a > span:first-child {
+  font-weight: 700;
+}
+.lista.concelhos-com-resumo .secundario {
+  text-align: left;
+}
 
 /* As paragens do concelho, fechadas quando são muitas: o nome por inteiro e
    as linhas por baixo, sem nunca partir o nome a meio da palavra. */
@@ -2110,6 +2124,11 @@ details.lista-fechada.discreta > summary::after {
 .preco-em-linha {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+/* Uma palavra com hífen que não se parte no fim da linha: «serve-» numa e
+   «os» na seguinte lia-se mal (auditoria de 1/11/2026). */
+.sem-quebra {
+  white-space: nowrap;
 }
 
 /* «POR CONFIRMAR», AO LADO DE UM PREÇO, É UM ESTADO DOS DADOS E NÃO UM
