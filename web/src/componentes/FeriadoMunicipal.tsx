@@ -1,4 +1,9 @@
-import { feriadoEmBreve, fraseDoFeriadoMunicipal, type FeriadoMunicipal } from '@/lib/formato';
+import {
+  diaDoFeriado,
+  feriadoEmBreve,
+  fraseDoFeriadoMunicipal,
+  type FeriadoMunicipal,
+} from '@/lib/formato';
 import { diaNoFuso } from '@/lib/fuso';
 
 /**
@@ -17,12 +22,16 @@ import { diaNoFuso } from '@/lib/fuso';
 export default function FeriadoMunicipalDoConcelho({
   feriado,
   emBreve = false,
+  dias,
 }: {
   feriado: FeriadoMunicipal | null | undefined;
   emBreve?: boolean;
+  /** Com `emBreve`, quantos dias antes aparece (21 por omissão). */
+  dias?: number;
 }) {
-  if (emBreve && !feriadoEmBreve(feriado, diaNoFuso(new Date()))) return null;
-  const frase = fraseDoFeriadoMunicipal(feriado);
+  const hoje = diaNoFuso(new Date());
+  if (emBreve && !feriadoEmBreve(feriado, hoje, dias)) return null;
+  const frase = fraseDoFeriadoMunicipal(feriado, hoje);
   if (!frase) return null;
   return (
     <div className="faixa informacao" role="note">
@@ -30,5 +39,33 @@ export default function FeriadoMunicipalDoConcelho({
         <strong>{frase.titulo}</strong> {frase.texto}
       </p>
     </div>
+  );
+}
+
+/**
+ * O FERIADO NUMA LINHA, NO FIM DA PÁGINA DO CONCELHO, quando ainda falta muito
+ * para ele. A página de um concelho abria com uma caixa de sete linhas sobre
+ * um feriado a quatro meses, e empurrava o «Sair do concelho» para fora do
+ * primeiro ecrã (auditoria de 1/11/2026). A caixa fica para quando ele está
+ * perto (`emBreve`); fora disso, isto.
+ */
+export function FeriadoMunicipalNumaLinha({
+  feriado,
+  dias,
+}: {
+  feriado: FeriadoMunicipal | null | undefined;
+  /** Os mesmos dias da caixa: dentro deles, é a caixa que o diz. */
+  dias: number;
+}) {
+  const hoje = diaNoFuso(new Date());
+  if (!feriado || feriadoEmBreve(feriado, hoje, dias)) return null;
+  if (!fraseDoFeriadoMunicipal(feriado, hoje)) return null;
+  return (
+    <p className="secundario">
+      Feriado municipal: {diaDoFeriado(feriado, hoje)}.
+      {feriado.nos_horarios === 'por-confirmar'
+        ? ' Os horários desse dia ainda não contam com ele.'
+        : ''}
+    </p>
   );
 }

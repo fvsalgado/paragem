@@ -122,6 +122,12 @@ export type Regiao = {
    * (`prosa.ts`, `fraseDaProposta`).
    */
   faixa_da_proposta?: { titulo: string; texto: string } | null;
+  /**
+   * Onde saem os avisos oficiais, quando a região o diz: o sítio da rede, o
+   * do operador ferroviário, o telefone do transporte a pedido. Ausente em
+   * dados de antes disto.
+   */
+  avisos_oficiais?: { nome: string; url?: string; telefone?: string }[];
   artigo: string;
   /** «a Serra da Pedra Alta», «o Baixo Sável» — escrito, não adivinhado. */
   nome_com_artigo: string;
@@ -428,11 +434,11 @@ const DIAS_DA_SEMANA = [
  */
 export function fraseDoFeriadoMunicipal(
   f: FeriadoMunicipal | null | undefined,
+  /** `AAAA-MM-DD`. Com ele, o ano diz-se quando não é o de hoje. */
+  hoje?: string,
 ): { titulo: string; texto: string } | null {
   if (!f || !/^\d{4}-\d{2}-\d{2}$/.test(f.data) || f.nos_horarios === 'nada-muda') return null;
-  const [ano, mes, dia] = f.data.split('-').map(Number);
-  const semana = DIAS_DA_SEMANA[new Date(Date.UTC(ano, mes - 1, dia)).getUTCDay()];
-  const titulo = `${dia} de ${MESES[mes - 1]}, ${semana}, é feriado municipal neste concelho.`;
+  const titulo = `${diaDoFeriado(f, hoje)}, é feriado municipal neste concelho.`;
   const texto =
     f.nos_horarios === 'como-feriado'
       ? 'Os horários desse dia já contam com o feriado.'
@@ -442,6 +448,18 @@ export function fraseDoFeriadoMunicipal(
     ? ''
     : ' A data é a que as fontes dão; falta a confirmação da câmara.';
   return { titulo, texto: texto + data };
+}
+
+/**
+ * «1 de março, segunda-feira» — e «1 de março de 2027, segunda-feira» quando
+ * o ano não é o de hoje: lido a 1 de novembro, «1 de março» sem ano deixava
+ * quem lê a perguntar de que ano (auditoria de 1/11/2026).
+ */
+export function diaDoFeriado(f: FeriadoMunicipal, hoje?: string): string {
+  const [ano, mes, dia] = f.data.split('-').map(Number);
+  const semana = DIAS_DA_SEMANA[new Date(Date.UTC(ano, mes - 1, dia)).getUTCDay()];
+  const doAno = hoje && hoje.slice(0, 4) !== String(ano) ? ` de ${ano}` : '';
+  return `${dia} de ${MESES[mes - 1]}${doAno}, ${semana}`;
 }
 
 /** Faltam no máximo `dias` dias para o feriado (o próprio dia incluído). */
@@ -676,11 +694,25 @@ export type Titulo = {
   nota?: string;
 };
 
+/**
+ * O que a região diz de uma tabela do tarifário (`tarifas.redes`, pelo nome
+ * da rede dos títulos): que modo é, e de onde vêm os preços dela. Tudo
+ * opcional — sem isto, a tabela sai sem linha de fonte.
+ */
+export type RedeDoTarifario = {
+  modo?: string;
+  /** A frase que se mostra por baixo da tabela: «Tabela tarifária da operadora…». */
+  fonte?: string;
+  url?: string;
+};
+
 export type Tarifas = {
   moeda: string;
   titulos: Titulo[];
   por_confirmar: number;
   reservas: Record<string, unknown>;
+  /** Ausente em dados de antes disto. */
+  redes?: Record<string, RedeDoTarifario>;
 };
 
 export type Lacuna = { id: string; o_que: string; porque_importa: string; quantos?: number };
@@ -816,6 +848,11 @@ export type HorarioAPedido = {
    * (`reservaOnlineDoHorario`).
    */
   zonas?: string[];
+  /**
+   * Os títulos do tarifário que se pagam aqui (`id` do `tarifas.yaml`), quando
+   * a receita os diz. Ausente em dados de antes disto.
+   */
+  tarifas?: string[];
   regras: string[];
   paragens: string[];
   viagens: number;
@@ -928,6 +965,10 @@ export type SistemaDeBicicletas = {
   operador: string | null;
   estado: string | null;
   disponibilidade_publica: boolean;
+  /** Como se usa, numa frase, quando a receita o diz. Ausente em dados de antes disto. */
+  como_usar?: string | null;
+  /** O sítio do sistema, quando a receita o diz. */
+  sitio?: string | null;
   estacoes: PontoDeModo[];
 };
 
@@ -1069,6 +1110,12 @@ export type ModoDetalhe = {
   /** Ausente em dados de antes disto, e em regiões que não os declaram. */
   urbanos_da_rede?: UrbanoDaRede[];
   operadores?: OperadorDeModo[];
+  /**
+   * Os serviços deste modo que circulam na região e não publicam dados
+   * abertos (`servicos_sem_dados`, no `regiao.yaml`): não há horário que se
+   * mostre, e a página diz que existem e onde se consultam.
+   */
+  sem_dados?: { nome: string; url: string }[];
   incompleto: boolean;
   notas: string[];
   fontes: string[];

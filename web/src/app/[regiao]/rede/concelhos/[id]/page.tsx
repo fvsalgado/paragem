@@ -17,17 +17,23 @@ import {
   NAO_ENCONTRADA,
   type LinhaDetalhe,
   regiao,
+  temMosaicos,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
-import FeriadoMunicipalDoConcelho from '@/componentes/FeriadoMunicipal';
+import FeriadoMunicipalDoConcelho, {
+  FeriadoMunicipalNumaLinha,
+} from '@/componentes/FeriadoMunicipal';
 import Distintivo from '@/componentes/Distintivo';
 import { aAutoridade, lista, plural } from '@/lib/prosa';
 import {
+  fraseDoDistrito,
   paragemPrincipal,
   porLocalidade,
+  quantosComUnidade,
   quantosNoConcelho,
   saidasDoConcelho,
 } from '@/lib/concelho';
+import { caminhoDoHorario } from '@/lib/a-pedido';
 import { horaLegivel } from '@/lib/formato';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
@@ -81,6 +87,7 @@ export default async function Concelho({
   const es = (await estacoes(rid)).filter((e) => e.concelho === c.id);
   const pedido = await aPedido(rid);
   const indiceDeLinhas = await linhas(rid);
+  const comMapa = await temMosaicos(rid);
 
   // AS LINHAS DESTE CONCELHO, pelo identificador e não só pelo número: as
   // paragens dizem os NÚMEROS das linhas que lá param, e há números que se
@@ -150,8 +157,10 @@ export default async function Concelho({
           masculina, ou uma autoridade que é ela própria um município, saía
           com o artigo errado. A contração vem da declaração da autoridade, ou
           fica com «a autoridade de transportes» (`prosa.ts`). */}
+      {/* «Distrito de Santarém», e não «Distrito Santarém»; o do Porto e o da
+          Guarda levam artigo (`fraseDoDistrito`). */}
       <p>
-        Distrito {c.distrito}.{' '}
+        {fraseDoDistrito(c.distrito)}{' '}
         {r.autoridade?.tipo === 'municipio'
           ? c.membro
             ? ''
@@ -162,7 +171,10 @@ export default async function Concelho({
       </p>
       <p className="secundario">{numeros.join(' · ')}.</p>
       <MarcaDeDados regiao={rid} />
-      <FeriadoMunicipalDoConcelho feriado={c.feriado_municipal} />
+      {/* A CAIXA DO FERIADO SÓ QUANDO ESTÁ PERTO: a quatro meses, sete linhas
+          sobre ele empurravam o «Sair do concelho» para fora do primeiro ecrã.
+          Fora disso, uma linha no fim da página. */}
+      <FeriadoMunicipalDoConcelho feriado={c.feriado_municipal} emBreve dias={DIAS_DO_FERIADO} />
 
       {/* DUAS COLUNAS NUM ECRÃ LARGO (P1-014), como a paragem e a linha: à
           esquerda o que se lê de alto a baixo — sair, as linhas, as paragens —,
@@ -270,22 +282,32 @@ export default async function Concelho({
                       : ''}
                     .
                   </p>
+                  {/* CADA ZONA LEVA À SUA ENTRADA NA PÁGINA DO TRANSPORTE A
+                      PEDIDO (`#z-<zona>`), onde estão os circuitos dela, o
+                      horário que se sabe, o telefone e a reserva online. Eram
+                      texto sem ligação, e o «Como funciona» levava a uma
+                      página que mandava de volta para aqui (auditoria de
+                      1/11/2026). */}
                   {zonas.length > 0 && (
                     <ul className="zonas-do-concelho">
                       {zonas.map((z) => (
                         <li key={z.id}>
-                          {z.circuitos.length
-                            ? `${plural(z.circuitos.length, 'circuito', 'circuitos')} na zona ${z.nome}`
-                            : z.entre?.length
-                              ? `${z.nome}, ligação entre concelhos`
-                              : `Zona ${z.nome}`}
+                          <Link href={url(rid, `a-pedido/#z-${z.id}`)}>
+                            {z.circuitos.length
+                              ? `${plural(z.circuitos.length, 'circuito', 'circuitos')} na zona ${z.nome}`
+                              : z.entre?.length
+                                ? `${z.nome}, ligação entre concelhos`
+                                : `Zona ${z.nome}`}
+                          </Link>
                         </li>
                       ))}
                     </ul>
                   )}
+                  {/* PARA A PÁGINA DO HORÁRIO, e não para uma âncora da página
+                      geral que não existia (`#tap-…`). */}
                   {horariosAPedido.map((h) => (
                     <p key={h.id}>
-                      <Link href={url(rid, `a-pedido/#tap-${h.id}`)}>
+                      <Link href={url(rid, caminhoDoHorario(h.id))}>
                         O horário dos circuitos do concelho
                         {h.circuito_de ? ` — ${h.circuito_de}` : ''}
                       </Link>{' '}
@@ -327,8 +349,11 @@ export default async function Concelho({
             {(presentes.length > 0 || ausentes.length > 0) && (
               <section aria-labelledby="c-outros">
                 <h2 id="c-outros">Outros transportes</h2>
+                {/* O NÚMERO COM O QUE CONTA («8 estações», «2 praças»), e
+                    cartões sem a borda da lista por baixo de cada um — eram
+                    dois traços entre cartões (auditoria de 1/11/2026). */}
                 {presentes.length > 0 && (
-                  <ul className="lista">
+                  <ul className="lista outros-modos">
                     {presentes.map((o) => (
                       <li key={o.modo}>
                         <Link
@@ -341,7 +366,9 @@ export default async function Concelho({
                               <span className="secundario"> · {lista(o.redes)}</span>
                             )}
                           </span>
-                          <span className="secundario">{o.quantos}</span>
+                          <span className="secundario contagem">
+                            {quantosComUnidade(o.modo, o.quantos)}
+                          </span>
                         </Link>
                       </li>
                     ))}
@@ -433,6 +460,33 @@ export default async function Concelho({
           </details>
         </section>
       </div>
+
+      {/* O CONCELHO NO MAPA E NO SÍTIO DA CÂMARA. É a página que cada câmara
+          vai querer pôr no seu sítio, e não levava nem ao mapa nem à caixa
+          para colar lá (auditoria de 1/11/2026). O mapa abre na paragem
+          principal do concelho; a caixa, já montada com ela. */}
+      <section aria-labelledby="c-mais">
+        <h2 id="c-mais">Mais de {c.nome}</h2>
+        <p className="cartao-accoes">
+          {principal && comMapa && (
+            <a href={url(rid, `/?ponto=${encodeURIComponent(principal.id)}`)}>
+              Ver {c.nome} no mapa
+            </a>
+          )}
+          <Link
+            href={url(
+              rid,
+              `levar/${principal ? `?paragem=${encodeURIComponent(principal.id)}` : ''}`,
+            )}
+          >
+            Pôr os transportes de {c.nome} no sítio da câmara
+          </Link>
+        </p>
+      </section>
+      <FeriadoMunicipalNumaLinha feriado={c.feriado_municipal} dias={DIAS_DO_FERIADO} />
     </>
   );
 }
+
+/** Quantos dias antes o feriado municipal passa de uma linha no fim a uma caixa em cima. */
+const DIAS_DO_FERIADO = 14;

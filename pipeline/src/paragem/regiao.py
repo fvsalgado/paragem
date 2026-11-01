@@ -257,6 +257,17 @@ class Regiao:
     #: das câmaras. Saem do `rede` — que vai tal e qual para o sítio — e ficam
     #: aqui, validados.
     urbanos_da_rede: list[UrbanoDaRede] = field(default_factory=list)
+    #: OS SERVIÇOS QUE CIRCULAM NA REGIÃO E NÃO PUBLICAM DADOS ABERTOS
+    #: (`servicos_sem_dados`): `modo`, `nome` e `url`. Não entram em lista
+    #: nenhuma de carreiras — não há horário que se mostre —, mas a página do
+    #: modo diz que existem e onde se consultam. Sem isto, quem procurava o
+    #: expresso que conhece e não o via concluía que o sítio estava incompleto.
+    servicos_sem_dados: list[dict[str, str]] = field(default_factory=list)
+    #: ONDE SAEM OS AVISOS OFICIAIS (`avisos_oficiais`): `nome` e `url` ou
+    #: `telefone`. Numa proposta, o sítio não fala pela autoridade, e a página
+    #: dos avisos vazia dizia, em três parágrafos, que podia não ter os avisos
+    #: oficiais — sem uma ligação para onde eles estão (auditoria de 1/11/2026).
+    avisos_oficiais: list[dict[str, str]] = field(default_factory=list)
 
     # --- prosa -----------------------------------------------------------
 
@@ -459,6 +470,8 @@ class Regiao:
             proposta=bool(d.get("proposta", False)),
             faixa_da_proposta=_faixa_da_proposta(d["id"], d.get("proposta")),
             urbanos_da_rede=_urbanos_da_rede(d["id"], (d.get("rede") or {}).get("urbanos")),
+            servicos_sem_dados=_servicos_sem_dados(d["id"], d.get("servicos_sem_dados")),
+            avisos_oficiais=_avisos_oficiais(d["id"], d.get("avisos_oficiais")),
             municipios_membros=int(terr.get("municipios_membros", len(concelhos))),
             concelhos_servidos=int(terr.get("concelhos_servidos", len(concelhos))),
             caixa=caixa,
@@ -540,6 +553,29 @@ class Regiao:
                     "de zona."
                 )
 
+        # OS TÍTULOS QUE UM HORÁRIO A PEDIDO DIZ QUE SE PAGAM NELE têm de estar
+        # no tarifário: um `id` trocado tirava o preço à página, em silêncio.
+        titulos = {str(t.get("id")) for t in (self.tarifas or {}).get("titulos") or []}
+        for s in self.saidas:
+            pedidos = s.params.get("tarifas") if s.modo == "a-pedido" else None
+            if not pedidos:
+                continue
+            estranhos = sorted({str(t) for t in pedidos} - titulos)
+            if not isinstance(pedidos, list) or estranhos:
+                raise ErroDeRegiao(
+                    f"{self.id}: {s.saida} declara `tarifas` que o `tarifas.yaml` não tem — "
+                    f"{', '.join(estranhos) or pedidos!r}. É uma lista de `id` de títulos."
+                )
+
+        _verificar_redes_do_tarifario(self.id, self.tarifas)
+
+        fora_dos_modos = sorted({x["modo"] for x in self.servicos_sem_dados} - set(self.modos))
+        if fora_dos_modos:
+            raise ErroDeRegiao(
+                f"{self.id}: `servicos_sem_dados` fala de {', '.join(fora_dos_modos)}, que não "
+                "está na lista de modos da região: a página onde a frase iria não existe."
+            )
+
         if self.urbanos_da_rede:
             if "urbano-municipal" not in self.modos:
                 raise ErroDeRegiao(
@@ -560,6 +596,66 @@ class Regiao:
                     f"{self.id}: a mesma linha em dois urbanos da rede, ou duas vezes no mesmo — "
                     f"{', '.join(repetidas)}. Uma linha é de uma rede urbana só."
                 )
+
+
+#: Os modos do produto (CLAUDE.md §3), para o que a região diz de cada tabela
+#: do tarifário.
+MODOS_DO_PRODUTO = (
+    "autocarro",
+    "a-pedido",
+    "comboio",
+    "urbano-municipal",
+    "bicicleta",
+    "expresso",
+    "taxi",
+)
+
+
+def _verificar_redes_do_tarifario(id_regiao: str, tarifas: dict[str, Any] | None) -> None:
+    """O que a região diz de cada tabela do tarifário (`tarifas.redes`).
+
+    Cada tabela da página é uma `rede` dos títulos, e a região pode dizer de
+    cada uma QUE MODO É e DE ONDE VÊM OS PREÇOS. As duas coisas faltavam: a
+    conta do «Que título me serve?» oferecia o sistema de bicicletas como uma
+    rede onde se fazem «40 viagens por mês», e a página acabava com «os preços
+    são os que a operadora publica» por baixo de tabelas que não eram dela
+    (auditoria de 1/11/2026).
+
+    É opcional. O que se recusa é descrever uma tabela que não existe — um nome
+    trocado deixava a tabela sem fonte, em silêncio —, um modo que o produto
+    não tem, ou uma chave que ninguém lê.
+    """
+    redes = (tarifas or {}).get("redes")
+    if redes is None:
+        return
+    if not isinstance(redes, dict):
+        raise ErroDeRegiao(
+            f"{id_regiao}: `redes` do tarifário é um mapa — o nome da rede dos títulos e, "
+            "para cada uma, `modo`, `fonte` e `url`."
+        )
+    existentes = {str(t.get("rede")) for t in (tarifas or {}).get("titulos") or []}
+    estranhas = sorted(str(n) for n in redes if str(n) not in existentes)
+    if estranhas:
+        raise ErroDeRegiao(
+            f"{id_regiao}: o tarifário descreve redes que nenhum título tem — "
+            f"{', '.join(estranhas)}. Os nomes são os do campo `rede` dos títulos."
+        )
+    for nome, d in redes.items():
+        if not isinstance(d, dict) or set(d) - {"modo", "fonte", "url"}:
+            raise ErroDeRegiao(
+                f"{id_regiao}: a rede {nome!r} do tarifário diz `modo`, `fonte` e `url`, "
+                "e mais nada."
+            )
+        if d.get("modo") and d["modo"] not in MODOS_DO_PRODUTO:
+            raise ErroDeRegiao(
+                f"{id_regiao}: a rede {nome!r} do tarifário é do modo {d['modo']!r}, que o "
+                f"produto não tem. Os modos são: {', '.join(MODOS_DO_PRODUTO)}."
+            )
+        if d.get("url") and not str(d["url"]).startswith("https://"):
+            raise ErroDeRegiao(
+                f"{id_regiao}: a rede {nome!r} do tarifário aponta para {d['url']!r}; uma "
+                "ligação para fora vai por https."
+            )
 
 
 def _marca(pasta: Path, d: dict[str, Any]) -> tuple[str | None, Path | None]:
@@ -652,6 +748,71 @@ def _urbanos_da_rede(id_regiao: str, valor: Any) -> list[UrbanoDaRede]:
             )
         urbanos.append(UrbanoDaRede(nome=nome, concelho=concelho, linhas=codigos))
     return urbanos
+
+
+def _servicos_sem_dados(id_regiao: str, valor: Any) -> list[dict[str, str]]:
+    """Os serviços sem dados abertos, como a região os declara (`Regiao.servicos_sem_dados`).
+
+    Cada um com `modo`, `nome` e `url` — a página onde se consultam os horários
+    e os bilhetes, por https —, e nada mais. Que o modo seja da região
+    confere-o o `_verificar`.
+    """
+    if valor in (None, []):
+        return []
+    if not isinstance(valor, list):
+        raise ErroDeRegiao(
+            f"{id_regiao}: `servicos_sem_dados` é uma lista, cada um com `modo`, `nome` e `url`."
+        )
+    saida: list[dict[str, str]] = []
+    for i, x in enumerate(valor):
+        if not isinstance(x, dict) or sorted(x) != ["modo", "nome", "url"]:
+            raise ErroDeRegiao(
+                f"{id_regiao}: `servicos_sem_dados[{i}]` declara-se com `modo`, `nome` e `url`, "
+                f"os três e mais nada — tem {sorted(x) if isinstance(x, dict) else x!r}."
+            )
+        d = {k: str(x[k] or "").strip() for k in ("modo", "nome", "url")}
+        if not d["modo"] or not d["nome"] or not d["url"].startswith("https://"):
+            raise ErroDeRegiao(
+                f"{id_regiao}: `servicos_sem_dados[{i}]` tem de ter `modo` e `nome`, e um `url` "
+                "por https — é para lá que a página manda quem quer os horários."
+            )
+        saida.append(d)
+    return saida
+
+
+def _avisos_oficiais(id_regiao: str, valor: Any) -> list[dict[str, str]]:
+    """Onde saem os avisos oficiais, como a região os declara (`Regiao.avisos_oficiais`).
+
+    Cada um com `nome` e uma maneira de lá chegar — `url` (por https) ou
+    `telefone` —, e nada mais.
+    """
+    if valor in (None, []):
+        return []
+    if not isinstance(valor, list):
+        raise ErroDeRegiao(
+            f"{id_regiao}: `avisos_oficiais` é uma lista, cada um com `nome` e `url` ou `telefone`."
+        )
+    saida: list[dict[str, str]] = []
+    for i, x in enumerate(valor):
+        chaves = set(x) if isinstance(x, dict) else set()
+        if "nome" not in chaves or chaves - {"nome", "url", "telefone"}:
+            raise ErroDeRegiao(
+                f"{id_regiao}: `avisos_oficiais[{i}]` declara-se com `nome` e `url` ou `telefone`, "
+                f"e mais nada — tem {sorted(chaves) if isinstance(x, dict) else x!r}."
+            )
+        d = {k: str(x[k] or "").strip() for k in ("nome", "url", "telefone") if k in x}
+        url = d.get("url", "")
+        if (
+            not d["nome"]
+            or not (url or d.get("telefone"))
+            or (url and not url.startswith("https://"))
+        ):
+            raise ErroDeRegiao(
+                f"{id_regiao}: `avisos_oficiais[{i}]` tem de ter `nome`, e um `url` por https ou "
+                "um `telefone` — é para lá que a página manda quem quer confirmar."
+            )
+        saida.append(d)
+    return saida
 
 
 def _ler_yaml(caminho: Path) -> dict[str, Any]:

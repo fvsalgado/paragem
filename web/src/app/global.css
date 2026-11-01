@@ -759,6 +759,16 @@ code {
 .cartao.modo-taxi {
   border-left: 1px solid var(--linhas);
 }
+/* OS «OUTROS TRANSPORTES» DE UM CONCELHO: cartões numa lista, sem a borda da
+   lista por baixo de cada um (eram dois traços entre cartões) e com o
+   espaço de dentro de um cartão — a `.lista a` encostava o texto à borda. */
+.lista.outros-modos > li {
+  border-bottom: 0;
+}
+.lista.outros-modos > li > a.cartao {
+  padding: 0.6rem 1rem;
+  margin: 0.5rem 0;
+}
 
 .lista {
   list-style: none;
@@ -791,8 +801,19 @@ code {
   align-items: center;
   position: relative;
   list-style: none;
+}
+/* O NOME A NEGRITO NA PRIMEIRA LINHA, e por baixo, em texto secundário, as
+   viagens e a primeira hora (auditoria de 1/11/2026): era tudo uma frase a
+   negrito na cor das ligações, e o nome do circuito perdia-se no meio. */
+.quadro-de-horario .resumo-do-quadro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.quadro-de-horario .nome-do-quadro {
   font-weight: 700;
-  color: var(--marca-texto);
+  color: var(--texto);
 }
 /* A SETA QUE O `display: flex` TIRAVA. Com ele, o Chromium deixa de desenhar
    o triângulo do `<details>`, e o resumo («26 viagens — da Centro de Saúde às
@@ -1738,6 +1759,33 @@ ul.zonas-do-concelho {
   margin: 0.25rem 0 0.5rem;
   padding-left: 1.25rem;
 }
+/* Cada zona leva à sua entrada na página do transporte a pedido: um alvo
+   sozinho na linha, com os 44 px. */
+ul.zonas-do-concelho a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+}
+/* A LISTA DOS CONCELHOS: o nome em cima e o que ele tem por baixo. Lado a
+   lado, o resumo comprido espremia o nome até o partir letra a letra. */
+.lista.concelhos-com-resumo a {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.15rem;
+}
+.lista.concelhos-com-resumo a > span:first-child {
+  font-weight: 700;
+}
+.lista.concelhos-com-resumo .secundario {
+  text-align: left;
+}
+/* Os canais dos avisos oficiais, um por linha. */
+ul.avisos-oficiais a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+}
 
 /* As paragens do concelho, fechadas quando são muitas: o nome por inteiro e
    as linhas por baixo, sem nunca partir o nome a meio da palavra. */
@@ -1986,6 +2034,38 @@ ul.pontos-de-modo .accoes a {
 .sobre-estes-dados details[open] > summary {
   margin-bottom: 0.5rem;
 }
+/* A contagem de uma estação numa linha sua, por baixo do nome: cada contagem
+   inteira — «8 docas» não se parte em «· 8» e «docas». */
+.disponibilidade.em-linha-propria .contagem {
+  white-space: nowrap;
+}
+/* «Como se usa», no topo de um sistema de bicicletas, e o cartão de um serviço
+   sem dados abertos: neutros, com borda e sem cor de modo (§6). */
+.como-se-usa,
+.cartao-neutro {
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  background: var(--superficie);
+  padding: 0.25rem 1rem;
+  margin: 0.75rem 0;
+}
+.como-se-usa h3 {
+  margin-top: 0.75rem;
+}
+.como-se-usa ul,
+ul.notas-do-cartaz {
+  padding-left: 1.25rem;
+}
+/* Uma lista fechada em segundo plano — as paragens de uma linha que ainda não
+   estão no mapa —, que não compete com o horário por cima dela. */
+details.lista-fechada.discreta > summary {
+  font-weight: 400;
+  color: var(--texto-secundario);
+  font-size: 0.95rem;
+}
+details.lista-fechada.discreta > summary::after {
+  border-color: var(--texto-secundario);
+}
 
 /* --- «Que título me serve?» -------------------------------------------------- */
 
@@ -2050,6 +2130,29 @@ ul.pontos-de-modo .accoes a {
 .preco-em-linha {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+/* Uma palavra com hífen que não se parte no fim da linha: «serve-» numa e
+   «os» na seguinte lia-se mal (auditoria de 1/11/2026). */
+.sem-quebra {
+  white-space: nowrap;
+}
+
+/* «POR CONFIRMAR», AO LADO DE UM PREÇO, É UM ESTADO DOS DADOS E NÃO UM
+   ALERTA (auditoria de 1/11/2026). Estava no vermelho dos alertas — que é
+   para o que mudou hoje — e, no tema escuro, o vermelho escuro sobre o fundo
+   escuro reprovava no axe. Neutro: o texto secundário (6,4:1 no claro, 8,7:1
+   no escuro) e o contorno dos campos. */
+.por-confirmar {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--borda-campo);
+  border-radius: 6px;
+  color: var(--texto-secundario);
+  white-space: nowrap;
+  vertical-align: middle;
 }
 
 /* Uma faixa de INFORMAÇÃO: o que é assim e vai continuar assim. O vermelho

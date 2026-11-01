@@ -65,10 +65,10 @@ test('a página diz como se reserva antes de dizer o que existe', async ({ page 
 
   // O telefone é uma ligação `tel:`, não texto a fingir — onde há telefone.
   if (TELEFONE) {
-    await expect(page.getByRole('link', { name: `Ligar ${APRESENTADO}` })).toHaveAttribute(
-      'href',
-      `tel:${TELEFONE}`,
-    );
+    // O da regra, à cabeça; as zonas sem circuitos têm o seu, mais abaixo.
+    await expect(
+      page.getByRole('link', { name: `Ligar ${APRESENTADO}`, exact: true }).first(),
+    ).toHaveAttribute('href', `tel:${TELEFONE}`);
   }
 });
 
@@ -129,9 +129,19 @@ test('conta as zonas por levantar em vez de as esconder', async ({ page }) => {
   // Uma lista curta a fingir-se de completa é pior do que uma lista curta que
   // se declara incompleta.
   await page.goto(`/a-pedido/`);
-  await expect(
-    page.getByRole('heading', { name: /zonas sem os circuitos atribuídos/ }),
-  ).toBeVisible();
+  const zonas = page.locator('ul.zonas-sem-circuitos > li');
+  await expect(zonas).toHaveCount(POR_LEVANTAR.length);
+  // CADA UMA COM O QUE FAZER, e não «ver o concelho» — que mandava para a
+  // página do concelho, e essa mandava de volta para aqui (auditoria de
+  // 1/11/2026). O telefone serve todas.
+  await expect(page.getByText('ver o concelho')).toHaveCount(0);
+  if (TAP!.reservas.telefone) {
+    for (const z of await zonas.all()) {
+      await expect(z.getByRole('link', { name: /^Ligar / })).toBeVisible();
+    }
+  }
+  // E chega-se lá pelo endereço que a página do concelho usa.
+  await expect(page.locator(`#z-${POR_LEVANTAR[0].id}`)).toBeVisible();
 });
 
 test('o catálogo dos circuitos está lá, com os nomes todos', async ({ page }) => {
@@ -164,7 +174,14 @@ test('não inventa a que zona pertence cada circuito', async ({ page }) => {
   // duas listas sem a ligação. A página tem de o DIZER — um circuito posto
   // no concelho errado manda alguém reservar onde não deve.
   await page.goto(`/a-pedido/`);
-  await expect(page.getByText(/não se sabe é qual deles serve qual zona/)).toBeVisible();
+  // A lista delas não põe circuito nenhum por baixo de nenhuma, e a página diz
+  // o que fazer: perguntar a hora ao reservar. Que a zona de cada circuito
+  // ainda falta diz-se em «Sobre estes dados», que é para quem quer saber.
+  await expect(page.locator('ul.zonas-sem-circuitos')).not.toContainText(/circuito/i);
+  await expect(page.getByText(/pergunte a hora ao reservar/)).toBeVisible();
+  const sobre = page.locator('section[aria-labelledby="donde"] details');
+  await sobre.locator('summary').click();
+  await expect(sobre).toContainText(/a zona de cada um/);
 });
 
 test('o concelho sem zona é declarado, e não omitido', async ({ page }) => {
@@ -174,7 +191,7 @@ test('o concelho sem zona é declarado, e não omitido', async ({ page }) => {
   // não o pusemos.
   test.skip(!TAP?.sem_zona.length, 'nesta região todos os concelhos têm zona');
   await page.goto(`/a-pedido/`);
-  await expect(page.getByText(/Sem zona de transporte a pedido/)).toContainText(
+  await expect(page.getByText(/(não tem|Não têm) zona de transporte a pedido/)).toContainText(
     TAP!.sem_zona[0].nome,
   );
 });
@@ -229,7 +246,7 @@ test('a grelha de um circuito abre e tem as horas', async ({ page }) => {
   // A hora como a folha a escreve: «9:06» e «09:06» são a mesma. O resumo diz
   // «a primeira às 7:30, na paragem …», e não «da … às 7:30»: a contração
   // saía «da» antes de nomes masculinos.
-  const resumo = page.getByText(/viagens? — a primeira às \d{1,2}:\d{2}, na paragem /).first();
+  const resumo = page.getByText(/a primeira às \d{1,2}:\d{2}, na paragem /).first();
   await resumo.click();
   await expect(page.getByRole('table').first()).toBeVisible();
 });
@@ -244,10 +261,15 @@ test('uma tabela de partidas não se faz passar por um percurso', async ({ page 
   await page.goto(`/a-pedido/${COM_PARTIDAS!.id}/`);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(COM_PARTIDAS!.nome);
   await expect(page.locator('main')).toContainText('tabela de partidas');
-  await page
-    .getByText(/partidas por dia/)
-    .first()
-    .click();
+  // UMA TABELA SÓ VEM ABERTA: não há o que escolher, e as horas eram o
+  // segundo toque de quem chegava (auditoria de 1/11/2026).
+  const quadro = page.locator('details.quadro-de-horario').first();
+  if (COM_PARTIDAS!.quadros.length === 1) await expect(quadro).toHaveAttribute('open', '');
+  else
+    await page
+      .getByText(/partidas por dia/)
+      .first()
+      .click();
   await expect(page.getByText(/e não um percurso/).first()).toBeVisible();
 });
 

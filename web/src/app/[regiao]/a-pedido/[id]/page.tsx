@@ -2,12 +2,17 @@ import { notFound } from 'next/navigation';
 import Link from '@/componentes/Ligacao';
 import type { Metadata } from 'next';
 import { nomeDoSistema } from '@/lib/prosa';
-import { aPedido, exigirRegiao, url, urlRede, NAO_ENCONTRADA, regiao } from '@/lib/dados';
+import { aPedido, exigirRegiao, tarifas, url, urlRede, NAO_ENCONTRADA, regiao } from '@/lib/dados';
 import QuadroDeHorario from '@/componentes/QuadroDeHorario';
 import Transcricao, { DataDoDocumento } from '@/componentes/Transcricao';
 import AbrirPeloEndereco from '@/componentes/AbrirPeloEndereco';
-import { caminhoDoHorario, idDoQuadro, reservaOnlineDoHorario } from '@/lib/a-pedido';
-import { lista, plural } from '@/lib/prosa';
+import {
+  caminhoDoHorario,
+  concelhoDoCircuito,
+  idDoQuadro,
+  reservaOnlineDoHorario,
+} from '@/lib/a-pedido';
+import { lista, plural, regraLegivel } from '@/lib/prosa';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
 /**
@@ -54,6 +59,27 @@ export default async function HorarioAPedido({ params }: { params: Promise<Param
   const h = d?.horarios.find((x) => x.id === id);
   if (!d || !h) notFound();
   const { reservas: v } = d;
+  // O PREÇO, QUANDO A RECEITA DIZ QUE TÍTULOS SE PAGAM AQUI. A página de um
+  // folheto de ligações entre cidades não dizia quanto custa — o preço só estava no tarifário.
+  const t = h.tarifas?.length ? await tarifas(rid) : null;
+  const precos = (t?.titulos ?? []).filter(
+    (x) => h.tarifas!.includes(x.id) && typeof x.valor === 'number',
+  );
+  const euros = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: t?.moeda ?? 'EUR' });
+  // QUE TERRAS LIGA, numa tabela de partidas: a primeira pergunta de quem
+  // chega a um folheto de ligações era «que cidades liga?», e a resposta só aparecia ao abrir
+  // a tabela.
+  const partidas = h.quadros.filter((q) => q.tipo === 'partidas');
+  const terras = [...new Set(partidas.flatMap((q) => q.paragens))];
+  const porDia = Math.max(0, ...partidas.flatMap((q) => (q.horas ?? []).map((x) => x.length)));
+  // UM GRUPO QUE NÃO É DE CONCELHO NENHUM diz o concelho de cada circuito, pela
+  // zona onde o catálogo o põe: «Circuito Amarelo» sozinho não diz a ninguém
+  // de que concelho é.
+  const comConcelho = (q: (typeof h.quadros)[number]) => {
+    if (h.concelho || !q.nome) return q;
+    const c = concelhoDoCircuito(d, q.nome);
+    return c ? { ...q, nome: `${c} — ${q.nome}` } : q;
+  };
   // A RESERVA ONLINE SÓ ONDE ELA SERVE. Esta página mostrava a ligação sempre
   // que a região tinha reserva online — e a página geral, na mesma região,
   // dizia que ela só servia alguns serviços: quem a seguisse daqui não
@@ -83,6 +109,32 @@ export default async function HorarioAPedido({ params }: { params: Promise<Param
           h.viagens > 0 ? plural(h.viagens, 'viagem', 'viagens') : 'tabela de partidas',
         ].join(' · ')}
       </p>
+      {terras.length > 1 && (
+        <p>
+          Liga {lista(terras)}
+          {porDia > 0 ? ` — até ${plural(porDia, 'partida', 'partidas')} por dia de cada uma` : ''}.
+        </p>
+      )}
+      {precos.length > 0 && (
+        <p>
+          {precos.map((x, i) => (
+            <span key={x.id}>
+              {i > 0 ? ' · ' : ''}
+              {precos.length > 1 ? `${x.nome}: ` : 'Cada viagem: '}
+              <strong className="preco-em-linha">
+                {x.valor === 0 ? 'grátis' : euros.format(x.valor!)}
+              </strong>
+              {!x.confirmado && (
+                <>
+                  {' '}
+                  <span className="por-confirmar">por confirmar</span>
+                </>
+              )}
+            </span>
+          ))}
+          . <Link href={urlRede(rid, 'tarifario/')}>Ver o tarifário</Link>
+        </p>
+      )}
 
       <div className="faixa a-pedido">
         <p>
@@ -116,19 +168,29 @@ export default async function HorarioAPedido({ params }: { params: Promise<Param
             {lista(online.so)}; nas outras zonas, reserva-se pelo telefone.
           </p>
         ) : null}
+        {/* AS REGRAS DA FOLHA DENTRO DA CAIXA DA RESERVA, e não soltas por
+            baixo dela: é o que se tem de saber antes de contar com uma hora —
+            e um horário que é o exemplo de um dia lia-se, cá fora, como o
+            horário do circuito (auditoria de 1/11/2026). */}
+        {h.regras.map((regra) => (
+          <p key={regra}>{regraLegivel(regra)}</p>
+        ))}
       </div>
 
-      {h.regras.map((regra) => (
-        <p key={regra}>{regra}</p>
-      ))}
-
       <h2>{h.quadros.length === 1 ? 'O horário' : 'Os circuitos'}</h2>
-      <p className="secundario">
-        {h.quadros.length === 1 ? 'Toque no quadro' : 'Toque num circuito'} para ver as horas,
-        paragem a paragem.
-      </p>
+      {h.quadros.length > 1 && (
+        <p className="secundario">Toque num circuito para ver as horas, paragem a paragem.</p>
+      )}
+      {/* UM QUADRO SÓ VEM ABERTO: não há o que escolher, e as horas eram o
+          segundo toque de quem chegava. */}
       {h.quadros.map((q, iq) => (
-        <QuadroDeHorario key={iq} quadro={q} titulo={nomeDoSistema(h.nome)} id={ids[iq]} />
+        <QuadroDeHorario
+          key={iq}
+          quadro={comConcelho(q)}
+          titulo={nomeDoSistema(h.nome)}
+          id={ids[iq]}
+          aberto={h.quadros.length === 1}
+        />
       ))}
       <DataDoDocumento conteudo={h.conteudo_de} documento="o documento" />
       <Transcricao por={h.transcrito_por} em={h.transcrito_em} de="da brochura" />

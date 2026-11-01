@@ -1,6 +1,16 @@
+import { Fragment } from 'react';
 import Link from '@/componentes/Ligacao';
 import type { Metadata } from 'next';
-import { concelhos, exigirRegiao, urlRede, regiao } from '@/lib/dados';
+import {
+  aPedido,
+  concelhos,
+  estacoes,
+  exigirRegiao,
+  modos as lerModos,
+  urlRede,
+  regiao,
+} from '@/lib/dados';
+import { quantosNoConcelho, resumoDoConcelho } from '@/lib/concelho';
 import { aAutoridade, aRede, maiuscula, plural } from '@/lib/prosa';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
@@ -24,6 +34,25 @@ export default async function Concelhos({ params }: { params: Promise<{ regiao: 
   const { regiao: rid } = await params;
   const r = await exigirRegiao(rid);
   const cs = await concelhos(rid);
+  // O QUE CADA CONCELHO TEM, e não só as paragens (`resumoDoConcelho`): «10
+  // paragens» escondia a estação, o urbano e as bicicletas de quem as tem.
+  const [es, pedido, ms] = await Promise.all([estacoes(rid), aPedido(rid), lerModos(rid)]);
+  // Cada parte inteira na mesma linha: «· 6» numa e «estações de bicicletas»
+  // na seguinte lia-se mal.
+  const resumo = (id: string, paragens: number) =>
+    resumoDoConcelho({
+      paragens,
+      estacoes: es.filter((e) => e.concelho === id).length,
+      aPedido: (pedido?.zonas ?? []).some((z) => z.concelho === id || z.entre?.includes(id)),
+      modos: Object.entries(ms).map(([m, d]) => [m, quantosNoConcelho(d, id)]),
+    })
+      .split(' · ')
+      .map((parte, i) => (
+        <Fragment key={parte}>
+          {i > 0 ? ' · ' : ''}
+          <span className="sem-quebra">{parte}</span>
+        </Fragment>
+      ));
   const membros = cs.filter((c) => c.membro);
   const outros = cs.filter((c) => !c.membro);
   // UMA CÂMARA NÃO TEM MUNICÍPIOS MEMBROS: é um. A região de um município
@@ -52,12 +81,12 @@ export default async function Concelhos({ params }: { params: Promise<{ regiao: 
       </p>
 
       <h2>{municipio ? 'O município' : 'Municípios membros'}</h2>
-      <ul className="lista">
+      <ul className="lista concelhos-com-resumo">
         {membros.map((c) => (
           <li key={c.id}>
             <Link href={urlRede(rid, `concelhos/${c.id}/`)}>
               <span>{c.nome}</span>
-              <span className="secundario">{plural(c.paragens, 'paragem', 'paragens')}</span>
+              <span className="secundario">{resumo(c.id, c.paragens)}</span>
             </Link>
           </li>
         ))}
@@ -65,26 +94,21 @@ export default async function Concelhos({ params }: { params: Promise<{ regiao: 
 
       {outros.length > 0 && (
         <>
-          <h2>Também servidos pela rede</h2>
+          {/* «TAMBÉM SERVIDOS PELA REDE <nome>», sem soar a desculpa. Dizia
+              «Não são municípios membros, e a rede serve-os na mesma» — como
+              se fosse um favor —, e no telemóvel partia «serve-» de «os»
+              (auditoria de 1/11/2026). */}
+          <h2>Também servidos pel{aRede(r)}</h2>
           <p>
-            {municipio
-              ? 'Ficam fora do município, e a rede serve-os na mesma.'
-              : 'Não são municípios membros, e a rede serve-os na mesma.'}
+            {municipio ? 'Ficam fora do município' : `Não são membros ${aAutoridade(r, 'de')}`}, mas{' '}
+            {aRede(r)} <span className="sem-quebra">serve-os</span>.
           </p>
-          <ul className="lista">
+          <ul className="lista concelhos-com-resumo">
             {outros.map((c) => (
               <li key={c.id}>
                 <Link href={urlRede(rid, `concelhos/${c.id}/`)}>
                   <span>{c.nome}</span>
-                  <span className="secundario">
-                    {plural(c.paragens, 'paragem', 'paragens')}
-                    {c.servido_por && (
-                      <>
-                        <br />
-                        {c.servido_por}
-                      </>
-                    )}
-                  </span>
+                  <span className="secundario">{resumo(c.id, c.paragens)}</span>
                 </Link>
               </li>
             ))}

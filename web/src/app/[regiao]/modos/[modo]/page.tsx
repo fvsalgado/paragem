@@ -9,6 +9,7 @@ import {
   paragens as lerParagens,
   procura,
   exigirRegiao,
+  tarifas as lerTarifas,
   url,
   urlRede,
   NOME_DOS_MODOS,
@@ -26,11 +27,18 @@ import DisponibilidadeBicicletas, {
   ContagemDaEstacao,
   ResumoDoSistema,
 } from '@/componentes/DisponibilidadeBicicletas';
-import type { HorarioDeModo, ModoDetalhe, PontoDeModo } from '@/lib/formato';
+import type {
+  HorarioDeModo,
+  ModoDetalhe,
+  PontoDeModo,
+  SistemaDeBicicletas,
+  Titulo,
+} from '@/lib/formato';
 import PrecosDeExpresso from '@/componentes/PrecosDeExpresso';
 import { disponibilidadeDaRegiao, expressosDaRegiao } from '@/lib/enderecos';
 import Distintivo from '@/componentes/Distintivo';
-import { aRede, lista, nomeDaRede, plural } from '@/lib/prosa';
+import { aRede, lista, nomeDaRede, plural, regraLegivel, semPrefixos } from '@/lib/prosa';
+import { percursosSemHorario, regrasENotas } from '@/lib/pagina-do-modo';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -211,7 +219,7 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
   const ps = await lerParagens(rid);
   // Só onde há mapa: numa região sem mosaicos o início não tem mapa onde abrir.
   const noMapa = new Set((await temMosaicos(rid)) ? (await procura(rid)).map((x) => x.id) : []);
-  const ondeFica = (p: PontoDeModo) => ({
+  const ondeFica = (p: Pick<PontoDeModo, 'id' | 'lat' | 'lon'>) => ({
     perto: paragemMaisPerto(p, ps),
     noMapa: p.id && noMapa.has(p.id) ? url(rid, `/?ponto=${encodeURIComponent(p.id)}`) : null,
   });
@@ -228,6 +236,14 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
   // abertos — a página deixou de publicar a lista em bruto (1/11/2026).
   const comRelatorio = descargas.some((x) => x.grupo === 'relatorios');
 
+  // QUANTO CUSTA CADA SISTEMA DE BICICLETAS, do tarifário: os títulos cuja
+  // rede tem o nome do sistema. A página não dizia o preço, e ele estava no
+  // tarifário sem ligação daqui (auditoria de 1/11/2026).
+  const titulos = m.sistemas.length ? (await lerTarifas(rid)).titulos : [];
+  const moeda = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' });
+  // Os percursos que já têm horário na página não se repetem em baixo.
+  const percursos = percursosSemHorario(m.percursos, m.horarios ?? []);
+
   return (
     <>
       <h1>{nome}</h1>
@@ -235,10 +251,10 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
           — «Câmara Municipal de Pedra Alta», a marca de um operador de
           expressos — e nenhum traz o artigo. «Gerido por Câmara Municipal» é o
           que se lia. */}
-      {(m.gerido_por.length > 0 || oQueHa(m, r.em)) && (
+      {(m.gerido_por.length > 0 || oQueHa({ ...m, percursos }, r.em)) && (
         <p>
           {m.gerido_por.length > 0 && <>Quem gere: {lista(m.gerido_por)}. </>}
-          {oQueHa(m, r.em)}
+          {oQueHa({ ...m, percursos }, r.em)}
         </p>
       )}
 
@@ -319,26 +335,57 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
               {s.estado === 'por-confirmar' && (
                 <p className="marca-dados">Estado do serviço por confirmar.</p>
               )}
+              <ComoSeUsa
+                s={s}
+                precos={titulos.filter((t) => t.rede === s.nome && typeof t.valor === 'number')}
+                formatar={(v) => (v === 0 ? 'grátis' : moeda.format(v))}
+                tarifario={urlRede(rid, 'tarifario/')}
+              />
               {porConcelho(s.estacoes, nomes, semConcelho).map((g) => (
                 <section key={g.id} aria-labelledby={`s-${s.id}-${g.id}`}>
                   <h3 id={`s-${s.id}-${g.id}`}>
-                    {g.nome} <span className="secundario">{g.itens.length}</span>
+                    {g.nome}{' '}
+                    <span className="secundario">
+                      · {plural(g.itens.length, 'estação', 'estações')}
+                    </span>
                   </h3>
-                  <ul className="lista">
-                    {g.itens.map((e) => (
-                      <li key={`${e.lat},${e.lon}`}>
-                        <span>
-                          {e.nome ??
-                            (() => {
-                              const perto = paragemMaisPerto(e, ps);
-                              return perto
+                  {/* CADA ESTAÇÃO COMO AS PRAÇAS DE TÁXIS: o nome, onde fica,
+                      a contagem numa linha sua e o mapa já nela. Eram texto
+                      solto — não abriam nada nem diziam onde ficavam —, e a
+                      contagem partia a linha aos bocados («· 8» numa linha,
+                      «docas» na seguinte). O nome sem o concelho e o sistema,
+                      que o título já diz (auditoria de 1/11/2026). */}
+                  <ul className="pontos-de-modo">
+                    {g.itens.map((e) => {
+                      const { perto, noMapa } = ondeFica(e);
+                      return (
+                        <li key={`${e.lat},${e.lon}`}>
+                          <span className="nome">
+                            {e.nome
+                              ? semPrefixos(e.nome, [g.nome, s.nome])
+                              : perto
                                 ? `Estação junto à paragem ${perto.nome}`
-                                : 'Estação sem nome no mapa';
-                            })()}
-                        </span>
-                        <ContagemDaEstacao id={e.id} />
-                      </li>
-                    ))}
+                                : 'Estação sem nome no mapa'}
+                          </span>
+                          {e.nome && perto && (
+                            <span className="onde">
+                              Junto à paragem {perto.nome}, a {perto.metros} m.
+                            </span>
+                          )}
+                          <ContagemDaEstacao id={e.id} emLinhaPropria />
+                          {noMapa && (
+                            <span className="accoes">
+                              <a href={noMapa}>
+                                Ver no mapa
+                                <span className="so-para-leitores">
+                                  : {e.nome ? semPrefixos(e.nome, [g.nome, s.nome]) : 'a estação'}
+                                </span>
+                              </a>
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                   {nomes.has(g.id) && (
                     <p className="cartao-accoes">
@@ -369,28 +416,38 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
               .filter(Boolean)
               .join(' · ')}
           </p>
-          {h.regras.map((regra) => (
-            <p key={regra}>{regra}</p>
-          ))}
-          <ParagensNoMapa h={h} />
+          <RegrasDoCartaz regras={h.regras} />
           {h.quadros.map((q, iq) => (
             <QuadroDeHorario key={iq} quadro={q} titulo={h.nome} />
           ))}
+          {/* O HORÁRIO PRIMEIRO, e o que falta no mapa depois, em segundo
+              plano: entre as regras e o horário, «As que faltam» tinha o
+              mesmo peso do horário, e quem procurava as horas abria o errado
+              (auditoria de 1/11/2026). */}
+          <ParagensNoMapa h={h} />
           <DataDoDocumento conteudo={h.conteudo_de} documento="o cartaz" />
           <Transcricao por={h.transcrito_por} em={h.transcrito_em} de="do cartaz" />
         </section>
       ))}
 
       {/* --- os percursos, sem horário --- */}
-      {m.percursos.length > 0 && (
+      {/* SÓ OS QUE NÃO TÊM HORÁRIO MAIS ACIMA (`percursosSemHorario`): os
+          outros repetiam a secção inteira de cima, com o nome colado à rede
+          (os dois `span` sem espaço). Cada linha com o desenho das listas com ligação:
+          o nome à esquerda, a rede à direita. */}
+      {percursos.length > 0 && (
         <section aria-labelledby="percursos">
-          <h2 id="percursos">As linhas que se conhecem</h2>
+          <h2 id="percursos">
+            {m.horarios?.length ? 'Outras linhas que se conhecem' : 'As linhas que se conhecem'}
+          </h2>
           <ul className="lista">
-            {m.percursos.map((p) => (
+            {percursos.map((p) => (
               <li key={p.nome}>
-                <span>{p.nome}</span>
-                <span className="secundario">
-                  {[p.rede, p.operador].filter(Boolean).join(' · ')}
+                <span className="sem-ligacao">
+                  <span>{p.nome}</span>
+                  <span className="secundario">
+                    {[p.rede, p.operador].filter(Boolean).join(' · ')}
+                  </span>
                 </span>
               </li>
             ))}
@@ -441,7 +498,9 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
           {m.paragens.map((p) => (
             <section key={`${p.lat},${p.lon}`} aria-labelledby={`e-${p.lat}-${p.lon}`}>
               <h3 id={`e-${p.lat}-${p.lon}`}>
-                {p.nome}
+                {/* A TERRA EM PORTUGUÊS, com os acentos que o feed lhe tira
+                    («Fatima»); o resto do nome fica como o operador o escreve. */}
+                {emPortugues(p.nome)}
                 {p.concelho && nomes.has(p.concelho) && (
                   <span className="secundario"> · {nomes.get(p.concelho)}</span>
                 )}
@@ -479,6 +538,29 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
           ))}
         </section>
       )}
+
+      {/* OS QUE CIRCULAM AQUI E NÃO PUBLICAM DADOS ABERTOS: não há horário
+          que se mostre, e não se inventa — mas quem procura o expresso que
+          conhece e não o vê conclui que o sítio está incompleto. Num cartão
+          neutro, como os serviços privados (§6). */}
+      {m.sem_dados?.length ? (
+        <section aria-labelledby="sem-dados">
+          <h2 id="sem-dados">Também {r.em}</h2>
+          {m.sem_dados.map((x) => (
+            <div key={x.nome} className="cartao-neutro">
+              <p>
+                <strong>{x.nome}</strong> também tem serviço {r.em}, e não publica dados abertos:
+                por isso não aparece nas listas desta página nem no planeador. Os horários e os
+                bilhetes estão no sítio do operador:{' '}
+                <a href={x.url} rel="noreferrer">
+                  {new URL(x.url).hostname.replace(/^www\./, '')}
+                </a>
+                .
+              </p>
+            </div>
+          ))}
+        </section>
+      ) : null}
 
       {m.operadores?.length ? (
         <section aria-labelledby="bilhetes">
@@ -553,26 +635,28 @@ function ParagensNoMapa({ h }: { h: HorarioDeModo }) {
   const postas = Object.keys(h.coordenadas ?? {}).length;
   const faltam = h.sem_coordenada ?? [];
   if (postas === 0 && faltam.length === 0) return null;
+  const total = postas + faltam.length;
 
-  const onde =
-    postas === 0
-      ? 'Nenhuma paragem desta linha está no mapa'
-      : `${postas} ${postas === 1 ? 'paragem está' : 'paragens estão'} no mapa`;
-  const resto =
-    faltam.length === 0
-      ? ', e é a linha toda'
-      : `; ${faltam.length === 1 ? 'a outra tem hora e não tem sítio' : `as outras ${faltam.length} têm hora e não têm sítio`}`;
-
+  // EM SEGUNDO PLANO, depois do horário: uma frase secundária e a lista
+  // fechada num resumo discreto — e não um acordeão a negrito igual ao do
+  // horário (auditoria de 1/11/2026).
   return (
     <>
       <p className="secundario">
-        {onde}
-        {resto}.
+        {postas === 0
+          ? 'Nenhuma paragem desta linha está no mapa.'
+          : faltam.length === 0
+            ? `${plural(postas, 'paragem está', 'paragens estão')} no mapa, e é a linha toda.`
+            : `${postas} de ${plural(total, 'paragem está', 'paragens estão')} no mapa.`}
       </p>
       {faltam.length > 0 && (
-        <details className="lista-fechada">
-          <summary>{faltam.length === 1 ? 'A que falta' : 'As que faltam'}</summary>
-          <p>
+        <details className="lista-fechada discreta">
+          <summary>
+            {faltam.length === 1
+              ? '1 paragem ainda sem localização no mapa'
+              : `${faltam.length} paragens ainda sem localização no mapa`}
+          </summary>
+          <p className="secundario">
             O cartaz dá o nome e a hora, nunca a coordenada. Estas ainda não estão no OpenStreetMap
             nem no feed da rede, e não se inventou nenhuma: uma paragem no sítio errado manda alguém
             esperar na berma errada.
@@ -585,5 +669,86 @@ function ParagensNoMapa({ h }: { h: HorarioDeModo }) {
         </details>
       )}
     </>
+  );
+}
+
+/**
+ * As regras do cartaz, escritas como o resto do sítio (`regraLegivel`), e as
+ * NOTAS NUMERADAS à parte (`regrasENotas`): «(1) Realiza-se apenas no período
+ * escolar» é a legenda de uma marca que o cartaz põe em algumas viagens, e a
+ * marca não passou para a tabela. Solta no meio das regras, lia-se como se
+ * valesse para a linha toda.
+ */
+function RegrasDoCartaz({ regras }: { regras: string[] }) {
+  const { regras: daLinha, notas } = regrasENotas(regras);
+  return (
+    <>
+      {daLinha.map((regra) => (
+        <p key={regra}>{regraLegivel(regra)}</p>
+      ))}
+      {notas.length > 0 && (
+        <>
+          <p className="secundario">
+            O cartaz marca algumas viagens com estas notas; a que viagens se aplica cada uma está no
+            cartaz, e ainda não nesta tabela:
+          </p>
+          <ul className="notas-do-cartaz">
+            {notas.map((n) => (
+              <li key={n}>{regraLegivel(n)}</li>
+            ))}
+          </ul>
+        </>
+      )}
+    </>
+  );
+}
+
+/**
+ * COMO SE USA UM SISTEMA DE BICICLETAS, no topo dele: onde se desbloqueia, o
+ * que custa e para onde ir saber mais. A página listava as estações e não
+ * dizia nada disto — o preço estava no tarifário, sem ligação daqui
+ * (auditoria de 1/11/2026). Só o que a região declara: a frase da receita, o
+ * sítio do sistema e os títulos do tarifário com o nome dele.
+ */
+function ComoSeUsa({
+  s,
+  precos,
+  formatar,
+  tarifario,
+}: {
+  s: SistemaDeBicicletas;
+  precos: Titulo[];
+  formatar: (v: number) => string;
+  tarifario: string;
+}) {
+  if (!s.como_usar && !s.sitio && precos.length === 0) return null;
+  return (
+    <div className="como-se-usa">
+      <h3>Como se usa</h3>
+      {s.como_usar && <p>{s.como_usar}</p>}
+      {precos.length > 0 && (
+        <ul>
+          {precos.map((t) => (
+            <li key={t.id}>
+              {t.nome}: <span className="preco-em-linha">{formatar(t.valor!)}</span>
+              {!t.confirmado && (
+                <>
+                  {' '}
+                  <span className="por-confirmar">por confirmar</span>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="cartao-accoes">
+        {precos.length > 0 && <Link href={tarifario}>Ver o tarifário</Link>}
+        {s.sitio && (
+          <a href={s.sitio} rel="noreferrer">
+            Sítio do {s.nome}
+          </a>
+        )}
+      </p>
+    </div>
   );
 }

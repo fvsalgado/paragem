@@ -94,8 +94,25 @@ export function precoDe(v: number | null): string | null {
  */
 const EXONIMOS: [RegExp, string][] = [
   [/\bLisbon Airport\b/g, 'Lisboa (Aeroporto)'],
+  // O terminal de Lisboa, que um percurso escreve sozinho («Braga - Coimbra -
+  // Sete Rios»): sem a cidade, quem não é de Lisboa não sabe onde fica.
+  [/(?<!Lisbon |Lisboa )\bSete Rios\b/g, 'Lisboa (Sete Rios)'],
   [/\bLisbon\b/g, 'Lisboa'],
   [/\bOporto\b/g, 'Porto'],
+  [/\bLuxembourg\b/g, 'Luxemburgo'],
+  [/\bZurich\b/g, 'Zurique'],
+  [/\bGeneva\b/g, 'Genebra'],
+  // E OS ACENTOS QUE O FEED TIRA AOS NOMES PORTUGUESES — «Fatima», «Santarem»
+  // (auditoria de 1/11/2026). Só nomes de terras, inteiros: o resto fica como
+  // o operador o escreve.
+  [/\bFatima\b/g, 'Fátima'],
+  [/\bSantarem\b/g, 'Santarém'],
+  [/\bEvora\b/g, 'Évora'],
+  [/\bCovilha\b/g, 'Covilhã'],
+  [/\bAlcobaca\b/g, 'Alcobaça'],
+  [/\bMortagua\b/g, 'Mortágua'],
+  [/\bSanta Comba Dao\b/g, 'Santa Comba Dão'],
+  [/\bSao Martinho do Porto\b/g, 'São Martinho do Porto'],
 ];
 
 export function emPortugues(nome: string): string {
@@ -111,9 +128,15 @@ export const pontoTecnico = (nome: string): boolean => /\bInterconnection Hub\b/
 
 /** «Porto - Lisbon - Hub - Paris» → «Porto – Lisboa – Paris». */
 export function percursoEmPortugues(percurso: string): string {
-  return percurso
-    .split(/\s+-\s+/)
-    .filter((parte) => !/^hub$/i.test(parte.trim()))
-    .map(emPortugues)
-    .join(' – ');
+  return (
+    percurso
+      // O CÓDIGO DE VARIANTE DO OPERADOR no fim do percurso — «Coimbra -
+      // Fatima - Lisbon BB» — não é parte do nome de terra nenhuma, e ninguém
+      // o sabe ler. A variante já está no número da linha («1018B»).
+      .replace(/\s+[A-Z]{2}$/, '')
+      .split(/\s+-\s+/)
+      .filter((parte) => !/^hub$/i.test(parte.trim()))
+      .map(emPortugues)
+      .join(' – ')
+  );
 }

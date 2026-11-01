@@ -62,6 +62,76 @@ export function quantosNoConcelho(d: ModoDetalhe, concelho: string): number {
 }
 
 /**
+ * O QUE O NÚMERO DOS «OUTROS TRANSPORTES» CONTA, com a palavra: os cartões
+ * diziam «Bicicleta partilhada 8», «Táxi 2», «Expresso 1» — 8 quê? (auditoria
+ * de 1/11/2026). Cada modo conta uma coisa (`quantosNoConcelho`): estações,
+ * praças, paragens, linhas. Um modo que o produto não conhece fica com o
+ * número sozinho, como estava.
+ */
+const UNIDADE_DO_MODO: Record<string, [string, string]> = {
+  bicicleta: ['estação', 'estações'],
+  taxi: ['praça', 'praças'],
+  expresso: ['paragem', 'paragens'],
+  'urbano-municipal': ['linha', 'linhas'],
+};
+
+export function quantosComUnidade(modo: string, n: number): string {
+  const u = UNIDADE_DO_MODO[modo];
+  return u ? `${n.toLocaleString('pt-PT')} ${n === 1 ? u[0] : u[1]}` : n.toLocaleString('pt-PT');
+}
+
+/**
+ * O QUE UM CONCELHO TEM, NUMA LINHA — a lista dos concelhos.
+ *
+ * Dizia só «10 paragens», e lido por quem é de um concelho com estação de
+ * comboio, urbano e dezassete estações de bicicletas parecia pouco: escondia
+ * tudo o que não é autocarro (auditoria de 1/11/2026). Cada modo pelo que
+ * conta, só os que há, pela ordem da grelha dos modos.
+ */
+export function resumoDoConcelho(c: {
+  paragens: number;
+  estacoes: number;
+  aPedido: boolean;
+  /** `[modo, quantos]`, dos «outros transportes» (`quantosNoConcelho`). */
+  modos: [string, number][];
+}): string {
+  const partes: string[] = [];
+  if (c.paragens)
+    partes.push(
+      `${c.paragens.toLocaleString('pt-PT')} ${c.paragens === 1 ? 'paragem' : 'paragens'} de autocarro`,
+    );
+  if (c.estacoes)
+    partes.push(`${c.estacoes} ${c.estacoes === 1 ? 'estação' : 'estações'} de comboio`);
+  if (c.aPedido) partes.push('transporte a pedido');
+  const ordem = ['urbano-municipal', 'bicicleta', 'expresso', 'taxi'];
+  const nomes: Record<string, (n: number) => string> = {
+    'urbano-municipal': () => 'urbano',
+    bicicleta: (n) => `${quantosComUnidade('bicicleta', n)} de bicicletas`,
+    expresso: () => 'expressos',
+    taxi: (n) => `${n} ${n === 1 ? 'praça' : 'praças'} de táxis`,
+  };
+  for (const [modo, n] of [...c.modos].sort((a, b) => ordem.indexOf(a[0]) - ordem.indexOf(b[0]))) {
+    if (n > 0 && nomes[modo]) partes.push(nomes[modo](n));
+  }
+  return partes.join(' · ');
+}
+
+/**
+ * «Distrito de Santarém», «Distrito do Porto», «Distrito da Guarda».
+ *
+ * A frase dizia «Distrito Santarém» (auditoria de 1/11/2026). Dos dezoito
+ * distritos, só o do Porto e o da Guarda levam artigo — e uma região autónoma
+ * não é distrito nenhum: diz-se o nome dela, sozinho.
+ */
+export function fraseDoDistrito(distrito: string): string {
+  const d = distrito.trim();
+  if (!d) return '';
+  if (/^regi[aã]o\b/i.test(d)) return `${d}.`;
+  const artigo: Record<string, string> = { Porto: 'do', Guarda: 'da' };
+  return `Distrito ${artigo[d] ?? 'de'} ${d}.`;
+}
+
+/**
  * UMA PARAGEM PARA MOSTRAR, ESCOLHIDA PELOS DADOS — a da caixa que se leva
  * para o sítio de uma câmara, que abria vazia («Escolha a paragem, e a caixa
  * aparece aqui»), com os botões de copiar desligados.

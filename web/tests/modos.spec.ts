@@ -21,6 +21,9 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { PROVA } from './anfitrioes';
+import { emPortugues } from '../src/lib/expressos.ts';
+import { percursosSemHorario } from '../src/lib/pagina-do-modo.ts';
+import { regraLegivel, semPrefixos } from '../src/lib/prosa.ts';
 import {
   concelhoComOutroModo,
   concelhos,
@@ -43,6 +46,7 @@ const QUADRO = URBANOS ? umQuadroDe('urbano-municipal') : null;
 /** A secção «o que falta saber» só existe onde há lacunas declaradas. */
 const LACUNAS_NAS_BICICLETAS = !!BICICLETA && (BICICLETA.incompleto || BICICLETA.notas.length > 0);
 const POR_SITUAR = URBANOS ? horarioComParagensPorSituar('urbano-municipal') : null;
+const NOMES_DOS_CONCELHOS = new Map(concelhos().map((c) => [c.id, c.nome]));
 /** Os rótulos são do produto; o que varia é quais deles a região usa. */
 /** Um nome dos dados, tal e qual, como expressão: «(Terminal)» não é um grupo. */
 const literal = (t: string) => new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
@@ -171,11 +175,18 @@ test('os urbanos municipais separam o que se sabe do que falta', async ({ page }
 
   // As linhas cujo TRAÇADO se conhece, numa lista — que é o que são: o
   // OpenStreetMap tem por onde passam e não tem mais nada. Quantas são é da
-  // região; que estejam lá todas é do produto.
-  const lista = page.getByRole('heading', { name: 'As linhas que se conhecem' });
-  await expect(lista).toBeVisible();
-  for (const p of URBANOS!.percursos) {
+  // região; que estejam lá todas é do produto. MENOS AS QUE JÁ TÊM HORÁRIO na
+  // página, que repetiam a secção delas (auditoria de 1/11/2026).
+  const semHorario = percursosSemHorario(URBANOS!.percursos, URBANOS!.horarios ?? []);
+  const lista = page.getByRole('heading', { name: /linhas que se conhecem$/ });
+  await expect(lista).toHaveCount(semHorario.length ? 1 : 0);
+  for (const p of semHorario) {
     await expect(page.getByRole('listitem').filter({ hasText: p.nome }).first()).toBeVisible();
+  }
+  for (const p of URBANOS!.percursos.filter((x) => !semHorario.includes(x))) {
+    await expect(
+      page.getByRole('heading', { name: new RegExp(`${literal(p.nome).source}$`) }).first(),
+    ).toBeVisible();
   }
 });
 
@@ -186,8 +197,9 @@ test('o expresso diz para onde vai e que os títulos daqui não servem', async (
   // O destino de cada cais é o que interessa a quem está na paragem: apanhar
   // um expresso é ir para outro lado, e cortar a viagem na fronteira era
   // esconder-lhe o destino.
+  // A terra em português: o feed escreve «Fatima» (`emPortugues`).
   await expect(
-    page.getByRole('heading', { name: EXPRESSO!.paragens[0].nome }).first(),
+    page.getByRole('heading', { name: emPortugues(EXPRESSO!.paragens[0].nome) }).first(),
   ).toBeVisible();
 });
 
@@ -266,8 +278,10 @@ test('os urbanos municipais passam a dizer a que horas passa', async ({ page }) 
   });
   await expect(seccao.first()).toBeVisible();
   // A regra de serviço vem do rodapé do cartaz, escrita como lá está.
+  // Escrita como o resto do sítio (`regraLegivel`): maiúscula no início, as
+  // horas como o sítio as escreve. Diz o mesmo que o cartaz.
   for (const regra of QUADRO!.regras) {
-    await expect(seccao.first()).toContainText(regra);
+    await expect(seccao.first()).toContainText(regraLegivel(regra));
   }
   // E a grelha abre: está dentro de um `<details>` FECHADO, porque dezenas de
   // paragens por dezenas de viagens não cabem num telemóvel desenroladas.
@@ -310,7 +324,6 @@ test('diz de cada linha quantas paragens estão no mapa, e nomeia as que não', 
   test.skip(!POR_SITUAR, SEM.modo('urbano-municipal'));
   await page.goto('/modos/urbano-municipal/');
   await expect(page.getByText(/\d+ paragens? (está|estão) no mapa/).first()).toBeVisible();
-  await expect(page.getByText(/têm? hora e não têm? sítio/).first()).toBeVisible();
 
   // E NOMEIA-AS. Um número sozinho não se conserta; uma lista de nomes é o
   // pedido concreto a quem mapeia ou a quem na câmara tem a folha.
@@ -321,7 +334,16 @@ test('diz de cada linha quantas paragens estão no mapa, e nomeia as que não', 
   const seccao = page.locator('section', {
     has: page.getByRole('heading', { name: POR_SITUAR!.linha, exact: true }),
   });
-  await seccao.getByText('As que faltam').click();
+  // DEPOIS DO HORÁRIO, e em segundo plano: entre as regras e o horário, «As
+  // que faltam» tinha o mesmo peso do horário (auditoria de 1/11/2026).
+  const faltam = seccao.locator('details.lista-fechada.discreta');
+  await expect(faltam.locator('summary')).toHaveText(/ainda sem localização no mapa/);
+  const [doHorario, doQueFalta] = await Promise.all([
+    seccao.locator('details.quadro-de-horario').first().boundingBox(),
+    faltam.boundingBox(),
+  ]);
+  expect(doQueFalta!.y).toBeGreaterThan(doHorario!.y);
+  await faltam.locator('summary').click();
   await expect(
     seccao.getByRole('listitem').filter({ hasText: POR_SITUAR!.faltam[0] }).first(),
   ).toBeVisible();
@@ -343,8 +365,10 @@ test('as estações levam o nome que o sistema lhes dá', async ({ page }) => {
   const seccao = page.locator('section', {
     has: page.getByRole('heading', { name: sistema.nome, exact: true }),
   });
+  // Sem o concelho e o sistema à frente, que o título já diz (`semPrefixos`).
   for (const e of sistema.estacoes.slice(0, 3)) {
-    await expect(seccao.first()).toContainText(e.nome);
+    const concelho = e.concelho ? (NOMES_DOS_CONCELHOS.get(e.concelho) ?? '') : '';
+    await expect(seccao.first()).toContainText(semPrefixos(e.nome!, [concelho, sistema.nome]));
   }
 });
 

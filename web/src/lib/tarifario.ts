@@ -9,7 +9,7 @@
  * faz-se a única conta que os preços permitem: quantos títulos de cada uso se
  * compram pelo preço de um título de período. A conclusão fica para quem lê.
  */
-import type { Titulo } from './formato';
+import type { RedeDoTarifario, Titulo } from './formato';
 
 export type TituloComConta = Titulo & {
   /** Pelo preço deste título compram-se `vezes` títulos `de` — só nos de período. */
@@ -98,12 +98,29 @@ export type EscolhaDeUmaRede = {
 };
 
 /**
- * As redes em que há conta a fazer: as que têm um título de cada uso e um de
- * período. As outras ficam só na tabela — sem bilhete não há com que
- * comparar.
+ * Os modos em que nada se paga à viagem, e por isso não entram na conta.
+ *
+ * A conta pergunta «quantas viagens faz por mês?» e compara o bilhete com o
+ * passe. Num sistema de bicicletas o que se paga é o acesso por um período e
+ * os minutos a mais — e a calculadora oferecia-o ao lado do autocarro como
+ * se fosse uma rede onde se fazem «40 viagens por mês» (auditoria de
+ * 1/11/2026). Só se sabe que uma tabela é de bicicletas quando a região o diz
+ * (`tarifas.redes`); o nome da rede não se adivinha.
  */
-export function escolhasDoTarifario(titulos: Titulo[]): EscolhaDeUmaRede[] {
-  return ajudaParaEscolher(titulos)
+const SEM_CONTA_POR_VIAGEM = new Set(['bicicleta', 'taxi']);
+
+/**
+ * As redes em que há conta a fazer: as que têm um título de cada uso e um de
+ * período, e que não são de um modo que se paga de outra maneira. As outras
+ * ficam só na tabela — sem bilhete não há com que comparar.
+ */
+export function escolhasDoTarifario(
+  titulos: Titulo[],
+  redes: Record<string, RedeDoTarifario> = {},
+): EscolhaDeUmaRede[] {
+  return ajudaParaEscolher(
+    titulos.filter((t) => !SEM_CONTA_POR_VIAGEM.has(redes[t.rede]?.modo ?? '')),
+  )
     .map((a) => ({
       rede: a.rede,
       bilhetes: [...a.aCadaUso]

@@ -194,3 +194,44 @@ test('a paragem de exemplo é a que mais linhas junta, e entre essas a de mais p
   assert.equal(paragemDeExemplo([avenida, outro, terminal])?.id, 'terminal');
   assert.equal(paragemDeExemplo([]), null);
 });
+
+test('os outros transportes de um concelho dizem o que contam', async () => {
+  const { quantosComUnidade } = await import('../src/lib/concelho.ts');
+  assert.equal(quantosComUnidade('bicicleta', 8), '8 estações');
+  assert.equal(quantosComUnidade('taxi', 1), '1 praça');
+  assert.equal(quantosComUnidade('expresso', 1), '1 paragem');
+  assert.equal(quantosComUnidade('urbano-municipal', 4), '4 linhas');
+  // Um modo que o produto não conhece fica com o número sozinho.
+  assert.equal(quantosComUnidade('teleferico', 2), '2');
+});
+
+test('o distrito diz-se com a preposição certa', async () => {
+  const { fraseDoDistrito } = await import('../src/lib/concelho.ts');
+  assert.equal(fraseDoDistrito('Santarém'), 'Distrito de Santarém.');
+  assert.equal(fraseDoDistrito('Porto'), 'Distrito do Porto.');
+  assert.equal(fraseDoDistrito('Guarda'), 'Distrito da Guarda.');
+  assert.equal(fraseDoDistrito('Região Autónoma da Madeira'), 'Região Autónoma da Madeira.');
+  assert.equal(fraseDoDistrito(''), '');
+});
+
+test('a lista dos concelhos diz o que cada um tem, e não só as paragens', async () => {
+  const { resumoDoConcelho } = await import('../src/lib/concelho.ts');
+  assert.equal(
+    resumoDoConcelho({
+      paragens: 10,
+      estacoes: 1,
+      aPedido: false,
+      modos: [
+        ['taxi', 0],
+        ['bicicleta', 17],
+        ['urbano-municipal', 3],
+      ],
+    }),
+    '10 paragens de autocarro · 1 estação de comboio · urbano · 17 estações de bicicletas',
+  );
+  assert.equal(
+    resumoDoConcelho({ paragens: 1, estacoes: 0, aPedido: true, modos: [['taxi', 2]] }),
+    '1 paragem de autocarro · transporte a pedido · 2 praças de táxis',
+  );
+  assert.equal(resumoDoConcelho({ paragens: 0, estacoes: 0, aPedido: false, modos: [] }), '');
+});

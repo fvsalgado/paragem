@@ -34,7 +34,8 @@ export default async function Tarifario({ params }: { params: Promise<{ regiao: 
     style: 'currency',
     currency: t.moeda,
   });
-  const escolhas = escolhasDoTarifario(t.titulos);
+  const redes = t.redes ?? {};
+  const escolhas = escolhasDoTarifario(t.titulos, redes);
 
   return (
     <>
@@ -90,18 +91,13 @@ export default async function Tarifario({ params }: { params: Promise<{ regiao: 
                     <tr key={x.id}>
                       <td>
                         {x.nome}
+                        {/* NEUTRO, E NÃO O VERMELHO DOS ALERTAS: um preço por
+                            confirmar é um estado dos dados, e o vermelho é
+                            para o que mudou hoje (`.por-confirmar`). */}
                         {!x.confirmado && (
                           <>
                             {' '}
-                            <span
-                              className="distintivo"
-                              style={{
-                                borderColor: 'var(--alerta)',
-                                color: 'var(--alerta)',
-                              }}
-                            >
-                              por confirmar
-                            </span>
+                            <span className="por-confirmar">por confirmar</span>
                           </>
                         )}
                         {x.nota && (
@@ -124,13 +120,32 @@ export default async function Tarifario({ params }: { params: Promise<{ regiao: 
                   ))}
                 </tbody>
               </table>
+              {/* DE ONDE VÊM ESTES PREÇOS, TABELA A TABELA. A página acabava
+                  com «os preços são os que a operadora publica» — por baixo
+                  de tabelas do comboio e das bicicletas, que não são dela. A
+                  fonte é a que a região declara para cada uma. */}
+              {redes[rede]?.fonte && (
+                <p className="secundario fonte-da-tabela">
+                  Fonte: {redes[rede].fonte}
+                  {redes[rede].url && (
+                    <>
+                      {' '}
+                      <a href={redes[rede].url} rel="noreferrer">
+                        {new URL(redes[rede].url!).hostname.replace(/^www\./, '')}
+                      </a>
+                    </>
+                  )}
+                </p>
+              )}
             </section>
           ))}
         </div>
       </div>
 
       <h2>Quem gere</h2>
-      <p>{redeEQuemAGere(r)}. Os preços são os que a operadora publica.</p>
+      {/* SÓ O QUE É VERDADE DE TODAS AS TABELAS: quem gere a rede. De onde vem
+          cada preço diz-se por baixo da tabela dele. */}
+      <p>{redeEQuemAGere(r)}.</p>
     </>
   );
 }

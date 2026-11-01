@@ -73,6 +73,44 @@ export function reservaOnlineDoHorario(
 }
 
 /**
+ * ONDE ESTÁ O HORÁRIO DE UMA ZONA SEM CIRCUITOS ATRIBUÍDOS — e é o que dá a
+ * quem lá mora alguma coisa para fazer.
+ *
+ * A lista dessas zonas dizia só «ver o concelho», e a página do concelho
+ * mandava de volta para aqui: quem mora numa delas nunca chegava a um horário
+ * nem a uma instrução (auditoria de 1/11/2026). O que se sabe são os grupos
+ * de horário que DECLARAM a zona (`zonas`, na receita — um folheto de ligações
+ * entre cidades não é de concelho nenhum) e, sem isso, os do concelho dela: a
+ * brochura do concelho tem os circuitos dele, ainda que não se saiba qual
+ * passa em que zona. Vazio quando não há nenhum, e a página diz que a hora se
+ * pergunta ao reservar.
+ */
+export function horariosDaZona(d: APedido, z: ZonaAPedido): HorarioAPedido[] {
+  const declarados = d.horarios.filter((h) => h.zonas?.includes(z.id));
+  if (declarados.length) return declarados;
+  return z.concelho ? d.horarios.filter((h) => !h.zonas?.length && h.concelho === z.concelho) : [];
+}
+
+/**
+ * DE QUE CONCELHO É UM CIRCUITO, pela zona onde o catálogo o põe — para o
+ * nome dele dizer onde é quando o grupo não é de concelho nenhum.
+ *
+ * Os circuitos que vêm do sítio de reservas chamavam-se «Circuito Amarelo»,
+ * «Circuito Azul», sem dizer de que concelho são (auditoria de 1/11/2026). O concelho sai da zona que os declara —
+ * é o próprio sistema de reservas a dizê-lo —, e não do nome. Vazio quando
+ * nenhuma zona o tem, ou quando duas de concelhos diferentes o têm.
+ */
+export function concelhoDoCircuito(d: APedido, circuito: string): string {
+  const k = simples(circuito);
+  const nomes = new Set(
+    d.zonas
+      .filter((z) => z.concelho_nome && z.circuitos.some((c) => simples(c.nome) === k))
+      .map((z) => z.concelho_nome),
+  );
+  return nomes.size === 1 ? [...nomes][0] : '';
+}
+
+/**
  * Um circuito onde se pode procurar: o nome, onde é (o concelho ou a zona,
  * quando se sabe), e para onde levar — o horário dele nesta página, ou o
  * folheto da autoridade, ou nada, quando nenhuma fonte publica as horas.

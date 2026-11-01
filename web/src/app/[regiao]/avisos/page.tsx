@@ -4,6 +4,7 @@ import FiltroDosAvisos from '@/componentes/FiltroDosAvisos';
 import { avisosEmVigor, redeToda, type AlcanceDoAviso, type Aviso } from '@/lib/avisos';
 import { catalogoDosAvisos } from '@/lib/avisos-do-sitio';
 import { concelhos, exigirRegiao, paragens, regiao } from '@/lib/dados';
+import type { Regiao } from '@/lib/formato';
 import { aAutoridade } from '@/lib/prosa';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
@@ -72,18 +73,14 @@ export default async function Avisos({ params }: { params: Promise<{ regiao: str
       ) : as.length === 0 ? (
         <>
           <p>Não há avisos em vigor.</p>
-          {/* NUMA PROPOSTA, O SÍTIO NÃO FALA PELA AUTORIDADE. Dizia que aqui
-              saíam «as alterações que a autoridade de transportes publica» —
-              e numa região que ela ainda não adotou isso é falso: ela publica
-              os avisos dela nos canais dela, e esta página pode não os ter.
-              Quem lê «não há avisos» tem de saber onde confirmar. */}
+          {/* NUMA PROPOSTA, O SÍTIO NÃO FALA PELA AUTORIDADE — e quem lê «não
+              há avisos» tem de saber onde confirmar. Eram três parágrafos de
+              ressalvas, com «não são os avisos oficiais» duas vezes e
+              «GTFS-RT» pelo meio, e nem uma ligação para onde eles estão
+              (auditoria de 1/11/2026). Agora: uma frase, e os canais que a
+              região declara (`avisos_oficiais`). */}
           {r.proposta ? (
-            <p className="secundario">
-              O que aparece aqui são as alterações ao serviço publicadas neste sítio: supressões,
-              desvios, greves. Este sítio ainda não é um serviço {aAutoridade(r, 'de')}, e por isso
-              pode não ter os avisos oficiais — esses saem nos canais de quem gere e opera o
-              serviço, e é lá que se confirma antes de contar com ele.
-            </p>
+            <AvisosOficiais r={r} />
           ) : (
             <p className="secundario">
               O que aparece aqui são as alterações ao serviço que a autoridade de transportes
@@ -105,22 +102,55 @@ export default async function Avisos({ params }: { params: Promise<{ regiao: str
         as.map((a) => <CartaoDeAviso key={a.id} aviso={a} catalogo={catalogo} />)
       )}
 
-      {/* DE QUE É QUE ESTES AVISOS SÃO, e é preciso dizê-lo: o sítio mostra
-          comboios e expressos ao lado da rede da casa, e quem lê uma página de
-          avisos sem avisos nenhuns tem direito a saber se isso quer dizer «não
-          há» ou «não é aqui que se sabe». */}
-      <p className="secundario">
-        {r.proposta
-          ? `Dizem respeito aos serviços geridos ${aAutoridade(r, 'por')}, e não são os avisos oficiais.`
-          : `São os avisos dos serviços geridos ${aAutoridade(r, 'por')}.`}{' '}
-        Para alterações noutros serviços que aparecem neste sítio, o aviso é de quem os opera, e é
-        no sítio dele que sai a tempo.
+      {/* DE QUE É QUE ESTES AVISOS SÃO, e é preciso dizê-lo quando os há: o
+          sítio mostra comboios e expressos ao lado da rede da casa. Sem
+          avisos, a frase de cima já diz onde confirmar. O formato para
+          máquinas (GTFS-RT) está nos dados abertos, que é o sítio dele. */}
+      {as && as.length > 0 && (
+        <>
+          <p className="secundario">
+            {r.proposta
+              ? `Dizem respeito aos serviços geridos ${aAutoridade(r, 'por')}, e não são os avisos oficiais.`
+              : `São os avisos dos serviços geridos ${aAutoridade(r, 'por')}.`}{' '}
+            Para alterações noutros serviços que aparecem neste sítio, o aviso é de quem os opera, e
+            é no sítio dele que sai a tempo.
+          </p>
+          {r.proposta && <AvisosOficiais r={r} />}
+        </>
+      )}
+    </>
+  );
+}
+
+/**
+ * Onde saem os avisos oficiais, numa frase e com as ligações que a região
+ * declara (`avisos_oficiais`). Sem a lista, diz-se onde em geral — nos canais
+ * de quem gere e opera cada serviço —, em vez de inventar um endereço.
+ */
+function AvisosOficiais({ r }: { r: Regiao }) {
+  const canais = r.avisos_oficiais ?? [];
+  return (
+    <>
+      <p>
+        Este sítio ainda não é um serviço {aAutoridade(r, 'de')}: os avisos oficiais saem nos canais
+        de quem gere e opera cada serviço{canais.length ? ':' : '.'}
       </p>
-      <p className="secundario">
-        Os avisos publicados saem também em <a href="gtfs-rt/alerts.pb">GTFS-RT Service Alerts</a>,
-        para quem os quiser mostrar noutro lado — menos os que só dizem respeito a um modo inteiro,
-        como as bicicletas, que esse formato não tem como dizer.
-      </p>
+      {canais.length > 0 && (
+        <ul className="avisos-oficiais">
+          {canais.map((c) => (
+            <li key={c.nome}>
+              {c.nome}:{' '}
+              {c.url ? (
+                <a href={c.url} rel="noreferrer">
+                  {new URL(c.url).hostname.replace(/^www\./, '')}
+                </a>
+              ) : c.telefone ? (
+                <a href={`tel:${c.telefone.replace(/\s+/g, '')}`}>{c.telefone}</a>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
     </>
   );
 }

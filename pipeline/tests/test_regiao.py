@@ -409,3 +409,121 @@ def test_um_horario_a_pedido_nao_pode_apontar_para_uma_zona_que_nao_ha(tmp_path)
     """Um nome trocado tirava à página o botão de reservar, em silêncio."""
     with pytest.raises(ErroDeRegiao, match="nordeste"):
         Regiao.carregar(_com_a_pedido(tmp_path / "x", ["norte", "nordeste"]))
+
+
+def _com_tarifas(pasta, redes):
+    """Uma região com duas tabelas no tarifário — um autocarro e uma bicicleta."""
+    pasta = _regiao_minima(pasta, inclui={"tarifas": "tarifas.yaml"})
+    (pasta / "tarifas.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "titulos": [
+                    {"id": "b", "rede": "Rede X", "nome": "Bilhete", "valor": 1.5},
+                    {"id": "p", "rede": "Rede X", "nome": "Passe", "valor": 30, "periodo": "mes"},
+                    {"id": "m", "rede": "Bicis", "nome": "Mensal", "valor": 6, "periodo": "mes"},
+                ],
+                "redes": redes,
+            },
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+    return pasta
+
+
+def test_o_tarifario_diz_o_que_cada_tabela_e(tmp_path):
+    """O modo de cada tabela, e de onde vêm os preços dela — e chega ao sítio tal e qual."""
+    from paragem.sitio import _tarifas
+
+    redes = {
+        "Rede X": {"modo": "autocarro", "fonte": "Tabela da operadora.", "url": "https://x.pt"},
+        "Bicis": {"modo": "bicicleta"},
+    }
+    r = Regiao.carregar(_com_tarifas(tmp_path / "x", redes))
+    assert _tarifas(r)["redes"] == redes
+    # Sem `redes`, a página fica como era.
+    assert _tarifas(Regiao.carregar(_regiao_minima(tmp_path / "sem")))["redes"] == {}
+
+
+@pytest.mark.parametrize(
+    ("redes", "erro"),
+    [
+        # Um nome trocado deixava a tabela sem fonte, em silêncio.
+        ({"Rede Y": {"modo": "autocarro"}}, "Rede Y"),
+        ({"Bicis": {"modo": "trotinete"}}, "trotinete"),
+        ({"Bicis": {"modo": "bicicleta", "preco": 1}}, "e mais nada"),
+        ({"Bicis": {"url": "http://bicis.pt"}}, "https"),
+        (["Bicis"], "é um mapa"),
+    ],
+)
+def test_o_tarifario_nao_descreve_o_que_nao_tem(tmp_path, redes, erro):
+    with pytest.raises(ErroDeRegiao, match=erro):
+        Regiao.carregar(_com_tarifas(tmp_path / "x", redes))
+
+
+def test_um_servico_sem_dados_abertos_declara_se_com_modo_nome_e_url(tmp_path):
+    x = {"modo": "expresso", "nome": "Expressos X", "url": "https://x.example"}
+    r = Regiao.carregar(_regiao_minima(tmp_path / "x", modos=["expresso"], servicos_sem_dados=[x]))
+    assert r.servicos_sem_dados == [x]
+    assert Regiao.carregar(_regiao_minima(tmp_path / "sem")).servicos_sem_dados == []
+
+
+@pytest.mark.parametrize(
+    ("servicos", "erro"),
+    [
+        ([{"modo": "expresso", "nome": "X"}], "os três e mais nada"),
+        ([{"modo": "expresso", "nome": "X", "url": "http://x.example"}], "https"),
+        ([{"modo": "taxi", "nome": "X", "url": "https://x.example"}], "lista de modos"),
+        ({"modo": "expresso"}, "é uma lista"),
+    ],
+)
+def test_um_servico_sem_dados_mal_declarado_recusa_se(tmp_path, servicos, erro):
+    pasta = _regiao_minima(tmp_path / "x", modos=["expresso"], servicos_sem_dados=servicos)
+    with pytest.raises(ErroDeRegiao, match=erro):
+        Regiao.carregar(pasta)
+
+
+def test_onde_saem_os_avisos_oficiais_declara_se_e_chega_ao_sitio(raiz, tmp_path):
+    from paragem.sitio import Sitio
+
+    avisos = [
+        {"nome": "Rede X", "url": "https://x.example"},
+        {"nome": "Transporte a pedido", "telefone": "800 000 000"},
+    ]
+    r = Regiao.carregar(_regiao_minima(tmp_path / "x", avisos_oficiais=avisos))
+    assert r.avisos_oficiais == avisos
+    assert Sitio(raiz, r, tmp_path).regiao_json()["avisos_oficiais"] == avisos
+    assert Regiao.carregar(_regiao_minima(tmp_path / "sem")).avisos_oficiais == []
+
+
+@pytest.mark.parametrize(
+    ("avisos", "erro"),
+    [
+        ([{"nome": "X"}], "um `url` por https ou um `telefone`"),
+        ([{"nome": "X", "url": "http://x.example"}], "https"),
+        ([{"nome": "X", "url": "https://x.example", "email": "a@b"}], "e mais nada"),
+        ({"nome": "X"}, "é uma lista"),
+    ],
+)
+def test_onde_saem_os_avisos_mal_declarado_recusa_se(tmp_path, avisos, erro):
+    with pytest.raises(ErroDeRegiao, match=erro):
+        Regiao.carregar(_regiao_minima(tmp_path / "x", avisos_oficiais=avisos))
+
+
+def test_um_horario_a_pedido_diz_que_titulos_se_pagam_nele(tmp_path):
+    """A página de um folheto de ligações não dizia quanto custa; um `id` trocado tirava-lho."""
+    pasta = _com_a_pedido(tmp_path / "x", ["norte"])
+    d = yaml.safe_load((pasta / "fontes.yaml").read_text(encoding="utf-8"))
+    d["saidas"][0]["params"]["tarifas"] = ["viagem"]
+    (pasta / "fontes.yaml").write_text(yaml.safe_dump(d), encoding="utf-8")
+    r = yaml.safe_load((pasta / "regiao.yaml").read_text(encoding="utf-8"))
+    r["inclui"]["tarifas"] = "tarifas.yaml"
+    (pasta / "regiao.yaml").write_text(yaml.safe_dump(r), encoding="utf-8")
+    titulos = {"titulos": [{"id": "viagem", "rede": "X", "nome": "Viagem", "valor": 3}]}
+    (pasta / "tarifas.yaml").write_text(yaml.safe_dump(titulos), encoding="utf-8")
+    assert Regiao.carregar(pasta).saidas[0].params["tarifas"] == ["viagem"]
+
+    d["saidas"][0]["params"]["tarifas"] = ["viagem", "outra"]
+    (pasta / "fontes.yaml").write_text(yaml.safe_dump(d), encoding="utf-8")
+    with pytest.raises(ErroDeRegiao, match="outra"):
+        Regiao.carregar(pasta)

@@ -53,6 +53,9 @@ saidas:
         id: bici-ameno
         nome: Bici Ameno
         operador: Comunidade Intermunicipal das Terras do Ameno
+        # Como se usa, para a página dizer onde se desbloqueia uma bicicleta.
+        # Inventado, como o sistema.
+        como_usar: Desbloqueia-se na própria estação, com o passe da rede.
       esperado: 8
       station_status: false
 

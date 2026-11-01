@@ -279,3 +279,57 @@ export function fraseDoQueJunta(r: Pick<Regiao, 'rede'>, modos: readonly string[
   if (nomes.length < 2) return null;
   return `${maiuscula(lista(nomes))} — tudo num só sítio.`;
 }
+
+/**
+ * UMA REGRA DE SERVIÇO DE UM CARTAZ, ESCRITA COMO O RESTO DO SÍTIO.
+ *
+ * As regras vêm do rodapé do cartaz da câmara, e a página copiava-as tal e
+ * qual: «horários em vigor a partir de 1 de fevereiro de 2021», a começar em
+ * minúscula; «até às 13h58m» e «13h 50m», duas grafias para a mesma coisa e
+ * nenhuma a do sítio; «exceto Feriados»; «Até sairem» (auditoria de
+ * 1/11/2026). O que a regra DIZ não muda — só a escrita: maiúscula no início,
+ * as horas como o sítio as escreve, os dias e os feriados em minúscula a meio
+ * da frase (são nomes comuns), e um erro de acentuação do próprio cartaz.
+ */
+const HORA_DE_CARTAZ = /\b(\d{1,2})\s*h\s*(\d{2})\s*(?:m(?:in)?\b)?/g;
+const A_MEIO_EM_MINUSCULA =
+  /(?<=\S\s+)(Feriados?|Sábados?|Domingos?|Dias Úteis|Segundas?-[Ff]eiras?|Terças?-[Ff]eiras?|Quartas?-[Ff]eiras?|Quintas?-[Ff]eiras?|Sextas?-[Ff]eiras?)\b/g;
+const ACENTOS_EM_FALTA: [RegExp, string][] = [[/\bsairem\b/g, 'saírem']];
+
+export function regraLegivel(regra: string): string {
+  let t = regra.trim().replace(HORA_DE_CARTAZ, (_, h, m) => `${h}:${m}`);
+  t = t.replace(A_MEIO_EM_MINUSCULA, (m) => m.toLowerCase());
+  for (const [errado, certo] of ACENTOS_EM_FALTA) t = t.replace(errado, certo);
+  // A maiúscula na primeira LETRA: «(1) realiza-se…» fica com o número à frente.
+  return t.replace(/\p{L}/u, (c) => c.toUpperCase());
+}
+
+/**
+ * O NOME DE UMA ESTAÇÃO SEM O QUE O TÍTULO POR CIMA JÁ DIZ.
+ *
+ * Os sistemas de bicicletas escrevem o concelho — e às vezes o próprio sistema
+ * — à frente de cada estação: «Vila - Escola Secundária» por baixo do título
+ * «Vila», «SB - Vila - Tribunal» por baixo de «SB» e de «Vila» (auditoria de
+ * 1/11/2026). Tira-se cada prefixo que o título
+ * já diz, seguido de um traço, quantos vierem; comparam-se sem acentos nem
+ * maiúsculas. Um nome que ficasse vazio fica como estava.
+ */
+export function semPrefixos(nome: string, prefixos: string[]): string {
+  const chave = (t: string) =>
+    t
+      .normalize('NFD')
+      .replace(/\p{Mn}/gu, '')
+      .toLowerCase()
+      .trim();
+  const ps = prefixos.map(chave).filter(Boolean);
+  let resto = nome.trim();
+  for (let mudou = true; mudou; ) {
+    mudou = false;
+    const m = /^(.+?)\s+[-–—]\s+(.+)$/u.exec(resto);
+    if (m && ps.includes(chave(m[1]))) {
+      resto = m[2].trim();
+      mudou = true;
+    }
+  }
+  return resto || nome;
+}

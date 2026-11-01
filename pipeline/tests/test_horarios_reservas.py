@@ -177,6 +177,9 @@ def test_diz_que_NAO_sabe_os_dias(raiz):
             assert not any(x in rot for x in proibidas), (
                 f"{q['nome']}: o rótulo {v['rotulo']!r} sugere uma regra que esta fonte não dá"
             )
+            # A DATA NA REGRA, E NÃO EM CADA VIAGEM: no resumo do circuito, «Ida
+            # — 21/09/2026» lia-se como o horário dele, e não como um exemplo.
+            assert f"{dia:%d/%m/%Y}" not in rot, f"{q['nome']}: a data está no rótulo {rot!r}"
 
 
 def test_as_viagens_nao_andam_para_tras(raiz):

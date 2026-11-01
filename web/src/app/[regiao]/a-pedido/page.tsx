@@ -3,8 +3,15 @@ import Link from '@/componentes/Ligacao';
 import type { Metadata } from 'next';
 import { aPedido, dadosAbertos, exigirRegiao, url, urlRede, regiao } from '@/lib/dados';
 import ProcurarTerra from '@/componentes/ProcurarTerra';
-import { caminhoDoHorario, idDoQuadro, indiceDasTerras } from '@/lib/a-pedido';
-import { nomeDoSistema, plural } from '@/lib/prosa';
+import AbrirPeloEndereco from '@/componentes/AbrirPeloEndereco';
+import {
+  caminhoDoHorario,
+  horariosDaZona,
+  idDoQuadro,
+  indiceDasTerras,
+  reservaOnlineDaZona,
+} from '@/lib/a-pedido';
+import { lista, nomeDoSistema, plural } from '@/lib/prosa';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
 export async function generateMetadata({
@@ -79,6 +86,9 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
 
   return (
     <>
+      {/* As zonas abrem-se pelo endereço (`#z-<zona>`): é para lá que a
+          página de cada concelho leva. */}
+      <AbrirPeloEndereco />
       <h1>Transporte a pedido</h1>
       <p>
         Há circuitos {r.em} que só circulam se alguém os reservar, em{' '}
@@ -119,10 +129,12 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
             </p>
           )}
           {/* A reserva online NÃO cobre tudo, e dizer que cobre manda alguém
-              a um sítio onde não encontra o que procura. */}
+              a um sítio onde não encontra o que procura. Numa frase, com o
+              «e» antes do último: separados só por vírgulas, um serviço «de A e
+              B» lia-se como dois. */}
           {v.com_reserva_online?.length ? (
             <p>
-              A reserva online só serve {v.com_reserva_online.join(', ')}. Os restantes circuitos
+              A reserva online só serve {lista(v.com_reserva_online)}. Os restantes circuitos
               reservam-se por telefone.
             </p>
           ) : null}
@@ -212,55 +224,74 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
           </details>
         ))}
 
-        {/* O QUE FALTA, ESCRITO — e não uma lista curta a fingir-se de
-            completa. A página de horários da autoridade carrega cada
-            separador só quando alguém lhe toca, por isso o instantâneo
-            guardado à mão só apanhou um. */}
+        {/* AS ZONAS SEM CIRCUITOS ATRIBUÍDOS, cada uma com o que se pode fazer.
+
+            Diziam «ver o concelho», e o concelho mandava de volta para aqui:
+            quem mora numa delas nunca chegava a um horário nem a uma instrução
+            — e a caixa explicava o que falta nos dados, numa página que é de
+            quem quer apanhar o transporte (auditoria de 1/11/2026). Agora cada
+            uma leva ao horário que se sabe dela (`horariosDaZona`), ao
+            telefone, e à reserva online onde ela serve. */}
         {semCircuitos.length > 0 && (
           <div className="faixa informacao">
             <h3>
-              {semCircuitos.length === 1
-                ? 'Uma zona sem os circuitos atribuídos'
-                : `${semCircuitos.length} zonas sem os circuitos atribuídos`}
+              {comCircuitos.length > 0
+                ? semCircuitos.length === 1
+                  ? 'Mais uma zona'
+                  : `Mais ${semCircuitos.length} zonas`
+                : semCircuitos.length === 1
+                  ? 'A zona'
+                  : `As ${semCircuitos.length} zonas`}
             </h3>
             <p>
-              Existem e têm serviço. Os circuitos também se conhecem — estão todos na lista abaixo
-              —, o que não se sabe é qual deles serve qual zona, nem a que horas passa. Reservam-se
-              pelo telefone acima, que serve todas.
+              Têm serviço, e reservam-se como as outras. Onde há horário publicado, a ligação leva a
+              ele; onde não há, pergunte a hora ao reservar.
             </p>
-            <ul className="lista lista-de-zonas">
-              {semCircuitos.map((z) => (
-                <li key={z.id}>
-                  {/* A NOTA SEPARADA DO NOME, e não colada: lia-se «LINK
-                      Cidadesentre concelhos», no ecrã e no leitor de ecrã. */}
-                  {z.concelho ? (
-                    <Link href={urlRede(rid, `concelhos/${z.concelho}/`)}>
-                      <span>
-                        {z.nome}
-                        {z.servico ? ` · ${z.servico}` : ''}
-                      </span>
-                      <span className="secundario">ver o concelho</span>
-                    </Link>
-                  ) : (
-                    <span className="sem-ligacao">
-                      <span>
-                        {z.nome}
-                        {z.servico ? ` · ${z.servico}` : ''}
-                      </span>
-                      <span className="secundario">entre concelhos</span>
+            <ul className="pontos-de-modo zonas-sem-circuitos">
+              {semCircuitos.map((z) => {
+                const horarios = horariosDaZona(d, z);
+                return (
+                  <li key={z.id} id={`z-${z.id}`}>
+                    {/* A NOTA SEPARADA DO NOME, e não colada: lia-se «LINK
+                        Cidadesentre concelhos», no ecrã e no leitor de ecrã. */}
+                    <span className="nome">
+                      {z.nome}
+                      {z.servico ? ` · ${z.servico}` : ''}
                     </span>
-                  )}
-                </li>
-              ))}
+                    <span className="accoes">
+                      {horarios.map((h) => (
+                        <Link key={h.id} href={url(rid, caminhoDoHorario(h.id))}>
+                          {horarios.length === 1 ? 'Ver o horário' : tituloDoHorario(h)}
+                          {horarios.length === 1 && (
+                            <span className="so-para-leitores"> de {z.nome}</span>
+                          )}
+                        </Link>
+                      ))}
+                      {v.telefone && (
+                        <a href={`tel:${v.telefone}`}>
+                          Ligar {v.telefone_apresentado ?? v.telefone}
+                          <span className="so-para-leitores"> para reservar em {z.nome}</span>
+                        </a>
+                      )}
+                      {v.online && reservaOnlineDaZona(d, z) === true && (
+                        <a href={v.online} rel="noreferrer">
+                          Reservar online
+                          <span className="so-para-leitores"> em {z.nome}</span>
+                        </a>
+                      )}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
 
         {d.sem_zona.length > 0 && (
           <p>
-            Sem zona de transporte a pedido: {d.sem_zona.map((c) => c.nome).join(', ')}. É
-            informação e não lapso — a fonte não lhe{d.sem_zona.length > 1 ? 's' : ''} atribui zona
-            nenhuma.
+            {d.sem_zona.length === 1
+              ? `${d.sem_zona[0].nome} não tem zona de transporte a pedido.`
+              : `Não têm zona de transporte a pedido: ${lista(d.sem_zona.map((c) => c.nome))}.`}
           </p>
         )}
       </section>
@@ -363,34 +394,41 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
         </section>
       )}
 
-      <section aria-labelledby="donde">
-        <h2 id="donde">De onde vem isto</h2>
-        <p>{d.fonte}</p>
-        {faltaAlgo && (
-          <p>
-            O que falta — o horário dos circuitos que nenhuma fonte publica, e saber a que zona
-            pertence cada um — entra por introdução manual assistida a partir das páginas públicas.
-            {comRelatorio && (
-              <>
-                {' '}
-                Está no relatório da última construção, que se descarrega dos{' '}
-                <Link href={url(rid, 'dados-abertos/')}>dados abertos</Link>, circuito a circuito e
-                zona a zona, com a razão de cada um.
-              </>
-            )}
-          </p>
-        )}
-        {/* O MESMO HORÁRIO, PARA MÁQUINAS. Não é um extra de quem gosta de
-            dados: é o que faz este serviço poder aparecer numa aplicação de
-            transportes em vez de viver só nesta página. */}
-        {temFlex && (
-          <p>
-            Estes circuitos também saem em <strong>GTFS-Flex</strong>, o formato em que uma
-            aplicação de transportes sabe que a hora só se cumpre com reserva feita — a regra de
-            reserva vai dentro do próprio ficheiro. Está nos{' '}
-            <Link href={url(rid, 'dados-abertos/')}>dados abertos</Link>, com os termos à frente.
-          </p>
-        )}
+      {/* DE ONDE VEM ISTO, NO FIM E FECHADO, como nas páginas dos modos: é
+          para quem quer saber, e não para quem quer apanhar o transporte.
+          Abria a meio da página, com «introdução manual assistida» e
+          «GTFS-Flex» (auditoria de 1/11/2026). */}
+      <section aria-labelledby="donde" className="sobre-estes-dados">
+        <h2 id="donde">Sobre estes dados</h2>
+        <details className="lista-fechada">
+          <summary>De onde vem isto, e o que falta</summary>
+          <p>{d.fonte}</p>
+          {faltaAlgo && (
+            <p>
+              O que falta — o horário dos circuitos que nenhuma brochura publica, e a zona de cada
+              um — vai sendo acrescentado à mão, a partir das páginas públicas da autoridade de
+              transportes.
+              {comRelatorio && (
+                <>
+                  {' '}
+                  O que ainda falta, circuito a circuito, está no relatório da última construção,
+                  que se descarrega dos <Link href={url(rid, 'dados-abertos/')}>dados abertos</Link>
+                  .
+                </>
+              )}
+            </p>
+          )}
+          {/* O MESMO HORÁRIO, PARA MÁQUINAS. Não é um extra de quem gosta de
+              dados: é o que faz este serviço poder aparecer numa aplicação de
+              transportes em vez de viver só nesta página. */}
+          {temFlex && (
+            <p>
+              Estes circuitos também se descarregam no formato que as aplicações de transportes leem
+              (GTFS-Flex), com a regra de reserva dentro do próprio ficheiro: está nos{' '}
+              <Link href={url(rid, 'dados-abertos/')}>dados abertos</Link>, com os termos à frente.
+            </p>
+          )}
+        </details>
       </section>
     </>
   );

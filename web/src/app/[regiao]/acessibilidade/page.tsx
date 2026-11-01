@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { exigirRegiao, temMosaicos, url, regiao } from '@/lib/dados';
-import { aAutoridade } from '@/lib/prosa';
-import { DO_PRODUTO, lerContactos, telefoneParaMarcar } from '@/lib/contactos';
+import { aAutoridade, maiuscula } from '@/lib/prosa';
+import { DO_PRODUTO, lerContactos, responsavelNaFrase, telefoneParaMarcar } from '@/lib/contactos';
 import VerificacoesDeAcessibilidade from '@/componentes/VerificacoesDeAcessibilidade';
 import { metadadosDaRegiao } from '@/lib/metadados';
 import QueixasDeAcessibilidade from '@/componentes/QueixasDeAcessibilidade';
@@ -41,6 +41,14 @@ export async function generateMetadata({
  * artigo 13.º — é assim que o citam as declarações publicadas pela própria
  * entidade que fiscaliza o decreto. Conferido a 13/10/2026.
  */
+/**
+ * A DATA DESTA DECLARAÇÃO, que o modelo do decreto pede — a última vez que o
+ * texto e o estado de conformidade foram revistos. Muda-se À MÃO, quando
+ * mudarem: não é a data da construção dos dados, que muda todas as semanas
+ * sem que a acessibilidade do sítio mude com ela.
+ */
+const REVISTA_EM = { dia: 1, mes: 'novembro', ano: 2026 } as const;
+
 export default async function Acessibilidade({ params }: { params: Promise<{ regiao: string }> }) {
   const { regiao: rid } = await params;
   const r = await exigirRegiao(rid);
@@ -50,20 +58,47 @@ export default async function Acessibilidade({ params }: { params: Promise<{ reg
   const doProduto = !contactos?.acessibilidade_email;
   const telefone = doProduto ? null : contactos?.acessibilidade_telefone;
   const reclamar = contactos?.reclamacao_url;
+  // QUEM SE COMPROMETE, como o modelo do decreto pede: quem a autoridade
+  // indicou no painel; enquanto não indicar, quem faz o produto — que é quem
+  // publica o sítio, e é o que a página diz.
+  // «Fulano, que faz o Paragem.pt, compromete-se»: o aposto fecha com vírgula.
+  const entidade =
+    responsavelNaFrase(contactos, aAutoridade(r, 'com_artigo')) ?? `${DO_PRODUTO.responsavel},`;
   return (
     <>
       <h1>Declaração de acessibilidade</h1>
+      {/* PELO MODELO DO DECRETO (o de acessibilidade.gov.pt): quem se
+          compromete, a que sítio se aplica, o estado numa das três
+          classificações, e quando e como foi feita. A declaração não tinha
+          data nem entidade, e o estado era «Por avaliar», que não é nenhuma
+          das três (auditoria de 1/11/2026). O detalhe honesto que já cá
+          estava continua por baixo. */}
       <p>
-        Este sítio compromete-se a ser acessível, nos termos do Decreto-Lei n.º 83/2018, de 19 de
-        outubro, que transpõe a Diretiva (UE) 2016/2102.
+        {maiuscula(entidade)} compromete-se a tornar este sítio acessível, nos termos do Decreto-Lei
+        n.º 83/2018, de 19 de outubro, que transpõe a Diretiva (UE) 2016/2102.
       </p>
+      {r.dominio && <p>A presente declaração aplica-se ao sítio {r.dominio}.</p>}
 
       <h2>Estado de conformidade</h2>
+      {/* «PARCIALMENTE CONFORME», E NÃO «CONFORME»: os testes automáticos
+          passam, mas há conteúdos que não estão conformes (os de baixo).
+          «Plenamente conforme» exige todos os requisitos cumpridos, sem
+          exceções — e há exceções. A FRASE É A MESMA DA AGENDA CULTURAL que
+          se apresenta ao lado deste sítio (decisão de 1/11/2026: «unifica»):
+          duas declarações da mesma casa a dizerem o mesmo estado por palavras
+          diferentes liam-se como dois estados. */}
       <p>
-        <strong>Por avaliar.</strong> O objetivo é a conformidade com as WCAG 2.1 nível AA, mas o
-        sítio ainda não foi avaliado à mão — nem de ponta a ponta, nem por uma entidade externa, nem
-        com pessoas com deficiência —, e por isso não se declara conforme. O que se sabe é o que os
-        testes automáticos verificam.
+        <strong>Parcialmente conforme</strong> com o Decreto-Lei n.º 83/2018 e com as WCAG 2.1,
+        nível AA, devido às limitações enumeradas abaixo. O estado resulta de uma autoavaliação —
+        testes automáticos a cada alteração e verificação manual durante o desenvolvimento —, sem
+        auditoria externa nem testes com pessoas que usam tecnologias de apoio.
+      </p>
+
+      <h2>Elaboração desta declaração</h2>
+      <p>
+        Declaração revista a {REVISTA_EM.dia} de {REVISTA_EM.mes} de {REVISTA_EM.ano}, por
+        autoavaliação: os testes automáticos descritos abaixo e verificação manual durante o
+        desenvolvimento.
       </p>
 
       <h2>O que foi verificado, e como</h2>
@@ -88,15 +123,17 @@ export default async function Acessibilidade({ params }: { params: Promise<{ reg
           Onde os ligamos, a informação está também em HTML.
         </li>
         <li>
-          <strong>Não houve avaliação manual, nem por pessoas com deficiência.</strong> Um teste
-          automático apanha uma parte do que interessa; o resto vê-se com quem usa.
+          <strong>
+            Não houve auditoria externa, nem testes com pessoas que usam tecnologias de apoio.
+          </strong>{' '}
+          Um teste automático apanha uma parte do que interessa; o resto vê-se com quem usa.
         </li>
       </ul>
 
       <h2>Como foi preparada</h2>
       <p>
-        Por autoavaliação, só com os testes automáticos descritos acima, que correm em cada
-        alteração ao sítio. Os dados são os que o pipeline produziu, e a data deles está em{' '}
+        Os testes automáticos descritos acima correm em cada alteração ao sítio. Os dados são os que
+        o pipeline produziu, e a data deles está em{' '}
         <a href={url(rid, '/dados-abertos/')}>Dados abertos</a>.
       </p>
 

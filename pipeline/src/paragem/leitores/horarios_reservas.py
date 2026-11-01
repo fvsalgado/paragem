@@ -479,9 +479,15 @@ def _escolher(lidos: dict[str, dict], quais: list[str]) -> tuple[list[dict], lis
 def _saida(ctx: Contexto, saida: Saida, circuitos: list[dict], data: dt.date) -> dict:
     p = saida.params
     dia = DIAS[data.weekday()]
+    # A DATA DIZ-SE UMA VEZ, NA REGRA, E NÃO EM CADA VIAGEM. O resumo de cada
+    # circuito dizia «1 viagem · Ida — 21/09/2026», e lia-se como o horário do
+    # circuito — quem o lesse podia contar com uma viagem que não existe
+    # noutros dias (auditoria de 1/11/2026). A regra diz que é um exemplo, e o
+    # que fazer com ele.
     regra = (
-        f"Horário que o sítio de reservas mostrava para {data:%d/%m/%Y} ({dia}). "
-        "Os dias em que circula não vêm nesta fonte."
+        f"Exemplo de um dia: é o horário que o sítio de reservas mostrava para "
+        f"{data:%d/%m/%Y} ({dia}). Os dias em que circula não vêm nesta fonte: "
+        "confirmam-se ao reservar."
     )
     quadros = []
     for c in sorted(circuitos, key=lambda x: _chave(x["nome"])):
@@ -492,11 +498,8 @@ def _saida(ctx: Contexto, saida: Saida, circuitos: list[dict], data: dt.date) ->
                 "tipo": "percurso",
                 "paragens": c["paragens"],
                 "regras": [regra] + [str(x) for x in (p.get("regras") or [])],
-                "rotulos": [f"{v['sentido']} — {data:%d/%m/%Y}" for v in viagens],
-                "viagens": [
-                    {"rotulo": f"{v['sentido']} — {data:%d/%m/%Y}", "passagens": v["passagens"]}
-                    for v in viagens
-                ],
+                "rotulos": [v["sentido"] for v in viagens],
+                "viagens": [{"rotulo": v["sentido"], "passagens": v["passagens"]} for v in viagens],
                 "horas": [],
             }
         )

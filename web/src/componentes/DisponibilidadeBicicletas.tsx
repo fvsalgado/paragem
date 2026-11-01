@@ -108,25 +108,54 @@ function fresco(e: Estado): boolean {
  * Nada, quando não há serviço, quando a leitura envelheceu, ou quando esta
  * estação não veio no feed.
  */
-export function ContagemDaEstacao({ id }: { id?: string | null }) {
+export function ContagemDaEstacao({
+  id,
+  emLinhaPropria = false,
+}: {
+  id?: string | null;
+  /**
+   * Numa linha sua, por baixo do nome — a lista das estações. Sem o ponto à
+   * cabeça, e cada contagem inteira: ao lado do nome, no telemóvel, partia-se
+   * em «· 8» numa linha e «docas» na seguinte (auditoria de 1/11/2026).
+   */
+  emLinhaPropria?: boolean;
+}) {
   const e = useContext(Ctx);
   if (!id || !fresco(e)) return null;
   const c = e.porId.get(id);
   if (!c || (c.bicicletas == null && c.docas == null)) return null;
+  const partes = [
+    c.bicicletas != null && (
+      <span key="b" className="contagem">
+        <strong>{c.bicicletas}</strong> {c.bicicletas === 1 ? 'bicicleta' : 'bicicletas'}
+      </span>
+    ),
+    c.docas != null && (
+      <span key="d" className="contagem">
+        <strong>{c.docas}</strong> {c.docas === 1 ? 'doca' : 'docas'}
+      </span>
+    ),
+  ].filter(Boolean);
+  if (emLinhaPropria) {
+    return (
+      <span className="disponibilidade em-linha-propria">
+        {partes.map((p, i) => (
+          <span key={i}>
+            {i > 0 ? ' · ' : ''}
+            {p}
+          </span>
+        ))}
+      </span>
+    );
+  }
   return (
     <span className="disponibilidade">
-      {c.bicicletas != null && (
-        <span>
+      {partes.map((p, i) => (
+        <span key={i}>
           {' · '}
-          <strong>{c.bicicletas}</strong> {c.bicicletas === 1 ? 'bicicleta' : 'bicicletas'}
+          {p}
         </span>
-      )}
-      {c.docas != null && (
-        <span>
-          {' · '}
-          <strong>{c.docas}</strong> {c.docas === 1 ? 'doca' : 'docas'}
-        </span>
-      )}
+      ))}
     </span>
   );
 }

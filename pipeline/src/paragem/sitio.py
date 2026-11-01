@@ -350,6 +350,9 @@ class Sitio:
             # autoridade é dela, e o sítio escreve-a tal e qual. `None` dá a
             # frase genérica (`Regiao.faixa_da_proposta`).
             "faixa_da_proposta": r.faixa_da_proposta,
+            # ONDE SAEM OS AVISOS OFICIAIS, quando a região o diz — a página
+            # dos avisos liga para lá (`Regiao.avisos_oficiais`).
+            "avisos_oficiais": r.avisos_oficiais,
             "modos": r.modos,
             # Os que a região mostra e não gere — ver `modos_de_terceiros`.
             # É por esta lista que o painel sabe sobre que modos é que a
@@ -1220,6 +1223,27 @@ class Sitio:
             )
             m["urbanos_da_rede"] = urbanos
 
+        # OS SERVIÇOS SEM DADOS ABERTOS (`Regiao.servicos_sem_dados`): não têm
+        # paragens nem horários para mostrar, e não entram nas contas — mas a
+        # página do modo diz que existem, e onde se consultam.
+        for x in self.regiao.servicos_sem_dados:
+            m = por_modo.setdefault(
+                x["modo"],
+                {
+                    "modo": x["modo"],
+                    "gerido_por": [],
+                    "sistemas": [],
+                    "pontos": [],
+                    "percursos": [],
+                    "paragens": [],
+                    "horarios": [],
+                    "incompleto": False,
+                    "notas": [],
+                    "fontes": [],
+                },
+            )
+            m.setdefault("sem_dados", []).append({"nome": x["nome"], "url": x["url"]})
+
         for m in por_modo.values():
             geridos = [s.get("operador") for s in m["sistemas"]]
             geridos += [p.get("operador") for p in m["percursos"]]
@@ -1364,6 +1388,11 @@ class Sitio:
                     "operador": sistema.get("operador"),
                     "estado": decl.params.get("estado"),
                     "disponibilidade_publica": bool(decl.params.get("station_status")),
+                    # COMO SE USA, quando a receita o diz: a página listava as
+                    # estações e não dizia onde se desbloqueia uma bicicleta
+                    # nem para onde ir saber mais (auditoria de 1/11/2026).
+                    "como_usar": (sistema.get("como_usar") or "").strip() or None,
+                    "sitio": (sistema.get("sitio") or "").strip() or None,
                     "estacoes": estacoes,
                 }
             ]
@@ -1621,13 +1650,21 @@ class Sitio:
         # para — uma frase falsa produzida por um atalho de uma linha.
         servem = {rid for p in paragens for rid in por_paragem.get(str(p["id"]), set())}
         agencias = {a["agency_id"]: a for a in feed.obter("agency.txt")}
-        operadores = []
+        operadores: list[dict[str, Any]] = []
         ids = {(rotas.get(r) or {}).get("agency_id") for r in servem}
+        # O NOME QUE A RECEITA DECLARA, quando declara (`operador_nome`): o feed
+        # chama-se «FlixBus-eu», e a página dizia «Quem gere: FlixBus-eu» — o
+        # nome de um ficheiro, e não o de quem vende o bilhete. É o mesmo nome
+        # que as frases dos horários já usavam.
+        declarado = str((decl.params or {}).get("operador_nome") or "").strip()
         for aid in sorted(str(x) for x in ids if x):
             a = agencias.get(aid) or {}
+            nome = declarado or str(a.get("agency_name") or aid).strip()
+            if any(o["nome"] == nome for o in operadores):
+                continue
             operadores.append(
                 {
-                    "nome": str(a.get("agency_name") or aid).strip(),
+                    "nome": nome,
                     "sitio": (a.get("agency_url") or "").strip() or None,
                     "bilhetes": (a.get("agency_fare_url") or "").strip() or None,
                 }
@@ -2614,6 +2651,10 @@ def _tarifas(regiao: Regiao) -> dict[str, Any]:
         # vai pagar (§4.4).
         "por_confirmar": sum(1 for x in titulos if not x.get("confirmado")),
         "reservas": t.get("reservas") or {},
+        # O QUE CADA TABELA É, quando a região o diz: o modo (a conta do «Que
+        # título me serve?» é de viagens, e uma bicicleta não se paga à
+        # viagem) e de onde vêm os preços dela, numa linha por baixo da tabela.
+        "redes": t.get("redes") or {},
     }
 
 
@@ -2774,6 +2815,11 @@ def _horarios_a_pedido(
                 # todas as zonas do concelho. É daqui que a página sabe se a
                 # reserva online o serve (`reserva_online` de cada zona).
                 "zonas": [str(z) for z in decl.params.get("zonas") or []],
+                # OS TÍTULOS DO TARIFÁRIO QUE SE PAGAM AQUI, quando a receita os
+                # diz (`tarifas`, os `id` do `tarifas.yaml`): a página de um folheto
+                # de ligações não dizia quanto custa, e o preço só estava no
+                # tarifário.
+                "tarifas": [str(t) for t in decl.params.get("tarifas") or []],
                 "regras": d.get("regras") or [],
                 "paragens": sorted({n for q in quadros for n in q.get("paragens", [])}),
                 "viagens": sum(len(q.get("viagens") or []) for q in quadros),
