@@ -350,6 +350,9 @@ class Sitio:
             # autoridade é dela, e o sítio escreve-a tal e qual. `None` dá a
             # frase genérica (`Regiao.faixa_da_proposta`).
             "faixa_da_proposta": r.faixa_da_proposta,
+            # ONDE SAEM OS AVISOS OFICIAIS, quando a região o diz — a página
+            # dos avisos liga para lá (`Regiao.avisos_oficiais`).
+            "avisos_oficiais": r.avisos_oficiais,
             "modos": r.modos,
             # Os que a região mostra e não gere — ver `modos_de_terceiros`.
             # É por esta lista que o painel sabe sobre que modos é que a

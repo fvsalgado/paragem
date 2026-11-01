@@ -483,6 +483,33 @@ def test_um_servico_sem_dados_mal_declarado_recusa_se(tmp_path, servicos, erro):
         Regiao.carregar(pasta)
 
 
+def test_onde_saem_os_avisos_oficiais_declara_se_e_chega_ao_sitio(raiz, tmp_path):
+    from paragem.sitio import Sitio
+
+    avisos = [
+        {"nome": "Rede X", "url": "https://x.example"},
+        {"nome": "Transporte a pedido", "telefone": "800 000 000"},
+    ]
+    r = Regiao.carregar(_regiao_minima(tmp_path / "x", avisos_oficiais=avisos))
+    assert r.avisos_oficiais == avisos
+    assert Sitio(raiz, r, tmp_path).regiao_json()["avisos_oficiais"] == avisos
+    assert Regiao.carregar(_regiao_minima(tmp_path / "sem")).avisos_oficiais == []
+
+
+@pytest.mark.parametrize(
+    ("avisos", "erro"),
+    [
+        ([{"nome": "X"}], "um `url` por https ou um `telefone`"),
+        ([{"nome": "X", "url": "http://x.example"}], "https"),
+        ([{"nome": "X", "url": "https://x.example", "email": "a@b"}], "e mais nada"),
+        ({"nome": "X"}, "é uma lista"),
+    ],
+)
+def test_onde_saem_os_avisos_mal_declarado_recusa_se(tmp_path, avisos, erro):
+    with pytest.raises(ErroDeRegiao, match=erro):
+        Regiao.carregar(_regiao_minima(tmp_path / "x", avisos_oficiais=avisos))
+
+
 def test_um_horario_a_pedido_diz_que_titulos_se_pagam_nele(tmp_path):
     """A página de um folheto de ligações não dizia quanto custa; um `id` trocado tirava-lho."""
     pasta = _com_a_pedido(tmp_path / "x", ["norte"])

@@ -263,6 +263,11 @@ class Regiao:
     #: modo diz que existem e onde se consultam. Sem isto, quem procurava o
     #: expresso que conhece e não o via concluía que o sítio estava incompleto.
     servicos_sem_dados: list[dict[str, str]] = field(default_factory=list)
+    #: ONDE SAEM OS AVISOS OFICIAIS (`avisos_oficiais`): `nome` e `url` ou
+    #: `telefone`. Numa proposta, o sítio não fala pela autoridade, e a página
+    #: dos avisos vazia dizia, em três parágrafos, que podia não ter os avisos
+    #: oficiais — sem uma ligação para onde eles estão (auditoria de 1/11/2026).
+    avisos_oficiais: list[dict[str, str]] = field(default_factory=list)
 
     # --- prosa -----------------------------------------------------------
 
@@ -466,6 +471,7 @@ class Regiao:
             faixa_da_proposta=_faixa_da_proposta(d["id"], d.get("proposta")),
             urbanos_da_rede=_urbanos_da_rede(d["id"], (d.get("rede") or {}).get("urbanos")),
             servicos_sem_dados=_servicos_sem_dados(d["id"], d.get("servicos_sem_dados")),
+            avisos_oficiais=_avisos_oficiais(d["id"], d.get("avisos_oficiais")),
             municipios_membros=int(terr.get("municipios_membros", len(concelhos))),
             concelhos_servidos=int(terr.get("concelhos_servidos", len(concelhos))),
             caixa=caixa,
@@ -769,6 +775,41 @@ def _servicos_sem_dados(id_regiao: str, valor: Any) -> list[dict[str, str]]:
             raise ErroDeRegiao(
                 f"{id_regiao}: `servicos_sem_dados[{i}]` tem de ter `modo` e `nome`, e um `url` "
                 "por https — é para lá que a página manda quem quer os horários."
+            )
+        saida.append(d)
+    return saida
+
+
+def _avisos_oficiais(id_regiao: str, valor: Any) -> list[dict[str, str]]:
+    """Onde saem os avisos oficiais, como a região os declara (`Regiao.avisos_oficiais`).
+
+    Cada um com `nome` e uma maneira de lá chegar — `url` (por https) ou
+    `telefone` —, e nada mais.
+    """
+    if valor in (None, []):
+        return []
+    if not isinstance(valor, list):
+        raise ErroDeRegiao(
+            f"{id_regiao}: `avisos_oficiais` é uma lista, cada um com `nome` e `url` ou `telefone`."
+        )
+    saida: list[dict[str, str]] = []
+    for i, x in enumerate(valor):
+        chaves = set(x) if isinstance(x, dict) else set()
+        if "nome" not in chaves or chaves - {"nome", "url", "telefone"}:
+            raise ErroDeRegiao(
+                f"{id_regiao}: `avisos_oficiais[{i}]` declara-se com `nome` e `url` ou `telefone`, "
+                f"e mais nada — tem {sorted(chaves) if isinstance(x, dict) else x!r}."
+            )
+        d = {k: str(x[k] or "").strip() for k in ("nome", "url", "telefone") if k in x}
+        url = d.get("url", "")
+        if (
+            not d["nome"]
+            or not (url or d.get("telefone"))
+            or (url and not url.startswith("https://"))
+        ):
+            raise ErroDeRegiao(
+                f"{id_regiao}: `avisos_oficiais[{i}]` tem de ter `nome`, e um `url` por https ou "
+                "um `telefone` — é para lá que a página manda quem quer confirmar."
             )
         saida.append(d)
     return saida

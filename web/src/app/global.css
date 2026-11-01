@@ -1780,6 +1780,12 @@ ul.zonas-do-concelho a {
 .lista.concelhos-com-resumo .secundario {
   text-align: left;
 }
+/* Os canais dos avisos oficiais, um por linha. */
+ul.avisos-oficiais a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+}
 
 /* As paragens do concelho, fechadas quando são muitas: o nome por inteiro e
    as linhas por baixo, sem nunca partir o nome a meio da palavra. */

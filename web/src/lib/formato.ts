@@ -122,6 +122,12 @@ export type Regiao = {
    * (`prosa.ts`, `fraseDaProposta`).
    */
   faixa_da_proposta?: { titulo: string; texto: string } | null;
+  /**
+   * Onde saem os avisos oficiais, quando a região o diz: o sítio da rede, o
+   * do operador ferroviário, o telefone do transporte a pedido. Ausente em
+   * dados de antes disto.
+   */
+  avisos_oficiais?: { nome: string; url?: string; telefone?: string }[];
   artigo: string;
   /** «a Serra da Pedra Alta», «o Baixo Sável» — escrito, não adivinhado. */
   nome_com_artigo: string;
