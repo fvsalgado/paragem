@@ -542,15 +542,16 @@ def _formas_finas(s: Any) -> dict[tuple[str, str], list[tuple[float, float]]]:
     return finas
 
 
-def escrever(s: Any, g: Any) -> None:
+def escrever(s: Any, g: Any) -> tuple[Path, int, int] | None:
     """A chamada do `pipeline sitio`: lê o que ele já escreveu e junta a rede.
 
-    `s` é o `Sitio` (o destino, a região, as saídas e as notas), `g` a grelha
-    que ele acabou de escrever. Os percursos lêem-se do disco, de onde o
-    `_percursos` os pôs; as formas finas, dos mesmos feeds que ele leu.
-    """
-    from .sitio import Saida
+    `s` é o `Sitio` (o destino, a região e as notas), `g` a grelha que ele
+    acabou de escrever. Os percursos lêem-se do disco, de onde o `_percursos`
+    os pôs; as formas finas, dos mesmos feeds que ele leu.
 
+    Devolve o ficheiro, os bytes e os traços, e é o `sitio` que os junta às
+    saídas: assim este módulo não o importa de volta, e não há ciclo.
+    """
     grelha = g.para_json((s.regiao.motor or {}).get("fuso", "UTC"))
     c = s.regiao.caixa_de_recorte
     com_horario = {linha[3] for linha in grelha.get("linhas") or []}
@@ -562,11 +563,11 @@ def escrever(s: Any, g: Any) -> None:
         _formas_finas(s),
     )
     if not rede["trocos"]:
-        return
+        return None
     n = escrever_em(s.destino, rede)
-    s.saidas.append(Saida(s.destino / FICHEIRO, n, len(rede["trocos"])))
     comprimido = len(gzip.compress((s.destino / FICHEIRO).read_bytes(), 9))
     s.notas.append(
         f"rede no mapa: {len(rede['trocos'])} traços, {comprimido // 1024} kB comprimido"
         + "".join(f" · {feed} conta a {data}" for feed, data in rede["dias"].items())
     )
+    return s.destino / FICHEIRO, n, len(rede["trocos"])

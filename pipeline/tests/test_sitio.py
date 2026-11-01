@@ -1023,8 +1023,6 @@ def test_um_ficheiro_para_consulta_com_partes_do_mapa_diz_qual_e_a_parte(tmp_pat
     catalogo = tmp_path / "catalogo.json"
     catalogo.write_text('{"nome": "x"}', encoding="utf-8")
     _embutir_atribuicao(catalogo, "as coordenadas das paragens")
-    import json
-
     d = json.loads(catalogo.read_text(encoding="utf-8"))
     assert "OpenStreetMap" in d["attribution"]
     assert d["license"].startswith("Sem licença aberta declarada")
