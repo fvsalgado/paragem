@@ -699,6 +699,124 @@ test.describe('a abertura de uma região', () => {
     );
   });
 
+  test('com a localização já dada, o mapa enquadra uma vez e não fica a ir e vir', async ({
+    page,
+    context,
+  }) => {
+    // Num telemóvel, a 1/11/2026, o mapa ia e vinha sem parar, sem ninguém lhe
+    // tocar: com a localização já concedida o mapa abre na pessoa, e o
+    // controlo da localização passava a SEGUI-LA — voltava a centrá-la a cada
+    // posição nova, e cada posição nova punha o «Aqui perto» a enquadrar outra
+    // vez a pessoa e as paragens. A 70 km da rede, era do nível da rua a uma
+    // vista de dezenas de quilómetros, em ciclo. O botão passou a responder
+    // uma vez e a não seguir: uma posição nova depois do enquadramento não
+    // mexe no mapa.
+    await context.grantPermissions(['geolocation']);
+    const onde = ondeHaParagens();
+    // UM GPS QUE SE PODE MEXER. O `setGeolocation` do Playwright não chega a
+    // quem está a seguir a posição (`watchPosition`): com ele, este teste
+    // passava com o erro lá dentro. Aqui a página recebe uma geolocalização
+    // que guarda quem a segue e lhe dá a posição nova quando se pede
+    // (`__mover`) — que é o que um telemóvel faz sozinho a cada poucos
+    // segundos.
+    await page.addInitScript(
+      ([lat, lon]) => {
+        let aqui = { lat, lon };
+        const quemSegue = new Map<number, PositionCallback>();
+        let proximo = 0;
+        const posicao = () =>
+          ({
+            coords: {
+              latitude: aqui.lat,
+              longitude: aqui.lon,
+              accuracy: 20,
+              altitude: null,
+              altitudeAccuracy: null,
+              heading: null,
+              speed: null,
+            },
+            timestamp: Date.now(),
+          }) as unknown as GeolocationPosition;
+        navigator.geolocation.getCurrentPosition = (ok) => {
+          setTimeout(() => ok(posicao()), 50);
+        };
+        navigator.geolocation.watchPosition = (ok) => {
+          const id = ++proximo;
+          quemSegue.set(id, ok);
+          setTimeout(() => ok(posicao()), 50);
+          return id;
+        };
+        navigator.geolocation.clearWatch = (id) => {
+          quemSegue.delete(id);
+        };
+        (window as unknown as { __mover: (la: number, lo: number) => void }).__mover = (la, lo) => {
+          aqui = { lat: la, lon: lo };
+          for (const ok of quemSegue.values()) ok(posicao());
+        };
+      },
+      [onde.latitude, onde.longitude],
+    );
+    // SEM TOCAR NO BOTÃO: com a permissão dada, é o próprio mapa que pergunta
+    // ao abrir — e foi assim que aconteceu. Um toque aqui desligava o
+    // seguimento que o mapa tinha acabado de ligar, e escondia o erro.
+    await page.goto('/');
+    await expect(page.locator('.numero-no-mapa').first()).toBeVisible({ timeout: 15_000 });
+
+    type Vista = { z: number; c: [number, number] } | null;
+    const vista = () =>
+      page.evaluate((): Vista => {
+        const m = (
+          window as unknown as {
+            __mapa?: {
+              isMoving(): boolean;
+              getZoom(): number;
+              getCenter(): { toArray(): [number, number] };
+            };
+          }
+        ).__mapa;
+        return !m || m.isMoving() ? null : { z: m.getZoom(), c: m.getCenter().toArray() };
+      });
+    // O enquadramento das paragens acaba quando a vista deixa de mudar.
+    let antes: Vista = null;
+    await expect
+      .poll(
+        async () => {
+          const agora = await vista();
+          const parado = !!agora && JSON.stringify(agora) === JSON.stringify(antes);
+          antes = agora;
+          return parado;
+        },
+        { intervals: [500], timeout: 15_000 },
+      )
+      .toBe(true);
+
+    // CONTAM-SE OS MOVIMENTOS, e não só onde o mapa acaba: com as paragens à
+    // volta, o ir e vir acabava na mesma vista de onde partira — o voo até à
+    // pessoa e o enquadramento de volta —, e comparar só o fim não o via.
+    await page.evaluate(() => {
+      const w = window as unknown as {
+        __movimentos: number;
+        __mapa: { on(evento: string, f: () => void): void };
+      };
+      w.__movimentos = 0;
+      w.__mapa.on('movestart', () => {
+        w.__movimentos += 1;
+      });
+    });
+    // O telemóvel dá uma posição nova, uns 30 m ao lado — como dão sempre.
+    await page.evaluate(
+      ([la, lo]) =>
+        (window as unknown as { __mover: (la: number, lo: number) => void }).__mover(la, lo),
+      [onde.latitude + 0.0003, onde.longitude],
+    );
+    await page.waitForTimeout(2_500);
+    expect(
+      await page.evaluate(() => (window as unknown as { __movimentos: number }).__movimentos),
+      'o mapa mexeu-se sozinho depois de enquadrar',
+    ).toBe(0);
+    expect(await vista()).toEqual(antes);
+  });
+
   test('a caixa de procura diz o que se escreve nela', async ({ page }) => {
     // Uma caixa a flutuar sobre o mapa, vazia e sem etiqueta à vista, não diz
     // a ninguém para que serve. A etiqueta continua lá para o leitor de ecrã.
