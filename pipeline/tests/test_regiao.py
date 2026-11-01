@@ -459,3 +459,25 @@ def test_o_tarifario_diz_o_que_cada_tabela_e(tmp_path):
 def test_o_tarifario_nao_descreve_o_que_nao_tem(tmp_path, redes, erro):
     with pytest.raises(ErroDeRegiao, match=erro):
         Regiao.carregar(_com_tarifas(tmp_path / "x", redes))
+
+
+def test_um_servico_sem_dados_abertos_declara_se_com_modo_nome_e_url(tmp_path):
+    x = {"modo": "expresso", "nome": "Expressos X", "url": "https://x.example"}
+    r = Regiao.carregar(_regiao_minima(tmp_path / "x", modos=["expresso"], servicos_sem_dados=[x]))
+    assert r.servicos_sem_dados == [x]
+    assert Regiao.carregar(_regiao_minima(tmp_path / "sem")).servicos_sem_dados == []
+
+
+@pytest.mark.parametrize(
+    ("servicos", "erro"),
+    [
+        ([{"modo": "expresso", "nome": "X"}], "os três e mais nada"),
+        ([{"modo": "expresso", "nome": "X", "url": "http://x.example"}], "https"),
+        ([{"modo": "taxi", "nome": "X", "url": "https://x.example"}], "lista de modos"),
+        ({"modo": "expresso"}, "é uma lista"),
+    ],
+)
+def test_um_servico_sem_dados_mal_declarado_recusa_se(tmp_path, servicos, erro):
+    pasta = _regiao_minima(tmp_path / "x", modos=["expresso"], servicos_sem_dados=servicos)
+    with pytest.raises(ErroDeRegiao, match=erro):
+        Regiao.carregar(pasta)

@@ -942,6 +942,10 @@ export type SistemaDeBicicletas = {
   operador: string | null;
   estado: string | null;
   disponibilidade_publica: boolean;
+  /** Como se usa, numa frase, quando a receita o diz. Ausente em dados de antes disto. */
+  como_usar?: string | null;
+  /** O sítio do sistema, quando a receita o diz. */
+  sitio?: string | null;
   estacoes: PontoDeModo[];
 };
 
@@ -1083,6 +1087,12 @@ export type ModoDetalhe = {
   /** Ausente em dados de antes disto, e em regiões que não os declaram. */
   urbanos_da_rede?: UrbanoDaRede[];
   operadores?: OperadorDeModo[];
+  /**
+   * Os serviços deste modo que circulam na região e não publicam dados
+   * abertos (`servicos_sem_dados`, no `regiao.yaml`): não há horário que se
+   * mostre, e a página diz que existem e onde se consultam.
+   */
+  sem_dados?: { nome: string; url: string }[];
   incompleto: boolean;
   notas: string[];
   fontes: string[];

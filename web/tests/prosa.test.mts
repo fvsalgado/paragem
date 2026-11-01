@@ -191,3 +191,49 @@ test('um nome do sistema de reservas escreve-se sem o traço baixo', async () =>
   assert.equal(nomeDoSistema('Pedra Alta_Lote 2'), 'Pedra Alta — Lote 2');
   assert.equal(nomeDoSistema('Vale Escuro'), 'Vale Escuro');
 });
+
+test('uma regra de cartaz escreve-se como o resto do sítio, e diz o mesmo', async () => {
+  const { regraLegivel } = await import('../src/lib/prosa.ts');
+  assert.equal(
+    regraLegivel('horários em vigor a partir de 1 de fevereiro de 2021'),
+    'Horários em vigor a partir de 1 de fevereiro de 2021',
+  );
+  assert.equal(
+    regraLegivel('Sábados, exceto feriados, até às 13h58m'),
+    'Sábados, exceto feriados, até às 13:58',
+  );
+  assert.equal(
+    regraLegivel('Sábados, exceto Feriados, até às 13h 50m'),
+    'Sábados, exceto feriados, até às 13:50',
+  );
+  assert.equal(
+    regraLegivel('(3) Até sairem todos os passageiros'),
+    '(3) Até saírem todos os passageiros',
+  );
+  assert.equal(
+    regraLegivel('(1) realiza-se apenas no período escolar'),
+    '(1) Realiza-se apenas no período escolar',
+  );
+  // O que já está bem fica como está — e um nome próprio a meio não se toca.
+  const certa = 'Restantes horários efetuam-se nos dias úteis exceto terças-feiras e feriados';
+  assert.equal(regraLegivel(certa), certa);
+  assert.equal(regraLegivel('Só em Porto Ameno, aos Domingos'), 'Só em Porto Ameno, aos domingos');
+});
+
+test('uma estação não repete o concelho nem o sistema que o título já diz', async () => {
+  const { semPrefixos } = await import('../src/lib/prosa.ts');
+  assert.equal(
+    semPrefixos('Porto Ameno - Escola Secundária', ['Porto Ameno', 'Bici Ameno']),
+    'Escola Secundária',
+  );
+  assert.equal(
+    semPrefixos('BA - Porto Ameno - Praça da República', ['Porto Ameno', 'BA']),
+    'Praça da República',
+  );
+  // Sem acentos nem maiúsculas a separar: «ALMEAO» é «Almeão».
+  assert.equal(semPrefixos('ALMEAO – Piscina Municipal', ['Almeão']), 'Piscina Municipal');
+  // O que não é prefixo do título fica; e um nome que ficasse vazio também.
+  assert.equal(semPrefixos('Almeão - Estação', ['Porto Ameno']), 'Almeão - Estação');
+  assert.equal(semPrefixos('Praça - Norte', ['Praça']), 'Norte');
+  assert.equal(semPrefixos('Almeão', ['Almeão']), 'Almeão');
+});

@@ -185,3 +185,101 @@ def test_uma_linha_urbana_que_o_feed_nao_tem_sai_como_lacuna(raiz, tmp_path):
     assert [(u["nome"], [x["codigo"] for x in u["linhas"]]) for u in urbanos] == [
         ("Circular de Porto Ameno", ["11"])
     ]
+
+
+def test_um_servico_sem_dados_abertos_diz_se_na_pagina_do_modo(raiz, tmp_path):
+    """Quem procurava o expresso que conhece e não o via concluía que o sítio estava incompleto.
+
+    Sem dados abertos não há paragens nem horários para mostrar — e não se
+    inventam. O que se diz é que existe, e onde se consulta; e não conta como
+    uma coisa que o modo tenha.
+    """
+    import dataclasses
+
+    from paragem.sitio import Sitio
+
+    demo = regiao_ou_salta("demo")
+    _feed_da_demonstracao(raiz, tmp_path)
+    antes = Sitio(raiz, demo, tmp_path).modos(None)
+    com = dataclasses.replace(
+        demo,
+        servicos_sem_dados=[
+            {"modo": "expresso", "nome": "Expressos do Poente", "url": "https://poente.example"}
+        ],
+    )
+    modos = Sitio(raiz, com, tmp_path).modos(None)
+    assert modos["expresso"]["sem_dados"] == [
+        {"nome": "Expressos do Poente", "url": "https://poente.example"}
+    ]
+    assert modos["expresso"]["quantos"] == antes.get("expresso", {}).get("quantos", 0)
+    assert "Expressos do Poente" not in modos["expresso"]["gerido_por"]
+
+
+def test_um_sistema_de_bicicletas_diz_como_se_usa_quando_a_receita_o_diz(raiz, tmp_path):
+    """A página listava as estações e não dizia onde se desbloqueia uma bicicleta."""
+    import dataclasses
+
+    from paragem.sitio import Sitio
+
+    demo = regiao_ou_salta("demo")
+    _feed_da_demonstracao(raiz, tmp_path)
+    (decl,) = [s for s in demo.saidas if s.modo == "bicicleta"]
+    gbfs = raiz / "build" / "demo" / decl.saida.strip("/")
+    if not (gbfs / "station_information.json").exists():
+        pytest.skip("sem o GBFS da demonstração — corre `uv run pipeline build --regiao demo`")
+    destino = tmp_path / decl.saida.strip("/")
+    destino.mkdir(parents=True)
+    (destino / "station_information.json").write_bytes(
+        (gbfs / "station_information.json").read_bytes()
+    )
+
+    def com(**extra):
+        sistema = {
+            k: v for k, v in decl.params["sistema"].items() if k not in ("como_usar", "sitio")
+        }
+        return dataclasses.replace(
+            demo,
+            saidas=[
+                dataclasses.replace(s, params={**s.params, "sistema": {**sistema, **extra}})
+                if s is decl
+                else s
+                for s in demo.saidas
+            ],
+        )
+
+    regiao = com(como_usar="Desbloqueia-se na estação.", sitio="https://bici.example")
+    (s,) = Sitio(raiz, regiao, tmp_path).modos(None)["bicicleta"]["sistemas"]
+    assert (s["como_usar"], s["sitio"]) == ("Desbloqueia-se na estação.", "https://bici.example")
+    # Sem a receita o dizer, não se diz nada — a página não inventa como se usa.
+    (s,) = Sitio(raiz, com(), tmp_path).modos(None)["bicicleta"]["sistemas"]
+    assert (s["como_usar"], s["sitio"]) == (None, None)
+
+
+def test_quem_gere_um_expresso_e_o_nome_que_a_receita_declara(raiz, tmp_path):
+    """O feed chama-se «X-eu», e a página dizia «Quem gere: X-eu» — o nome de um ficheiro."""
+    import dataclasses
+
+    from paragem.sitio import Sitio
+
+    demo = regiao_ou_salta("demo")
+    (decl,) = [s for s in demo.saidas if s.modo == "expresso"]
+    feed = raiz / "build" / "demo" / decl.saida
+    if not feed.exists():
+        pytest.skip("sem o feed da demonstração — corre `uv run pipeline build --regiao demo`")
+    _feed_da_demonstracao(raiz, tmp_path)
+    (tmp_path / decl.saida).write_bytes(feed.read_bytes())
+
+    sem = Sitio(raiz, demo, tmp_path).modos(None)["expresso"]
+    com = dataclasses.replace(
+        demo,
+        saidas=[
+            dataclasses.replace(s, params={**s.params, "operador_nome": "Expressos"})
+            if s is decl
+            else s
+            for s in demo.saidas
+        ],
+    )
+    modo = Sitio(raiz, com, tmp_path).modos(None)["expresso"]
+    assert [o["nome"] for o in modo["operadores"]] == ["Expressos"]
+    assert modo["gerido_por"] == ["Expressos"]
+    assert [o["nome"] for o in sem["operadores"]] != ["Expressos"]

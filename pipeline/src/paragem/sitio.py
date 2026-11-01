@@ -1220,6 +1220,27 @@ class Sitio:
             )
             m["urbanos_da_rede"] = urbanos
 
+        # OS SERVIÇOS SEM DADOS ABERTOS (`Regiao.servicos_sem_dados`): não têm
+        # paragens nem horários para mostrar, e não entram nas contas — mas a
+        # página do modo diz que existem, e onde se consultam.
+        for x in self.regiao.servicos_sem_dados:
+            m = por_modo.setdefault(
+                x["modo"],
+                {
+                    "modo": x["modo"],
+                    "gerido_por": [],
+                    "sistemas": [],
+                    "pontos": [],
+                    "percursos": [],
+                    "paragens": [],
+                    "horarios": [],
+                    "incompleto": False,
+                    "notas": [],
+                    "fontes": [],
+                },
+            )
+            m.setdefault("sem_dados", []).append({"nome": x["nome"], "url": x["url"]})
+
         for m in por_modo.values():
             geridos = [s.get("operador") for s in m["sistemas"]]
             geridos += [p.get("operador") for p in m["percursos"]]
@@ -1364,6 +1385,11 @@ class Sitio:
                     "operador": sistema.get("operador"),
                     "estado": decl.params.get("estado"),
                     "disponibilidade_publica": bool(decl.params.get("station_status")),
+                    # COMO SE USA, quando a receita o diz: a página listava as
+                    # estações e não dizia onde se desbloqueia uma bicicleta
+                    # nem para onde ir saber mais (auditoria de 1/11/2026).
+                    "como_usar": (sistema.get("como_usar") or "").strip() or None,
+                    "sitio": (sistema.get("sitio") or "").strip() or None,
                     "estacoes": estacoes,
                 }
             ]
@@ -1621,13 +1647,21 @@ class Sitio:
         # para — uma frase falsa produzida por um atalho de uma linha.
         servem = {rid for p in paragens for rid in por_paragem.get(str(p["id"]), set())}
         agencias = {a["agency_id"]: a for a in feed.obter("agency.txt")}
-        operadores = []
+        operadores: list[dict[str, Any]] = []
         ids = {(rotas.get(r) or {}).get("agency_id") for r in servem}
+        # O NOME QUE A RECEITA DECLARA, quando declara (`operador_nome`): o feed
+        # chama-se «FlixBus-eu», e a página dizia «Quem gere: FlixBus-eu» — o
+        # nome de um ficheiro, e não o de quem vende o bilhete. É o mesmo nome
+        # que as frases dos horários já usavam.
+        declarado = str((decl.params or {}).get("operador_nome") or "").strip()
         for aid in sorted(str(x) for x in ids if x):
             a = agencias.get(aid) or {}
+            nome = declarado or str(a.get("agency_name") or aid).strip()
+            if any(o["nome"] == nome for o in operadores):
+                continue
             operadores.append(
                 {
-                    "nome": str(a.get("agency_name") or aid).strip(),
+                    "nome": nome,
                     "sitio": (a.get("agency_url") or "").strip() or None,
                     "bilhetes": (a.get("agency_fare_url") or "").strip() or None,
                 }

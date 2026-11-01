@@ -257,6 +257,12 @@ class Regiao:
     #: das câmaras. Saem do `rede` — que vai tal e qual para o sítio — e ficam
     #: aqui, validados.
     urbanos_da_rede: list[UrbanoDaRede] = field(default_factory=list)
+    #: OS SERVIÇOS QUE CIRCULAM NA REGIÃO E NÃO PUBLICAM DADOS ABERTOS
+    #: (`servicos_sem_dados`): `modo`, `nome` e `url`. Não entram em lista
+    #: nenhuma de carreiras — não há horário que se mostre —, mas a página do
+    #: modo diz que existem e onde se consultam. Sem isto, quem procurava o
+    #: expresso que conhece e não o via concluía que o sítio estava incompleto.
+    servicos_sem_dados: list[dict[str, str]] = field(default_factory=list)
 
     # --- prosa -----------------------------------------------------------
 
@@ -459,6 +465,7 @@ class Regiao:
             proposta=bool(d.get("proposta", False)),
             faixa_da_proposta=_faixa_da_proposta(d["id"], d.get("proposta")),
             urbanos_da_rede=_urbanos_da_rede(d["id"], (d.get("rede") or {}).get("urbanos")),
+            servicos_sem_dados=_servicos_sem_dados(d["id"], d.get("servicos_sem_dados")),
             municipios_membros=int(terr.get("municipios_membros", len(concelhos))),
             concelhos_servidos=int(terr.get("concelhos_servidos", len(concelhos))),
             caixa=caixa,
@@ -541,6 +548,13 @@ class Regiao:
                 )
 
         _verificar_redes_do_tarifario(self.id, self.tarifas)
+
+        fora_dos_modos = sorted({x["modo"] for x in self.servicos_sem_dados} - set(self.modos))
+        if fora_dos_modos:
+            raise ErroDeRegiao(
+                f"{self.id}: `servicos_sem_dados` fala de {', '.join(fora_dos_modos)}, que não "
+                "está na lista de modos da região: a página onde a frase iria não existe."
+            )
 
         if self.urbanos_da_rede:
             if "urbano-municipal" not in self.modos:
@@ -714,6 +728,36 @@ def _urbanos_da_rede(id_regiao: str, valor: Any) -> list[UrbanoDaRede]:
             )
         urbanos.append(UrbanoDaRede(nome=nome, concelho=concelho, linhas=codigos))
     return urbanos
+
+
+def _servicos_sem_dados(id_regiao: str, valor: Any) -> list[dict[str, str]]:
+    """Os serviços sem dados abertos, como a região os declara (`Regiao.servicos_sem_dados`).
+
+    Cada um com `modo`, `nome` e `url` — a página onde se consultam os horários
+    e os bilhetes, por https —, e nada mais. Que o modo seja da região
+    confere-o o `_verificar`.
+    """
+    if valor in (None, []):
+        return []
+    if not isinstance(valor, list):
+        raise ErroDeRegiao(
+            f"{id_regiao}: `servicos_sem_dados` é uma lista, cada um com `modo`, `nome` e `url`."
+        )
+    saida: list[dict[str, str]] = []
+    for i, x in enumerate(valor):
+        if not isinstance(x, dict) or sorted(x) != ["modo", "nome", "url"]:
+            raise ErroDeRegiao(
+                f"{id_regiao}: `servicos_sem_dados[{i}]` declara-se com `modo`, `nome` e `url`, "
+                f"os três e mais nada — tem {sorted(x) if isinstance(x, dict) else x!r}."
+            )
+        d = {k: str(x[k] or "").strip() for k in ("modo", "nome", "url")}
+        if not d["modo"] or not d["nome"] or not d["url"].startswith("https://"):
+            raise ErroDeRegiao(
+                f"{id_regiao}: `servicos_sem_dados[{i}]` tem de ter `modo` e `nome`, e um `url` "
+                "por https — é para lá que a página manda quem quer os horários."
+            )
+        saida.append(d)
+    return saida
 
 
 def _ler_yaml(caminho: Path) -> dict[str, Any]:

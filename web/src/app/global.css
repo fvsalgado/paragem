@@ -1986,6 +1986,38 @@ ul.pontos-de-modo .accoes a {
 .sobre-estes-dados details[open] > summary {
   margin-bottom: 0.5rem;
 }
+/* A contagem de uma estação numa linha sua, por baixo do nome: cada contagem
+   inteira — «8 docas» não se parte em «· 8» e «docas». */
+.disponibilidade.em-linha-propria .contagem {
+  white-space: nowrap;
+}
+/* «Como se usa», no topo de um sistema de bicicletas, e o cartão de um serviço
+   sem dados abertos: neutros, com borda e sem cor de modo (§6). */
+.como-se-usa,
+.cartao-neutro {
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  background: var(--superficie);
+  padding: 0.25rem 1rem;
+  margin: 0.75rem 0;
+}
+.como-se-usa h3 {
+  margin-top: 0.75rem;
+}
+.como-se-usa ul,
+ul.notas-do-cartaz {
+  padding-left: 1.25rem;
+}
+/* Uma lista fechada em segundo plano — as paragens de uma linha que ainda não
+   estão no mapa —, que não compete com o horário por cima dela. */
+details.lista-fechada.discreta > summary {
+  font-weight: 400;
+  color: var(--texto-secundario);
+  font-size: 0.95rem;
+}
+details.lista-fechada.discreta > summary::after {
+  border-color: var(--texto-secundario);
+}
 
 /* --- «Que título me serve?» -------------------------------------------------- */
 
