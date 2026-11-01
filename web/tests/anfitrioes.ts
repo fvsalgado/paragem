@@ -21,7 +21,13 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-export const PORTA = 4321;
+/**
+ * A porta do sítio: 4321, ou a que `PARAGEM_PORTA` disser — a mesma variável
+ * que o `lighthouse.mjs` já lê. Com duas cópias do repositório a correr na
+ * mesma máquina, a segunda não pode reaproveitar o servidor da primeira: os
+ * testes passavam contra o código do outro.
+ */
+export const PORTA = Number(process.env.PARAGEM_PORTA ?? 4321);
 export const PRODUTO = `http://127.0.0.1:${PORTA}`;
 
 /** O anfitrião de uma região, nos testes. */
