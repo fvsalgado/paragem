@@ -13,7 +13,7 @@ import {
 import { agruparParagens, coresPorNumero, type GrupoDeParagens } from '@/lib/lista-de-paragens';
 import { procurarParagens, RAIO_DA_TERRA } from '@/lib/procura-de-paragens';
 import { metadadosDaRegiao } from '@/lib/metadados';
-import { numero, plural } from '@/lib/prosa';
+import { emMetros, numero, plural } from '@/lib/prosa';
 import Distintivo from '@/componentes/Distintivo';
 import ItemDaParagem from '@/componentes/ItemDaParagem';
 import ProcurarParagem from '@/componentes/ProcurarParagem';
@@ -158,8 +158,7 @@ export default async function ProcurarParagens({ params, searchParams }: Props) 
             <span className="secundario">· {plural(t.grupos.length, 'paragem', 'paragens')}</span>
           </h2>
           <p className="secundario">
-            Paragens com outro nome, a menos de {RAIO_DA_TERRA}
-            {'\u00a0'}m de {t.terra}.
+            Paragens com outro nome, a menos de {emMetros(RAIO_DA_TERRA)} de {t.terra}.
           </p>
           <ul className="lista">{t.grupos.map(item)}</ul>
         </section>

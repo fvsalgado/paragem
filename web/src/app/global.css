@@ -1489,9 +1489,44 @@ details.quadro-do-dia[open] {
   margin: var(--espaco-4) 0 var(--espaco-2);
   min-height: 9rem;
 }
-.a-seguir > h2 {
+/* O TÍTULO DO CARTÃO ENCOSTA AO ALTO, esteja onde estiver lá dentro (#166): o
+   «A seguir» vem dentro do invólucro das partidas, e não era filho direto —
+   a regra não o apanhava, e o cartão abria com 35 px vazios por cima. */
+.a-seguir h2 {
   margin-top: var(--espaco-3);
   font-size: var(--letra-destaque);
+}
+
+/* A ESTAÇÃO NUM ECRÃ LARGO (#83): o dia inteiro à esquerda, e à direita o que
+   parte a seguir, o autocarro à porta e o que mais há ali — uma caixa por
+   linha da grelha, com as partidas do dia a ocupar a altura das quatro. No
+   telemóvel, pela ordem em que estão. */
+@media (min-width: 64rem) {
+  .em-colunas.estacao-em-colunas {
+    grid-template-areas: none;
+    grid-template-rows: auto auto auto auto 1fr;
+  }
+  .estacao-em-colunas > .partidas-da-estacao {
+    grid-column: 1;
+    grid-row: 1 / span 5;
+    min-width: 0;
+  }
+  .estacao-em-colunas > .ao-lado {
+    grid-column: 2;
+    min-width: 0;
+  }
+  .estacao-em-colunas > .partidas-da-estacao > h2:first-child {
+    margin-top: var(--espaco-4);
+  }
+}
+.tipos-de-comboio {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-1);
+  vertical-align: middle;
+}
+.tambem-aqui > ul.pontos-de-modo {
+  margin-top: var(--espaco-2);
 }
 
 /* --- a página da linha ---------------------------------------------------- */
@@ -1570,7 +1605,7 @@ nav.sentidos a {
 /* A chegada onde a viagem espera, por baixo da partida (#120). */
 .quadro-da-linha .chegada-no-quadro {
   display: block;
-  font-size: 0.75rem;
+  font-size: var(--letra-mini);
   font-style: normal;
   color: var(--texto-secundario);
   white-space: nowrap;
@@ -1951,11 +1986,11 @@ ul.localidades .localidade + .paragens-com-linhas {
 /* A procura nas paragens (#103): o campo e o botão na mesma linha, e a ajuda
    por baixo. É um formulário que o servidor responde, sem JavaScript. */
 .procurar-paragem {
-  margin: 0.5rem 0 1.25rem;
+  margin: var(--espaco-2) 0 1.25rem;
 }
 .procurar-paragem .campo-e-botao {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--espaco-2);
 }
 .procurar-paragem .campo-e-botao input {
   flex: 1 1 auto;
@@ -1974,7 +2009,7 @@ ul.localidades .localidade + .paragens-com-linhas {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--espaco-1);
   margin-top: 0.3rem;
 }
 ul.terras-encontradas {
@@ -6295,6 +6330,11 @@ details.fora-da-regiao {
 }
 .outro-dia label {
   margin: 0;
+}
+/* Para onde, numa estação com vários sentidos (#81). */
+.para-onde {
+  margin: var(--espaco-1) 0 0;
+  max-width: 24rem;
 }
 .dia-escolhido {
   margin: var(--espaco-2) 0;

@@ -26,6 +26,15 @@ export function numero(n: number): string {
   return n.toLocaleString('pt-PT', { useGrouping: 'always' } as Intl.NumberFormatOptions);
 }
 
+/**
+ * Uma distância: «300 m», com o número e a unidade presos um ao outro por um
+ * espaço que não parte (#169). No computador, «300» ficava no fim de uma linha
+ * e «m.» começava a seguinte.
+ */
+export function emMetros(n: number): string {
+  return `${numero(n)}\u00a0m`;
+}
+
 /** «1 paragem», «2 paragens» — o número e o nome, a concordar. */
 export function plural(n: number, um: string, varios: string): string {
   return `${numero(n)} ${n === 1 ? um : varios}`;
