@@ -253,8 +253,8 @@ Por esta ordem, um PR de cada vez: (0) a base, provada num Postgres real;
   - o cartão de partilha da região é o cabeçalho em ponto grande: o endereço
     em feixe sobre o papel, e a régua a fechar; na paragem e na linha, o nome
     delas e as tabuletas das linhas (`web/src/lib/cartao.tsx`).
-- Estrutura da página inicial (telemóvel): «Para onde vais?»; faixa de avisos;
-  «Perto de ti»; bloco do transporte a pedido; grelha dos modos; «Que título me
+- Estrutura da página inicial (telemóvel): «Para onde quer ir?»; faixa de avisos;
+  «Aqui perto»; bloco do transporte a pedido; grelha dos modos; «Que título me
   serve?»; concelhos; rodapé.
 - Resultados de viagem: cartões por opção com linha do tempo colorida por modo.
   As opções a pedido mostram a regra de reserva e os botões de reservar.
