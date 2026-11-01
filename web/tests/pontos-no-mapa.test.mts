@@ -96,6 +96,6 @@ test('o raio interpola-se como o mapa o faz', () => {
 
 test('a estação escreve-se sem o «(estação)», e o resto como está', () => {
   assert.equal(rotuloNoMapa({ tipo: 'estacao', nome: 'Vila Nova (estação)' }), 'Vila Nova');
-  assert.equal(rotuloNoMapa({ tipo: 'estacao', nome: 'Entroncamento' }), 'Entroncamento');
+  assert.equal(rotuloNoMapa({ tipo: 'estacao', nome: 'Vale Sereno' }), 'Vale Sereno');
   assert.equal(rotuloNoMapa({ tipo: 'paragem', nome: 'Rua (estação)' }), 'Rua (estação)');
 });
