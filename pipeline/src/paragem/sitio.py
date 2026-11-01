@@ -2445,13 +2445,15 @@ def _lacunas(raiz: Path, regiao: Regiao) -> dict[str, Any]:
 # e poder olhar.
 #
 #   odbl      a saída (ou a fonte) DECLARA ODbL na receita da região: o que
-#             deriva do OpenStreetMap — só dele, ou com os traçados
-#             encaminhados por ele — leva a partilha nos mesmos termos. É uma
-#             licença aberta, e a atribuição vai dentro do ficheiro
-#             (`_embutir_atribuicao`). Não se infere: declara-se (`licenca:`).
+#             deriva SÓ do OpenStreetMap. É uma licença aberta, e a atribuição
+#             vai dentro do ficheiro (`_embutir_atribuicao`). Não se infere:
+#             declara-se (`licenca:`).
 #   consulta  construído por nós a partir de fontes SEM licença aberta
-#             declarada. Está aqui para se ver e conferir; a publicação com
-#             licença aberta depende da autoridade de transportes (Fase 5).
+#             declarada — os horários de uma operadora, as paragens de uma
+#             autoridade de transportes, os cartazes de uma câmara —, mesmo
+#             que leve partes do OpenStreetMap (`partes_odbl`). Está aqui para
+#             se ver e conferir; a publicação com licença aberta depende da
+#             autoridade de transportes (Fase 5).
 #   terceiro  é o ficheiro de outra entidade, filtrado à região. Os termos
 #             são os dela, e quem o quiser reutilizar fala com ela.
 ODBL = "odbl"
@@ -2479,12 +2481,16 @@ LICENCA_DO_RELATORIO = "CC-BY-4.0"
 def _termos(fonte: Any, papel: str | None, licenca_da_saida: str | None = None) -> str:
     """O rótulo sai da licença da SAÍDA quando ela a declara, e só então da fonte.
 
-    Era só da fonte, e isso estava errado na raiz: a licença de uma obra
-    derivada não é a da entrada principal. O feed da rede sai de um caderno de
-    horários que não declara licença — e por isso ficava «para consulta» — mas
-    74 % dos traçados dele encaminham-se pelo OpenStreetMap, cuja partilha nos
-    mesmos termos ganha a tudo o resto. O ficheiro não estava por licenciar:
-    estava mal rotulado, e o rótulo era mais restritivo do que a realidade.
+    A licença de uma obra derivada não é a da entrada principal, e por isso a
+    receita pode declarar a da saída. Mas só se declara ODbL no que deriva SÓ
+    do OpenStreetMap.
+
+    Esteve escrito aqui que a partilha nos mesmos termos da ODbL «ganha a tudo
+    o resto», e com esse argumento o feed de uma rede — horários da operadora,
+    paragens da autoridade de transportes, traçados encaminhados pelo mapa —
+    saía rotulado ODbL. A ODbL não dá direitos sobre dados de terceiros que
+    ninguém nos autorizou a reutilizar: o que eles trazem continua deles, e o
+    ficheiro fica «para consulta», com a parte do mapa dita em `partes_odbl`.
     """
     licenca = (licenca_da_saida or fonte.licenca or "").upper()
     if licenca.startswith("ODBL"):
@@ -2557,36 +2563,51 @@ def _nomeia_osm(texto: str | bytes | None) -> bool:
     return "openstreetmap" in texto.lower()
 
 
-def _atribuicao_da_descarga(fonte: Any, termos: str) -> tuple[str | None, bool]:
+def _atribuicao_da_descarga(
+    fonte: Any, termos: str, partes_odbl: str | None = None
+) -> tuple[str | None, bool]:
     """A atribuição que a página escreve ao lado do ficheiro, e se é obrigatória.
 
     A de um ficheiro sob ODbL leva sempre o OpenStreetMap: é dele que vem a
     licença, mesmo quando a fonte principal é outra — o registo de fontes dá a
-    atribuição da ENTRADA, e o rótulo ODbL é da SAÍDA (`Saida.licenca`).
+    atribuição da ENTRADA, e o rótulo ODbL é da SAÍDA (`Saida.licenca`). A de
+    um ficheiro para consulta com partes do mapa leva-o também: a atribuição do
+    OpenStreetMap é obrigatória onde quer que os dados dele vão.
     """
     propria = fonte.atribuicao
-    if termos != ODBL:
+    if termos != ODBL and not partes_odbl:
         return propria, fonte.exige_atribuicao
     if _nomeia_osm(propria):
         return propria, True
     return (f"{ATRIBUICAO_OSM}; {propria}" if propria else ATRIBUICAO_OSM), True
 
 
-def _embutir_atribuicao(alvo: Path) -> None:
+def _embutir_atribuicao(alvo: Path, parcial: str | None = None) -> None:
     """Põe a nota da ODbL dentro do ficheiro, onde o formato a deixa pôr.
 
     Num GTFS vai para o `attributions.txt`, que é onde o formato a quer; noutro
     zip, num `ATRIBUICAO.txt`; num JSON, nos campos `attribution` e `license`,
     como no GeoJSON que o leitor do OpenStreetMap escreve. Um CSV não tem onde a
     guardar sem deixar de ser CSV — leva-a a página, ao lado dele.
+
+    `parcial` é a parte do ficheiro que vem do OpenStreetMap, num ficheiro que
+    NÃO é todo dele. Aí a nota diz que é essa parte que está sob ODbL — e não o
+    ficheiro inteiro, que leva dados de quem não nos deu licença nenhuma.
     """
     if alvo.suffix == ".zip":
-        _atribuicao_no_zip(alvo)
+        _atribuicao_no_zip(alvo, parcial)
     elif alvo.suffix in (".json", ".geojson"):
-        _atribuicao_no_json(alvo)
+        _atribuicao_no_json(alvo, parcial)
 
 
-def _atribuicao_no_zip(alvo: Path) -> None:
+def _nota_parcial(parcial: str) -> str:
+    return (
+        f"Sem licença aberta declarada, para consulta. A parte que deriva do OpenStreetMap "
+        f"({parcial}) está sob a Open Database License (ODbL) 1.0 — {LICENCA_ODBL}"
+    )
+
+
+def _atribuicao_no_zip(alvo: Path, parcial: str | None = None) -> None:
     with zipfile.ZipFile(alvo) as z:
         membros = [(i.filename, z.read(i)) for i in z.infolist() if not i.is_dir()]
     nomes = [n for n, _ in membros]
@@ -2603,9 +2624,17 @@ def _atribuicao_no_zip(alvo: Path) -> None:
         if any(_nomeia_osm(b) for _, b in membros):
             return
         nota = (
-            f"Estes dados derivam do OpenStreetMap.\n"
-            f"{ATRIBUICAO_OSM} — {COPYRIGHT_OSM}\n"
-            f"Disponíveis sob a Open Database License (ODbL) 1.0 — {LICENCA_ODBL}\n"
+            (
+                f"Parte destes dados deriva do OpenStreetMap: {parcial}.\n"
+                f"{ATRIBUICAO_OSM} — {COPYRIGHT_OSM}\n"
+                f"{_nota_parcial(parcial)}\n"
+            )
+            if parcial
+            else (
+                f"Estes dados derivam do OpenStreetMap.\n"
+                f"{ATRIBUICAO_OSM} — {COPYRIGHT_OSM}\n"
+                f"Disponíveis sob a Open Database License (ODbL) 1.0 — {LICENCA_ODBL}\n"
+            )
         )
         membros.append((NOTA_DA_ODBL, nota.encode("utf-8")))
     # Reescrito como o `_zipar` escreve: a mesma data fixa, para que o mesmo
@@ -2644,7 +2673,7 @@ def _com_linha_do_osm(atual: bytes | None) -> bytes:
     return (texto + saida.getvalue()).encode("utf-8")
 
 
-def _atribuicao_no_json(alvo: Path) -> None:
+def _atribuicao_no_json(alvo: Path, parcial: str | None = None) -> None:
     dados = json.loads(alvo.read_text(encoding="utf-8"))
     if not isinstance(dados, dict) or _nomeia_osm(dados.get("attribution")):
         return
@@ -2653,7 +2682,7 @@ def _atribuicao_no_json(alvo: Path) -> None:
     # OpenStreetMap, para se ver sem descer o ficheiro.
     novo: dict[str, Any] = {"type": dados["type"]} if "type" in dados else {}
     novo["attribution"] = f"{ATRIBUICAO_OSM}; {atual}" if atual else ATRIBUICAO_OSM
-    novo["license"] = dados.get("license") or LICENCA_ODBL
+    novo["license"] = _nota_parcial(parcial) if parcial else (dados.get("license") or LICENCA_ODBL)
     novo.update({k: v for k, v in dados.items() if k not in novo})
     alvo.write_text(json.dumps(novo, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
@@ -2689,6 +2718,7 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
         papel: str | None,
         descricao: str,
         licenca_da_saida: str | None = None,
+        partes_odbl: str | None = None,
     ) -> None:
         alvo = pasta / relativo
         alvo.parent.mkdir(parents=True, exist_ok=True)
@@ -2697,9 +2727,14 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
         else:
             shutil.copyfile(origem, alvo)
         termos = _termos(fonte, papel, licenca_da_saida)
+        # A PARTE DO MAPA SÓ SE DIZ À PARTE quando o ficheiro não é todo dele:
+        # num ficheiro sob ODbL, a ODbL já é o ficheiro inteiro.
+        parcial = partes_odbl if termos != ODBL else None
         if termos == ODBL:
             _embutir_atribuicao(alvo)
-        atribuicao, obrigatoria = _atribuicao_da_descarga(fonte, termos)
+        elif parcial:
+            _embutir_atribuicao(alvo, parcial)
+        atribuicao, obrigatoria = _atribuicao_da_descarga(fonte, termos, parcial)
         dados = alvo.read_bytes()
         saida.append(
             {
@@ -2716,6 +2751,7 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
                 "licenca": licenca_da_saida or fonte.licenca,
                 "licenca_por_esclarecer": fonte.licenca_por_esclarecer,
                 "termos": termos,
+                "partes_odbl": parcial,
                 "atribuicao": atribuicao,
                 "atribuicao_obrigatoria": obrigatoria,
                 "descricao": descricao,
@@ -2754,6 +2790,7 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
             papel=s.papel,
             descricao=_descricao_da_saida(s),
             licenca_da_saida=s.licenca,
+            partes_odbl=s.partes_odbl,
         )
 
     # As DECISÕES, que não são saídas da receita e são o que torna a
@@ -2781,14 +2818,13 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
                 modo=dona.modo,
                 papel="decisoes",
                 descricao=DECISOES.get(ficheiro.name, "uma decisão por linha, com a razão"),
-                # A LICENÇA É A DA SAÍDA DE QUE ESTA TABELA DECIDE, e não a da
-                # fonte. É o mesmo erro que o `_termos` foi escrito para
-                # corrigir, repetido aqui: a tabela carrega as MESMAS
-                # coordenadas resolvidas que o feed carrega, e saía rotulada
-                # «para consulta» ao lado do feed rotulado ODbL. Uma tabela
-                # que explica um ficheiro não pode estar sob termos mais
-                # apertados do que o ficheiro que explica.
+                # OS TERMOS SÃO OS DA SAÍDA DE QUE ESTA TABELA DECIDE, e não
+                # os da fonte: a tabela carrega as MESMAS coordenadas
+                # resolvidas que o feed carrega, e não pode sair sob termos
+                # diferentes dos do ficheiro que explica — nem mais apertados
+                # nem mais largos.
                 licenca_da_saida=dona.licenca,
+                partes_odbl=dona.partes_odbl,
             )
 
     relatorio = raiz / "build" / "reports" / f"{regiao.id}.md"

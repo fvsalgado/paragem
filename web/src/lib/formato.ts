@@ -465,6 +465,12 @@ export type Descarga = {
   licenca_por_esclarecer: boolean;
   /** `odbl` reutiliza-se, `consulta` vê-se, `terceiro` fala-se com quem o publica. */
   termos?: 'odbl' | 'consulta' | 'terceiro' | 'nosso';
+  /**
+   * Num ficheiro para consulta, a parte que vem do OpenStreetMap — «os
+   * traçados», «as coordenadas das estações». É essa parte que está sob ODbL,
+   * e não o ficheiro inteiro. Ausente quando não há, e em dados de antes disto.
+   */
+  partes_odbl?: string | null;
   atribuicao: string | null;
   atribuicao_obrigatoria: boolean;
   descricao?: string;

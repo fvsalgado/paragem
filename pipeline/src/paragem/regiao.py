@@ -96,11 +96,19 @@ class Saida:
     publica: bool = True
     #: A LICENÇA DA SAÍDA, quando não é a da fonte.
     #:
-    #: A de uma obra derivada não é a da entrada principal: é a soma de todas
-    #: as entradas mais o que lhe pusemos em cima, e a mais exigente ganha.
-    #: Um feed cujos traçados se encaminham pelo OpenStreetMap leva a partilha
-    #: nos mesmos termos da ODbL, mesmo que o caderno de horários de onde saem
-    #: as horas não declare licença nenhuma.
+    #: A de uma obra derivada não é a da entrada principal. Uma saída que deriva
+    #: SÓ do OpenStreetMap, pela mão de um leitor que a fonte não deixa ver —
+    #: uma lista de estações em que só a posição vem do mapa, por exemplo —, é
+    #: ODbL e declara-o aqui.
+    #:
+    #: O QUE ISTO NÃO FAZ é relicenciar dados de terceiros. Esteve escrito que
+    #: «a partilha nos mesmos termos da ODbL ganha a tudo o que entra», e com
+    #: isso feeds com os horários de uma operadora, as paragens de uma
+    #: autoridade de transportes e os cartazes de uma câmara saíam rotulados
+    #: ODbL. A ODbL obriga quem usa o OpenStreetMap; não dá a ninguém direitos
+    #: sobre os dados dos outros, que ninguém nos autorizou a reutilizar. Uma
+    #: saída que junta os dois fica «para consulta» (o rótulo por omissão), e a
+    #: parte que veio do mapa diz-se em `partes_odbl`.
     #:
     #: NÃO SE INFERE, declara-se. Os leitores compostos puxam fontes por dentro
     #: — camadas de um geoportal, um registo do regulador, o próprio
@@ -108,6 +116,12 @@ class Saida:
     #: a partir dela dava a licença errada com ar de automática, que é pior do
     #: que não inferir. Quem constrói a região sabe o que lá entrou, e escreve-o.
     licenca: str | None = None
+    #: A PARTE DO OPENSTREETMAP numa saída que não é toda dele — «os traçados
+    #: encaminhados pelo OpenStreetMap», «as coordenadas das estações». A saída
+    #: continua para consulta; esta parte é ODbL, e a atribuição vai dentro do
+    #: ficheiro e ao lado dele na página de dados abertos. Declara-se, como a
+    #: licença: o leitor sabe o que puxou, a receita é que o diz.
+    partes_odbl: str | None = None
     leitor_especifico_da_fonte: bool = False
     params: dict[str, Any] = field(default_factory=dict)
 
@@ -363,6 +377,9 @@ class Regiao:
                 papel=s.get("papel"),
                 publica=bool(s.get("publica", True)),
                 licenca=s.get("licenca"),
+                partes_odbl=(str(s["partes_odbl"]).strip() or None)
+                if s.get("partes_odbl")
+                else None,
                 leitor_especifico_da_fonte=bool(s.get("leitor_especifico_da_fonte", False)),
                 params=s.get("params") or {},
             )

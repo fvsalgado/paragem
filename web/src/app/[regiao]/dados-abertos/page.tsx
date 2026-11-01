@@ -97,6 +97,12 @@ function Ficheiro({ d }: { d: Descarga }) {
           dizem agora a da fonte de onde ele sai (P1-046, P2-026). */}
       <div className="secundario">
         {TERMOS[d.termos ?? 'consulta'] ?? 'termos por confirmar'} · origem: {d.fonte}
+        {/* A PARTE DO MAPA, num ficheiro que não é todo dele: é essa parte que
+            está sob ODbL, e não o ficheiro — que leva dados de quem não nos
+            deu licença nenhuma. */}
+        {d.partes_odbl
+          ? ` · a parte que vem do OpenStreetMap (${d.partes_odbl}) está sob ODbL`
+          : ''}
         {d.atribuicao
           ? ` · ${d.atribuicao_obrigatoria ? 'atribuição obrigatória' : 'atribuição'}: ${d.atribuicao}`
           : ''}
@@ -113,7 +119,6 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
   const porEsclarecer = ds.filter((d) => d.licenca_por_esclarecer);
   const sobOdbl = ds.filter((d) => d.termos === 'odbl');
   const daCasa = ds.filter((d) => d.termos === 'nosso');
-  const abertos = [...sobOdbl, ...daCasa];
   const soParaConsulta = ds.filter((d) => d.termos === 'consulta');
 
   return (
@@ -131,16 +136,36 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
           termos não nos autorizavam a relicenciar, dizê-lo era honestidade.
           Deixar o mesmo aviso depois de eles saírem seria o contrário: uma
           página de dados abertos a pedir desculpa por dados que são abertos. */}
+      {/* UM FACTO SOBRE OS TERMOS, E NÃO UM ALARME: numa faixa de informação.
+          O vermelho é dos avisos de serviço (P1-017).
+
+          E DIZ O QUE A ODbL NÃO FAZ. Esteve aqui que os ficheiros com
+          horários e paragens da região saíam sob ODbL por terem partes do
+          OpenStreetMap — e com isso «pode levá-los, usá-los e
+          redistribuí-los» ao lado de dados que ninguém nos autorizou a
+          reutilizar. A ODbL obriga quem usa o mapa; não dá direitos sobre os
+          dados dos outros. */}
       {soParaConsulta.length ? (
-        <div className="faixa alerta">
+        <div className="faixa informacao">
           <p>
-            <strong>Nem todos estes ficheiros têm licença aberta declarada.</strong> Os que a
-            declaração desta região dá como assentes no OpenStreetMap saem sob ODbL e reutilizam-se
-            com atribuição
-            {abertos.length ? ` (${abertos.length})` : ''}. Os que a construção faz a partir de
-            documentos cujos termos não nos autorizam a relicenciar estão aqui{' '}
-            <strong>para consulta</strong> ({soParaConsulta.length}): a publicação com licença
-            aberta depende de autorização {aAutoridade(r, 'de')}.
+            <strong>Nem todos estes ficheiros têm licença aberta declarada.</strong>{' '}
+            {sobOdbl.length > 0 ? (
+              <>
+                Os que derivam só do OpenStreetMap saem sob ODbL e reutilizam-se com atribuição
+                {` (${sobOdbl.length})`}.{' '}
+              </>
+            ) : null}
+            Os que levam horários, paragens ou circuitos de quem gere e opera o serviço estão aqui{' '}
+            <strong>para consulta</strong> ({soParaConsulta.length}): servem para ver e conferir,
+            mas não se redistribuem com uma licença que não é nossa para dar. Quando um deles leva
+            partes do OpenStreetMap, diz quais — essas partes estão sob ODbL, com a atribuição
+            dentro do ficheiro. A publicação com licença aberta depende de autorização{' '}
+            {aAutoridade(r, 'de')}.
+          </p>
+          <p>
+            Aqui está <strong>o que {aAutoridade(r, 'com_artigo')} gere</strong>. Os feeds de outros
+            operadores alimentam o mapa, as páginas de paragem e o planeador deste sítio, mas não se
+            descarregam daqui: quem os distribui é quem os produz.
           </p>
         </div>
       ) : (

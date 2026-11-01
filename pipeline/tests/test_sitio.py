@@ -539,11 +539,10 @@ def _fonte(licenca: str = "", por_esclarecer: bool = False):
 def test_a_licenca_da_saida_ganha_a_da_fonte():
     """A licença de uma obra derivada não é a da entrada principal.
 
-    O feed da rede sai de um caderno de horários que não declara licença, e por
-    isso ficava «para consulta». Mas 668 dos 903 traçados encaminham-se pelo
-    OpenStreetMap, e a partilha nos mesmos termos da ODbL ganha a tudo o que
-    entra. O ficheiro não estava por licenciar — estava mal rotulado, e o
-    rótulo era MAIS restritivo do que a realidade obriga.
+    Uma saída que deriva só do OpenStreetMap, por um leitor cuja fonte
+    principal é outra, declara ODbL e é ODbL. O que este teste NÃO diz é que
+    um feed com horários de uma operadora passe a ODbL por ter traçados do
+    mapa: isso é a receita a não o declarar (ver o teste das partes do mapa).
     """
     from paragem.sitio import _termos
 
@@ -643,10 +642,8 @@ def test_um_modo_que_a_regiao_nao_declara_fica_de_fora_da_conta():
 def test_uma_tabela_de_decisoes_nao_sai_mais_fechada_do_que_o_ficheiro_que_explica():
     """As decisões carregam as MESMAS coordenadas resolvidas que o feed.
 
-    Saíam com a licença da FONTE — «sem licença aberta declarada, para
-    consulta» — ao lado do feed que explicam, rotulado ODbL. É o mesmo erro
-    que o `_termos` foi escrito para corrigir: a licença de uma obra derivada
-    não é a da entrada principal.
+    Saem com os termos da saída de que decidem, e não com os da fonte: nem
+    mais apertados nem mais largos do que o ficheiro que explicam.
     """
     from paragem.sitio import ODBL, _termos
 
@@ -999,3 +996,49 @@ fontes:
         # Um dos dois sem data: o modo fica sem data.
         "expresso": None,
     }
+
+
+# --- a parte do mapa num ficheiro que não é todo dele ----------------------
+
+
+def test_um_ficheiro_para_consulta_com_partes_do_mapa_diz_qual_e_a_parte(tmp_path):
+    """A ODbL obriga quem usa o OpenStreetMap; não relicencia os dados dos outros.
+
+    Um catálogo com as horas de uma brochura e as coordenadas de um mapa fica
+    para consulta — e a parte do mapa leva a atribuição dentro, a dizer que é
+    ESSA parte que está sob ODbL e não o ficheiro inteiro.
+    """
+    import zipfile
+
+    from paragem.sitio import NOTA_DA_ODBL, _embutir_atribuicao
+
+    alvo = _zip(tmp_path / "estacoes.zip", {"station_information.json": "{}"})
+    _embutir_atribuicao(alvo, "as coordenadas das estações")
+    with zipfile.ZipFile(alvo) as z:
+        nota = z.read(NOTA_DA_ODBL).decode("utf-8")
+    assert "as coordenadas das estações" in nota
+    assert "para consulta" in nota
+    assert "OpenStreetMap" in nota
+
+    catalogo = tmp_path / "catalogo.json"
+    catalogo.write_text('{"nome": "x"}', encoding="utf-8")
+    _embutir_atribuicao(catalogo, "as coordenadas das paragens")
+    import json
+
+    d = json.loads(catalogo.read_text(encoding="utf-8"))
+    assert "OpenStreetMap" in d["attribution"]
+    assert d["license"].startswith("Sem licença aberta declarada")
+    assert "as coordenadas das paragens" in d["license"]
+
+
+def test_a_atribuicao_ao_lado_de_um_ficheiro_para_consulta_com_partes_do_mapa():
+    from types import SimpleNamespace
+
+    from paragem.sitio import CONSULTA, _atribuicao_da_descarga
+
+    caderno = SimpleNamespace(atribuicao="Operadora X", exige_atribuicao=False)
+    texto, obrigatoria = _atribuicao_da_descarga(caderno, CONSULTA, "os traçados")
+    assert "OpenStreetMap" in texto and "Operadora X" in texto
+    assert obrigatoria is True
+    # Sem partes do mapa, é só a da fonte, como era.
+    assert _atribuicao_da_descarga(caderno, CONSULTA) == ("Operadora X", False)
