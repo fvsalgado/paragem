@@ -145,3 +145,10 @@ test('a faixa de uma proposta contrai a autoridade como a região a declara', ()
   const semArtigo = fraseDaProposta({ autoridade: { nome: 'Comunidade X' } });
   assert.match(semArtigo.texto, /serviço da autoridade de transportes \(Comunidade X\):/);
 });
+
+test('um nome do sistema de reservas escreve-se sem o traço baixo', async () => {
+  const { nomeDoSistema } = await import('../src/lib/prosa.ts');
+  assert.equal(nomeDoSistema('Circuito Norte_Reforço'), 'Circuito Norte — Reforço');
+  assert.equal(nomeDoSistema('Pedra Alta_Lote 2'), 'Pedra Alta — Lote 2');
+  assert.equal(nomeDoSistema('Vale Escuro'), 'Vale Escuro');
+});

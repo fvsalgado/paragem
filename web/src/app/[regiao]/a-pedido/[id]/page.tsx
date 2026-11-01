@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from '@/componentes/Ligacao';
 import type { Metadata } from 'next';
+import { nomeDoSistema } from '@/lib/prosa';
 import { aPedido, exigirRegiao, url, urlRede, NAO_ENCONTRADA, regiao } from '@/lib/dados';
 import QuadroDeHorario from '@/componentes/QuadroDeHorario';
 import Transcricao from '@/componentes/Transcricao';
@@ -28,8 +29,8 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const h = d?.horarios.find((x) => x.id === id);
   if (!h || !r) return { title: NAO_ENCONTRADA };
   return metadadosDaRegiao(r, {
-    titulo: h.nome,
-    descricao: `${h.nome}: o horário do transporte a pedido ${r.em}, e como reservar.`,
+    titulo: nomeDoSistema(h.nome),
+    descricao: `${nomeDoSistema(h.nome)}: o horário do transporte a pedido ${r.em}, e como reservar.`,
     caminho: url(rid, caminhoDoHorario(h.id)),
   });
 }
@@ -68,7 +69,7 @@ export default async function HorarioAPedido({ params }: { params: Promise<Param
   return (
     <>
       <AbrirPeloEndereco />
-      <h1>{h.nome}</h1>
+      <h1>{nomeDoSistema(h.nome)}</h1>
       <p className="secundario">
         {[
           plural(h.paragens.length, 'paragem', 'paragens'),
@@ -109,7 +110,7 @@ export default async function HorarioAPedido({ params }: { params: Promise<Param
         a paragem.
       </p>
       {h.quadros.map((q, iq) => (
-        <QuadroDeHorario key={iq} quadro={q} titulo={h.nome} id={ids[iq]} />
+        <QuadroDeHorario key={iq} quadro={q} titulo={nomeDoSistema(h.nome)} id={ids[iq]} />
       ))}
       <Transcricao por={h.transcrito_por} em={h.transcrito_em} de="da brochura" />
 

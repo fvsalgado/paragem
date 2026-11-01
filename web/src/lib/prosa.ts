@@ -161,3 +161,15 @@ export function fraseDaProposta(r: Pick<Regiao, 'autoridade'>): {
       'faz com a informação pública da região.',
   };
 }
+
+/**
+ * Um nome escrito por um sistema de reservas, como se escreve numa frase.
+ *
+ * O sistema separa o qualificativo com um traço baixo — «Circuito
+ * Norte_Reforço», «Pedra Alta_Lote 2» — e a página mostrava-o assim. Nenhum
+ * nome português leva «_»: troca-se pelo travessão que a casa usa nestes casos
+ * («Pedra Alta — Reforço»), e o resto fica como está.
+ */
+export function nomeDoSistema(nome: string): string {
+  return nome.replace(/\s*_+\s*/g, ' — ').trim();
+}

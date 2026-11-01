@@ -25,8 +25,14 @@ import {
 test('a espera responde à pergunta de quem está na paragem', () => {
   assert.equal(esperaLegivel('14:20', '14:08'), '12 min');
   assert.equal(esperaLegivel('14:08', '14:08'), 'agora');
-  assert.equal(esperaLegivel('15:51', '14:08'), '1 h 43');
-  assert.equal(esperaLegivel('16:08', '14:08'), '2 h');
+  assert.equal(esperaLegivel('15:08', '14:08'), '60 min');
+});
+
+test('a mais de uma hora, a resposta é a hora e não «5 h 49»', () => {
+  // Quem está a mais de uma hora de uma partida não está na paragem: está a
+  // planear, e quer o relógio. A folha mostra a hora quando a espera é nula.
+  assert.equal(esperaLegivel('15:09', '14:08'), null);
+  assert.equal(esperaLegivel('19:57', '14:08'), null);
 });
 
 test('o que já passou, ou é longe de mais, fica só com o relógio', () => {
@@ -150,9 +156,11 @@ test('O AMANHÃ É O AMANHÃ A SÉRIO: sexta à noite, as próximas são as de s
     ['08:00', '12:00'],
     'só as de sábado',
   );
-  // E a espera conta as 24 horas da volta ao dia: «06:45» menos «20:46» dava
-  // negativo, e a espera sumia-se à hora em que mais faz falta.
-  assert.equal(esperaLegivel('08:00', '23:50', true), '8 h 10');
+  // E a espera conta as 24 horas da volta ao dia: «00:20» menos «23:50» dava
+  // negativo, e a espera sumia-se à hora em que mais faz falta. A mais de uma
+  // hora, é a hora que se mostra.
+  assert.equal(esperaLegivel('00:20', '23:50', true), '30 min');
+  assert.equal(esperaLegivel('08:00', '23:50', true), null);
   assert.equal(
     fraseDoDia(r, dia(2, 23, 50)),
     'Hoje já não há mais partidas nesta paragem. As próximas são amanhã:',

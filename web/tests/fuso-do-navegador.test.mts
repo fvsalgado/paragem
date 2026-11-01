@@ -161,3 +161,16 @@ test('e depois da última de hoje, «amanhã» é o amanhã da região', () => {
     });
   }
 });
+
+test('«amanhã» é o de hoje: numa pesquisa para outro dia, diz-se o dia pelo nome', async () => {
+  const { diaDe } = await import('../src/lib/otp.ts');
+  // Domingo, 1/11/2026, ao meio-dia em Lisboa; pergunta-se por terça, 3/11.
+  const hoje = Date.UTC(2026, 10, 1, 12, 0);
+  const terca = Date.UTC(2026, 10, 3, 8, 0);
+  const quarta = Date.UTC(2026, 10, 4, 7, 30);
+  assert.equal(diaDe(quarta, terca, 'Europe/Lisbon', hoje), 'quarta-feira, 4/11');
+  assert.equal(diaDe(terca, terca, 'Europe/Lisbon', hoje), '', 'o dia perguntado não se repete');
+  // Perguntado hoje, o dia seguinte continua a ser «amanhã».
+  const segunda = Date.UTC(2026, 10, 2, 7, 0);
+  assert.equal(diaDe(segunda, hoje, 'Europe/Lisbon', hoje), 'amanhã');
+});

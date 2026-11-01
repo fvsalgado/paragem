@@ -51,6 +51,26 @@ def test_o_nome_escreve_se_como_se_lê():
     assert limpo("Pedra Alta\r\n  (Terminal)") == "Pedra Alta (Terminal)"
 
 
+def test_um_cartaz_em_caixa_alta_escreve_se_como_se_le():
+    """«da INSTITUTO DE LÍNGUAS» e «(1) - REALIZA-SE APENAS NO PERÍODO ESCOLAR»."""
+    from paragem.nomes import frase_de_cartaz, nome_de_cartaz
+
+    assert nome_de_cartaz("INSTITUTO DE LÍNGUAS") == "Instituto de Línguas"
+    # As siglas ficam siglas: «Estação / Cp» lia-se como um erro.
+    assert nome_de_cartaz("ESTAÇÃO / CP") == "Estação / CP"
+    assert nome_de_cartaz("ESCOLA EB 2/3 DR. RUY D'ANDRADE") == "Escola EB 2/3 Dr. Ruy D'Andrade"
+    # Caixa mista fica como está: quem a escreveu sabia.
+    assert nome_de_cartaz("Av. Nogueiral (Gare)") == "Av. Nogueiral (Gare)"
+    assert frase_de_cartaz("(1) - REALIZA-SE APENAS NO PERÍODO ESCOLAR") == (
+        "(1) Realiza-se apenas no período escolar"
+    )
+    assert frase_de_cartaz("(2) - TERMINA NA ESTAÇÃO/CP") == "(2) Termina na estação/CP"
+    # A grafia de hoje, e nada mais: a frase continua a ser a do cartaz.
+    assert frase_de_cartaz("Sábados, excepto Feriados, até às 13h 50m") == (
+        "Sábados, exceto Feriados, até às 13h 50m"
+    )
+
+
 # --- universo --------------------------------------------------------------
 
 

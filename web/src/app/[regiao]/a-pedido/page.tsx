@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import { aPedido, dadosAbertos, exigirRegiao, url, urlRede, regiao } from '@/lib/dados';
 import ProcurarTerra from '@/componentes/ProcurarTerra';
 import { caminhoDoHorario, idDoQuadro, indiceDasTerras } from '@/lib/a-pedido';
-import { plural } from '@/lib/prosa';
+import { nomeDoSistema, plural } from '@/lib/prosa';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
 export async function generateMetadata({
@@ -49,6 +49,22 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
   if (!d) notFound();
 
   const { reservas: v } = d;
+  // O TÍTULO DE CADA GRUPO DE HORÁRIOS É O CONCELHO — e quando o concelho tem
+  // mais do que um, o nome do grupo. Eram cinco linhas iguais com o nome do
+  // mesmo concelho, uma por circuito, e nenhuma dizia qual era.
+  const porConcelho = new Map<string, number>();
+  for (const h of d.horarios) {
+    if (h.concelho_nome)
+      porConcelho.set(h.concelho_nome, (porConcelho.get(h.concelho_nome) ?? 0) + 1);
+  }
+  const tituloDoHorario = (h: (typeof d.horarios)[number]) =>
+    !h.concelho_nome
+      ? nomeDoSistema(h.nome)
+      : h.circuito_de
+        ? `${h.concelho_nome} — ${h.circuito_de}`
+        : (porConcelho.get(h.concelho_nome) ?? 0) > 1
+          ? nomeDoSistema(h.nome)
+          : h.concelho_nome;
   const comCircuitos = d.zonas.filter((z) => z.circuitos.length);
   const semCircuitos = d.zonas.filter((z) => !z.circuitos.length);
   // O QUE FALTA E O QUE HÁ, contados — e não escritos para uma região só. A
@@ -151,13 +167,13 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
               </span>
               <span className="circuitos-no-resumo">
                 {plural(z.circuitos.length, 'circuito', 'circuitos')}:{' '}
-                {z.circuitos.map((c) => c.nome).join(', ')}
+                {z.circuitos.map((c) => nomeDoSistema(c.nome)).join(', ')}
               </span>
             </summary>
             <ul className="circuitos-da-zona">
               {z.circuitos.map((c) => (
                 <li key={c.nome}>
-                  <span>{c.nome}</span>
+                  <span>{nomeDoSistema(c.nome)}</span>
                   {/* O HORÁRIO PRIMEIRO, o folheto depois. Quem está a olhar
                       para a zona onde mora quer a hora, e o folheto é o PDF
                       da autoridade — vale por ser a fonte, não por ser o
@@ -276,12 +292,10 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
                   {/* O TÍTULO É O CONCELHO, porque é por aí que se procura —
                       mas nem tudo é de um concelho: o LINK atravessa-os, e
                       sem esta alternativa o nome dele saía em branco. */}
-                  <span>
-                    {h.concelho_nome
-                      ? `${h.concelho_nome}${h.circuito_de ? ` — ${h.circuito_de}` : ''}`
-                      : h.nome}
-                  </span>
-                  <span className="secundario">
+                  <span>{tituloDoHorario(h)}</span>
+                  {/* A CONTAGEM NÃO SE PARTE: «13 viage ns» lia-se numa linha
+                      com o nome comprido ao lado (`.contagem`). */}
+                  <span className="secundario contagem">
                     {/* A TABELA DE PARTIDAS NÃO TEM VIAGENS, e dizer «0
                         viagens» era anunciar um serviço que não existe. */}
                     {h.viagens > 0 ? plural(h.viagens, 'viagem', 'viagens') : 'tabela de partidas'}
@@ -332,11 +346,12 @@ export default async function APedido({ params }: { params: Promise<{ regiao: st
                         `${caminhoDoHorario(c.horario.grupo)}#${idDoQuadro(c.horario.quadro)}`,
                       )}
                     >
-                      {c.nome}
+                      {nomeDoSistema(c.nome)}
                     </Link>
                   ) : (
                     <span className="sem-horario">
-                      {c.nome} <span className="secundario">· sem horário publicado</span>
+                      {nomeDoSistema(c.nome)}{' '}
+                      <span className="secundario">· sem horário publicado</span>
                     </span>
                   )}
                 </li>

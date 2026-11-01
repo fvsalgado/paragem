@@ -1133,12 +1133,14 @@ class Sitio:
             return None
         dados = json.loads(caminho.read_text(encoding="utf-8"))
         sistema = decl.params.get("sistema") or {}
+        nomes_da_regiao = (self.regiao.nomes or {}).get("paragens") or {}
         estacoes = []
         for e in dados.get("data", {}).get("stations", []):
             try:
                 lat, lon = float(e["lat"]), float(e["lon"])
             except (KeyError, TypeError, ValueError):
                 continue
+            nome = e.get("name") or None
             estacoes.append(
                 {
                     # O `id` é o `station_id` do GBFS — e é por ele que a
@@ -1147,7 +1149,10 @@ class Sitio:
                     # navegador. Tem de ser o mesmo dos dois lados, e é: vem
                     # daqui, do feed que a construção produziu.
                     "id": e.get("station_id") or None,
-                    "nome": e.get("name") or None,
+                    # O NOME COMO A REGIÃO O ESCREVE (`nomes.yaml`), como nas
+                    # paragens: o sítio de um sistema escreve «Terminal
+                    # Rodoviario», sem acento, e a interface é em português.
+                    "nome": nomes_da_regiao.get(nome, nome) if nome else None,
                     "lat": round(lat, 6),
                     "lon": round(lon, 6),
                     "concelho": self._concelho_de(territorio, lat, lon),
@@ -1288,7 +1293,7 @@ class Sitio:
         caminho = self.destino.parent / decl.saida
         if not caminho.exists():
             return None
-        linha = json.loads(caminho.read_text(encoding="utf-8"))
+        linha = _cartaz_legivel(json.loads(caminho.read_text(encoding="utf-8")))
         quadros = linha.get("quadros") or []
         return {
             "horarios": [
@@ -1483,6 +1488,54 @@ class Sitio:
             default=None,
         )
         return perto[1] if perto and perto[0] <= RAIO_SEM_CARTA_KM else None
+
+
+def _cartaz_legivel(linha: dict[str, Any]) -> dict[str, Any]:
+    """Um cartaz em CAIXA ALTA, escrito como se lê — e sem mudar mais nada.
+
+    O cartaz de uma câmara vem todo em maiúsculas, e a página escrevia-o tal e
+    qual: «da INSTITUTO DE LÍNGUAS», «(1) - REALIZA-SE APENAS NO PERÍODO
+    ESCOLAR». O §6 proíbe rótulos em maiúsculas, e uma página inteira assim
+    lê-se como um grito.
+
+    O mesmo nome muda em todo o lado ao mesmo tempo — paragens, passagens das
+    viagens, coordenadas, as que não têm sítio —, porque a página junta-os pelo
+    nome. As horas, a ordem e o que as regras dizem não mudam.
+    """
+    from .nomes import frase_de_cartaz, nome_de_cartaz
+
+    def nomes(lista: list[Any]) -> list[Any]:
+        return [nome_de_cartaz(x) if isinstance(x, str) else x for x in lista]
+
+    novo = dict(linha)
+    novo["regras"] = [frase_de_cartaz(r) for r in linha.get("regras") or []]
+    quadros = []
+    for q in linha.get("quadros") or []:
+        q2 = dict(q)
+        if q.get("nome"):
+            q2["nome"] = nome_de_cartaz(q["nome"])
+        q2["paragens"] = nomes(q.get("paragens") or [])
+        q2["rotulos"] = [frase_de_cartaz(r) for r in q.get("rotulos") or []]
+        if q.get("regras"):
+            q2["regras"] = [frase_de_cartaz(r) for r in q["regras"]]
+        q2["viagens"] = [
+            {
+                **v,
+                "passagens": [
+                    [nome_de_cartaz(p[0]), *p[1:]] if p and isinstance(p[0], str) else p
+                    for p in v.get("passagens") or []
+                ],
+                **({"rotulo": frase_de_cartaz(v["rotulo"])} if v.get("rotulo") else {}),
+            }
+            for v in q.get("viagens") or []
+        ]
+        quadros.append(q2)
+    novo["quadros"] = quadros
+    novo["coordenadas"] = {
+        nome_de_cartaz(k): v for k, v in (linha.get("coordenadas") or {}).items()
+    }
+    novo["sem_coordenada"] = nomes(linha.get("sem_coordenada") or [])
+    return novo
 
 
 def partidas_das_estacoes(estacoes: list[dict], g, feed: str) -> dict[str, list[dict[str, Any]]]:
@@ -1706,7 +1759,7 @@ def construir(raiz: Path, regiao: Regiao, destino: Path, territorio=None) -> Sit
             s.saidas.append(Saida(s.destino / "percursos", bytes_percursos, quantas_linhas))
     s._escrever("lacunas.json", _lacunas(raiz, regiao))
     s._escrever("dados-abertos.json", _dados_abertos(raiz, regiao, destino, s.destino))
-    indice = _procura(indice_paragens, estacoes, modos)
+    indice = _procura(indice_paragens, estacoes, modos, ((regiao.nomes or {}).get("procura") or {}))
     s._escrever("procura.json", indice, len(indice["pontos"]))
 
     # OS SÍTIOS VÃO NUM FICHEIRO À PARTE, e é uma decisão de dados móveis.
@@ -1979,7 +2032,10 @@ def _comboio_pelos_carris(
 
 
 def _procura(
-    paragens: list[dict], estacoes: list[dict], modos: dict[str, Any] | None = None
+    paragens: list[dict],
+    estacoes: list[dict],
+    modos: dict[str, Any] | None = None,
+    outros_nomes: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Os pontos do mapa, e o índice de quem escreve na caixa de procura.
 
@@ -2039,6 +2095,20 @@ def _procura(
         ]
 
     melhor.update(_pontos_dos_modos(modos or {}, campos))
+
+    # OS NOMES POR QUE SE PROCURA UMA PARAGEM, e que não são o dela.
+    #
+    # Quem vai ao santuário de uma cidade escreve «santuário», e a paragem que
+    # o serve chama-se «<cidade> (Terminal)»: a primeira resposta era o
+    # santuário de outra terra, com o nome escrito por extenso numa paragem de
+    # aldeia. A região declara o outro nome (`nomes.yaml`, `procura:`), e ele
+    # entra na procura a apontar para a MESMA paragem — o mesmo sítio e o mesmo
+    # identificador, para a página e o planeador serem os dela. Um nome que
+    # aponte para uma paragem que não existe não entra: não se inventa sítio.
+    for outro, alvo in (outros_nomes or {}).items():
+        destino = melhor.get(str(alvo))
+        if destino is not None and str(outro) not in melhor:
+            melhor[str(outro)] = [str(outro), *destino[1:]]
 
     linhas = sorted(melhor.values(), key=lambda x: _simples(str(x[0])))
     return {"campos": campos, "pontos": linhas}

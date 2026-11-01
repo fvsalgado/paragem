@@ -920,12 +920,13 @@ export function esperaLegivel(hora: string, agora: string, amanha = false): stri
   // espera sumia-se — justamente à hora em que ela mais faz falta. Quem
   // chama diz que deu a volta, e aqui somam-se as 24 horas.
   const falta = b + (amanha ? 24 * 60 : 0) - a;
-  if (falta < 0 || falta > 12 * 60) return null;
+  // SÓ ATÉ UMA HORA. «5 h 49» obriga a fazer a conta ao contrário para saber
+  // a que horas é — e a mais de uma hora ninguém está na paragem à espera: está
+  // a planear, e quem planeia quer o relógio. Daí para a frente a resposta é a
+  // hora, que quem chama já mostra quando isto devolve `null`.
+  if (falta < 0 || falta > 60) return null;
   if (falta < 1) return 'agora';
-  if (falta < 60) return `${falta} min`;
-  const h = Math.floor(falta / 60);
-  const resto = falta % 60;
-  return resto ? `${h} h ${String(resto).padStart(2, '0')}` : `${h} h`;
+  return `${falta} min`;
 }
 
 /**

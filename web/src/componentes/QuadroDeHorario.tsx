@@ -1,4 +1,5 @@
 import type { QuadroDeCartaz, ViagemDeCartaz } from '@/lib/formato';
+import { nomeDoSistema } from '@/lib/prosa';
 
 /**
  * A grelha de um horário lido de um cartaz: paragens em linha, viagens em coluna.
@@ -34,7 +35,8 @@ export default function QuadroDeHorario({
   /** Para uma ligação poder apontar este quadro (`#q-…`). */
   id?: string;
 }) {
-  const nome = quadro.nome ? `${titulo} — ${quadro.nome}` : titulo;
+  const nomeDoQuadro = quadro.nome ? nomeDoSistema(quadro.nome) : '';
+  const nome = nomeDoQuadro ? `${titulo} — ${nomeDoQuadro}` : titulo;
   if (quadro.tipo === 'partidas') return <Partidas quadro={quadro} titulo={nome} id={id} />;
 
   const viagens = quadro.viagens;
@@ -45,9 +47,13 @@ export default function QuadroDeHorario({
   return (
     <details className="quadro-de-horario" id={id}>
       <summary>
-        {quadro.nome ? `${quadro.nome} · ` : ''}
+        {nomeDoQuadro ? `${nomeDoQuadro} · ` : ''}
         {viagens.length} {viagens.length === 1 ? 'viagem' : 'viagens'}
-        {rotulo ? ` · ${rotulo}` : ''} — da {primeira.passagens[0][0]} às {primeira.passagens[0][1]}
+        {rotulo ? ` · ${rotulo}` : ''} — a primeira às {primeira.passagens[0][1]}, na paragem{' '}
+        {/* «NA PARAGEM …», e não «da …»: a contração tem de concordar com o
+            nome que vem a seguir, e um cartaz não diz o género de ninguém —
+            lia-se «da Centro de Saúde», «da Bairro da Cabrita». */}
+        {primeira.passagens[0][0]}
       </summary>
       <div
         className="rolar-na-horizontal"

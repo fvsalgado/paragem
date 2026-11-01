@@ -1116,3 +1116,29 @@ def test_o_feed_version_nao_repete_o_em_vigor_desde():
         " em vigor desde o Natal"
     )
     assert _em_vigor(Documento()) == ""
+
+
+# --- os nomes por que se procura -------------------------------------------
+
+
+def test_um_outro_nome_declarado_aponta_para_a_mesma_paragem():
+    """«santuário» dava o santuário de outra terra, e não o da cidade."""
+    from paragem.sitio import _procura
+
+    paragens = [
+        {"id": "t1", "nome": "Pedra Alta (Terminal)", "lat": 39.6, "lon": -8.6, "partidas": 101},
+        {
+            "id": "o1",
+            "nome": "Santuário da Ribeira Branca",
+            "lat": 39.5,
+            "lon": -8.5,
+            "partidas": 12,
+        },
+    ]
+    outros = {"Santuário da Pedra Alta": "Pedra Alta (Terminal)", "Fantasma": "Não existe"}
+    pontos = {p[0]: p for p in _procura(paragens, [], {}, outros)["pontos"]}
+    assert pontos["Santuário da Pedra Alta"][1:] == pontos["Pedra Alta (Terminal)"][1:]
+    # Um nome que aponta para uma paragem que não existe não entra.
+    assert "Fantasma" not in pontos
+    # E não substitui nada que já lá estivesse com esse nome.
+    assert pontos["Santuário da Ribeira Branca"][5] == "o1"

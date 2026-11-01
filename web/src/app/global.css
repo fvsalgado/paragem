@@ -5324,3 +5324,14 @@ pre.codigo-para-copiar {
   padding: 0.45rem 0.5rem;
   border-bottom: 1px solid var(--linhas);
 }
+
+/* A CONTAGEM AO LADO DE UM NOME COMPRIDO NÃO SE PARTE A MEIO (ronda de
+   1/11/2026). A coluna secundária das listas pode partir onde calhar
+   (`overflow-wrap: anywhere`), e numa linha com o nome de um grupo de
+   circuitos ao lado lia-se «13 viage ns». Uma contagem é curta: fica inteira,
+   e quem encolhe é o nome. */
+.lista .secundario.contagem {
+  flex-shrink: 0;
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
