@@ -14,6 +14,7 @@ conseguiu, para o relatório contar.
 from __future__ import annotations
 
 import os
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Any
@@ -58,6 +59,89 @@ class Resolucao:
     @property
     def confiavel(self) -> bool:
         return not self.por_confirmar
+
+
+#: O que um feriado municipal faz aos horários, quando alguém com autoridade o
+#: disse. São as duas respostas que a pergunta admite; uma terceira — «suspende
+#: só o troço do concelho» — não cabe num calendário de serviço, e quem a der
+#: está a pedir outra coisa (viagens partidas), que se escreve à parte.
+REGRAS_DOS_FERIADOS_MUNICIPAIS = ("como-feriado", "nada-muda")
+
+#: A que viagens se aplica o «como-feriado». A diferença é a que separa um
+#: urbano, que anda todo dentro do concelho, de uma carreira que o atravessa.
+AMBITOS_DOS_FERIADOS_MUNICIPAIS = ("viagens-que-passam-no-concelho", "viagens-so-no-concelho")
+
+
+@dataclass(frozen=True)
+class RegraDosFeriadosMunicipais:
+    """O que muda nos horários num feriado municipal — ou que não se sabe.
+
+    **A regra vem de uma fonte, ou não vem.** Os horários publicados dizem
+    «exceto feriados» e «domingos e feriados» sem dizer se um feriado municipal
+    conta, e qualquer das leituras é defensável: aplicá-lo a uma linha que sai
+    do concelho suprime viagens que existem no resto do percurso; não o
+    aplicar anuncia viagens que não existem. Por isso não há omissão que
+    escolha por quem opera: sem `regra`, fica por confirmar, e a pergunta que
+    a região escreveu vai para o relatório.
+    """
+
+    regra: str | None = None
+    ambito: str | None = None
+    fonte: str | None = None
+    pergunta: str | None = None
+
+    @property
+    def por_confirmar(self) -> bool:
+        return self.regra is None
+
+    @property
+    def estado(self) -> str:
+        """O que o sítio diz: `por-confirmar`, `como-feriado` ou `nada-muda`."""
+        return self.regra or "por-confirmar"
+
+    @classmethod
+    def ler(cls, decl: Any) -> RegraDosFeriadosMunicipais:
+        """A declaração `feriados_municipais_nos_horarios` do calendario.yaml.
+
+        Uma regra sem fonte rebenta. Não é rigor de formulário: uma regra
+        escrita sem fonte é exatamente o palpite que este bloco existe para
+        impedir, e escrevê-la à mesma deixava-a valer como se a tivesse.
+        """
+        if decl is None:
+            return cls()
+        if not isinstance(decl, Mapping):
+            raise ErroDeCalendario(
+                "feriados_municipais_nos_horarios tem de ser um mapa (regra, ambito, fonte "
+                "ou por_confirmar)."
+            )
+        regra = decl.get("regra")
+        pergunta = decl.get("por_confirmar")
+        pergunta = " ".join(str(pergunta).split()) if pergunta else None
+        if regra is None:
+            return cls(pergunta=pergunta)
+        regra = str(regra)
+        if regra not in REGRAS_DOS_FERIADOS_MUNICIPAIS:
+            raise ErroDeCalendario(
+                f"feriados_municipais_nos_horarios: regra {regra!r} desconhecida — é uma de "
+                f"{', '.join(REGRAS_DOS_FERIADOS_MUNICIPAIS)}, ou nenhuma (por confirmar)."
+            )
+        fonte = " ".join(str(decl.get("fonte") or "").split())
+        if not fonte:
+            raise ErroDeCalendario(
+                f"feriados_municipais_nos_horarios: a regra {regra!r} não diz de onde vem. "
+                "O que muda num feriado municipal é de quem opera, e não se escreve sem "
+                "fonte; enquanto não houver, declara-se `por_confirmar:` com a pergunta."
+            )
+        ambito = decl.get("ambito")
+        if regra == "como-feriado" and ambito not in AMBITOS_DOS_FERIADOS_MUNICIPAIS:
+            raise ErroDeCalendario(
+                "feriados_municipais_nos_horarios: «como-feriado» precisa do `ambito` — "
+                f"{' ou '.join(AMBITOS_DOS_FERIADOS_MUNICIPAIS)}. É a outra metade da "
+                "resposta, e é a que separa um urbano de uma carreira que atravessa o concelho."
+            )
+        return cls(
+            regra=regra, ambito=str(ambito) if ambito else None, fonte=fonte, pergunta=pergunta
+        )
 
 
 def pascoa(ano: int) -> date:
@@ -135,6 +219,54 @@ class Calendario:
                     velha = _d(d_)
                     saida[concelho] = date(ano, velha.month, velha.day)
         return saida
+
+    def feriados_municipais_entre(self, inicio: date, fim: date) -> list[dict[str, Any]]:
+        """Os feriados municipais que caem na janela, por data.
+
+        É o que o relatório e o sítio mostram: o dia, o concelho, o nome e se
+        a data vem da câmara. Um feriado a 24 de novembro num concelho só
+        interessa a quem anda nele nesse dia — mas a esse interessa muito.
+        """
+        nomes = {str(f.get("concelho") or ""): f for f in (self.d.get("feriados_municipais") or [])}
+        saida: list[dict[str, Any]] = []
+        for ano in range(inicio.year, fim.year + 1):
+            for concelho, dia in self.feriados_municipais(ano).items():
+                if inicio <= dia <= fim:
+                    f = nomes.get(concelho) or {}
+                    saida.append(
+                        {
+                            "data": dia,
+                            "concelho": concelho,
+                            "nome": str(f.get("nome") or ""),
+                            "confirmado": bool(f.get("confirmado")),
+                        }
+                    )
+        return sorted(saida, key=lambda x: (x["data"], x["concelho"]))
+
+    @property
+    def regra_dos_feriados_municipais(self) -> RegraDosFeriadosMunicipais:
+        """O que um feriado municipal faz aos horários (`RegraDosFeriadosMunicipais`)."""
+        return RegraDosFeriadosMunicipais.ler(self.d.get("feriados_municipais_nos_horarios"))
+
+    def _feriados_municipais_de(self, concelhos: Iterable[str]) -> Callable[[int], set[date]]:
+        """Os feriados dos concelhos dados, ano a ano — vazio se a regra não os aplicar.
+
+        Só a regra «como-feriado» os faz contar. Sem regra, ou com «nada-muda»,
+        um feriado municipal não toca em dia nenhum: é a mesma resposta de
+        antes, e agora é uma resposta declarada em vez de um silêncio.
+        """
+        quais = frozenset(concelhos)
+        if not quais or self.regra_dos_feriados_municipais.regra != "como-feriado":
+            return lambda ano: set()
+        return lambda ano: {d for c, d in self.feriados_municipais(ano).items() if c in quais}
+
+    def concelhos_com_feriado_municipal(self) -> set[str]:
+        """Os concelhos cujo feriado municipal se consegue calcular."""
+        return {
+            str(f.get("concelho"))
+            for f in (self.d.get("feriados_municipais") or [])
+            if f.get("concelho") and (f.get("deslocamento_pascoa") is not None or f.get("data"))
+        }
 
     def feriados_municipais_sem_regra(self) -> list[str]:
         """Aqueles cuja data nem sequer se consegue calcular."""
@@ -284,8 +416,16 @@ class Calendario:
 
     # --- resolver um código ----------------------------------------------
 
-    def resolver(self, codigo: str, inicio: date, fim: date) -> Resolucao:
-        """`E-U` → as datas entre `inicio` e `fim` em que esse serviço corre."""
+    def resolver(
+        self, codigo: str, inicio: date, fim: date, concelhos: Iterable[str] = ()
+    ) -> Resolucao:
+        """`E-U` → as datas entre `inicio` e `fim` em que esse serviço corre.
+
+        `concelhos` são os concelhos cujo feriado municipal vale para ESTE
+        serviço — quem chama sabe por onde andam as viagens dele. Só contam se
+        a região declarar que um feriado municipal se faz como feriado
+        (`feriados_municipais_nos_horarios`); de outro modo não mudam nada.
+        """
         periodo, _, dias = codigo.partition("-")
         if not dias:
             raise ErroDeCalendario(
@@ -293,7 +433,15 @@ class Calendario:
             )
 
         res = Resolucao()
-        regra_dias = self._regra_de_dias(dias, res)
+        municipais = self._feriados_municipais_de(concelhos)
+        cache: dict[int, set[date]] = {}
+
+        def e_feriado(d: date) -> bool:
+            if d.year not in cache:
+                cache[d.year] = self.feriados(d.year) | municipais(d.year)
+            return d in cache[d.year]
+
+        regra_dias = self._regra_de_dias(dias, res, e_feriado)
         if regra_dias is None:
             return res
         regra_periodo = self._regra_de_periodo(periodo, res)
@@ -307,7 +455,7 @@ class Calendario:
             dia += timedelta(days=1)
         return res
 
-    def _regra_de_dias(self, dias: str, res: Resolucao):
+    def _regra_de_dias(self, dias: str, res: Resolucao, e_feriado: Callable[[date], bool]):
         decl = (self.d.get("codigos") or {}).get("dias") or {}
         digitos = (self.d.get("codigos") or {}).get("digitos") or {}
 
@@ -321,9 +469,7 @@ class Calendario:
                 return None
             semana = {mapa[c] for c in dias}
             exclui = bool(digitos.get("exclui_feriados", True))
-            return lambda d: (
-                d.isoweekday() in semana and not (exclui and d in self.feriados(d.year))
-            )
+            return lambda d: d.isoweekday() in semana and not (exclui and e_feriado(d))
 
         regra = decl.get(dias)
         if not regra or not regra.get("dias_da_semana"):
@@ -345,7 +491,7 @@ class Calendario:
             # apesar de ser feriado — e a ordem é o que faz a diferença.
             if (d.month, d.day) in fora_datas or d.isoweekday() in fora_semana:
                 return False
-            feriado = d in self.feriados(d.year)
+            feriado = e_feriado(d)
             if feriado and inclui:
                 return True
             if feriado and exclui:

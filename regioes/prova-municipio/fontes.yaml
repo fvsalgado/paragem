@@ -19,6 +19,10 @@ saidas:
       # ter mexido em nada. Os `service_id` já eram códigos da região (A-U,
       # A-S); construída em qualquer dia, tem um ano de serviço pela frente.
       calendario: regras
+      # O feed inteiro anda no concelho do município. É o que deixa o feriado
+      # municipal aplicar-se sem carta administrativa: a receita di-lo, em vez
+      # de o pipeline o deduzir da caixa.
+      concelho: savel
 
 motor:
   fuso: Europe/Lisbon

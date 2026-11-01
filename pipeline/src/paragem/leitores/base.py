@@ -129,3 +129,79 @@ def verificar_esperado(
         ),
         quantos=obtido,
     )
+
+
+def concelhos_do_feriado_municipal(
+    ctx: Contexto,
+    saida: Saida,
+    regra: Any,
+    servico_da_viagem: dict[str, str],
+    concelhos_da_viagem: dict[str, set[str] | None],
+    com_feriado: set[str],
+) -> dict[str, frozenset[str]]:
+    """Os concelhos cujo feriado municipal vale para cada serviço do feed.
+
+    É o que se passa a `Calendario.resolver(..., concelhos=)`, e só tem efeito
+    quando a região declara que um feriado municipal se faz como feriado. A
+    regra é sobre VIAGENS — as que passam no concelho, ou as que andam só lá
+    dentro —, e um calendário de serviço é sobre SERVIÇOS: quando todas as
+    viagens de um serviço caem do mesmo lado, aplica-se ao serviço inteiro.
+
+    **Quando caem dos dois lados, não se aplica, e diz-se.** Aplicar o feriado
+    ao serviço inteiro suprimia viagens que não passam no concelho; não o
+    aplicar anuncia viagens que não andam. O que resolve é partir o serviço
+    por concelho, e isso ainda não está feito — fica na lacuna, com os
+    serviços que precisam dele, e não escondido numa das duas escolhas erradas.
+
+    O mesmo vale para uma viagem cujas paragens não se sabem situar num
+    concelho: sem carta administrativa, ou sem `concelho:` declarado na saída,
+    não há a quem aplicar o feriado.
+    """
+    if getattr(regra, "regra", None) != "como-feriado" or not com_feriado:
+        return {}
+    so_dentro = regra.ambito == "viagens-so-no-concelho"
+    por_servico: dict[str, set[frozenset[str]]] = {}
+    sem_concelho: set[str] = set()
+    for viagem, servico in servico_da_viagem.items():
+        onde = concelhos_da_viagem.get(viagem)
+        if onde is None:
+            sem_concelho.add(servico)
+            continue
+        if so_dentro:
+            aplica = frozenset(onde) if len(onde) == 1 and onde <= com_feriado else frozenset()
+        else:
+            aplica = frozenset(onde & com_feriado)
+        por_servico.setdefault(servico, set()).add(aplica)
+
+    aplicar: dict[str, frozenset[str]] = {}
+    partidos: list[str] = []
+    for servico, conjuntos in sorted(por_servico.items()):
+        if servico in sem_concelho:
+            continue
+        if len(conjuntos) == 1:
+            (unico,) = conjuntos
+            if unico:
+                aplicar[servico] = unico
+            continue
+        quais = sorted({c for x in conjuntos for c in x})
+        partidos.append(f"{servico}: só parte das viagens passa em {', '.join(quais)}")
+
+    if partidos or sem_concelho:
+        ctx.relatorio.lacuna(
+            id=f"{saida.fonte}.feriados-municipais-por-partir",
+            o_que="Serviços em que o feriado municipal só apanha parte das viagens",
+            onde=f"regioes/{ctx.regiao.id}/calendario.yaml → feriados_municipais_nos_horarios",
+            porque_importa=(
+                "A regra está declarada e vale para estas viagens, mas não para as outras do "
+                "mesmo serviço. Aplicá-la ao serviço inteiro suprimia viagens que não passam "
+                "no concelho do feriado; não a aplicar anuncia viagens que não andam. Nestes "
+                "serviços ficou como estava, e por isso o feriado não se vê neles."
+            ),
+            o_que_fazer=(
+                "Partir o serviço por concelho no pipeline, ou situar as paragens num concelho "
+                "(carta administrativa da região, ou `concelho:` na saída)."
+            ),
+            quantos=len(partidos) + len(sem_concelho),
+            quais=partidos + [f"{s}: viagens sem concelho conhecido" for s in sorted(sem_concelho)],
+        )
+    return aplicar

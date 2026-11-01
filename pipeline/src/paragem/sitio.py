@@ -42,7 +42,7 @@ from pathlib import Path
 from typing import Any
 
 from . import rede_no_mapa
-from .calendario import NomesDosCodigos, nome_pela_semana
+from .calendario import Calendario, ErroDeCalendario, NomesDosCodigos, hoje, nome_pela_semana
 from .geo import distancia_km
 from .gtfs import Gtfs
 from .leitores import LEITORES_DE_HORARIO
@@ -452,6 +452,7 @@ class Sitio:
         for p in paragens:
             if p.get("concelho"):
                 por_concelho[p["concelho"]] += 1
+        feriados = self._proximos_feriados_municipais()
         return [
             {
                 "id": c.id,
@@ -464,9 +465,38 @@ class Sitio:
                 "membro": c.membro,
                 "servido_por": c.servido_por,
                 "paragens": por_concelho.get(c.id, 0),
+                "feriado_municipal": feriados.get(c.id),
             }
             for c in self.regiao.concelhos
         ]
+
+    def _proximos_feriados_municipais(self) -> dict[str, dict[str, Any]]:
+        """O próximo feriado municipal de cada concelho, e o que ele faz aos horários.
+
+        **Os horários desse dia saem como os de um dia normal** enquanto a
+        região não souber o que muda (`feriados_municipais_nos_horarios`), e a
+        página tem de o dizer: quem procura a paragem para o dia do feriado
+        está a ler um horário que pode não ser o desse dia. Com a regra
+        declarada, `nos_horarios` diz qual — e as datas já vêm com ela.
+        """
+        try:
+            cal = Calendario(self.regiao.calendario or {})
+            estado = cal.regra_dos_feriados_municipais.estado
+        except ErroDeCalendario:
+            return {}
+        inicio = hoje()
+        saida: dict[str, dict[str, Any]] = {}
+        for f in cal.feriados_municipais_entre(inicio, inicio + timedelta(days=366)):
+            saida.setdefault(
+                f["concelho"],
+                {
+                    "data": f["data"].isoformat(),
+                    "nome": f["nome"] or None,
+                    "data_confirmada": f["confirmado"],
+                    "nos_horarios": estado,
+                },
+            )
+        return saida
 
     # --- paragens -------------------------------------------------------
 

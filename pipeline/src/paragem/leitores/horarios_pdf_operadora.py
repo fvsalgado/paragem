@@ -57,7 +57,7 @@ from ..resolucao import Resolucao, nomes_em_paragens_diferentes, resolver
 from ..tracados import Parametros as ParametrosDosTracados
 from ..tracados import Tracado, desenhar, ler_rede, numerar
 from . import pdf_horarios as pdf
-from .base import Contexto, Resultado
+from .base import Contexto, Resultado, concelhos_do_feriado_municipal
 
 nome = "horarios-pdf-operadora"
 
@@ -100,7 +100,7 @@ def ler(ctx: Contexto, saida: Saida) -> Resultado:
 
     prefixo = prefixo_das_contagens(saida)
     feed, contagens, lacunas = _escrever(
-        ctx, doc, completas, resolucao, camadas, formas, forma_de, prefixo
+        ctx, saida, doc, completas, resolucao, camadas, formas, forma_de, prefixo
     )
     destino = ctx.caminho_de_saida(saida)
     feed.escrever(destino)
@@ -326,6 +326,7 @@ def prefixo_das_contagens(saida: Saida) -> str:
 
 def _escrever(
     ctx: Contexto,
+    saida: Saida,
     doc: pdf.Documento,
     completas: list[ViagemCompleta],
     resolucao: Resolucao,
@@ -479,11 +480,12 @@ def _escrever(
 
     # --- calendário -------------------------------------------------------
     cal = Calendario(ctx.regiao.calendario, [c.id for c in ctx.regiao.concelhos])
+    municipais = _feriados_municipais_por_servico(ctx, saida, cal, viagens_gtfs, horarios, paragens)
     datas: list[dict[str, str]] = []
     por_confirmar: list[str] = []
     sem_datas: list[str] = []
     for servico in sorted(servicos):
-        res = cal.resolver(servico, hoje, fim)
+        res = cal.resolver(servico, hoje, fim, municipais.get(servico, ()))
         if not res.datas:
             sem_datas.append(f"{servico}: {'; '.join(res.por_confirmar)}")
         elif not res.confiavel:
@@ -594,6 +596,52 @@ def _escrever(
     }
     lacunas = _lacunas(ctx, resolucao, completas, sem_cor, por_confirmar, sem_datas, servicos)
     return feed, contagens, lacunas
+
+
+def _feriados_municipais_por_servico(
+    ctx: Contexto,
+    saida: Saida,
+    cal: Calendario,
+    viagens: list[dict[str, str]],
+    horarios: list[dict[str, str]],
+    paragens: dict[str, dict[str, str]],
+) -> dict[str, frozenset[str]]:
+    """Por onde anda cada viagem, para o feriado municipal saber a quem se aplica.
+
+    O concelho de cada paragem sai da carta administrativa — e só dela: sem
+    carta não se sabe, e a regra fica por aplicar com a razão escrita. Nada
+    disto corre sem a região declarar que um feriado municipal se faz como
+    feriado.
+    """
+    regra = cal.regra_dos_feriados_municipais
+    if regra.regra != "como-feriado":
+        return {}
+    com_feriado = cal.concelhos_com_feriado_municipal()
+    territorio = ctx.territorio
+    por_dico = {c.dico: c.id for c in ctx.regiao.concelhos if c.dico}
+    do_stop: dict[str, str | None] = {}
+    for p in paragens.values():
+        concelho = None
+        if territorio is not None:
+            limite = territorio.concelho_de(float(p["stop_lat"]), float(p["stop_lon"]))
+            concelho = por_dico.get(limite.codigo) if limite else "fora-da-regiao"
+        do_stop[p["stop_id"]] = concelho
+    onde: dict[str, set[str] | None] = {}
+    for h in horarios:
+        c = do_stop.get(h["stop_id"])
+        atual = onde.setdefault(h["trip_id"], set())
+        if c is None or atual is None:
+            onde[h["trip_id"]] = None
+        else:
+            atual.add(c)
+    return concelhos_do_feriado_municipal(
+        ctx,
+        saida,
+        regra,
+        {v["trip_id"]: v["service_id"] for v in viagens},
+        onde,
+        com_feriado,
+    )
 
 
 def _cor_do_texto(cor: str) -> str:

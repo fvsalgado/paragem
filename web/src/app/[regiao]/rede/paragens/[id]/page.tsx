@@ -18,6 +18,7 @@ import {
   quadrosDeHoje,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
+import FeriadoMunicipalDoConcelho from '@/componentes/FeriadoMunicipal';
 import { AvisosDaPagina } from '@/componentes/Avisos';
 import { avisosDaParagem, catalogoDosAvisos } from '@/lib/avisos-do-sitio';
 import Distintivo from '@/componentes/Distintivo';
@@ -245,6 +246,7 @@ export default async function Paragem({
         modos={[...modosDaParagem]}
         feeds={feedsDosServicos(partidas.map((d) => d.servico_id))}
       />
+      <FeriadoMunicipalDoConcelho feriado={concelho?.feriado_municipal} emBreve />
       <AvisosDaPagina avisos={avisos} catalogo={catalogo} titulo="Avisos nesta paragem" />
 
       {partidas.length === 0 ? (

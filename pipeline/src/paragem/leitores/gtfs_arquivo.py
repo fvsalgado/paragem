@@ -21,7 +21,7 @@ from datetime import timedelta
 from ..calendario import Calendario, hoje
 from ..gtfs import Gtfs
 from ..regiao import Saida
-from .base import Contexto, Resultado
+from .base import Contexto, Resultado, concelhos_do_feriado_municipal
 
 nome = "gtfs-arquivo"
 
@@ -80,11 +80,12 @@ def _calendario_pelas_regras(ctx: Contexto, saida: Saida, feed: Gtfs) -> None:
     fim = inicio + timedelta(days=JANELA_DIAS)
     cal = Calendario(ctx.regiao.calendario, [c.id for c in ctx.regiao.concelhos])
 
+    municipais = _feriados_municipais_por_servico(ctx, saida, cal, feed)
     datas: list[dict[str, str]] = []
     sem_datas: list[str] = []
     por_confirmar: list[str] = []
     for servico in sorted(feed.trips.valores("service_id") - {""}):
-        r = cal.resolver(servico, inicio, fim)
+        r = cal.resolver(servico, inicio, fim, municipais.get(servico, ()))
         if not r.datas:
             sem_datas.append(f"{servico}: {'; '.join(r.por_confirmar) or 'nenhum dia na janela'}")
             continue
@@ -145,6 +146,52 @@ def _calendario_pelas_regras(ctx: Contexto, saida: Saida, feed: Gtfs) -> None:
 
     ctx.relatorio.contar(f"{saida.fonte}.calendario_desde", inicio.isoformat())
     ctx.relatorio.contar(f"{saida.fonte}.calendario_ate", fim.isoformat())
+
+
+def _feriados_municipais_por_servico(
+    ctx: Contexto, saida: Saida, cal: Calendario, feed: Gtfs
+) -> dict[str, frozenset[str]]:
+    """Por onde anda cada viagem, para o feriado municipal saber a quem se aplica.
+
+    O concelho de uma paragem sai da carta administrativa quando a região a
+    tem; quando não tem, só o da saída (`params.concelho`) — que é a receita a
+    dizer que o feed inteiro anda num concelho, como num município que é a
+    sua própria autoridade de transportes. Sem nenhum dos dois, não se sabe,
+    e a lacuna diz quais serviços ficaram por aplicar.
+    """
+    regra = cal.regra_dos_feriados_municipais
+    if regra.regra != "como-feriado":
+        return {}
+    com_feriado = cal.concelhos_com_feriado_municipal()
+    declarado = (saida.params or {}).get("concelho")
+    territorio = ctx.territorio
+    por_dico = {c.dico: c.id for c in ctx.regiao.concelhos if c.dico}
+    do_stop: dict[str, str | None] = {}
+    for p in feed.stops:
+        concelho = str(declarado) if declarado else None
+        if territorio is not None:
+            try:
+                limite = territorio.concelho_de(float(p["stop_lat"]), float(p["stop_lon"]))
+            except (KeyError, ValueError):
+                limite = None
+            concelho = por_dico.get(limite.codigo) if limite else "fora-da-regiao"
+        do_stop[p.get("stop_id", "")] = concelho
+    onde: dict[str, set[str] | None] = {}
+    for h in feed.stop_times:
+        c = do_stop.get(h.get("stop_id", ""))
+        atual = onde.setdefault(h.get("trip_id", ""), set())
+        if c is None or atual is None:
+            onde[h.get("trip_id", "")] = None
+        else:
+            atual.add(c)
+    return concelhos_do_feriado_municipal(
+        ctx,
+        saida,
+        regra,
+        {t["trip_id"]: t.get("service_id", "") for t in feed.trips},
+        onde,
+        com_feriado,
+    )
 
 
 def _paragens_fora_da_caixa(ctx: Contexto, saida: Saida, feed: Gtfs) -> None:
