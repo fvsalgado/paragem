@@ -272,14 +272,34 @@ try {
  * no HTML e JS e 310,6 de 305 ao todo, e sobem 10 KiB os dois. O início, com
  * a linha acesa, as sedes, o anel das estações e o «Aqui perto» que responde
  * sozinho, cabe: 190,2 e 312,3, muito abaixo dos 520 e 770.
+ *
+ * A 2/11/2026, A SEGUNDA RONDA DA AUDITORIA passou-o de propósito, e achou-o
+ * já passado. Medido numa máquina local, com a demonstração, antes e depois
+ * dela: à entrada, a rede, a paragem e o tarifário já estavam a 220,7, 224,8
+ * e 221,9 de 220 — a primeira ronda do mesmo dia. Esta acrescenta 1 KiB de CSS
+ * a todas as páginas (a procura nas paragens, a estação e «A rede» em
+ * colunas, os dados abertos compactos, o a pedido por concelho) e, a cada
+ * uma, o que ganhou: a rede +2,5 (o formulário da procura e as colunas),
+ * «como chegar» +2,3 (a proposta a pedido com o preço, o dia da semana), a
+ * paragem +1,7 (a escolha do destino na lista do dia), a linha +1,3 (a hora
+ * de chegada nos quadros) e o tarifário +2,1. Ficaram a 223,2, 305,1, 226,5,
+ * 210,4 e 224,0 no total, e «como chegar» e a paragem a 184,0 e 168,9 de 185 e
+ * 170 no HTML e JS. Sobem para o que cabe com a folga de sempre.
+ *
+ * A 2/11/2026, AS DUAS FRENTES DA FASE 2 JUNTAS: cada uma mediu sobre a
+ * primeira ronda e não sobre a outra, e as contas somam-se — o desenho deu à
+ * rede, à paragem e ao tarifário 223,9, 226,3 e 225,3, e os achados mais 2,5,
+ * 1,7 e 2,1; «como chegar» fica perto de 313 no total e de 191 no HTML e
+ * JS. Os tetos passam ao maior dos dois com 5 KiB de folga, que é a folga de
+ * sempre, e o CI do PR diz o número a sério.
  */
 const ORCAMENTO = {
   início: { htmlEJs: 520, total: 770 },
-  'a rede': { htmlEJs: 170, total: 230 },
-  'como chegar': { htmlEJs: 195, total: 315 },
-  paragem: { htmlEJs: 170, total: 230 },
+  'a rede': { htmlEJs: 170, total: 235 },
+  'como chegar': { htmlEJs: 195, total: 320 },
+  paragem: { htmlEJs: 175, total: 235 },
   linha: { htmlEJs: 155, total: 220 },
-  tarifário: { htmlEJs: 170, total: 230 },
+  tarifário: { htmlEJs: 170, total: 235 },
 };
 
 const daDemonstracao = (r) => {
