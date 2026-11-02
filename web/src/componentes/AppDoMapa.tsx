@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Mapa, { type Marca } from '@/componentes/Mapa';
+import Mapa, { type Limites, type Marca } from '@/componentes/Mapa';
 import EscolherPonto from '@/componentes/EscolherPonto';
 import Direccoes, { type Percurso } from '@/componentes/Direccoes';
 import {
@@ -205,7 +205,7 @@ function corDaLinhaNoMapa(l: Pick<LinhaDetalhe, 'cor' | 'modo'>): CorDaLinha {
 }
 
 /** A caixa que leva a linha inteira — as paragens e o traçado. */
-function caixaDaLinha(l: NonNullable<LinhaDetalhe['no_mapa']>): Caixa2 {
+function caixaDaLinha(l: NonNullable<LinhaDetalhe['no_mapa']>): Limites {
   const pontos: [number, number][] = [
     ...l.paragens.map(([lat, lon]) => [lon, lat] as [number, number]),
     ...l.tracos.flatMap((t) => descodificarLinha(t)),
@@ -217,7 +217,6 @@ function caixaDaLinha(l: NonNullable<LinhaDetalhe['no_mapa']>): Caixa2 {
     [Math.max(...lons), Math.max(...lats)],
   ];
 }
-type Caixa2 = [[number, number], [number, number]];
 
 export default function AppDoMapa({
   regiao,
