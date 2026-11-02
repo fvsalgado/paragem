@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Direccoes, { type Percurso } from './Direccoes';
-import Mapa, { type Limites } from './Mapa';
+import dynamic from 'next/dynamic';
+import type { Limites } from './Mapa';
 import type { Sede } from '@/lib/sedes';
 import type { Ponto } from '@/lib/formato';
 import { usePontos } from '@/lib/pontos-do-navegador';
@@ -197,6 +198,13 @@ export default function DireccoesDaPagina({
     </div>
   );
 }
+
+/**
+ * O MAPA À PARTE, e só quando se mostra: o código dele não vai no JavaScript
+ * da página, que é o mesmo num telemóvel — onde não há mapa aqui. Pede-se
+ * quando a janela é larga (`largo`), como o MapLibre que ele pede depois.
+ */
+const Mapa = dynamic(() => import('./Mapa'), { ssr: false });
 
 /** Uma lista vazia que é sempre a mesma: o mapa compara-a. */
 const SEM_PONTOS: Ponto[] = [];

@@ -6400,3 +6400,39 @@ ul.sentidos-no-cartao li:last-child {
     inset: 0;
   }
 }
+
+/* --- o concelho no mapa (#75) ------------------------------------------- */
+
+/* Uma caixa com o tamanho e a cor do mapa desde o primeiro instante: o mapa
+   entra nela quando se aproxima do ecrã, e nada à volta salta. Larga e baixa
+   num ecrã largo — é a cabeça da página —, e quase quadrada num telemóvel. */
+figure.mapa-do-concelho {
+  margin: 1rem 0 1.5rem;
+}
+.caixa-do-mapa-do-concelho {
+  position: relative;
+  height: 16rem;
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  overflow: hidden;
+  background: var(--fundo-do-mapa);
+}
+.caixa-do-mapa-do-concelho .mapa-caixa,
+.caixa-do-mapa-do-concelho .mapa {
+  position: absolute;
+  inset: 0;
+}
+figure.mapa-do-concelho figcaption {
+  margin-top: 0.4rem;
+  font-size: 0.9rem;
+}
+@media (min-width: 64rem) {
+  .caixa-do-mapa-do-concelho {
+    height: 22rem;
+  }
+}
+/* Num mapa pequeno, os botões cabem à justa: o da localização fica para o
+   mapa grande, que é onde «onde estou» quer dizer alguma coisa. */
+.caixa-do-mapa-do-concelho .maplibregl-ctrl-group:has(> .maplibregl-ctrl-geolocate) {
+  display: none;
+}

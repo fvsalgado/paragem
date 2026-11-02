@@ -1120,7 +1120,9 @@ export default function Mapa({
   }, [rotas, estado]);
 
   /** As camadas que o sítio acrescenta, com a tinta do tema — para o trocar. */
-  const esbatida = !!percurso || !!linha;
+  // Uma «linha» sem traços é só um grupo de pontos acesos — as paragens de um
+  // concelho, no mapa dele: acendem-se sem esbater o resto.
+  const esbatida = !!percurso || !!linha?.tracos.length;
   const camadasNossas = (tema: TemaDoMapa): LayerSpecification[] => [
     ...camadasDaRede(tema, esbatida),
     ...(linha ? camadasDaLinha(tema, linha.cor, linha.aproximado) : []),

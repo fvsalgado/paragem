@@ -876,16 +876,20 @@ export function camadasDaLinha(
       type: 'circle',
       source: FONTE_DAS_PARAGENS_DA_LINHA,
       paint: {
+        // Pequenas de longe — num concelho são centenas, e de longe o que
+        // se quer ver é onde há paragens, e não cada uma.
         'circle-radius': pelo([
-          [8, 2.2],
-          [12, 4],
+          [8, 1.4],
+          [11, 2.2],
+          [13, 3.6],
           [16, 6.5],
         ]),
         'circle-color': tema === 'claro' ? '#ffffff' : CORES_DOS_PONTOS.escuro.miolo,
         'circle-stroke-color': traco,
         'circle-stroke-width': pelo([
-          [8, 1.4],
-          [12, 2.2],
+          [8, 1],
+          [11, 1.4],
+          [13, 2.2],
           [16, 3],
         ]),
       },
