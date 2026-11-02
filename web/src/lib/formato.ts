@@ -722,6 +722,8 @@ export type RedeDoTarifario = {
   /** A frase que se mostra por baixo da tabela: «Tabela tarifária da operadora…». */
   fonte?: string;
   url?: string;
+  /** As condições que valem para a tabela toda, numa nota por baixo dela (#188). */
+  nota?: string;
 };
 
 export type Tarifas = {

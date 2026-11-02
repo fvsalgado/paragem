@@ -6907,3 +6907,9 @@ fieldset.escolha-do-sentido legend {
 .aviso-do-cartaz {
   margin: var(--espaco-3) 0;
 }
+
+/* As condições de uma tabela do tarifário, por baixo dela (#188). */
+.nota-da-tabela {
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+}

@@ -641,10 +641,13 @@ def _verificar_redes_do_tarifario(id_regiao: str, tarifas: dict[str, Any] | None
             f"{', '.join(estranhas)}. Os nomes são os do campo `rede` dos títulos."
         )
     for nome, d in redes.items():
-        if not isinstance(d, dict) or set(d) - {"modo", "fonte", "url"}:
+        # `nota`: as condições que valem para a tabela toda — o intervalo entre
+        # viagens, o tempo máximo —, por baixo dela. Iam na célula de um título,
+        # em seis linhas que afastavam o preço do nome (#188).
+        if not isinstance(d, dict) or set(d) - {"modo", "fonte", "url", "nota"}:
             raise ErroDeRegiao(
-                f"{id_regiao}: a rede {nome!r} do tarifário diz `modo`, `fonte` e `url`, "
-                "e mais nada."
+                f"{id_regiao}: a rede {nome!r} do tarifário diz `modo`, `fonte`, `url` e "
+                "`nota`, e mais nada."
             )
         if d.get("modo") and d["modo"] not in MODOS_DO_PRODUTO:
             raise ErroDeRegiao(

@@ -437,7 +437,8 @@ def test_o_tarifario_diz_o_que_cada_tabela_e(tmp_path):
 
     redes = {
         "Rede X": {"modo": "autocarro", "fonte": "Tabela da operadora.", "url": "https://x.pt"},
-        "Bicis": {"modo": "bicicleta"},
+        # As condições da tabela toda vão por baixo dela, e não numa célula (#188).
+        "Bicis": {"modo": "bicicleta", "nota": "Entre duas viagens, 15 minutos."},
     }
     r = Regiao.carregar(_com_tarifas(tmp_path / "x", redes))
     assert _tarifas(r)["redes"] == redes
