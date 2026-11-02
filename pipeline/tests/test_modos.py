@@ -283,3 +283,18 @@ def test_quem_gere_um_expresso_e_o_nome_que_a_receita_declara(raiz, tmp_path):
     assert [o["nome"] for o in modo["operadores"]] == ["Expressos"]
     assert modo["gerido_por"] == ["Expressos"]
     assert [o["nome"] for o in sem["operadores"]] != ["Expressos"]
+
+
+def test_o_telefone_de_uma_praca_le_se_das_duas_etiquetas_do_mapa():
+    """`phone` e `contact:phone` são as duas do OpenStreetMap (#114)."""
+    from paragem.leitores.osm import propriedades_da_praca
+
+    assert propriedades_da_praca({"amenity": "taxi", "phone": "+351 200 000 000"})["telefone"] == (
+        "+351 200 000 000"
+    )
+    assert (
+        propriedades_da_praca({"amenity": "taxi", "contact:phone": "+351 200 000 001"})["telefone"]
+        == "+351 200 000 001"
+    )
+    # Sem nenhuma das duas, não há telefone — não se procura noutro lado.
+    assert propriedades_da_praca({"amenity": "taxi", "name": "Praça"})["telefone"] is None
