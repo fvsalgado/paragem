@@ -183,6 +183,11 @@ test('os alvos táteis autónomos têm pelo menos 44 px', async ({ page }) => {
           // Em linha = o pai é um bloco de texto e há texto à volta dela.
           const pai = e.parentElement;
           if (!pai) return true;
+          // A ATRIBUIÇÃO DO MAPA É UMA FRASE — «© contribuidores do
+          // OpenStreetMap, sob ODbL» —, escrita pelo MapLibre num `div`. A
+          // ligação está nela como num parágrafo, e a exceção é a mesma.
+          // Media-se só quando o mapa acabava de carregar antes da medição.
+          if (e.closest('.maplibregl-ctrl-attrib-inner')) return false;
           const emProsa = ['P', 'LI', 'TD', 'SPAN', 'STRONG', 'EM'].includes(pai.tagName);
           const temTextoAoLado = (pai.textContent ?? '').trim() !== (e.textContent ?? '').trim();
           return !(emProsa && temTextoAoLado);
