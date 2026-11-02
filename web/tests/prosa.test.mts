@@ -12,6 +12,7 @@ import {
   aAutoridade,
   aRede,
   comPonto,
+  fraseDoPrazoDasMedicoes,
   fraseDaProposta,
   linhasNumaFrase,
   lista,
@@ -254,4 +255,10 @@ test('as horas das folhas saem com dois algarismos antes dos dois pontos (#154)'
   assert.equal(horaComZero('8:00'), '08:00');
   assert.equal(horaComZero('08:55'), '08:55');
   assert.equal(horaComZero('—'), '—');
+});
+
+test('a página de privacidade diz o prazo das medições quando é declarado, e o critério quando não (#184)', () => {
+  assert.match(fraseDoPrazoDasMedicoes('12 meses'), /durante 12 meses, e depois apagam-se/);
+  assert.match(fraseDoPrazoDasMedicoes(null), /pelo prazo de conservação dele/);
+  assert.match(fraseDoPrazoDasMedicoes('  '), /pelo prazo de conservação dele/);
 });

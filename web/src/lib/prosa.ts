@@ -352,3 +352,17 @@ export function semPrefixos(nome: string, prefixos: string[]): string {
   }
   return resto || nome;
 }
+
+/**
+ * QUANTO TEMPO FICAM AS MEDIÇÕES, na página de privacidade (#184). O RGPD
+ * (artigo 13.º, n.º 2, alínea a)) pede o prazo ou o critério. O prazo é o que
+ * está configurado no serviço de medição, e declara-se
+ * (`PARAGEM_MEDICAO_PRAZO`, «12 meses»); sem ele, diz-se o critério, e não se
+ * escreve um número que ninguém configurou.
+ */
+export function fraseDoPrazoDasMedicoes(prazo: string | null | undefined): string {
+  const p = (prazo ?? '').trim();
+  return p
+    ? `As medições ficam no serviço de medição durante ${p}, e depois apagam-se; nunca se juntam a um nome nem a um contacto.`
+    : 'As medições ficam no serviço de medição pelo prazo de conservação dele, e nunca se juntam a um nome nem a um contacto.';
+}

@@ -112,7 +112,12 @@ export default function PrivacidadeDoProduto() {
         , e serve para lhe responder.
       </p>
 
-      <DireitosDePrivacidade mede={mede} identificada={identificada} email={CONTACTO} />
+      <DireitosDePrivacidade
+        mede={mede}
+        identificada={identificada}
+        email={CONTACTO}
+        prazo={process.env.PARAGEM_MEDICAO_PRAZO?.trim() || null}
+      />
 
       <h2>Quem responde</h2>
       <p>

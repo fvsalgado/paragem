@@ -115,6 +115,14 @@ verdade e é o mínimo, mas não substitui o consentimento.
 | `NEXT_PUBLIC_PARAGEM_POSTHOG` | a chave do projeto (é pública, vai no código do navegador) |
 | `NEXT_PUBLIC_PARAGEM_POSTHOG_HOST` | o servidor; por omissão `https://eu.i.posthog.com` |
 | `NEXT_PUBLIC_PARAGEM_MEDICAO_IDENTIFICADA` | `1` para seguir pessoas — ver acima |
+| `PARAGEM_MEDICAO_PRAZO` | quanto tempo o serviço guarda as medições, por extenso — `12 meses` —, tal como está configurado lá |
+
+**O prazo diz-se, e não se adivinha.** O RGPD (artigo 13.º, n.º 2, alínea a))
+pede que a página de privacidade diga quanto tempo se guardam os dados, ou o
+critério; quem licencia vai perguntá-lo. O prazo é o que está configurado no
+serviço de medição, e é quem tem acesso a ele que o escreve aqui. Sem a
+variável, a página diz que as medições ficam pelo prazo de conservação do
+serviço — que é verdade, e não é um número.
 
 **Sem a chave, não se mede nada.** Não é uma falha: o sítio funciona igual, e
 uma construção local ou de pré-visualização não tem por que sujar os dados de

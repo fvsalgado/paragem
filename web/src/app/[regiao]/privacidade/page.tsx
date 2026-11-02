@@ -183,7 +183,12 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
         ) : null}
       </p>
 
-      <DireitosDePrivacidade mede={mede} identificada={identificada} email={emailDePrivacidade} />
+      <DireitosDePrivacidade
+        mede={mede}
+        identificada={identificada}
+        email={emailDePrivacidade}
+        prazo={process.env.PARAGEM_MEDICAO_PRAZO?.trim() || null}
+      />
 
       <h2>Para saber mais</h2>
       <p>
