@@ -305,6 +305,16 @@ const A_MEIO_EM_MINUSCULA =
   /(?<=\S\s+)(Feriados?|Sábados?|Domingos?|Dias Úteis|Segundas?-[Ff]eiras?|Terças?-[Ff]eiras?|Quartas?-[Ff]eiras?|Quintas?-[Ff]eiras?|Sextas?-[Ff]eiras?)\b/g;
 const ACENTOS_EM_FALTA: [RegExp, string][] = [[/\bsairem\b/g, 'saírem']];
 
+/**
+ * Uma frase com ponto final, quando não traz pontuação nenhuma (#156): as
+ * regras das folhas vêm como estão nelas, sem ponto, e numa lista de frases a
+ * última ficava a meio.
+ */
+export function comPonto(frase: string): string {
+  const t = frase.trim();
+  return !t || /[.!?…:;)»"]$/u.test(t) ? t : `${t}.`;
+}
+
 export function regraLegivel(regra: string): string {
   let t = regra.trim().replace(HORA_DE_CARTAZ, (_, h, m) => `${h}:${m}`);
   t = t.replace(A_MEIO_EM_MINUSCULA, (m) => m.toLowerCase());

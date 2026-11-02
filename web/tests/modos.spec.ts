@@ -437,7 +437,7 @@ test('um cartaz de urbano com anos diz-se à cabeça, com o horário por baixo',
   const seccao = page.getByRole('region', { name: velho!.nome });
   const aviso = seccao.locator('.aviso-do-cartaz');
   await expect(aviso).toBeVisible();
-  await expect(aviso).toContainText(/Horário em vigor desde|não diz desde quando vale/);
+  await expect(aviso).toContainText(/Horário em vigor desde|não indica a data de início/);
   // O horário fica.
   await expect(seccao.locator('details.quadro-de-horario').first()).toBeVisible();
 });

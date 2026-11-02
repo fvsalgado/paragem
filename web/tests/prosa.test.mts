@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import {
   aAutoridade,
   aRede,
+  comPonto,
   fraseDaProposta,
   linhasNumaFrase,
   lista,
@@ -20,6 +21,7 @@ import {
   redeEQuemAGere,
   regiaoNoInicio,
 } from '../src/lib/prosa.ts';
+import { horaComZero } from '../src/lib/formato.ts';
 
 test('o número e o nome concordam, e os milhares separam-se como a casa os escreve', () => {
   assert.equal(plural(1, 'paragem perto', 'paragens perto'), '1 paragem perto');
@@ -236,4 +238,20 @@ test('uma estação não repete o concelho nem o sistema que o título já diz',
   assert.equal(semPrefixos('Almeão - Estação', ['Porto Ameno']), 'Almeão - Estação');
   assert.equal(semPrefixos('Praça - Norte', ['Praça']), 'Norte');
   assert.equal(semPrefixos('Almeão', ['Almeão']), 'Almeão');
+});
+
+test('as regras de uma folha acabam em ponto, e as que já têm pontuação ficam (#156)', () => {
+  assert.equal(
+    comPonto('Com 2 faltas, fica impedido durante 30 dias'),
+    'Com 2 faltas, fica impedido durante 30 dias.',
+  );
+  assert.equal(comPonto('Até às 15h.'), 'Até às 15h.');
+  assert.equal(comPonto('(1) Só em período escolar)'), '(1) Só em período escolar)');
+  assert.equal(comPonto(''), '');
+});
+
+test('as horas das folhas saem com dois algarismos antes dos dois pontos (#154)', () => {
+  assert.equal(horaComZero('8:00'), '08:00');
+  assert.equal(horaComZero('08:55'), '08:55');
+  assert.equal(horaComZero('—'), '—');
 });

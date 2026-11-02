@@ -391,3 +391,52 @@ export function aPedidoNasPontas(
   const peso = { 'as-duas': 0, de: 1, para: 1 } as const;
   return propostas.sort((a, b) => peso[a.liga] - peso[b.liga]).slice(0, maximo);
 }
+
+/** Um concelho do transporte a pedido: as zonas dele, e os horários que nenhuma zona alcança. */
+export type ConcelhoAPedido = {
+  /** Vazio para o que atravessa concelhos (as ligações entre cidades). */
+  id: string;
+  nome: string;
+  zonas: ZonaAPedido[];
+  /** Os horários deste concelho a que nenhuma zona leva — para não ficarem sem caminho. */
+  outros: HorarioAPedido[];
+  circuitos: number;
+};
+
+/**
+ * O TRANSPORTE A PEDIDO POR CONCELHO, numa estrutura só (#55).
+ *
+ * A página tinha três listas para os mesmos circuitos — as zonas, os
+ * circuitos com horário, e o catálogo por ordem alfabética —, e o mesmo
+ * circuito aparecia em duas ou três: oito ecrãs de labirinto. Agora é um
+ * concelho de cada vez, com as zonas dele e os circuitos de cada zona a levar
+ * ao horário. O que atravessa concelhos fica num grupo à parte, no fim; e um
+ * horário a que nenhuma zona leva entra no grupo do concelho dele, para não
+ * ficar sem caminho. A lista alfabética passou a ser a procura.
+ */
+export function aPedidoPorConcelho(d: APedido): ConcelhoAPedido[] {
+  const grupos = new Map<string, ConcelhoAPedido>();
+  const grupo = (id: string, nome: string) => {
+    let g = grupos.get(id);
+    if (!g) {
+      g = { id, nome, zonas: [], outros: [], circuitos: 0 };
+      grupos.set(id, g);
+    }
+    return g;
+  };
+  const alcancados = new Set<string>();
+  for (const z of d.zonas) {
+    const g = grupo(z.concelho ?? '', z.concelho_nome ?? '');
+    g.zonas.push(z);
+    g.circuitos += z.circuitos.length;
+    for (const c of z.circuitos) if (c.horario) alcancados.add(c.horario.grupo);
+    if (!z.circuitos.length) for (const h of horariosDaZona(d, z)) alcancados.add(h.id);
+  }
+  for (const h of d.horarios) {
+    if (alcancados.has(h.id)) continue;
+    grupo(h.concelho ?? '', h.concelho_nome ?? '').outros.push(h);
+  }
+  return [...grupos.values()].sort(
+    (a, b) => Number(!a.id) - Number(!b.id) || a.nome.localeCompare(b.nome, 'pt'),
+  );
+}

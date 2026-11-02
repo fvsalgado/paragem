@@ -479,7 +479,7 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
                   <strong>
                     {aviso.desde
                       ? `Horário em vigor desde ${aviso.desde}, diz o cartaz.`
-                      : 'O cartaz não diz desde quando vale.'}
+                      : 'O cartaz não indica a data de início.'}
                   </strong>{' '}
                   Pode ter mudado entretanto: confirme antes de viajar
                   {h.operador ? <>, com quem o opera — {h.operador}</> : ''}.

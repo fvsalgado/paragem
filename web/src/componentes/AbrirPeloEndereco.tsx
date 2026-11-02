@@ -17,10 +17,17 @@ export default function AbrirPeloEndereco() {
       const id = decodeURIComponent(window.location.hash.slice(1));
       if (!id) return;
       const el = document.getElementById(id);
-      if (el instanceof HTMLDetailsElement && !el.open) {
-        el.open = true;
-        el.scrollIntoView({ block: 'start' });
+      if (!el) return;
+      // O ALVO PODE ESTAR DENTRO DE OUTRO FECHADO — uma zona dentro do
+      // concelho dela, no transporte a pedido (#55) —, e um alvo escondido não
+      // se vê nem se lê. Abrem-se ele, se for um, e os que o contêm.
+      const fechados: HTMLDetailsElement[] = [];
+      for (let d = el.closest('details'); d; d = d.parentElement?.closest('details') ?? null) {
+        if (!d.open) fechados.push(d);
       }
+      if (!fechados.length) return;
+      for (const d of fechados) d.open = true;
+      el.scrollIntoView({ block: 'start' });
     };
     abrir();
     window.addEventListener('hashchange', abrir);

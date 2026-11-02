@@ -795,6 +795,16 @@ export function seguro(identificador: string): string {
 
 // --- prosa -----------------------------------------------------------------
 
+/**
+ * UMA HORA COM DOIS ALGARISMOS ANTES DOS DOIS PONTOS: «08:00», e não «8:00»
+ * (#154). As folhas escrevem-na como lhes apetece — uma brochura «8:00», o
+ * sítio de reservas «08:55» —, e a página dizia as duas na mesma lista. O que
+ * não for uma hora fica como está.
+ */
+export function horaComZero(hora: string): string {
+  return /^\d:\d{2}$/.test(hora.trim()) ? `0${hora.trim()}` : hora;
+}
+
 /** Uma hora `25:10` do GTFS é 01:10 do dia seguinte, e tem de o dizer. */
 export function horaLegivel(hora: string): { texto: string; diaSeguinte: boolean } {
   const [h, m] = hora.split(':');
@@ -914,7 +924,9 @@ export function fraseDoConteudo(
     return `Em vigor desde ${dia}/${mes}/${ano}, diz ${documento}.`;
   }
   if (c.texto) return `${Documento} não diz o dia em que entra em vigor: ${c.texto}.`;
-  return `${Documento} não diz desde quando vale.`;
+  // «Não indica a data de início», e não «não diz desde quando vale», que
+  // soava a nota interna (#155).
+  return `${Documento} não indica a data de início.`;
 }
 
 export type APedido = {
@@ -927,6 +939,8 @@ export type APedido = {
     telefone_apresentado?: string;
     telefone_nota?: string;
     email?: string;
+    /** A frase que diz para que serve o correio eletrónico, antes dele (#153). */
+    email_nota?: string;
     com_reserva_online?: string[];
     tolerancia?: string;
   };

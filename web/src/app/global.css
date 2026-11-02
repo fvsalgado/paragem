@@ -6908,6 +6908,77 @@ fieldset.escolha-do-sentido legend {
   margin: var(--espaco-3) 0;
 }
 
+/* --- o transporte a pedido (auditoria de 1/11/2026, fase 2) ------------- */
+
+/* As regras de uma folha, numa lista dentro da caixa da reserva (#156). */
+.faixa.a-pedido .titulo-das-regras {
+  margin: 0.75rem 0 0.25rem;
+}
+.faixa.a-pedido ul.regras-da-reserva {
+  margin: 0 0 0.25rem;
+  padding-left: 1.25rem;
+}
+.faixa.a-pedido ul.regras-da-reserva > li + li {
+  margin-top: 0.25rem;
+}
+
+/* Um concelho de cada vez, fechado (#55): o mesmo desenho das zonas, e as
+   zonas dentro dele, cada uma com o nome numa linha e os circuitos por baixo. */
+details.concelho-a-pedido {
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  background: var(--superficie);
+  margin: 0.5rem 0;
+}
+details.concelho-a-pedido > summary {
+  cursor: pointer;
+  list-style: none;
+  position: relative;
+  min-height: var(--alvo);
+  padding: 0.65rem 2.25rem 0.65rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+details.concelho-a-pedido > summary::-webkit-details-marker {
+  display: none;
+}
+details.concelho-a-pedido > summary .nome-da-zona {
+  font-weight: 700;
+}
+details.concelho-a-pedido > summary .circuitos-no-resumo {
+  font-size: 0.9rem;
+  color: var(--texto-secundario);
+}
+details.concelho-a-pedido > .zona-a-pedido {
+  border-top: 1px solid var(--linhas);
+  padding: 0.5rem 0.85rem 0.75rem;
+}
+details.concelho-a-pedido > .zona-a-pedido > h3 {
+  margin: 0.25rem 0 0.25rem;
+  font-size: 1rem;
+}
+details.concelho-a-pedido > summary::after {
+  content: '';
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-top: -0.4rem;
+  border-right: 2px solid var(--marca-texto);
+  border-bottom: 2px solid var(--marca-texto);
+  transform: rotate(45deg);
+}
+details.concelho-a-pedido[open] > summary::after {
+  transform: rotate(-135deg);
+  margin-top: -0.1rem;
+}
+details.concelho-a-pedido > summary:focus-visible {
+  outline: 3px solid var(--foco);
+  outline-offset: -3px;
+}
+
 /* As condições de uma tabela do tarifário, por baixo dela (#188). */
 .nota-da-tabela {
   margin: 0.5rem 0 0;
