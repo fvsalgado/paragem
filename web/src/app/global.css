@@ -637,13 +637,21 @@ code {
   padding: 0;
   margin: var(--espaco-3) 0;
 }
+/* A linha tem de caber num telemóvel de 360 px, e não só no de 412 dos
+   testes: «Tema» e as três escolhas pedem uns 360 px com a letra do corpo e
+   os vãos de antes, e num ecrã de 412 sobravam 20 — partia em duas com
+   qualquer letra um pouco mais larga. Na letra pequena do rodapé, com vãos de
+   8 px, são uns 320. O alvo de cada escolha continua com 44 px de altura. */
 .rodape .opcoes-do-tema {
-  gap: 0 0.9rem;
+  gap: 0 var(--espaco-2);
+}
+.rodape .opcoes-do-tema label {
+  font-size: var(--letra-pequena);
 }
 .rodape .escolha-do-tema legend {
   float: left;
   padding: 0;
-  margin-right: var(--espaco-3);
+  margin-right: var(--espaco-2);
   line-height: var(--alvo);
   font-size: var(--letra-pequena);
 }

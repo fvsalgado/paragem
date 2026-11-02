@@ -307,9 +307,10 @@ test('a primeira hora lê-se sem abrir a grelha', async ({ page }) => {
     .first()
     .locator('summary');
   await expect(resumo).toContainText(`${QUADRO!.viagens} viagens`);
-  await expect(resumo).toContainText(
-    `a primeira às ${QUADRO!.hora}, na paragem ${QUADRO!.paragem}`,
-  );
+  // A página escreve as horas com dois algarismos («07:30», `horaComZero`), e
+  // o cartaz da câmara pode tê-las com um («7:30»).
+  const hora = /^\d:\d{2}$/.test(QUADRO!.hora) ? `0${QUADRO!.hora}` : QUADRO!.hora;
+  await expect(resumo).toContainText(`a primeira às ${hora}, na paragem ${QUADRO!.paragem}`);
 });
 
 test('diz de cada linha quantas paragens estão no mapa, e nomeia as que não', async ({ page }) => {
