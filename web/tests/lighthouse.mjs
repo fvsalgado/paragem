@@ -257,14 +257,29 @@ try {
  * tarifário só pagam o CSS das páginas novas, que vai na folha de todas
  * (trilho, listas por letra, estações): ficaram a 220,4 e 221,8 de 220, e
  * sobem 5 KiB. Medido no CI do PR #53.
+ *
+ * A 2/11/2026, A FASE 2 DO DESENHO passou-o de propósito, em todas as páginas
+ * de catálogo e só no total, e em «como chegar» também no HTML e JS. O CSS
+ * vai na folha de todas as páginas, e ganhou a escala (`--letra-*`,
+ * `--espaco-*`, `--raio-*`), as pastilhas de estado, a nota dos dados com o
+ * «i», o índice das páginas compridas, os sentidos da linha em cápsulas, os
+ * ícones dos botões do mapa e as caixas dos mapas do concelho e do planeador:
+ * a rede ficou a 223,9 de 220, a paragem a 226,3, a linha a 211,0 e o
+ * tarifário a 225,3 — sobem 10 KiB, para a próxima ronda não reprovar ao
+ * acaso. «Como chegar» ganhou o mapa ao lado das opções num ecrã largo: o
+ * código dele vem à parte e só nesse ecrã, mas a página leva a moldura, a
+ * área da rede e as sedes, no HTML e outra vez na hidratação — 188,6 de 185
+ * no HTML e JS e 310,6 de 305 ao todo, e sobem 10 KiB os dois. O início, com
+ * a linha acesa, as sedes, o anel das estações e o «Aqui perto» que responde
+ * sozinho, cabe: 190,2 e 312,3, muito abaixo dos 520 e 770.
  */
 const ORCAMENTO = {
   início: { htmlEJs: 520, total: 770 },
-  'a rede': { htmlEJs: 170, total: 225 },
-  'como chegar': { htmlEJs: 185, total: 305 },
+  'a rede': { htmlEJs: 170, total: 230 },
+  'como chegar': { htmlEJs: 195, total: 315 },
   paragem: { htmlEJs: 170, total: 230 },
-  linha: { htmlEJs: 155, total: 210 },
-  tarifário: { htmlEJs: 170, total: 225 },
+  linha: { htmlEJs: 155, total: 220 },
+  tarifário: { htmlEJs: 170, total: 230 },
 };
 
 const daDemonstracao = (r) => {
@@ -284,6 +299,16 @@ const PAGINAS_DO_PESO = daDemonstracao(maisRica);
 
 /** O endereço é o do mapa da região — o molde mais pesado, com piso próprio. */
 const ehMapa = (endereco) => /\.localhost:\d+\/$/.test(endereco) && !endereco.startsWith(PROVA);
+
+/**
+ * AS PÁGINAS COM MAPA, e não só o início (fase 2, novembro de 2026): o
+ * concelho passou a ter o seu à cabeça (#75), e o MapLibre a arrancar com o
+ * CPU a um quarto é o mesmo bloqueio que no início — 65 duas vezes, medido
+ * numa máquina partilhada, onde o catálogo sem mapa dava 80 a 99. Fica com o
+ * piso do mapa, pela mesma razão que o início o tem. «Como chegar» não: o mapa
+ * dele só existe num ecrã largo, e o Lighthouse mede o telemóvel.
+ */
+const COM_MAPA = new Set(['concelho']);
 
 // --- o navegador ------------------------------------------------------------
 
@@ -400,7 +425,7 @@ try {
   for (const [nome, endereco] of PAGINAS) {
     let r = await medir(claro, endereco, ['accessibility', 'performance']);
     const nota = Math.round((r.lhr.categories.accessibility.score ?? 0) * 100);
-    const piso = ehMapa(endereco) ? PISO_DO_MAPA : PISO_DAS_PAGINAS;
+    const piso = ehMapa(endereco) || COM_MAPA.has(nome) ? PISO_DO_MAPA : PISO_DAS_PAGINAS;
     let desempenho = Math.round((r.lhr.categories.performance.score ?? 0) * 100);
     // UMA SEGUNDA MEDIÇÃO ANTES DE REPROVAR. Uma nota abaixo do piso numa
     // máquina partilhada pode ser a máquina; duas seguidas não são.
