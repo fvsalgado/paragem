@@ -180,3 +180,35 @@ test('«A rede» num ecrã largo é duas colunas, com a procura à direita, e di
     '0px',
   );
 });
+
+test('no computador, o rodapé começa onde começa o conteúdo', async ({ page }) => {
+  // Os links do rodapé começavam 16 px à esquerda do título, em todas as
+  // páginas: o espaço dos lados ia por fora da largura máxima (#170).
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const caminho of ['/rede/estacoes/', '/rede/']) {
+    await page.goto(caminho);
+    const titulo = (await page.locator('main h1').boundingBox())!;
+    const rodape = (await page.locator('footer.rodape nav a').first().boundingBox())!;
+    expect(Math.abs(rodape.x - titulo.x), caminho).toBeLessThanOrEqual(1);
+  }
+});
+
+test('a nota dos dados tem cantos suaves, e não vira elipse em duas linhas', async ({ page }) => {
+  // Com o raio todo, uma nota de duas linhas era uma elipse com o texto
+  // encostado à curva (#167, #194).
+  await page.goto('/rede/');
+  const nota = page.locator('.marca-dados').first();
+  await expect(nota).toBeVisible();
+  const raio = await nota.evaluate((e) => parseFloat(getComputedStyle(e).borderTopLeftRadius));
+  expect(raio).toBeLessThanOrEqual(12);
+});
+
+test('no rodapé, o tema escolhe-se numa linha só', async ({ page }) => {
+  // O grupo do rodapé era uma caixa com uma nota por baixo, uns 90 px no
+  // telemóvel, a repetir o botão do cabeçalho (#164, #195).
+  await page.goto('/rede/');
+  const tema = page.locator('footer.rodape fieldset.escolha-do-tema');
+  await expect(tema).toBeVisible();
+  expect((await tema.boundingBox())!.height).toBeLessThanOrEqual(60);
+  await expect(tema.getByRole('radio', { name: 'Escuro' })).toBeVisible();
+});

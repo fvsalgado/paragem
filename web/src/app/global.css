@@ -627,6 +627,35 @@ code {
   color: var(--texto-secundario);
 }
 
+/* NO RODAPÉ, UMA LINHA SÓ (#164, #195): o tema escolhe-se também no botão do
+   cabeçalho, e o grupo do rodapé ocupava uns 90 px no telemóvel, numa caixa
+   com uma nota por baixo. Fica «Tema:» e as três escolhas na mesma linha; a
+   nota passa a ser dita só a quem usa leitor de ecrã — a página de privacidade
+   di-la por inteiro. */
+.rodape .escolha-do-tema {
+  border: 0;
+  padding: 0;
+  margin: var(--espaco-3) 0;
+}
+.rodape .opcoes-do-tema {
+  gap: 0 0.9rem;
+}
+.rodape .escolha-do-tema legend {
+  float: left;
+  padding: 0;
+  margin-right: var(--espaco-3);
+  line-height: var(--alvo);
+  font-size: var(--letra-pequena);
+}
+.rodape .nota-do-tema {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 /* Onde há régua, ela é a borda: a linha cinzenta de antes sai. No rodapé vai
    de ponta a ponta, por cima do espaço dele. */
 .cabecalho:has(> .regua-do-feixe) {
@@ -636,7 +665,7 @@ code {
   border-top: 0;
 }
 .rodape > .regua-do-feixe {
-  margin: calc(3.5px - var(--espaco-5)) -1rem calc(var(--espaco-5) - 3.5px);
+  margin: calc(3.5px - var(--espaco-5)) 0 calc(var(--espaco-5) - 3.5px);
 }
 
 /* AS CORES DA REGIÃO NAS PÁGINAS DELA. O invólucro (`app/[regiao]/layout.tsx`)
@@ -722,16 +751,20 @@ code {
   color: var(--texto-secundario);
 }
 
+/* O RODAPÉ ALINHA COM O CONTEÚDO (#170): o espaço dos lados ia por fora da
+   largura máxima, e na `.pagina` vai por dentro — no computador, os links do
+   rodapé começavam 16 px à esquerda do título. Passa para dentro, como lá. */
 .rodape {
   border-top: 1px solid var(--linhas);
   margin-top: var(--espaco-7);
-  padding: var(--espaco-5) var(--espaco-4) var(--espaco-7);
+  padding: var(--espaco-5) 0 var(--espaco-7);
   color: var(--texto-secundario);
   font-size: var(--letra-pequena);
 }
 .rodape .interior {
   max-width: var(--medida);
   margin: 0 auto;
+  padding: 0 var(--espaco-4);
 }
 .rodape ul {
   list-style: none;
