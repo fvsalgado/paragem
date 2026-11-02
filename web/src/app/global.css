@@ -5203,9 +5203,43 @@ dialog.menu-do-mapa .lista .secundario {
 }
 
 .descargas > li {
-  margin-bottom: var(--espaco-4);
-  padding-bottom: var(--espaco-4);
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.6rem;
   border-bottom: 1px solid var(--linhas);
+}
+/* UM FICHEIRO NUMA LINHA (#78): o nome e os termos, por baixo o formato, o
+   tamanho e a data; a origem e a atribuição num «Detalhes» fechado. */
+.descargas > li > span {
+  display: block;
+}
+.descarga-cabeca a {
+  font-weight: 700;
+}
+.termos-da-descarga {
+  display: inline-block;
+  font-size: var(--letra-mini);
+  font-weight: 700;
+  line-height: 1.3;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio);
+  color: var(--texto);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.detalhes-da-descarga > summary {
+  cursor: pointer;
+  font-size: var(--letra-pequena);
+  color: var(--marca-texto);
+  min-height: var(--alvo);
+  display: inline-flex;
+  align-items: center;
+}
+.detalhes-da-descarga > p {
+  margin: 0 0 var(--espaco-1);
+}
+details.descargas-do-modo {
+  margin: var(--espaco-2) 0 var(--espaco-4);
 }
 
 .descargas > li:last-child {

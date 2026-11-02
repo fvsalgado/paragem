@@ -776,6 +776,8 @@ export type Descarga = {
   atribuicao: string | null;
   atribuicao_obrigatoria: boolean;
   descricao?: string;
+  /** O nome do serviço, quando o ficheiro é de um serviço com nome (#78). */
+  nome?: string;
 };
 
 /** 3 379 988 → «3,2 MB». Quem descarrega num telemóvel quer saber antes. */

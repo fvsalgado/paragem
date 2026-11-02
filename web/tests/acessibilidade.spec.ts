@@ -292,7 +292,9 @@ test('o que não se sabe está escrito na página', async ({ page }) => {
   // falha; o que seria uma falha é a página calar-se sobre os termos.
   await page.goto(`/dados-abertos/`);
   if (descargasParaConsulta() > 0) {
-    await expect(page.getByText(/licença aberta declarada/i).first()).toBeVisible();
+    // Na faixa dos termos, à vista; ao lado de cada ficheiro vai fechado, em
+    // «Detalhes» (#78).
+    await expect(page.locator('.faixa', { hasText: /licença aberta declarada/i })).toBeVisible();
   } else {
     await expect(page.getByText(/Estes ficheiros reutilizam-se/i).first()).toBeVisible();
   }

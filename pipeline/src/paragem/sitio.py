@@ -3214,6 +3214,7 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
         descricao: str,
         licenca_da_saida: str | None = None,
         partes_odbl: str | None = None,
+        nome: str | None = None,
     ) -> None:
         alvo = pasta / relativo
         alvo.parent.mkdir(parents=True, exist_ok=True)
@@ -3250,6 +3251,11 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
                 "atribuicao": atribuicao,
                 "atribuicao_obrigatoria": obrigatoria,
                 "descricao": descricao,
+                # O NOME DE QUEM LÊ, quando o ficheiro é de um serviço com nome
+                # — «Pedra Alta — Circuito Azul», e não
+                # «tap/pa-azul.json» (auditoria de 1/11/2026, #78). Ausente
+                # nos outros: o caminho é o nome.
+                **({"nome": nome} if nome else {}),
             }
         )
 
@@ -3286,6 +3292,7 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
             descricao=_descricao_da_saida(s),
             licenca_da_saida=s.licenca,
             partes_odbl=s.partes_odbl,
+            nome=str((s.params or {}).get("linha") or "").strip() or None,
         )
 
     # A MESMA REDE EM NeTEx, ao lado do GTFS de onde sai (`netex.py`).

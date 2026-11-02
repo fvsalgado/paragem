@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { dadosAbertos, exigirRegiao, regiao } from '@/lib/dados';
 import { enderecoDaDescarga } from '@/lib/descargas';
-import { tamanho, type Descarga } from '@/lib/formato';
+import { NOME_DOS_MODOS, tamanho, type Descarga } from '@/lib/formato';
 import { aAutoridade, lista } from '@/lib/prosa';
 import { disponibilidadeDaRegiao } from '@/lib/enderecos';
 import { dataCompleta } from '@/lib/dias';
@@ -107,43 +107,138 @@ const TERMOS: Record<string, string> = {
   terceiro: 'ficheiro de outra entidade — os termos são dela',
 };
 
-function Ficheiro({ d }: { d: Descarga }) {
-  const nome = d.caminho ?? d.ficheiro;
+/** O rótulo curto dos termos, num distintivo ao lado de cada ficheiro (#78). */
+const TERMOS_CURTOS: Record<string, string> = {
+  nosso: 'Licença aberta',
+  odbl: 'ODbL',
+  consulta: 'Para consulta',
+  terceiro: 'De terceiros',
+};
+
+/** «gtfs/meio.zip» → «ZIP». */
+const formato = (caminho: string) => (caminho.split('.').pop() ?? '').toUpperCase();
+
+/**
+ * O CÓDIGO DENTRO DE UMA FRASE, como código (#165). A descrição de um ficheiro
+ * vinha com as crases do Markdown à vista: «a regra de reserva vai no próprio
+ * feed (`booking_rules.txt`)».
+ */
+function comCodigo(texto: string) {
+  return texto
+    .split(/(`[^`]+`)/)
+    .map((p, i) =>
+      p.startsWith('`') && p.endsWith('`') ? <code key={i}>{p.slice(1, -1)}</code> : p,
+    );
+}
+
+/**
+ * UM FICHEIRO NUMA LINHA, E O RESTO FECHADO (#78). Cada um dos trinta e oito
+ * ocupava seis a dez linhas — os termos por extenso, a origem, a parte do
+ * mapa, a atribuição —, e a página tinha dezoito ecrãs no telemóvel. Fica o
+ * nome de quem lê, o formato, o tamanho, a data e os termos num distintivo; a
+ * origem e a atribuição, que são para quem reutiliza, num «Detalhes» fechado.
+ * E a descrição, quando é a mesma do grupo inteiro, não se repete em cada um.
+ */
+function Ficheiro({ d, semDescricao = false }: { d: Descarga; semDescricao?: boolean }) {
+  const caminho = d.caminho ?? d.ficheiro;
+  const termos = d.termos ?? 'consulta';
   return (
     <li>
-      {/* PELO DOMÍNIO DA REGIÃO, e não pelo do armazém (P4-025): a rota
-          redireciona para lá, e é este endereço que se copia. */}
-      <a href={enderecoDaDescarga(d)} download>
-        {nome}
-      </a>{' '}
-      <span className="secundario">
-        {tamanho(d.bytes)}
-        {/* «28/09/2026», como o resto do sítio escreve as datas — e não o
-            «2026-09-28» do ficheiro (P1-046). */}
-        {d.gerado_em && /^\d{4}-\d{2}-\d{2}$/.test(d.gerado_em)
-          ? ` · ${dataCompleta(d.gerado_em.replace(/-/g, ''))}`
-          : d.gerado_em
-            ? ` · ${d.gerado_em}`
-            : ''}
+      <span className="descarga-cabeca">
+        {/* PELO DOMÍNIO DA REGIÃO, e não pelo do armazém (P4-025): a rota
+            redireciona para lá, e é este endereço que se copia. */}
+        <a href={enderecoDaDescarga(d)} download>
+          {d.nome ?? caminho}
+        </a>{' '}
+        <span className={`termos-da-descarga termos-${termos}`}>
+          {TERMOS_CURTOS[termos] ?? 'Termos por confirmar'}
+        </span>
       </span>
-      {d.descricao && <div className="secundario">{d.descricao}</div>}
+      <span className="secundario descarga-dados">
+        {[
+          formato(caminho),
+          tamanho(d.bytes),
+          // «28/09/2026», como o resto do sítio escreve as datas — e não o
+          // «2026-09-28» do ficheiro (P1-046).
+          d.gerado_em && /^\d{4}-\d{2}-\d{2}$/.test(d.gerado_em)
+            ? dataCompleta(d.gerado_em.replace(/-/g, ''))
+            : (d.gerado_em ?? ''),
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+      </span>
+      {d.descricao && !semDescricao && (
+        <span className="secundario descarga-descricao">{comCodigo(d.descricao)}</span>
+      )}
       {/* A ATRIBUIÇÃO QUE O FICHEIRO LEVA DENTRO, dita aqui também — e não só
-          a obrigatória. Numa região inventada, a página dizia «obra da casa» e
-          o ficheiro, lá dentro, «© contribuidores do OpenStreetMap»; os dois
-          dizem agora a da fonte de onde ele sai (P1-046, P2-026). */}
-      <div className="secundario">
-        {TERMOS[d.termos ?? 'consulta'] ?? 'termos por confirmar'} · origem: {d.fonte}
-        {/* A PARTE DO MAPA, num ficheiro que não é todo dele: é essa parte que
-            está sob ODbL, e não o ficheiro — que leva dados de quem não nos
-            deu licença nenhuma. */}
-        {d.partes_odbl
-          ? ` · a parte que vem do OpenStreetMap (${d.partes_odbl}) está sob ODbL`
-          : ''}
-        {d.atribuicao
-          ? ` · ${d.atribuicao_obrigatoria ? 'atribuição obrigatória' : 'atribuição'}: ${d.atribuicao}`
-          : ''}
-      </div>
+          a obrigatória (P1-046, P2-026). */}
+      <details className="detalhes-da-descarga">
+        <summary>
+          Detalhes<span className="so-para-leitores"> de {d.nome ?? caminho}</span>
+        </summary>
+        <p className="secundario">
+          {TERMOS[termos] ?? 'termos por confirmar'}. Origem: {d.fonte}
+          {/* A PARTE DO MAPA, num ficheiro que não é todo dele: é essa parte que
+              está sob ODbL, e não o ficheiro. */}
+          {d.partes_odbl
+            ? `. A parte que vem do OpenStreetMap (${d.partes_odbl}) está sob ODbL`
+            : ''}
+          {d.atribuicao
+            ? `. ${d.atribuicao_obrigatoria ? 'Atribuição obrigatória' : 'Atribuição'}: ${d.atribuicao}`
+            : ''}
+          .
+          {d.nome ? (
+            <>
+              {' '}
+              Ficheiro: <code>{caminho}</code>.
+            </>
+          ) : null}
+        </p>
+      </details>
     </li>
+  );
+}
+
+/**
+ * Os ficheiros de um grupo, com os de um modo que seja a maioria deles num
+ * acordeão à parte (#78): os quinze catálogos do transporte a pedido eram
+ * quinze entradas iguais seguidas, no meio dos outros.
+ */
+function ListaDoGrupo({ ficheiros }: { ficheiros: Descarga[] }) {
+  const porModo = new Map<string, Descarga[]>();
+  for (const d of ficheiros) {
+    const m = d.modo ?? '';
+    porModo.set(m, [...(porModo.get(m) ?? []), d]);
+  }
+  const juntar = [...porModo.entries()].filter(([m, ds]) => m && ds.length >= 5);
+  const soltos = ficheiros.filter((d) => !juntar.some(([m]) => m === (d.modo ?? '')));
+  return (
+    <>
+      {soltos.length > 0 && (
+        <ul className="descargas">
+          {soltos.map((d) => (
+            <Ficheiro key={d.caminho ?? d.ficheiro} d={d} />
+          ))}
+        </ul>
+      )}
+      {juntar.map(([m, ds]) => {
+        const descricoes = new Set(ds.map((d) => d.descricao ?? ''));
+        const comum = descricoes.size === 1 ? [...descricoes][0] : '';
+        return (
+          <details key={m} className="lista-fechada descargas-do-modo">
+            <summary>
+              {NOME_DOS_MODOS[m] ?? m} <span className="secundario">({ds.length} ficheiros)</span>
+            </summary>
+            {comum && <p className="secundario">{comCodigo(comum)}</p>}
+            <ul className="descargas">
+              {ds.map((d) => (
+                <Ficheiro key={d.caminho ?? d.ficheiro} d={d} semDescricao={!!comum} />
+              ))}
+            </ul>
+          </details>
+        );
+      })}
+    </>
   );
 }
 
@@ -184,11 +279,7 @@ export default async function DadosAbertos({ params }: { params: Promise<{ regia
                 ? textoDasBicicletas(disponibilidadeDaRegiao(rid, r.demonstracao) !== '')
                 : g.texto}
             </p>
-            <ul className="descargas">
-              {doGrupo.map((d) => (
-                <Ficheiro key={d.caminho ?? d.ficheiro} d={d} />
-              ))}
-            </ul>
+            <ListaDoGrupo ficheiros={doGrupo} />
           </section>
         );
       })}

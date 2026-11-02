@@ -74,3 +74,20 @@ test('os dados abertos abrem pelo que se usa, e não publicam o registo da const
     await expect(principal.getByRole('link', { name: relatorio })).toBeVisible();
   }
 });
+
+test('cada ficheiro numa linha, com os termos num distintivo e a origem fechada', async ({
+  page,
+}) => {
+  // Trinta e oito ficheiros de seis a dez linhas cada, com a mesma ressalva
+  // repetida, e o caminho como nome (#78); e as crases do Markdown à vista
+  // numa descrição (#165).
+  await page.goto('/dados-abertos/');
+  const principal = page.getByRole('main');
+  const ficheiros = principal.locator('ul.descargas > li');
+  expect(await ficheiros.count()).toBeGreaterThan(0);
+  for (const f of (await ficheiros.all()).slice(0, 5)) {
+    await expect(f.locator('.termos-da-descarga')).toHaveCount(1);
+    await expect(f.locator('details.detalhes-da-descarga')).not.toHaveAttribute('open', '');
+  }
+  await expect(principal).not.toContainText('`');
+});
