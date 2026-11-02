@@ -27,6 +27,23 @@ export async function generateMetadata({
  * em cima, vê-se a caixa a sério, copia-se uma linha. E a mesma promessa:
  * sem conta, sem chave, sem cookies, sem seguir ninguém.
  */
+/** Os atributos que a caixa aceita, para quem escreve o código à mão. */
+const ATRIBUTOS = [
+  {
+    nome: 'data-paragem',
+    valores: 'o identificador da paragem, o que está no fim do endereço da página dela',
+    omissao: 'nenhuma',
+    faz: 'Mostra as próximas partidas dessa paragem. Sem ele, a caixa é o «Para onde quer ir?».',
+  },
+  { nome: 'data-quantas', valores: '1 a 10', omissao: '5', faz: 'Quantas partidas mostrar.' },
+  {
+    nome: 'data-titulo',
+    valores: 'texto',
+    omissao: '«Próximas partidas» ou «Para onde quer ir?»',
+    faz: 'O nome que os leitores de ecrã anunciam ao encontrar a caixa.',
+  },
+];
+
 export default async function ParaOSeuSitio({ params }: { params: Promise<{ regiao: string }> }) {
   const { regiao: rid } = await params;
   const r = await exigirRegiao(rid);
@@ -64,53 +81,30 @@ export default async function ParaOSeuSitio({ params }: { params: Promise<{ regi
       <section aria-labelledby="opcoes">
         <h2 id="opcoes">Todas as opções</h2>
         <p>Para quem prefere escrever o código à mão:</p>
-        <div
-          className="rolavel"
-          tabIndex={0}
-          role="region"
-          aria-label="Os atributos que a caixa aceita"
-        >
-          <table className="tabela-de-opcoes">
-            <caption className="so-para-leitores">Os atributos que a caixa aceita</caption>
-            <thead>
-              <tr>
-                <th scope="col">Atributo</th>
-                <th scope="col">Valores</th>
-                <th scope="col">Por omissão</th>
-                <th scope="col">O que faz</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <code>data-paragem</code>
-                </td>
-                <td>o identificador da paragem, o que está no fim do endereço da página dela</td>
-                <td>nenhuma</td>
-                <td>
-                  Mostra as próximas partidas dessa paragem. Sem ele, a caixa é o «Para onde quer
-                  ir?».
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <code>data-quantas</code>
-                </td>
-                <td>1 a 10</td>
-                <td>5</td>
-                <td>Quantas partidas mostrar.</td>
-              </tr>
-              <tr>
-                <td>
-                  <code>data-titulo</code>
-                </td>
-                <td>texto</td>
-                <td>«Próximas partidas» ou «Para onde quer ir?»</td>
-                <td>O nome que os leitores de ecrã anunciam ao encontrar a caixa.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        {/* UM ATRIBUTO DE CADA VEZ, e não uma tabela de quatro colunas (#175):
+            a 390 px, «data-paragem» partia em dois e «O que faz» ficava com
+            uma palavra por linha. Cada atributo diz os valores, o de omissão
+            e o que faz, um por baixo do outro. */}
+        <ul className="atributos-da-caixa" aria-label="Os atributos que a caixa aceita">
+          {ATRIBUTOS.map((x) => (
+            <li key={x.nome}>
+              <p className="nome-do-atributo">
+                <code>{x.nome}</code>
+              </p>
+              <p>{x.faz}</p>
+              <dl>
+                <div>
+                  <dt>Valores</dt>
+                  <dd>{x.valores}</dd>
+                </div>
+                <div>
+                  <dt>Por omissão</dt>
+                  <dd>{x.omissao}</dd>
+                </div>
+              </dl>
+            </li>
+          ))}
+        </ul>
         <p className="secundario">
           Um valor que não se reconheça ignora-se e vale o de omissão: um erro de escrita não deixa
           a caixa em branco.

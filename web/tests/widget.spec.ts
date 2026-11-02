@@ -104,3 +104,23 @@ test('a linha para colar é JavaScript, e a caixa só existe nos domínios das r
   });
   expect(tipo).toMatch(/javascript/);
 });
+
+test('«Levar para o sítio da câmara»: as opções na cor do sítio, e os atributos um a um', async ({
+  page,
+}) => {
+  // Os botões de opção eram o azul do navegador (#174), e a tabela dos
+  // atributos espremia-se em quatro colunas no telemóvel (#175).
+  await page.goto(`${PROVA}/levar/`);
+  const radio = page.locator('main input[type="radio"]').first();
+  await expect(radio).toBeVisible();
+  const [doRadio, daMarca] = await radio.evaluate((r) => [
+    getComputedStyle(r).accentColor,
+    getComputedStyle(document.documentElement).getPropertyValue('--marca-texto').trim(),
+  ]);
+  expect(doRadio).not.toBe('auto');
+  expect(daMarca).not.toBe('');
+  await expect(page.locator('table.tabela-de-opcoes')).toHaveCount(0);
+  const atributos = page.getByRole('list', { name: 'Os atributos que a caixa aceita' });
+  await expect(atributos.locator('> li')).toHaveCount(3);
+  await expect(atributos).toContainText('data-paragem');
+});

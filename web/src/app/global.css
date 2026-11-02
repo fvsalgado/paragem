@@ -6172,17 +6172,47 @@ pre.codigo-para-copiar {
   background: var(--superficie);
   font-size: var(--letra-pequena);
 }
-.tabela-de-opcoes {
-  width: 100%;
-  border-collapse: collapse;
+/* Os atributos da caixa para as câmaras, um de cada vez (#175): eram uma
+   tabela de quatro colunas que se espremia no telemóvel. */
+.atributos-da-caixa {
+  list-style: none;
+  padding: 0;
+  margin: var(--espaco-2) 0;
+}
+.atributos-da-caixa > li {
+  border-top: 1px solid var(--linhas);
+  padding: 0.6rem 0;
+}
+.atributos-da-caixa > li > p {
+  margin: 0 0 0.3rem;
+}
+.atributos-da-caixa dl {
+  margin: 0;
+  display: grid;
+  gap: 0.15rem;
   font-size: var(--letra-pequena);
 }
-.tabela-de-opcoes th,
-.tabela-de-opcoes td {
-  text-align: left;
-  vertical-align: top;
-  padding: 0.45rem var(--espaco-2);
-  border-bottom: 1px solid var(--linhas);
+.atributos-da-caixa dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.4rem;
+}
+.atributos-da-caixa dt {
+  font-weight: 700;
+}
+.atributos-da-caixa dt::after {
+  content: ':';
+}
+.atributos-da-caixa dd {
+  margin: 0;
+  color: var(--texto-secundario);
+}
+
+/* Os botões de opção e as caixas de escolha na cor do sítio (#174): os do
+   construtor da caixa ficavam no azul do navegador, ao lado do tema e da
+   calculadora do tarifário, que já tinham a da marca. */
+:where(input[type='radio'], input[type='checkbox']) {
+  accent-color: var(--marca-texto);
 }
 
 /* A CONTAGEM AO LADO DE UM NOME COMPRIDO NÃO SE PARTE A MEIO (ronda de
