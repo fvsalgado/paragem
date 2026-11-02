@@ -788,15 +788,28 @@ code {
 .cartao.modo-taxi {
   border-left: 1px solid var(--linhas);
 }
-/* OS «OUTROS TRANSPORTES» DE UM CONCELHO: cartões numa lista, sem a borda da
-   lista por baixo de cada um (eram dois traços entre cartões) e com o
-   espaço de dentro de um cartão — a `.lista a` encostava o texto à borda. */
-.lista.outros-modos > li {
-  border-bottom: 0;
+/* OS «OUTROS TRANSPORTES» DE UM CONCELHO: uma lista com filetes, e não
+   quatro cartões iguais (§6). A cor do modo é um traço curto à esquerda do
+   nome — os privados, expressos e táxis, ficam sem ele —, e a contagem, com
+   a unidade, à direita. */
+.lista.outros-modos > li > a {
+  padding-left: var(--espaco-3);
+  border-left: 4px solid transparent;
 }
-.lista.outros-modos > li > a.cartao {
-  padding: 0.6rem var(--espaco-4);
-  margin: var(--espaco-2) 0;
+.lista.outros-modos > li.modo-autocarro > a {
+  border-left-color: var(--autocarro);
+}
+.lista.outros-modos > li.modo-a-pedido > a {
+  border-left-color: var(--a-pedido);
+}
+.lista.outros-modos > li.modo-bicicleta > a {
+  border-left-color: var(--bicicleta);
+}
+.lista.outros-modos > li.modo-comboio > a {
+  border-left-color: var(--comboio);
+}
+.lista.outros-modos > li.modo-urbano-municipal > a {
+  border-left-color: var(--urbano-municipal);
 }
 
 .lista {
@@ -1225,14 +1238,34 @@ details.lista-fechada[open] > summary::after {
   flex: none;
 }
 
+/* A NOTA DOS DADOS («Horários planeados…»): o «i» de nota e a frase, numa
+   caixa de cantos pequenos. Era uma cápsula de raio total, e com duas linhas
+   ficava oval, com o texto encostado à curva e com ar de botão desformado
+   (auditoria de 1/11/2026, #167 e #194). O ícone é o mesmo das pastilhas de
+   estado (`Estado.tsx`), desenhado por máscara para seguir a cor do texto. */
 .marca-dados {
-  display: inline-block;
-  font-size: var(--letra-mini);
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--espaco-2);
+  max-width: 100%;
+  font-size: var(--letra-pequena);
+  line-height: 1.45;
   color: var(--texto-secundario);
-  border: 1px solid var(--linhas);
-  border-radius: var(--raio-redondo);
-  padding: 0.1rem 0.6rem;
-  background: var(--superficie);
+  border-radius: var(--raio-pequeno);
+  padding: var(--espaco-1) var(--espaco-3) var(--espaco-1) var(--espaco-2);
+  background: var(--superficie-suave);
+}
+.marca-dados::before {
+  content: '';
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.15rem;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9.5'/%3E%3Cpath d='M12 11v6'/%3E%3Ccircle cx='12' cy='7.6' r='1' fill='black' stroke='none'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9.5'/%3E%3Cpath d='M12 11v6'/%3E%3Ccircle cx='12' cy='7.6' r='1' fill='black' stroke='none'/%3E%3C/svg%3E")
+    center / contain no-repeat;
 }
 
 /* O NÚMERO DA LINHA, num desenho só e em três tamanhos (`Distintivo.tsx`).
@@ -1793,6 +1826,22 @@ ul.linhas-do-concelho a:focus-visible {
 ul.linhas-do-concelho a > span:last-child {
   min-width: 0;
   overflow-wrap: break-word;
+}
+/* OS NOMES ALINHADOS, tenha o número dois dígitos ou quatro: o distintivo tem
+   a largura do maior, e o número fica ao meio (auditoria de 1/11/2026, #160).
+   A margem esquerda dos nomes era uma escada. */
+ul.linhas-do-concelho .distintivo {
+  flex: none;
+  min-width: 3.6rem;
+  justify-content: center;
+}
+details.mais-linhas > summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--alvo);
+  font-weight: 700;
+  color: var(--marca-texto);
+  cursor: pointer;
 }
 
 ul.zonas-do-concelho {
@@ -6508,4 +6557,87 @@ figure.mapa-do-concelho figcaption {
 }
 .estado-no-cartao {
   margin: 0.4rem 0 0;
+}
+/* No painel, a marca é um rótulo e não uma nota: sem o «i». */
+.painel-cabecalho .marca-dados::before {
+  content: none;
+}
+
+/* --- o índice de uma página comprida ------------------------------------- */
+
+/* «NESTA PÁGINA»: as secções, por ordem, numa fila que quebra. Uma página de
+   mais de seis ecrãs num telemóvel sem um índice obriga a rolar às cegas à
+   procura da parte que interessa. Ligações com o alvo de 44 px, separadas por
+   um ponto que não se lê. */
+nav.indice-da-pagina {
+  margin: 0 0 var(--espaco-5);
+  font-size: var(--letra-pequena);
+}
+nav.indice-da-pagina ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--espaco-3);
+}
+nav.indice-da-pagina li {
+  display: flex;
+  align-items: center;
+}
+nav.indice-da-pagina li + li::before {
+  content: '·';
+  margin-right: var(--espaco-3);
+  color: var(--texto-secundario);
+}
+nav.indice-da-pagina a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+}
+
+/* «SAIR DO CONCELHO» NUM TELEMÓVEL: cada destino numa linha com as horas, e os
+   distintivos por baixo, à largura toda (#74). Na tabela de três colunas, a
+   das linhas empilhava-os dois a dois e o destino partia-se em três linhas.
+   Continua a ser uma tabela — os cabeçalhos dizem-se a quem não vê —, só
+   arrumada de outra maneira no ecrã estreito. */
+@media (max-width: 47.99rem) {
+  table.saidas thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  table.saidas tr {
+    display: grid;
+    /* As horas nunca passam de metade: com a nota do período comprida, a
+       coluna crescia até o destino se partir por cima dela. */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 50%);
+    grid-template-areas:
+      'destino horas'
+      'linhas linhas';
+    column-gap: var(--espaco-3);
+    padding: var(--espaco-2) 0;
+    border-bottom: 1px solid var(--linhas);
+  }
+  table.saidas th[scope='row'],
+  table.saidas td {
+    padding: 0;
+    border: 0;
+  }
+  table.saidas th[scope='row'] {
+    grid-area: destino;
+  }
+  table.saidas td:has(.linhas-da-saida) {
+    grid-area: linhas;
+  }
+  table.saidas td.horas-da-saida {
+    grid-area: horas;
+    text-align: right;
+    padding-top: 0.6rem;
+  }
+  table.saidas .linhas-da-saida {
+    min-width: 0;
+  }
 }

@@ -29,6 +29,7 @@ import FeriadoMunicipalDoConcelho, {
   FeriadoMunicipalNumaLinha,
 } from '@/componentes/FeriadoMunicipal';
 import Distintivo from '@/componentes/Distintivo';
+import Estado from '@/componentes/Estado';
 import { aAutoridade, lista, plural } from '@/lib/prosa';
 import {
   fraseDoDistrito,
@@ -206,6 +207,41 @@ export default async function Concelho({
         />
       )}
 
+      {/* UM ÍNDICE, porque a página passa de seis ecrãs num telemóvel: as
+          secções que este concelho tem, pela ordem em que vêm. */}
+      <nav aria-label="Nesta página" className="indice-da-pagina">
+        <ul>
+          {saidas.length > 0 && (
+            <li>
+              <a href="#c-sair">Sair do concelho</a>
+            </li>
+          )}
+          {temAPedido && (
+            <li>
+              <a href="#c-a-pedido">Transporte a pedido</a>
+            </li>
+          )}
+          {es.length > 0 && (
+            <li>
+              <a href="#c-estacoes">Estações</a>
+            </li>
+          )}
+          {(presentes.length > 0 || ausentes.length > 0) && (
+            <li>
+              <a href="#c-outros">Outros transportes</a>
+            </li>
+          )}
+          {detalhes.length > 0 && (
+            <li>
+              <a href="#c-linhas">Linhas</a>
+            </li>
+          )}
+          <li>
+            <a href="#c-paragens">Paragens</a>
+          </li>
+        </ul>
+      </nav>
+
       {/* DUAS COLUNAS NUM ECRÃ LARGO (P1-014), como a paragem e a linha: à
           esquerda o que se lê de alto a baixo — sair, as linhas, as paragens —,
           e à direita o que é curto. Era uma coluna de 608 px em qualquer ecrã. */}
@@ -366,9 +402,14 @@ export default async function Concelho({
                         href={urlRede(rid, `estacoes/${e.id.replace(/[^a-zA-Z0-9\-_]/g, '-')}/`)}
                       >
                         <span>{e.nome}</span>
-                        <span className="secundario">
-                          {e.sem_ligacao ? 'sem autocarro perto' : 'com autocarro perto'}
-                        </span>
+                        {/* SEM AUTOCARRO PERTO, NUMA PASTILHA: o ícone e a
+                            palavra, como no mapa — e a que tem diz-se em
+                            secundário, sem disputar a atenção. */}
+                        {e.sem_ligacao ? (
+                          <Estado tipo="atencao">Sem autocarro perto</Estado>
+                        ) : (
+                          <span className="secundario">com autocarro perto</span>
+                        )}
                       </Link>
                     </li>
                   ))}
@@ -385,11 +426,8 @@ export default async function Concelho({
                 {presentes.length > 0 && (
                   <ul className="lista outros-modos">
                     {presentes.map((o) => (
-                      <li key={o.modo}>
-                        <Link
-                          className={`cartao modo-${o.modo}`}
-                          href={url(rid, `modos/${o.modo}/`)}
-                        >
+                      <li key={o.modo} className={`modo-${o.modo}`}>
+                        <Link href={url(rid, `modos/${o.modo}/`)}>
                           <span>
                             {o.nome}
                             {o.redes.length > 0 && (
@@ -418,19 +456,32 @@ export default async function Concelho({
         {detalhes.length > 0 && (
           <section aria-labelledby="c-linhas">
             <h2 id="c-linhas">Linhas que passam aqui</h2>
-            <ul className="linhas-do-concelho">
-              {detalhes
-                .slice()
-                .sort((a, b) => a.ordem.localeCompare(b.ordem))
-                .map((l) => (
-                  <li key={l.id}>
-                    <Link href={urlRede(rid, `linhas/${l.id}/`)}>
-                      <Distintivo codigo={l.codigo} cor={l.cor} tamanho="medio" />
-                      <span>{l.nome}</span>
-                    </Link>
-                  </li>
-                ))}
-            </ul>
+            {/* AS PRIMEIRAS À VISTA, E O RESTO A UM TOQUE: numa cidade são
+                trinta, e eram três ecrãs de telemóvel antes das paragens. */}
+            {(() => {
+              const ordenadas = detalhes.slice().sort((a, b) => a.ordem.localeCompare(b.ordem));
+              const item = (l: LinhaDetalhe) => (
+                <li key={l.id}>
+                  <Link href={urlRede(rid, `linhas/${l.id}/`)}>
+                    <Distintivo codigo={l.codigo} cor={l.cor} tamanho="medio" />
+                    <span>{l.nome}</span>
+                  </Link>
+                </li>
+              );
+              const vistas =
+                ordenadas.length > LINHAS_A_VISTA + 2 ? LINHAS_A_VISTA : ordenadas.length;
+              return (
+                <>
+                  <ul className="linhas-do-concelho">{ordenadas.slice(0, vistas).map(item)}</ul>
+                  {ordenadas.length > vistas && (
+                    <details className="mais-linhas">
+                      <summary>Mais {plural(ordenadas.length - vistas, 'linha', 'linhas')}</summary>
+                      <ul className="linhas-do-concelho">{ordenadas.slice(vistas).map(item)}</ul>
+                    </details>
+                  )}
+                </>
+              );
+            })()}
           </section>
         )}
 
@@ -517,6 +568,9 @@ export default async function Concelho({
     </>
   );
 }
+
+/** Quantas linhas se mostram antes do «Mais …»: as outras ficam a um toque. */
+const LINHAS_A_VISTA = 12;
 
 /** Quantos dias antes o feriado municipal passa de uma linha no fim a uma caixa em cima. */
 const DIAS_DO_FERIADO = 14;
