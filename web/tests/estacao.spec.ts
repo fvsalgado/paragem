@@ -8,7 +8,9 @@
  */
 import { test, expect } from '@playwright/test';
 
-import { estacoes, fusoDaRegiao, temMosaicos, SEM } from './dados-da-regiao';
+import { estacoes, fusoDaRegiao, modos, temMosaicos, SEM } from './dados-da-regiao';
+import { tambemAqui } from '../src/lib/tambem-aqui.ts';
+import type { Modos } from '../src/lib/formato.ts';
 
 const COM_AUTOCARRO = estacoes().find((e) => e.sem_ligacao === false);
 const SEM_AUTOCARRO = estacoes().find((e) => e.sem_ligacao === true);
@@ -80,6 +82,64 @@ test('na lista, as estações sem autocarro perto ficam juntas, à parte', async
   await expect(grupo.getByRole('link', { name: new RegExp(SEM_AUTOCARRO!.nome) })).toBeVisible();
   // E a faixa leva lá.
   await expect(page.locator('.faixa a[href="#sem-autocarro"]')).toBeVisible();
+  // O número e a unidade presos um ao outro (#169).
+  await expect(page.locator('.faixa').first()).toContainText('300\u00a0m');
   // Todas as que não têm autocarro perto, e só essas.
   await expect(grupo.getByRole('link')).toHaveCount(estacoes().filter((e) => e.sem_ligacao).length);
+});
+
+test('a estação tem as partidas do dia inteiro, de outro dia, e para onde', async ({ page }) => {
+  // Mostravam-se seis partidas, sem «mais», sem outro dia e sem sentidos (#81).
+  const e = COM_AUTOCARRO ?? SEM_AUTOCARRO;
+  test.skip(!e, SEM.comboio);
+  await page.goto(`/rede/estacoes/${seguro(e!.id)}/`);
+  const dia = page.locator('section.partidas-da-estacao');
+  await expect(dia.getByRole('heading', { name: 'Partidas do dia' })).toBeVisible();
+  await dia.getByRole('radio', { name: 'Amanhã' }).check();
+  await expect(dia.locator('.dia-escolhido, .hoje-nao')).toContainText(/^Amanhã/);
+  const paraOnde = dia.getByRole('combobox', { name: 'Para onde' });
+  if (await paraOnde.count()) {
+    const destino = (await paraOnde.locator('option').nth(1).textContent())!;
+    await paraOnde.selectOption(destino);
+    const destinos = await dia.locator('tbody tr td:nth-child(3)').allInnerTexts();
+    expect(destinos.length).toBeGreaterThan(0);
+    for (const d of destinos) expect(d.split('\n')[0]).toBe(destino);
+  }
+});
+
+test('num ecrã largo, a estação põe o dia à esquerda e o que parte a seguir à direita', async ({
+  page,
+}) => {
+  // Usava 576 px de 1 440, com os comboios e o autocarro empilhados (#83).
+  const e = COM_AUTOCARRO ?? SEM_AUTOCARRO;
+  test.skip(!e, SEM.comboio);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/rede/estacoes/${seguro(e!.id)}/`);
+  const dia = (await page.locator('section.partidas-da-estacao').boundingBox())!;
+  const aSeguir = (await page.getByRole('heading', { name: 'Comboios a seguir' }).boundingBox())!;
+  expect(aSeguir.x).toBeGreaterThan(dia.x + dia.width);
+  expect(Math.abs(aSeguir.y - dia.y)).toBeLessThan(80);
+});
+
+test('a estação diz o que mais há à porta: bicicletas, táxis, o urbano', async ({ page }) => {
+  // Só mostrava o comboio e o autocarro, e havia bicicletas e táxis a cem
+  // metros (#82). Uma estação com alguma coisa à porta, dos dados.
+  const daRegiao = modos() as unknown as Modos;
+  const e = estacoes().find((x) => tambemAqui(x, daRegiao).length > 0);
+  test.skip(!e, 'nenhuma estação desta região tem outro modo a menos de 400 m');
+  const primeira = tambemAqui(e!, daRegiao)[0];
+  await page.goto(`/rede/estacoes/${seguro(e!.id)}/`);
+  const aqui = page.getByRole('region', { name: 'Também aqui' });
+  await expect(aqui).toBeVisible();
+  await expect(aqui.locator('li').first()).toContainText(`${primeira.metros}\u00a0m`);
+  await expect(aqui.getByRole('link').first()).toHaveAttribute('href', `/modos/${primeira.modo}/`);
+});
+
+test('na lista, cada estação diz o concelho e os comboios que lá param', async ({ page }) => {
+  // Cada linha tinha só o nome e o número de paragens (#168).
+  const e = estacoes().find((x) => x.concelho);
+  test.skip(!e, SEM.comboio);
+  await page.goto('/rede/estacoes/');
+  const ligacao = page.getByRole('link', { name: new RegExp(`^${e!.nome}`) }).first();
+  await expect(ligacao.locator('.linhas-da-paragem')).toBeVisible();
 });

@@ -2,6 +2,7 @@ import Link from '@/componentes/Ligacao';
 import type { Metadata } from 'next';
 import {
   exigirModo,
+  linhas as lerLinhas,
   paragens,
   concelhos,
   sitios,
@@ -14,6 +15,7 @@ import { plural } from '@/lib/prosa';
 import { letraDe, LETRAS, paraUrl, daUrl, vizinhas } from '@/lib/letras';
 import {
   agruparParagens,
+  coresPorNumero,
   paraOnde,
   pontoDoGrupo,
   posicoesRelativas,
@@ -22,6 +24,8 @@ import {
 import { oQueOsDistingue } from '@/lib/homonimos';
 import { metadadosDaRegiao } from '@/lib/metadados';
 import BarraDeIniciais from '@/componentes/BarraDeIniciais';
+import ItemDaParagem from '@/componentes/ItemDaParagem';
+import ProcurarParagem from '@/componentes/ProcurarParagem';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -119,25 +123,17 @@ export default async function PorLetra({
   const fora = grupos.filter((g) => !g.concelho);
   const { antes, depois } = vizinhas(l, comParagens);
 
+  // AS LINHAS NOS SEUS DISTINTIVOS, pela ordem dos números (#183).
+  const cores = coresPorNumero(await lerLinhas(rid));
   const item = (g: GrupoDeParagens) => (
-    <li key={g.principal.id}>
-      <Link href={urlDaParagem(rid, g.principal.id)}>
-        <span>
-          {g.nome}
-          {pistas.has(g) && <span className="secundario"> · {pistas.get(g)}</span>}
-        </span>
-        <span className="secundario">
-          {g.concelho ? (nomes[g.concelho] ?? g.concelho) : 'fora da região'}
-          {g.linhas.length > 0 && (
-            <>
-              <br />
-              {g.linhas.slice(0, 6).join(' · ')}
-              {g.linhas.length > 6 ? ' …' : ''}
-            </>
-          )}
-        </span>
-      </Link>
-    </li>
+    <ItemDaParagem
+      key={g.principal.id}
+      grupo={g}
+      href={urlDaParagem(rid, g.principal.id)}
+      onde={g.concelho ? (nomes[g.concelho] ?? g.concelho) : 'fora da região'}
+      pista={pistas.get(g)}
+      cores={cores}
+    />
   );
 
   return (
@@ -150,6 +146,9 @@ export default async function PorLetra({
           href: urlRede(rid, `paragens/letra/${paraUrl(x)}/`),
         }))}
       />
+      {/* A PROCURA TAMBÉM AQUI (#103): quem abriu a letra C tem seiscentos
+          nomes à frente, e o que procura pode estar noutra letra. */}
+      <ProcurarParagem />
       <p>
         {dentro.length > 0 ? plural(dentro.length, 'paragem', 'paragens') : 'Nenhuma paragem'} na
         região

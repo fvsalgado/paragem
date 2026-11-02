@@ -1,12 +1,24 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import Mapa, { type Marca } from '@/componentes/Mapa';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import Mapa, { type Limites, type Marca } from '@/componentes/Mapa';
 import EscolherPonto from '@/componentes/EscolherPonto';
 import Direccoes, { type Percurso } from '@/componentes/Direccoes';
-import { NOME_DOS_MODOS, fraseDosHorarios, type Partida, type Ponto } from '@/lib/formato';
+import {
+  NOME_DOS_MODOS,
+  fraseDosHorarios,
+  type LinhaDetalhe,
+  type Partida,
+  type Ponto,
+} from '@/lib/formato';
+import { tituloDoSentido } from '@/lib/sentidos';
+import { comContrasteSuficiente } from '@/componentes/Distintivo';
+import { normalizar } from '@/lib/cor';
+import { corDaRede, misturar, type CorDaLinha } from '@/lib/estilo-mapa';
+import { descodificarLinha } from '@/lib/otp';
 import { aplicaAParagem, redeToda, type AvisoNoMapa } from '@/lib/avisos';
 import Distintivo from '@/componentes/Distintivo';
+import Estado from '@/componentes/Estado';
 import { calendarioDe, horaDoRelogio, proximas, type Calendario } from '@/lib/dias';
 import ASeguir from '@/componentes/ASeguir';
 import PertoDeTi from '@/componentes/PertoDeTi';
@@ -17,11 +29,12 @@ import DisponibilidadeBicicletas, {
 import Link from '@/componentes/Ligacao';
 import MenuDoMapa from '@/componentes/MenuDoMapa';
 import PegaDaFolha, { type Altura } from '@/componentes/PegaDaFolha';
-import { Chegada, DoModo, Hamburguer, Lista } from '@/componentes/Icones';
+import { Aviso as IconeDeAviso, Chegada, DoModo, Hamburguer, Lista } from '@/componentes/Icones';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { usePontos } from '@/lib/pontos-do-navegador';
 import AssinaturaDaRegiao from '@/componentes/AssinaturaDaRegiao';
 import type { Assinatura, Marca as MarcaDaRegiao } from '@/lib/marca';
+import type { Sede } from '@/lib/sedes';
 import {
   avisoDe,
   comoProcura,
@@ -178,6 +191,33 @@ function escrever(camada: Camada | null, endereco: string, empilhar: boolean): v
   else window.history.replaceState(estado, '', endereco);
 }
 
+/**
+ * A cor de uma linha no mapa, nos dois temas: a do feed escurecida até se ler
+ * sobre o branco (a mesma do distintivo e do percurso da página), e no escuro
+ * misturada com branco, como os traços da página (`--mistura-dos-tracos`).
+ * Sem cor no feed, a do modo.
+ */
+function corDaLinhaNoMapa(l: Pick<LinhaDetalhe, 'cor' | 'modo'>): CorDaLinha {
+  const original = normalizar(l.cor);
+  if (!original) return { claro: corDaRede('claro', l.modo), escuro: corDaRede('escuro', l.modo) };
+  const claro = comContrasteSuficiente(original);
+  return { claro, escuro: misturar(claro, '#ffffff', 0.58) };
+}
+
+/** A caixa que leva a linha inteira — as paragens e o traçado. */
+function caixaDaLinha(l: NonNullable<LinhaDetalhe['no_mapa']>): Limites {
+  const pontos: [number, number][] = [
+    ...l.paragens.map(([lat, lon]) => [lon, lat] as [number, number]),
+    ...l.tracos.flatMap((t) => descodificarLinha(t)),
+  ];
+  const lons = pontos.map((p) => p[0]);
+  const lats = pontos.map((p) => p[1]);
+  return [
+    [Math.min(...lons), Math.min(...lats)],
+    [Math.max(...lons), Math.max(...lats)],
+  ];
+}
+
 export default function AppDoMapa({
   regiao,
   centro,
@@ -202,6 +242,8 @@ export default function AppDoMapa({
   precos = null,
   aPedidoNaFolha = null,
   oQueJunta = null,
+  sedes = [],
+  estacoesSemAutocarro = [],
 }: {
   regiao: string;
   /**
@@ -260,6 +302,10 @@ export default function AppDoMapa({
   aPedidoNaFolha?: { telefone: string; apresentado: string; nota: string | null } | null;
   /** O que o sítio junta, numa frase (`fraseDoQueJunta`) — por baixo da assinatura. */
   oQueJunta?: string | null;
+  /** As sedes de concelho, para o mapa as nomear a todos os zooms (`sedes.ts`). */
+  sedes?: Sede[];
+  /** As estações sem autocarro a menos de 300 m — um anel no mapa, e uma palavra no cartão. */
+  estacoesSemAutocarro?: string[];
 }) {
   const [menu, setMenu] = useState(false);
 
@@ -279,6 +325,14 @@ export default function AppDoMapa({
   // em texto no HTML de todas as outras páginas, que são as que os motores de
   // busca leem.
   const [escolhido, setEscolhido] = useState<Marca | null>(null);
+  /**
+   * A LINHA ESCOLHIDA NA PROCURA, acesa no mapa (`?linha=`): a ficha dela, e
+   * `'falhou'` quando não chegou. Escolher uma linha levava à página dela, e o
+   * mapa — que é onde se vê por onde ela vai — ficava para trás.
+   */
+  const [linha, setLinha] = useState<LinhaDetalhe | 'falhou' | null>(null);
+  const [alturaDaLinha, setAlturaDaLinha] = useState<Altura>('media');
+  const tituloDaLinha = useRef<HTMLHeadingElement>(null);
 
   // AS CAMADAS COMEÇAM TODAS LIGADAS, e derivam do que há nos dados: uma
   // região sem bicicletas não ganha um botão que não liga a nada.
@@ -634,6 +688,7 @@ export default function AppDoMapa({
    * quem chama: um gesto empilha uma entrada, um «voltar» não.
    */
   function mostrarCartao(p: Marca | Ponto) {
+    setLinha(null);
     setEscolhido(p as Marca);
     setAlturaDoCartao('media');
     setPartidas(null);
@@ -664,8 +719,28 @@ export default function AppDoMapa({
     escrever('cartao', endereco, camadaNoHistorico() !== 'cartao');
   }
 
+  /** A ficha de uma linha, para a acender no mapa — sem tocar no histórico. */
+  function mostrarLinha(id: string) {
+    setEscolhido(null);
+    setDirecoes(null);
+    setPercurso(null);
+    setAlturaDaLinha('media');
+    fetch(enderecoDosDados(regiao, `linhas/${seguro(id)}.json`))
+      .then((r) => (r.ok ? (r.json() as Promise<LinhaDetalhe>) : Promise.reject(r.status)))
+      .then((l) => setLinha(l))
+      .catch(() => setLinha('falhou'));
+  }
+
+  /** Uma linha escolhida na procura: acende-se no mapa, fica no endereço e recebe o foco. */
+  function abrirLinha(id: string) {
+    focarCartao.current = true;
+    mostrarLinha(id);
+    escrever('cartao', `/?linha=${encodeURIComponent(id)}`, camadaNoHistorico() !== 'cartao');
+  }
+
   /** As direções, abertas por um gesto, com o foco no campo que falta. */
   function abrirDirecoes(de: Ponto | null, para: Ponto | null, foco: 'de' | 'para') {
+    setLinha(null);
     setAvisoDoEndereco(null);
     setDirecoes((antes) => ({ de, para, dia: null, hora: null, foco, vez: (antes?.vez ?? 0) + 1 }));
     setPercurso(null);
@@ -709,11 +784,18 @@ export default function AppDoMapa({
   // arrastar o mapa não quer o teclado do telemóvel a abrir.
   const tinhaFoco = useRef(false);
   useEffect(() => {
-    if (escolhido || direcoes) return;
+    if (escolhido || direcoes || linha) return;
     if (!tinhaFoco.current) return;
     tinhaFoco.current = false;
     procura.current?.querySelector<HTMLInputElement>('input')?.focus();
-  }, [escolhido, direcoes]);
+  }, [escolhido, direcoes, linha]);
+
+  // A LINHA QUE SE ACENDE DIZ QUE SE ACENDEU, como o cartão de um ponto.
+  useEffect(() => {
+    if (!linha || !focarCartao.current) return;
+    focarCartao.current = false;
+    tituloDaLinha.current?.focus();
+  }, [linha]);
 
   // O CARTÃO QUE SOBE DIZ QUE SUBIU. Aparecia em silêncio, e com o foco
   // deixado na caixa de procura (P3-014): quem usa leitor de ecrã não sabia
@@ -754,6 +836,12 @@ export default function AppDoMapa({
     }
     setDirecoes(null);
     setAvisoDoEndereco(null);
+    const idDaLinha = q.get('linha');
+    if (idDaLinha) {
+      mostrarLinha(idDaLinha);
+      return;
+    }
+    setLinha(null);
     const id = q.get('ponto');
     // Primeiro as paragens e as estações: os identificadores de modos
     // diferentes vêm de fontes diferentes, e se algum dia coincidirem, quem
@@ -796,7 +884,7 @@ export default function AppDoMapa({
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented || menu) return;
-      if (!direcoes && !escolhido) return;
+      if (!direcoes && !escolhido && !linha) return;
       e.preventDefault();
       tinhaFoco.current = true;
       if (direcoes) fecharDirecoes();
@@ -823,6 +911,18 @@ export default function AppDoMapa({
   const aCarregarHoras =
     (escolhido?.tipo === 'paragem' || escolhido?.tipo === 'estacao') &&
     (partidas === null || (Array.isArray(partidas) && calendario === undefined));
+
+  // A LINHA NO MAPA, com a cor de cada tema e a caixa que a leva inteira.
+  // Calculada uma vez por linha: o mapa compara-a, e uma nova a cada pintura
+  // voltava a enquadrá-la por baixo do dedo de quem a está a arrastar.
+  const linhaNoMapa = useMemo(() => {
+    if (!linha || linha === 'falhou' || !linha.no_mapa) return null;
+    return {
+      ...linha.no_mapa,
+      cor: corDaLinhaNoMapa(linha),
+      caixa: caixaDaLinha(linha.no_mapa),
+    };
+  }, [linha]);
 
   // O que o mapa mostra, contado, para quem não o vê (P3-018). Contado no
   // servidor, para estar no HTML antes de os pontos chegarem.
@@ -880,8 +980,88 @@ export default function AppDoMapa({
               regiao={regiao}
               linhas
               aoEscolher={(p) => p && abrir(p)}
+              aoEscolherLinha={abrirLinha}
             />
           </div>
+        )}
+
+        {/* A LINHA ESCOLHIDA: acesa no mapa, e um cartão com o que ela é —
+            os sentidos, quantas paragens, e o horário a um toque. */}
+        {linha && !direcoes && (
+          <section
+            className="cartao-de-baixo cartao-da-linha"
+            aria-labelledby="linha-escolhida"
+            data-altura={alturaDaLinha}
+            onFocus={() => (tinhaFoco.current = true)}
+          >
+            <PegaDaFolha
+              altura={alturaDaLinha}
+              aoMudar={setAlturaDaLinha}
+              rotulos={{ baixa: 'Mostrar a linha', media: 'Mostrar o cartão inteiro' }}
+            />
+            <div className="cartao-cabecalho">
+              <h2 id="linha-escolhida" tabIndex={-1} ref={tituloDaLinha}>
+                {linha === 'falhou' ? (
+                  'Linha'
+                ) : (
+                  <>
+                    <Distintivo
+                      codigo={linha.codigo}
+                      cor={linha.cor}
+                      modo={linha.modo}
+                      tamanho="medio"
+                    />{' '}
+                    <span>{linha.nome}</span>
+                  </>
+                )}
+              </h2>
+              <button
+                type="button"
+                className="fechar"
+                onClick={() => {
+                  tinhaFoco.current = true;
+                  fechar();
+                }}
+                aria-label="Fechar"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+            {linha === 'falhou' ? (
+              <p className="faixa alerta" role="status">
+                Não foi possível carregar esta linha — pode ser da ligação à Internet.
+              </p>
+            ) : (
+              <>
+                <p className="secundario">
+                  {NOME_DOS_MODOS[linha.modo] ?? 'Linha'}
+                  {linha.no_mapa
+                    ? ` · ${linha.no_mapa.paragens.length === 1 ? '1 paragem' : `${linha.no_mapa.paragens.length} paragens`} no mapa`
+                    : ''}
+                </p>
+                {linha.sentidos.length > 0 && (
+                  <ul className="sentidos-no-cartao">
+                    {linha.sentidos.map((x) => (
+                      <li key={x.sentido}>{tituloDoSentido(x)}</li>
+                    ))}
+                  </ul>
+                )}
+                <p className="cartao-accoes">
+                  <a className="botao" href={`/rede/linhas/${seguro(linha.id)}/`}>
+                    Horário e paragens
+                  </a>
+                </p>
+                {linha.no_mapa?.aproximado && (
+                  <p className="secundario">
+                    Sem o traçado nas ruas: no mapa, as paragens vão ligadas a direito, pela ordem.
+                  </p>
+                )}
+                {!linha.no_mapa && (
+                  <p className="secundario">Esta linha não tem paragens com sítio para mostrar.</p>
+                )}
+              </>
+            )}
+          </section>
         )}
 
         {/* O cartão que sobe de baixo quando se toca num ponto. Vem LOGO A
@@ -940,6 +1120,15 @@ export default function AppDoMapa({
                 alguém a uma doca vazia, e isso é pior do que número nenhum. */}
               <ContagemDaEstacao id={escolhido.tipo === 'bicicleta' ? escolhido.id : null} />
             </p>
+
+            {/* SEM AUTOCARRO À PORTA, DITO À CABEÇA: quem chega de comboio a
+              esta estação tem de arranjar outra maneira de sair dela. É o que
+              o anel à volta dela no mapa quer dizer. */}
+            {escolhido.tipo === 'estacao' && estacoesSemAutocarro.includes(escolhido.id) && (
+              <p className="estado-no-cartao">
+                <Estado tipo="atencao">Sem autocarro a menos de 300&nbsp;m</Estado>
+              </p>
+            )}
 
             {/* OS DOIS GESTOS, À CABEÇA DO CARTÃO (P2-001, P3-024).
               Havia um só, «Como chegar», que punha este sítio no DESTINO — e
@@ -1183,7 +1372,7 @@ export default function AppDoMapa({
           percurso={percurso?.geo ?? null}
           alternativas={percurso?.outras ?? null}
           etiqueta={percurso?.meio ?? null}
-          enquadrar={percurso?.caixa ?? null}
+          enquadrar={percurso?.caixa ?? linhaNoMapa?.caixa ?? null}
           // Na secretária, só o respiro dos botões do canto de baixo.
           margemInferior={lateral ? 48 : tapadoEmBaixo}
           margemEsquerda={lateral}
@@ -1194,7 +1383,10 @@ export default function AppDoMapa({
           modosDesligados={modosDesligados}
           limites={limites}
           lembrarVista={`paragem:vista-do-mapa:${regiao}`}
-          perto={!direcoes && !escolhido ? perto : null}
+          perto={!direcoes && !escolhido && !linha ? perto : null}
+          sedes={sedes}
+          linha={linhaNoMapa}
+          estacoesSemAutocarro={estacoesSemAutocarro}
         />
 
         {/* A FOLHA DE ABERTURA: por onde se pode ir, antes de se perguntar nada.
@@ -1206,7 +1398,7 @@ export default function AppDoMapa({
          *
          * É o que responde a quem abre isto sem saber o que aqui há. A procura
          * serve quem já sabe o nome; isto serve quem não sabe. */}
-        {!direcoes && !escolhido && (
+        {!direcoes && !escolhido && !linha && (
           <section
             className="folha-de-abertura"
             aria-labelledby="abertura"
@@ -1217,6 +1409,47 @@ export default function AppDoMapa({
               aoMudar={setAlturaDaAbertura}
               rotulos={{ baixa: 'Mostrar o que há perto e os modos' }}
             />
+            {/* A FAIXA DE AVISOS, NO ALTO DA FOLHA, quando os há (§6). Vinha a
+              seguir a «Para onde quer ir?», e com a folha a meio ficava na
+              dobra: o aviso que muda os planos de alguém lia-se depois do
+              botão que os fazia. Uma faixa na cor do estado, com o ícone e a
+              palavra — o estado não depende só da cor —, os graves primeiro,
+              dois à vista e o resto a uma ligação. Sem avisos, não ocupa nada. */}
+            {avisos.length > 0 && (
+              <section className="avisos-na-abertura" aria-labelledby="avisos-agora">
+                <h2 id="avisos-agora">
+                  <IconeDeAviso tamanho={18} />
+                  {avisos.length === 1 ? 'Um aviso em vigor' : `${avisos.length} avisos em vigor`}
+                </h2>
+                <ul>
+                  {avisos.slice(0, 2).map((a) => (
+                    <li key={a.id} className={a.gravidade === 'SEVERE' ? 'grave' : undefined}>
+                      <a href={`/avisos/#aviso-${encodeURIComponent(a.id)}`}>
+                        {a.distintivos.length > 0 && (
+                          <span className="distintivos-do-aviso">
+                            <span className="so-para-leitores">
+                              {a.distintivos.length === 1 ? 'Linha ' : 'Linhas '}
+                            </span>
+                            {a.distintivos.slice(0, 3).map((l) => (
+                              <Distintivo key={l.id} codigo={l.codigo} cor={l.cor} modo={l.modo} />
+                            ))}
+                            {a.distintivos.length > 3 && (
+                              <span className="secundario">+{a.distintivos.length - 3}</span>
+                            )}
+                          </span>
+                        )}
+                        <span className="titulo-do-aviso">{a.titulo}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+                {avisos.length > 2 && (
+                  <p>
+                    <a href="/avisos/">Ver os {avisos.length} avisos</a>
+                  </p>
+                )}
+              </section>
+            )}
             {/* A MARCA DA REDE NO PRIMEIRO ECRÃ (P1-008). O mapa ocupa o ecrã
               todo e o cabeçalho sai da frente; sem isto, quem abria o sítio
               da sua autoridade de transportes não via de quem ele era — e o
@@ -1262,45 +1495,6 @@ export default function AppDoMapa({
               botão da localização do mapa só punha um ponto azul. Agora as duas
               portas dão ao mesmo: o botão de texto, para quem não reconhece o
               ícone, e o do mapa — e a folha diz o que passa ali perto. */}
-            {/* A FAIXA DE AVISOS, onde o §6 a põe: logo a seguir a «Para onde quer
-              ir?». O aviso publicado no painel não aparecia no ecrã
-              principal (P4-019) — e é aqui que toda a gente começa. Dois à
-              vista, os graves primeiro; o resto a uma ligação. */}
-            {avisos.length > 0 && (
-              <section className="avisos-na-abertura" aria-labelledby="avisos-agora">
-                <h2 id="avisos-agora">
-                  {avisos.length === 1 ? 'Um aviso em vigor' : `${avisos.length} avisos em vigor`}
-                </h2>
-                <ul>
-                  {avisos.slice(0, 2).map((a) => (
-                    <li key={a.id} className={a.gravidade === 'SEVERE' ? 'grave' : undefined}>
-                      <a href={`/avisos/#aviso-${encodeURIComponent(a.id)}`}>
-                        {a.distintivos.length > 0 && (
-                          <span className="distintivos-do-aviso">
-                            <span className="so-para-leitores">
-                              {a.distintivos.length === 1 ? 'Linha ' : 'Linhas '}
-                            </span>
-                            {a.distintivos.slice(0, 3).map((l) => (
-                              <Distintivo key={l.id} codigo={l.codigo} cor={l.cor} modo={l.modo} />
-                            ))}
-                            {a.distintivos.length > 3 && (
-                              <span className="secundario">+{a.distintivos.length - 3}</span>
-                            )}
-                          </span>
-                        )}
-                        <span className="titulo-do-aviso">{a.titulo}</span>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-                {avisos.length > 2 && (
-                  <p className="secundario">
-                    <a href="/avisos/">Ver os {avisos.length} avisos</a>
-                  </p>
-                )}
-              </section>
-            )}
-
             <PertoDeTi
               regiao={regiao}
               pontos={pontos}

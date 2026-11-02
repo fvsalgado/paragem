@@ -26,6 +26,15 @@ export function numero(n: number): string {
   return n.toLocaleString('pt-PT', { useGrouping: 'always' } as Intl.NumberFormatOptions);
 }
 
+/**
+ * Uma distância: «300 m», com o número e a unidade presos um ao outro por um
+ * espaço que não parte (#169). No computador, «300» ficava no fim de uma linha
+ * e «m.» começava a seguinte.
+ */
+export function emMetros(n: number): string {
+  return `${numero(n)}\u00a0m`;
+}
+
 /** «1 paragem», «2 paragens» — o número e o nome, a concordar. */
 export function plural(n: number, um: string, varios: string): string {
   return `${numero(n)} ${n === 1 ? um : varios}`;
@@ -296,6 +305,16 @@ const A_MEIO_EM_MINUSCULA =
   /(?<=\S\s+)(Feriados?|Sábados?|Domingos?|Dias Úteis|Segundas?-[Ff]eiras?|Terças?-[Ff]eiras?|Quartas?-[Ff]eiras?|Quintas?-[Ff]eiras?|Sextas?-[Ff]eiras?)\b/g;
 const ACENTOS_EM_FALTA: [RegExp, string][] = [[/\bsairem\b/g, 'saírem']];
 
+/**
+ * Uma frase com ponto final, quando não traz pontuação nenhuma (#156): as
+ * regras das folhas vêm como estão nelas, sem ponto, e numa lista de frases a
+ * última ficava a meio.
+ */
+export function comPonto(frase: string): string {
+  const t = frase.trim();
+  return !t || /[.!?…:;)»"]$/u.test(t) ? t : `${t}.`;
+}
+
 export function regraLegivel(regra: string): string {
   let t = regra.trim().replace(HORA_DE_CARTAZ, (_, h, m) => `${h}:${m}`);
   t = t.replace(A_MEIO_EM_MINUSCULA, (m) => m.toLowerCase());
@@ -332,4 +351,18 @@ export function semPrefixos(nome: string, prefixos: string[]): string {
     }
   }
   return resto || nome;
+}
+
+/**
+ * QUANTO TEMPO FICAM AS MEDIÇÕES, na página de privacidade (#184). O RGPD
+ * (artigo 13.º, n.º 2, alínea a)) pede o prazo ou o critério. O prazo é o que
+ * está configurado no serviço de medição, e declara-se
+ * (`PARAGEM_MEDICAO_PRAZO`, «12 meses»); sem ele, diz-se o critério, e não se
+ * escreve um número que ninguém configurou.
+ */
+export function fraseDoPrazoDasMedicoes(prazo: string | null | undefined): string {
+  const p = (prazo ?? '').trim();
+  return p
+    ? `As medições ficam no serviço de medição durante ${p}, e depois apagam-se; nunca se juntam a um nome nem a um contacto.`
+    : 'As medições ficam no serviço de medição pelo prazo de conservação dele, e nunca se juntam a um nome nem a um contacto.';
 }

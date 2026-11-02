@@ -85,9 +85,12 @@ def encaixar(sequencia: list[K], dentro: list[K]) -> list[int]:
 @dataclass
 class Passagem:
     paragem: str
+    #: A hora de PARTIDA, que é a que o quadro mostra — a de quem apanha aqui.
     hora: str
     #: `False` quando a hora foi estimada por nós (`timepoint=0`).
     marcada: bool
+    #: A hora de CHEGADA, só quando é outra: a viagem espera na paragem.
+    chegada: str = ""
 
 
 @dataclass
@@ -106,6 +109,12 @@ def quadro_do_sentido(
     `horas[i]` é a hora da viagem na paragem `i` do quadro, ou `""` se não
     passa lá; `estimadas` são os índices em que a hora é nossa. As colunas vão
     pela hora de partida.
+
+    **A HORA DO QUADRO É A DE PARTIDA**, e onde a viagem espera na paragem — o
+    caderno dá-lhe chegada e partida — a de chegada vai em `chegadas`, pelo
+    índice. Sem ela, a página da linha dizia 13:45 no terminal e o planeador,
+    para a mesma viagem, dizia que se chegava lá às 13:35: as duas certas, e
+    quem as comparava via duas horas para a mesma coisa.
     """
     if not viagens:
         return {"paragens": [], "viagens": []}
@@ -136,6 +145,7 @@ def quadro_do_sentido(
     for v, pos in zip(viagens, linhas_de, strict=True):
         horas = [""] * len(linhas)
         estimadas = []
+        chegadas: dict[str, str] = {}
         for k, p in zip(pos, v.passagens, strict=True):
             i = indice.get(k)
             if i is None or horas[i]:
@@ -143,6 +153,8 @@ def quadro_do_sentido(
             horas[i] = p.hora
             if not p.marcada:
                 estimadas.append(i)
+            if p.chegada and p.chegada != p.hora:
+                chegadas[str(i)] = p.chegada
         if not any(horas):
             continue
         saida_viagens.append(
@@ -152,6 +164,9 @@ def quadro_do_sentido(
                 "destino": v.destino,
                 "horas": horas,
                 "estimadas": sorted(estimadas),
+                # Só quando há alguma: são poucas, e o ficheiro da linha vai
+                # para o telemóvel de quem a abre.
+                **({"chegadas": chegadas} if chegadas else {}),
             }
         )
     saida_viagens.sort(key=lambda x: (next(h for h in x["horas"] if h), x["horas"]))

@@ -8,7 +8,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { emPortugues, percursoEmPortugues } from '../src/lib/expressos.ts';
+import { emPortugues, percursoEmPortugues, semOperador } from '../src/lib/expressos.ts';
 
 test('um percurso lê-se em português, sem o ponto técnico nem o código de variante', () => {
   assert.equal(percursoEmPortugues('Coimbra - Fatima - Lisbon BB'), 'Coimbra – Fátima – Lisboa');
@@ -32,4 +32,13 @@ test('uma paragem fica com o nome do operador, só com a terra em português', (
   assert.equal(emPortugues('Fatima (Bus Station)'), 'Fátima (Bus Station)');
   assert.equal(emPortugues('Lisbon Sete Rios (Terminal)'), 'Lisboa Sete Rios (Terminal)');
   assert.equal(emPortugues('Porto (Bus Station)'), 'Porto (Bus Station)');
+});
+
+test('o número da carreira sai sem o nome do operador à frente (#88)', () => {
+  const operadores = [{ nome: 'Expressos da Serra' }];
+  assert.equal(semOperador('Expressos da Serra 1018', operadores), '1018');
+  assert.equal(semOperador('expressos da serra N785', operadores), 'N785');
+  // Outro nome, ou o nome sozinho, fica como está.
+  assert.equal(semOperador('Outra Casa 12', operadores), 'Outra Casa 12');
+  assert.equal(semOperador('Expressos da Serra', operadores), 'Expressos da Serra');
 });

@@ -49,6 +49,7 @@ from .leitores import LEITORES_DE_HORARIO
 from .leitores.osm import ATRIBUICAO as ATRIBUICAO_OSM
 from .leitores.osm import LICENCA_URL as LICENCA_ODBL
 from .marca import marca_publicada
+from .percursos import linha_no_mapa
 from .quadros import Passagem, ViagemDoSentido, quadro_do_sentido
 from .regiao import Regiao
 from .regiao import Saida as SaidaDaReceita
@@ -901,6 +902,8 @@ class Sitio:
                     st["stop_id"],
                     (st.get("departure_time") or st.get("arrival_time") or "").strip()[:5],
                     st.get("timepoint", "1") != "0",
+                    # A chegada, quando a viagem espera aqui (`quadros.py`).
+                    chegada=(st.get("arrival_time") or "").strip()[:5],
                 )
                 for st in paradas
             ]
@@ -1545,6 +1548,11 @@ class Sitio:
                     "transcrito_por": linha.get("transcrito_por", ""),
                     "transcrito_em": linha.get("transcrito_em", ""),
                     "conteudo_de": _conteudo_de(self.raiz, decl.fonte),
+                    # ONDE SE CONFERE O CARTAZ: o endereço público de onde ele
+                    # veio, no sítio de quem o publica (#191). Um horário com
+                    # anos tem de levar quem o lê até à fonte, e não só dizer
+                    # que é velho.
+                    "documento": _documento_de(self.raiz, decl.fonte),
                     "concelho": decl.params.get("concelho") or None,
                     "coordenadas": {
                         nome: {"lat": p["lat"], "lon": p["lon"], "fonte": p["fonte"]}
@@ -1643,6 +1651,20 @@ class Sitio:
             )
         paragens.sort(key=lambda p: _simples(str(p["nome"])))
 
+        # AS PARTIDAS DE CADA PARAGEM, como as de uma paragem da rede
+        # (auditoria de 1/11/2026, #88). A página dava o número das carreiras e
+        # o percurso, e nem uma hora nem um dia — e o feed tem-nas. Saem com a
+        # mesma forma e a mesma chave de serviço (`<feed>:<serviço>`), para a
+        # página perguntar à tabela dos dias o que anda hoje. Sem o operador em
+        # cada uma: é um só, e a página di-lo uma vez.
+        partidas: dict[str, list[dict[str, Any]]] = collections.defaultdict(list)
+        self._partidas_do_feed(feed, partidas, collections.defaultdict(set), Path(decl.saida).stem)
+        for p in paragens:
+            p["partidas"] = sorted(
+                ({k: v for k, v in x.items() if k != "operador"} for x in partidas[str(p["id"])]),
+                key=lambda x: (x["hora"], x["linha"]),
+            )
+
         # O OPERADOR SAI DAS ROTAS QUE PARAM AQUI, e não da tabela de agências.
         #
         # O feed da FlixBus traz também a FlixTrain. Tirar o operador de
@@ -1669,10 +1691,10 @@ class Sitio:
                     "bilhetes": (a.get("agency_fare_url") or "").strip() or None,
                 }
             )
-        notas = [
-            "Serviço de um operador privado. Os bilhetes vendem-se no sítio "
-            "dele, e os títulos desta região não servem.",
-        ]
+        # A FRASE DO OPERADOR PRIVADO JÁ NÃO VAI NAS NOTAS: a página di-la à
+        # cabeça, com o botão da compra, a partir de `operadores`. Nas notas era
+        # a terceira vez na mesma página (auditoria de 1/11/2026, #172).
+        notas: list[str] = []
         # A INTERFACE É EM PORTUGUÊS (§1) E ESTES NOMES PODEM NÃO SER.
         #
         # Vêm do feed do operador, e há operadores que os escrevem em inglês
@@ -2097,7 +2119,20 @@ def construir(raiz: Path, regiao: Regiao, destino: Path, territorio=None) -> Sit
         # conhecem: o código e os dados publicam-se separados, e o sítio novo
         # recua para ele quando não encontra este.
         s._escrever("calendario.json", calendario_em_mascaras(g.servicos, datas), len(g.servicos))
+    # A LINHA NO MAPA, dentro da ficha dela: por onde passa e onde para, para
+    # o mapa a acender por cima da rede quando alguém a escolhe
+    # (`percursos.linha_no_mapa`). Uns poucos kB por linha, lidos só por quem
+    # a escolhe.
+    onde = {
+        str(p["id"]): (float(p["lat"]), float(p["lon"]))
+        for p in indice_paragens
+        if p.get("lat") is not None and p.get("lon") is not None
+    }
+    linhas_da_grelha = g.linhas if g is not None else []
     for rid, dados in linhas.items():
+        no_mapa = linha_no_mapa(dados, linhas_da_grelha, s.destino / "percursos", onde)
+        if no_mapa:
+            dados = {**dados, "no_mapa": no_mapa}
         s._escrever(f"linhas/{_seguro(rid)}.json", dados)
     return s
 
@@ -2574,6 +2609,25 @@ def _conteudo_de(raiz: Path | None, id_fonte: str | None) -> dict[str, str | Non
     }
 
 
+def _documento_de(raiz: Path | None, id_fonte: str | None) -> str | None:
+    """O endereço público do documento de onde saem estes horários, se o registo o tiver.
+
+    É o `url` da fonte — a página ou o PDF de quem o publica —, e não a cópia
+    arquivada, que é para quem confere a construção. Uma fonte sem endereço
+    (entrou à mão, sem origem na rede) não tem para onde levar.
+    """
+    from .fontes import ErroDeFonte, Registo
+
+    if not id_fonte or raiz is None:
+        return None
+    try:
+        f = Registo.carregar(raiz).obter(id_fonte)
+    except ErroDeFonte:
+        return None
+    url = (f.url or "").strip()
+    return url if url.startswith(("https://", "http://")) else None
+
+
 def datas_dos_horarios(raiz: Path, regiao: Regiao) -> dict[str, str | None]:
     """DE QUANDO SÃO OS HORÁRIOS de cada modo, para o sítio o dizer ao lado deles.
 
@@ -2791,6 +2845,7 @@ def _horarios_a_pedido(
     if construcao is None:
         return []
     nomes = {c.id: c.nome for c in regiao.concelhos}
+    titulos = {str(t.get("id")): t for t in (regiao.tarifas or {}).get("titulos") or []}
     saida: list[dict[str, Any]] = []
     for decl in regiao.saidas:
         if decl.leitor not in LEITORES_DE_HORARIO or decl.modo != "a-pedido":
@@ -2820,6 +2875,18 @@ def _horarios_a_pedido(
                 # de ligações não dizia quanto custa, e o preço só estava no
                 # tarifário.
                 "tarifas": [str(t) for t in decl.params.get("tarifas") or []],
+                # E O PREÇO DELES, já resolvido, para quem não lê o tarifário:
+                # o planeador propunha a ligação sem dizer quanto custa (#192).
+                # Só os que têm valor, e com o «por confirmar» de cada um.
+                "precos": [
+                    {
+                        "nome": str(t.get("nome") or ""),
+                        "valor": t["valor"],
+                        "confirmado": bool(t.get("confirmado")),
+                    }
+                    for i in decl.params.get("tarifas") or []
+                    if (t := titulos.get(str(i))) and isinstance(t.get("valor"), (int, float))
+                ],
                 "regras": d.get("regras") or [],
                 "paragens": sorted({n for q in quadros for n in q.get("paragens", [])}),
                 "viagens": sum(len(q.get("viagens") or []) for q in quadros),
@@ -3160,6 +3227,7 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
         descricao: str,
         licenca_da_saida: str | None = None,
         partes_odbl: str | None = None,
+        nome: str | None = None,
     ) -> None:
         alvo = pasta / relativo
         alvo.parent.mkdir(parents=True, exist_ok=True)
@@ -3196,6 +3264,11 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
                 "atribuicao": atribuicao,
                 "atribuicao_obrigatoria": obrigatoria,
                 "descricao": descricao,
+                # O NOME DE QUEM LÊ, quando o ficheiro é de um serviço com nome
+                # — «Pedra Alta — Circuito Azul», e não
+                # «tap/pa-azul.json» (auditoria de 1/11/2026, #78). Ausente
+                # nos outros: o caminho é o nome.
+                **({"nome": nome} if nome else {}),
             }
         )
 
@@ -3232,6 +3305,7 @@ def _dados_abertos(raiz: Path, regiao: Regiao, destino: Path, sitio: Path) -> li
             descricao=_descricao_da_saida(s),
             licenca_da_saida=s.licenca,
             partes_odbl=s.partes_odbl,
+            nome=str((s.params or {}).get("linha") or "").strip() or None,
         )
 
     # A MESMA REDE EM NeTEx, ao lado do GTFS de onde sai (`netex.py`).

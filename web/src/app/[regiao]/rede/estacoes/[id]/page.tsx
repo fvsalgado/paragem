@@ -17,11 +17,25 @@ import {
   paragensPertoPorNome,
   regiao,
   temMosaicos,
+  modos as lerModos,
+  calendarioDaRegiao,
+  procura,
+  NOME_DOS_MODOS,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
 import ProximasPartidas from '@/componentes/ProximasPartidas';
+import PartidasDoDia from '@/componentes/PartidasDoDia';
+import Distintivo from '@/componentes/Distintivo';
+import DisponibilidadeBicicletas, {
+  ContagemDaEstacao,
+} from '@/componentes/DisponibilidadeBicicletas';
 import { metadadosDaRegiao } from '@/lib/metadados';
 import { feedsDosServicos } from '@/lib/formato';
+import { servicosNoDia } from '@/lib/dias';
+import { diaNoFuso } from '@/lib/fuso';
+import { disponibilidadeDaRegiao } from '@/lib/enderecos';
+import { tambemAqui, RAIO_DA_PORTA } from '@/lib/tambem-aqui';
+import { emMetros, lista, semPrefixos } from '@/lib/prosa';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -88,6 +102,65 @@ export default async function Estacao({
     }),
   );
 
+  // OS COMBOIOS QUE PARAM AQUI, pelos tipos que o operador lhes dá (#82): o
+  // subtítulo dizia «Estação de comboio em <concelho>», que o título já
+  // quase dizia. Os tipos dizem que serviço se apanha aqui.
+  const partidas = ficha?.partidas ?? [];
+  const tipos = [...new Set(partidas.map((d) => d.linha).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, 'pt'),
+  );
+
+  // O DIA DE HOJE JÁ NO HTML, como na paragem (`PartidasDoDia`): os serviços
+  // que andam no dia em que a página se fez, pela tabela dos dias do servidor.
+  const calendario = await calendarioDaRegiao(rid);
+  const hojeNoServidor = diaNoFuso(new Date()).replace(/-/g, '');
+  const ativosHoje = calendario ? servicosNoDia(calendario, hojeNoServidor) : null;
+  const servicos = [...new Set(partidas.map((d) => d.servico_id).filter((x): x is string => !!x))];
+  const doDiaNoServidor = ativosHoje
+    ? { hoje: hojeNoServidor, servicos: servicos.filter((x) => ativosHoje.has(x)) }
+    : null;
+
+  // O QUE MAIS HÁ À PORTA (#82): bicicletas, táxis, o urbano, o expresso — a
+  // poucos passos, com a distância e o caminho para cada um.
+  const dosModos = await lerModos(rid);
+  const aqui = tambemAqui(e, dosModos);
+  const noMapa = new Set(temMapa ? (await procura(rid)).map((x) => x.id) : []);
+  const comBicicletas = aqui.some((x) => x.modo === 'bicicleta');
+  // O nome sem o sistema e sem a terra, que a linha de baixo e o título já
+  // dizem: «Praça da República», e não «<sistema> - <terra> - Praça da
+  // República».
+  const nomeAqui = (x: (typeof aqui)[number]) =>
+    semPrefixos(x.nome, [x.de, concelho?.nome ?? '', e.nome].filter(Boolean));
+
+  const tambem =
+    aqui.length > 0 ? (
+      <section aria-labelledby="tambem-aqui" className="tambem-aqui">
+        <h2 id="tambem-aqui">Também aqui</h2>
+        <ul className="pontos-de-modo">
+          {aqui.map((x) => (
+            <li key={`${x.modo}-${x.nome}-${x.metros}`}>
+              <span className="nome">
+                {nomeAqui(x)}
+                <span className="secundario"> · {emMetros(x.metros)}</span>
+              </span>
+              <span className="onde">
+                <Link href={url(rid, `modos/${x.modo}/`)}>{NOME_DOS_MODOS[x.modo] ?? x.modo}</Link>
+                {x.de && x.de !== x.nome ? ` · ${x.de}` : ''}
+              </span>
+              {x.modo === 'bicicleta' && <ContagemDaEstacao id={x.id} emLinhaPropria />}
+              {x.id && noMapa.has(x.id) && (
+                <span className="accoes">
+                  <a href={url(rid, `/?ponto=${encodeURIComponent(x.id)}`)}>
+                    Ver no mapa<span className="so-para-leitores">: {nomeAqui(x)}</span>
+                  </a>
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+    ) : null;
+
   return (
     <>
       <h1>{e.nome}</h1>
@@ -99,89 +172,154 @@ export default async function Estacao({
             <Link href={urlRede(rid, `concelhos/${concelho.id}/`)}>{concelho.nome}</Link>
           </>
         )}
+        {tipos.length > 0 && (
+          <>
+            {' · '}
+            <span className="so-para-leitores">
+              {tipos.length === 1 ? 'comboio ' : 'comboios '}
+              {lista(tipos)}
+            </span>
+            <span aria-hidden="true" className="tipos-de-comboio">
+              {tipos.map((t) => (
+                <Distintivo key={t} codigo={t} modo="comboio" />
+              ))}
+            </span>
+          </>
+        )}
         .
       </p>
 
-      {/* OS COMBOIOS QUE O SÍTIO JÁ TEM. A página dizia «os horários da CP não
-          são publicados aqui», e o planeador do mesmo sítio propunha comboios
-          ao minuto: a estação negava o que o sítio sabe. As partidas vêm da
-          mesma grelha que o planeador usa. */}
-      <section aria-labelledby="comboios" className="a-seguir">
-        {ficha && ficha.partidas.length > 0 ? (
-          <ProximasPartidas
+      {/* NUM ECRÃ LARGO, LADO A LADO (#83), como a paragem: a estação usava
+          576 px de 1 440, com os comboios e o autocarro empilhados a um ecrã
+          de distância. À direita, o que se apanha a seguir e o que há à porta;
+          à esquerda, as partidas do dia inteiro. No telemóvel, o que parte a
+          seguir e o que há à porta primeiro, e a lista do dia — comprida — no
+          fim. */}
+      <div className="em-colunas estacao-em-colunas">
+        {/* OS COMBOIOS QUE O SÍTIO JÁ TEM. A página dizia «os horários da CP não
+            são publicados aqui», e o planeador do mesmo sítio propunha comboios
+            ao minuto: a estação negava o que o sítio sabe. As partidas vêm da
+            mesma grelha que o planeador usa. */}
+        <section aria-labelledby="comboios" className="a-seguir ao-lado">
+          {partidas.length > 0 ? (
+            <ProximasPartidas
+              regiao={rid}
+              partidas={compactar(partidas)}
+              cores={{}}
+              modo="comboio"
+              Titulo="h2"
+              id="comboios"
+              titulo="Comboios a seguir"
+              quantas={4}
+            />
+          ) : (
+            <>
+              <h2 id="comboios">Comboios a seguir</h2>
+              <p>
+                {ficha
+                  ? 'Nos horários carregados, nenhum comboio parte desta estação.'
+                  : 'As horas dos comboios desta estação ainda não estão nesta página — o planeador já as usa: procure a viagem em «Como chegar».'}
+              </p>
+            </>
+          )}
+          <OperadorFerroviario operador={e.operador} demonstracao={!!r?.demonstracao} />
+        </section>
+
+        {/* O QUE SE PROCURA PRIMEIRO, E O RESTO DEPOIS (auditoria de
+            1/11/2026, #80): a nota sobre os dados logo a seguir às horas, que
+            é a quem ela responde — «não é tempo real» —, e os botões a seguir
+            a ela. */}
+        <div className="ao-lado">
+          <MarcaDeDados
             regiao={rid}
-            partidas={compactar(ficha.partidas)}
-            cores={{}}
-            modo="comboio"
-            Titulo="h2"
-            id="comboios"
-            titulo="Comboios a seguir"
+            modos={['comboio']}
+            feeds={feedsDosServicos(partidas.map((d) => d.servico_id))}
           />
-        ) : (
-          <>
-            <h2 id="comboios">Comboios a seguir</h2>
-            <p>
-              {ficha
-                ? 'Nos horários carregados, nenhum comboio parte desta estação.'
-                : 'As horas dos comboios desta estação ainda não estão nesta página — o planeador já as usa: procure a viagem em «Como chegar».'}
-            </p>
-          </>
-        )}
-        <OperadorFerroviario operador={e.operador} demonstracao={!!r?.demonstracao} />
-      </section>
+          <p className="cartao-accoes">
+            <Link className="botao" href={url(rid, `/viagem/?para=${encodeURIComponent(e.nome)}`)}>
+              Como chegar aqui
+            </Link>
+            {/* Só onde há mapa: numa região sem mosaicos o início não tem mapa. */}
+            {temMapa && <a href={url(rid, `/?ponto=${encodeURIComponent(e.id)}`)}>Ver no mapa</a>}
+          </p>
+        </div>
 
-      {/* O QUE SE PROCURA PRIMEIRO, E O RESTO DEPOIS (auditoria de 1/11/2026,
-          #80). O primeiro comboio aparecia a 70 % do primeiro ecrã do
-          telemóvel, depois dos botões e da nota sobre os dados. A nota fica
-          logo a seguir às horas, que é a quem ela responde — «não é tempo
-          real» —, e os botões a seguir a ela. */}
-      <MarcaDeDados
-        regiao={rid}
-        modos={['comboio']}
-        feeds={feedsDosServicos((ficha?.partidas ?? []).map((d) => d.servico_id))}
-      />
-      <p className="cartao-accoes">
-        <Link className="botao" href={url(rid, `/viagem/?para=${encodeURIComponent(e.nome)}`)}>
-          Como chegar aqui
-        </Link>
-        {/* Só onde há mapa: numa região sem mosaicos o início não tem mapa. */}
-        {temMapa && <a href={url(rid, `/?ponto=${encodeURIComponent(e.id)}`)}>Ver no mapa</a>}
-      </p>
+        {/* O AUTOCARRO À PORTA NO MESMO CARTÃO DOS COMBOIOS (#166): são a
+            mesma pergunta — o que parte daqui a seguir —, e um vinha num
+            cartão branco e o outro solto no fundo. */}
+        <section aria-labelledby="autocarro" className="a-seguir ao-lado">
+          <h2 id="autocarro">Autocarro à porta</h2>
+          {e.sem_ligacao ? (
+            // UM FACTO QUE NÃO MUDA AMANHÃ, numa faixa de informação: a de
+            // alerta é para o que mudou hoje (P1-017).
+            <div className="faixa informacao">
+              <p>
+                <strong>
+                  Não há paragem de autocarro a menos de {emMetros(300)} desta estação.
+                </strong>{' '}
+                Quem aqui chegar de comboio tem de contar com outra maneira de sair — a pé, de táxi,
+                ou com quem o venha buscar.
+              </p>
+            </div>
+          ) : (
+            aPorta.map((g) => (
+              <div key={g.nome} className="paragem-a-porta">
+                <h3>
+                  <Link href={urlDaParagem(rid, g.id)}>{g.nome}</Link>{' '}
+                  <span className="secundario">· {emMetros(g.metros)}</span>
+                </h3>
+                {g.partidas.length > 0 ? (
+                  <ProximasPartidas
+                    regiao={rid}
+                    partidas={compactar(g.partidas)}
+                    cores={cores}
+                    Titulo={null}
+                    quantas={3}
+                  />
+                ) : (
+                  <p className="secundario">Sem partidas registadas nesta paragem.</p>
+                )}
+              </div>
+            ))
+          )}
+        </section>
 
-      <section aria-labelledby="autocarro">
-        <h2 id="autocarro">Autocarro à porta</h2>
-        {e.sem_ligacao ? (
-          // UM FACTO QUE NÃO MUDA AMANHÃ, numa faixa de informação: a de
-          // alerta é para o que mudou hoje (P1-017).
-          <div className="faixa informacao">
-            <p>
-              <strong>Não há paragem de autocarro a menos de 300 m desta estação.</strong> Quem aqui
-              chegar de comboio tem de contar com outra maneira de sair — a pé, de táxi, ou com quem
-              o venha buscar.
+        {tambem && (
+          <div className="ao-lado">
+            {comBicicletas ? (
+              <DisponibilidadeBicicletas endereco={disponibilidadeDaRegiao(rid, r?.demonstracao)}>
+                {tambem}
+              </DisponibilidadeBicicletas>
+            ) : (
+              tambem
+            )}
+            <p className="secundario">
+              A menos de {emMetros(RAIO_DA_PORTA)} da estação, em linha reta.
             </p>
           </div>
-        ) : (
-          aPorta.map((g) => (
-            <div key={g.nome} className="paragem-a-porta">
-              <h3>
-                <Link href={urlDaParagem(rid, g.id)}>{g.nome}</Link>{' '}
-                <span className="secundario">· {g.metros} m</span>
-              </h3>
-              {g.partidas.length > 0 ? (
-                <ProximasPartidas
-                  regiao={rid}
-                  partidas={compactar(g.partidas)}
-                  cores={cores}
-                  Titulo={null}
-                  quantas={3}
-                />
-              ) : (
-                <p className="secundario">Sem partidas registadas nesta paragem.</p>
-              )}
-            </div>
-          ))
         )}
-      </section>
+        {/* O DIA INTEIRO, E OUTRO DIA (#81). Mostravam-se seis partidas, sem
+            «ver mais», sem outro dia e sem sentidos: na estação mais servida da
+            região, a última era às 21:21 e os comboios para o Sul e para o
+            Norte vinham misturados. Agora é a lista do dia, de hoje, de amanhã
+            ou de outra data, e escolhe-se para onde. */}
+        {partidas.length > 0 && (
+          <section aria-labelledby="partidas-do-dia" className="partidas-da-estacao">
+            <h2 id="partidas-do-dia">Partidas do dia</h2>
+            <PartidasDoDia
+              regiao={rid}
+              partidas={compactar(partidas)}
+              cores={{}}
+              nomesDosServicos={{}}
+              noServidor={doDiaNoServidor}
+              caminhoDasLinhas={null}
+              modo="comboio"
+              deQue="desta estação"
+              porDestino
+            />
+          </section>
+        )}
+      </div>
     </>
   );
 }

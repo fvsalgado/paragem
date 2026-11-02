@@ -56,7 +56,7 @@ test('a página diz como se reserva antes de dizer o que existe', async ({ page 
   // paragem à espera de um autocarro que nunca foi pedido.
   await page.goto(`/a-pedido/`);
   const reservar = page.getByRole('heading', { name: 'Como se reserva' });
-  const zonas = page.getByRole('heading', { name: 'As zonas' });
+  const zonas = page.getByRole('heading', { name: 'Por concelho' });
   await expect(reservar).toBeVisible();
   await expect(zonas).toBeVisible();
 
@@ -127,43 +127,44 @@ test('conta as zonas por levantar em vez de as esconder', async ({ page }) => {
   test.skip(!TAP, SEM.aPedido);
   test.skip(!POR_LEVANTAR.length, 'nesta região todas as zonas têm os circuitos atribuídos');
   // Uma lista curta a fingir-se de completa é pior do que uma lista curta que
-  // se declara incompleta.
+  // se declara incompleta. Cada uma está no concelho dela (#55), com o que
+  // fazer: o telefone serve todas.
   await page.goto(`/a-pedido/`);
-  const zonas = page.locator('ul.zonas-sem-circuitos > li');
-  await expect(zonas).toHaveCount(POR_LEVANTAR.length);
-  // CADA UMA COM O QUE FAZER, e não «ver o concelho» — que mandava para a
-  // página do concelho, e essa mandava de volta para aqui (auditoria de
-  // 1/11/2026). O telefone serve todas.
-  await expect(page.getByText('ver o concelho')).toHaveCount(0);
-  if (TAP!.reservas.telefone) {
-    for (const z of await zonas.all()) {
-      await expect(z.getByRole('link', { name: /^Ligar / })).toBeVisible();
-    }
+  for (const z of POR_LEVANTAR) {
+    const bloco = page.locator(`#z-${z.id}`);
+    await expect(bloco).toBeAttached();
+    await expect(bloco.locator('ul.circuitos-da-zona')).toHaveCount(0);
   }
-  // E chega-se lá pelo endereço que a página do concelho usa.
+  await expect(page.getByText('ver o concelho')).toHaveCount(0);
+  // E chega-se lá pelo endereço que a página do concelho usa: o concelho dela
+  // abre-se sozinho.
+  await page.goto(`/a-pedido/#z-${POR_LEVANTAR[0].id}`);
   await expect(page.locator(`#z-${POR_LEVANTAR[0].id}`)).toBeVisible();
+  if (TAP!.reservas.telefone) {
+    await expect(
+      page.locator(`#z-${POR_LEVANTAR[0].id}`).getByRole('link', { name: /^Ligar / }),
+    ).toBeVisible();
+  }
 });
 
-test('o catálogo dos circuitos está lá, com os nomes todos', async ({ page }) => {
+test('os circuitos estão uma vez só, por concelho, e o catálogo acha-se pela procura', async ({
+  page,
+}) => {
   test.skip(!TAP, SEM.aPedido);
-  // Saber que o circuito existe não é saber a que horas passa — mas é o que
-  // responde a «há transporte para a minha aldeia?», e é a pergunta que se
-  // faz primeiro. Sem isto, quem não vê o nome da terra na lista das zonas
-  // conclui que não tem serviço.
+  // Eram três listas para os mesmos circuitos — as zonas, os circuitos com
+  // horário e o catálogo por ordem alfabética —, e o mesmo circuito aparecia
+  // em duas ou três (#55). A lista alfabética passou a ser a procura.
   await page.goto(`/a-pedido/`);
-  await expect(
-    page.getByRole('heading', { name: new RegExp(`Os ${TAP!.circuitos.length} circuitos`) }),
-  ).toBeVisible();
-  // Dentro da secção do catálogo, e não na página inteira: um circuito que
-  // tenha brochura tem o mesmo nome na grelha dela — que é o que se queria,
-  // mas não é o que aqui se mede.
-  const catalogo = page.locator('section[aria-labelledby="circuitos"]');
-  // A lista está fechada: a procura de cima responde mais depressa, e a lista
-  // fica para quem prefere ler. Abre-se como quem a quer ler.
-  await catalogo.locator('summary').click();
-  for (const c of TAP!.circuitos.slice(0, 3)) {
-    await expect(catalogo.getByText(c.nome, { exact: false }).first()).toBeVisible();
-  }
+  await expect(page.getByRole('heading', { name: /^Os \d+ circuitos$/ })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: /circuitos com horário/ })).toHaveCount(0);
+  const concelhos = page.locator('details.concelho-a-pedido');
+  expect(await concelhos.count()).toBeGreaterThan(0);
+  // Saber que o circuito existe responde a «há transporte para a minha
+  // aldeia?». O primeiro do catálogo acha-se escrevendo o nome dele.
+  const c = TAP!.circuitos[0];
+  test.skip(!c, 'esta região não tem catálogo de circuitos');
+  await page.getByLabel('Escreva o nome da sua terra').fill(c.nome);
+  await expect(page.locator('ul.terras-encontradas').first()).toContainText(c.nome);
 });
 
 test('não inventa a que zona pertence cada circuito', async ({ page }) => {
@@ -174,11 +175,13 @@ test('não inventa a que zona pertence cada circuito', async ({ page }) => {
   // duas listas sem a ligação. A página tem de o DIZER — um circuito posto
   // no concelho errado manda alguém reservar onde não deve.
   await page.goto(`/a-pedido/`);
-  // A lista delas não põe circuito nenhum por baixo de nenhuma, e a página diz
-  // o que fazer: perguntar a hora ao reservar. Que a zona de cada circuito
-  // ainda falta diz-se em «Sobre estes dados», que é para quem quer saber.
-  await expect(page.locator('ul.zonas-sem-circuitos')).not.toContainText(/circuito/i);
-  await expect(page.getByText(/pergunte a hora ao reservar/)).toBeVisible();
+  // Nenhuma zona sem circuitos ganha uma lista de circuitos, e a página diz o
+  // que fazer. Que a zona de cada circuito ainda falta diz-se em «Sobre estes
+  // dados», que é para quem quer saber.
+  for (const z of POR_LEVANTAR) {
+    await expect(page.locator(`#z-${z.id} ul.circuitos-da-zona`)).toHaveCount(0);
+  }
+  await expect(page.locator(`#z-${POR_LEVANTAR[0].id}`)).toContainText(/reserva-se como as outras/);
   const sobre = page.locator('section[aria-labelledby="donde"] details');
   await sobre.locator('summary').click();
   await expect(sobre).toContainText(/a zona de cada um/);
@@ -223,15 +226,23 @@ test('a demonstração não ganha uma secção vazia', async ({ page }) => {
   expect(r?.status(), 'a prova não pode ter esta página').toBe(404);
 });
 
-test('os circuitos com horário mostram a que horas passam', async ({ page }) => {
+test('os circuitos com horário levam a que horas passam, e continuam a ser a pedido', async ({
+  page,
+}) => {
   test.skip(!TAP, SEM.aPedido);
   // Era a maior lacuna da região: sabia-se que o circuito existia e não a que
   // horas passa. As brochuras que a autoridade publica têm-no, paragem a
-  // paragem, e agora está aqui.
-  await page.goto(`/a-pedido/`);
-  await expect(page.getByRole('heading', { name: /Os circuitos com horário/ })).toBeVisible();
+  // paragem, e cada circuito leva ao seu horário.
+  test.skip(!ZONA?.circuitos.some((c) => c.horario), 'nenhum circuito de uma zona tem horário');
+  await page.goto(`/a-pedido/#z-${ZONA!.id}`);
+  await expect(
+    page
+      .locator(`#z-${ZONA!.id}`)
+      .getByRole('link', { name: /^Ver horário/ })
+      .first(),
+  ).toBeVisible();
   // E continuam a ser a pedido: a hora não dispensa a reserva.
-  await expect(page.getByText(/estas horas só se cumprem se alguém reservar/)).toBeVisible();
+  await expect(page.getByText(/só passam se alguém reservar/)).toBeVisible();
 });
 
 test('a grelha de um circuito abre e tem as horas', async ({ page }) => {
@@ -239,9 +250,14 @@ test('a grelha de um circuito abre e tem as horas', async ({ page }) => {
   test.skip(!COM_VIAGENS, 'nenhum circuito desta região tem grelha de viagens');
   // Cada grupo de circuitos tem a sua página: todas as tabelas juntas eram
   // 833 kB e dez mil elementos.
-  await page.goto(`/a-pedido/`);
-  await page.locator('section[aria-labelledby="horarios"]').getByRole('link').first().click();
-  await expect(page).toHaveURL(/\/a-pedido\/[^/]+\/$/);
+  test.skip(!ZONA?.circuitos.some((c) => c.horario), 'nenhum circuito de uma zona tem horário');
+  await page.goto(`/a-pedido/#z-${ZONA!.id}`);
+  await page
+    .locator(`#z-${ZONA!.id}`)
+    .getByRole('link', { name: /^Ver horário/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/a-pedido\/[^/]+\/(#.*)?$/);
   await page.goto(`/a-pedido/${COM_VIAGENS!.id}/`);
   // A hora como a folha a escreve: «9:06» e «09:06» são a mesma. O resumo diz
   // «a primeira às 7:30, na paragem …», e não «da … às 7:30»: a contração

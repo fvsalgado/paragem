@@ -104,7 +104,8 @@ function fresco(e: Estado): boolean {
 }
 
 /**
- * A contagem de uma estação, ao lado do nome dela: «· 3 bicicletas · 6 docas».
+ * A contagem de uma estação, ao lado do nome dela: «· 3 bicicletas · 6 lugares
+ * livres».
  * Nada, quando não há serviço, quando a leitura envelheceu, ou quando esta
  * estação não veio no feed.
  */
@@ -132,7 +133,9 @@ export function ContagemDaEstacao({
     ),
     c.docas != null && (
       <span key="d" className="contagem">
-        <strong>{c.docas}</strong> {c.docas === 1 ? 'doca' : 'docas'}
+        {/* «LUGARES LIVRES», e não «docas» (#158): «2 docas» não dizia se eram
+            as livres ou as todas, e é o número de quem vai deixar a bicicleta. */}
+        <strong>{c.docas}</strong> {c.docas === 1 ? 'lugar livre' : 'lugares livres'}
       </span>
     ),
   ].filter(Boolean);

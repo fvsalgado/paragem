@@ -2,6 +2,7 @@ import Link from '@/componentes/Ligacao';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import {
+  compactar,
   concelhos,
   dadosAbertos,
   modo as lerModo,
@@ -20,7 +21,9 @@ import {
 import { metadadosDaRegiao } from '@/lib/metadados';
 import AbrirPeloEndereco from '@/componentes/AbrirPeloEndereco';
 import { paragemMaisPerto } from '@/lib/onde';
-import { emPortugues, percursoEmPortugues, pontoTecnico } from '@/lib/expressos';
+import { emPortugues, percursoEmPortugues, pontoTecnico, semOperador } from '@/lib/expressos';
+import ProximasPartidas from '@/componentes/ProximasPartidas';
+import { simples } from '@/lib/homonimos';
 import QuadroDeHorario from '@/componentes/QuadroDeHorario';
 import Transcricao, { DataDoDocumento } from '@/componentes/Transcricao';
 import DisponibilidadeBicicletas, {
@@ -38,7 +41,13 @@ import PrecosDeExpresso from '@/componentes/PrecosDeExpresso';
 import { disponibilidadeDaRegiao, expressosDaRegiao } from '@/lib/enderecos';
 import Distintivo from '@/componentes/Distintivo';
 import { aRede, lista, nomeDaRede, plural, regraLegivel, semPrefixos } from '@/lib/prosa';
-import { percursosSemHorario, regrasENotas } from '@/lib/pagina-do-modo';
+import {
+  avisoDoCartaz,
+  regraDaData,
+  percursosSemHorario,
+  quemGerePorOrdem,
+  regrasENotas,
+} from '@/lib/pagina-do-modo';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -203,6 +212,7 @@ function Ponto({
 export default async function Modo({ params }: { params: Promise<Params> }) {
   const { regiao: rid, modo: mid } = await params;
   const r = await exigirRegiao(rid);
+  // A mesma praça mapeada duas vezes já vem junta (`modos`, em `lib/dados.ts`).
   const m: ModoDetalhe | null = await lerModo(rid, mid);
   if (!m) notFound();
 
@@ -253,7 +263,7 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
           que se lia. */}
       {(m.gerido_por.length > 0 || oQueHa({ ...m, percursos }, r.em)) && (
         <p>
-          {m.gerido_por.length > 0 && <>Quem gere: {lista(m.gerido_por)}. </>}
+          {m.gerido_por.length > 0 && <>Quem gere: {lista(quemGerePorOrdem(m))}. </>}
           {oQueHa({ ...m, percursos }, r.em)}
         </p>
       )}
@@ -264,10 +274,26 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
           ecrã. A honestidade fica: numa frase aqui, por inteiro no fim, em
           «Sobre estes dados». O vermelho fica para o que mudou hoje. */}
       {m.operadores?.length ? (
-        <p>
-          <strong>Serviço de um operador privado:</strong> os títulos desta região não servem aqui,
-          e os bilhetes compram-se ao operador.
-        </p>
+        <>
+          <p>
+            <strong>Serviço de um operador privado:</strong> os títulos desta região não servem
+            aqui, e os bilhetes compram-se ao operador.
+          </p>
+          {/* A COMPRA COMO AÇÃO, e dita uma vez (#172): a mesma frase voltava
+              no fim, numa secção «Bilhetes» com o nome do operador como
+              ligação solta. */}
+          {m.operadores.some((o) => o.bilhetes) && (
+            <p className="cartao-accoes">
+              {m.operadores
+                .filter((o) => o.bilhetes)
+                .map((o) => (
+                  <a key={o.nome} className="botao" href={o.bilhetes!} rel="noreferrer">
+                    Comprar bilhete: {o.nome}
+                  </a>
+                ))}
+            </p>
+          )}
+        </>
       ) : null}
       {(m.incompleto || m.notas.length > 0) && (
         <p className="secundario">
@@ -387,9 +413,15 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
                       );
                     })}
                   </ul>
+                  {/* «TUDO EM …», depois da lista das bicicletas de um
+                      concelho, prometia mais bicicletas e levava à página do
+                      concelho (#158). Diz para onde leva — e sem contração
+                      nenhuma: «em Pedra Alta», mas «no Sável». */}
                   {nomes.has(g.id) && (
                     <p className="cartao-accoes">
-                      <Link href={urlRede(rid, `concelhos/${g.id}/`)}>Tudo em {g.nome}</Link>
+                      <Link href={urlRede(rid, `concelhos/${g.id}/`)}>
+                        {g.nome}: os outros transportes do concelho
+                      </Link>
                     </p>
                   )}
                 </section>
@@ -404,31 +436,79 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
           Vêm antes dos percursos e antes de tudo o resto que não seja o que
           falta: quem abre a página de um urbano municipal quer saber a que
           horas passa, e até aqui a resposta era «pergunte à câmara». */}
-      {(m.horarios ?? []).map((h) => (
-        <section key={h.id} aria-labelledby={`h-${h.id}`}>
-          <h2 id={`h-${h.id}`}>{h.nome}</h2>
-          <p className="secundario">
-            {[
-              h.operador,
-              plural(h.paragens.length, 'paragem', 'paragens'),
-              `${plural(h.viagens, 'viagem', 'viagens')} por dia`,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
-          <RegrasDoCartaz regras={h.regras} />
-          {h.quadros.map((q, iq) => (
-            <QuadroDeHorario key={iq} quadro={q} titulo={h.nome} />
-          ))}
-          {/* O HORÁRIO PRIMEIRO, e o que falta no mapa depois, em segundo
-              plano: entre as regras e o horário, «As que faltam» tinha o
-              mesmo peso do horário, e quem procurava as horas abria o errado
-              (auditoria de 1/11/2026). */}
-          <ParagensNoMapa h={h} />
-          <DataDoDocumento conteudo={h.conteudo_de} documento="o cartaz" />
-          <Transcricao por={h.transcrito_por} em={h.transcrito_em} de="do cartaz" />
-        </section>
-      ))}
+      {(m.horarios ?? []).map((h) => {
+        const aviso = avisoDoCartaz(h.conteudo_de, new Date());
+        return (
+          <section
+            key={h.id}
+            aria-labelledby={`h-${h.id}`}
+            className={`horario-de-modo modo-${mid}`}
+          >
+            {/* A COR DA LINHA ANTES DO NOME (#190): as linhas de um urbano
+                chamam-se pela cor — «Linha Azul», «Vermelha» — e o título era
+                azul-noite como os outros. A cor é a que a região declara. */}
+            <h2 id={`h-${h.id}`}>
+              {h.cor && (
+                <span
+                  className="cor-da-linha-do-cartaz"
+                  style={{ backgroundColor: `#${h.cor.replace(/^#/, '')}` }}
+                  aria-hidden="true"
+                />
+              )}
+              {h.nome}
+            </h2>
+            <p className="secundario">
+              {[
+                h.operador,
+                plural(h.paragens.length, 'paragem', 'paragens'),
+                `${plural(h.viagens, 'viagem', 'viagens')} por dia`,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+            {/* UM CARTAZ COM ANOS DIZ-SE À CABEÇA, e o horário fica (#191).
+                «Em vigor desde 1/2/2021, diz o cartaz» vinha em letra pequena
+                no fim de cada linha, e um horário de há cinco anos pode já
+                não valer. Quem o opera é quem o confirma, e o cartaz está no
+                sítio dele. */}
+            {aviso && (
+              <div className="faixa informacao aviso-do-cartaz">
+                <p>
+                  <strong>
+                    {aviso.desde
+                      ? `Horário em vigor desde ${aviso.desde}, diz o cartaz.`
+                      : 'O cartaz não indica a data de início.'}
+                  </strong>{' '}
+                  Pode ter mudado entretanto: confirme antes de viajar
+                  {h.operador ? <>, com quem o opera — {h.operador}</> : ''}.
+                  {h.documento && (
+                    <>
+                      {' '}
+                      <a href={h.documento} rel="noreferrer">
+                        Ver o cartaz original
+                        <span className="so-para-leitores"> de {h.nome}</span>
+                      </a>
+                    </>
+                  )}
+                </p>
+              </div>
+            )}
+            <RegrasDoCartaz
+              regras={aviso?.desde ? h.regras.filter((x) => !regraDaData(x)) : h.regras}
+            />
+            {h.quadros.map((q, iq) => (
+              <QuadroDeHorario key={iq} quadro={q} titulo={h.nome} />
+            ))}
+            {/* O HORÁRIO PRIMEIRO, e o que falta no mapa depois, em segundo
+                plano: entre as regras e o horário, «As que faltam» tinha o
+                mesmo peso do horário, e quem procurava as horas abria o errado
+                (auditoria de 1/11/2026). */}
+            <ParagensNoMapa h={h} />
+            {!aviso && <DataDoDocumento conteudo={h.conteudo_de} documento="o cartaz" />}
+            <Transcricao por={h.transcrito_por} em={h.transcrito_em} de="do cartaz" />
+          </section>
+        );
+      })}
 
       {/* --- os percursos, sem horário --- */}
       {/* SÓ OS QUE NÃO TÊM HORÁRIO MAIS ACIMA (`percursosSemHorario`): os
@@ -496,15 +576,43 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
         <section aria-labelledby="paragens">
           <h2 id="paragens">Onde param, e para onde vão</h2>
           {m.paragens.map((p) => (
-            <section key={`${p.lat},${p.lon}`} aria-labelledby={`e-${p.lat}-${p.lon}`}>
+            <section
+              key={`${p.lat},${p.lon}`}
+              aria-labelledby={`e-${p.lat}-${p.lon}`}
+              className="paragem-de-expresso"
+            >
               <h3 id={`e-${p.lat}-${p.lon}`}>
                 {/* A TERRA EM PORTUGUÊS, com os acentos que o feed lhe tira
-                    («Fatima»); o resto do nome fica como o operador o escreve. */}
+                    («Fatima»); o resto do nome fica como o operador o escreve.
+                    O CONCELHO SÓ QUANDO O NOME NÃO O DIZ (#171): «Vila
+                    (Terminal) · Vila» dizia a terra duas vezes. */}
                 {emPortugues(p.nome)}
-                {p.concelho && nomes.has(p.concelho) && (
-                  <span className="secundario"> · {nomes.get(p.concelho)}</span>
-                )}
+                {p.concelho &&
+                  nomes.has(p.concelho) &&
+                  !simples(emPortugues(p.nome)).includes(simples(nomes.get(p.concelho)!)) && (
+                    <span className="secundario"> · {nomes.get(p.concelho)}</span>
+                  )}
               </h3>
+              {/* A QUE HORAS, E SE PASSA HOJE (#88). A lista dava o número das
+                  carreiras e o percurso, e nem uma hora — e o feed tem-nas.
+                  As próximas, com a mesma tabela dos dias das paragens; o
+                  nome do operador sai do número, que a frase de cima já o diz. */}
+              {(p.partidas ?? []).length > 0 && (
+                <ProximasPartidas
+                  regiao={rid}
+                  partidas={compactar(
+                    (p.partidas ?? []).map((d) => ({
+                      ...d,
+                      linha: semOperador(d.linha, m.operadores ?? []),
+                      destino: emPortugues(d.destino),
+                    })),
+                  )}
+                  cores={{}}
+                  Titulo="h4"
+                  titulo="A seguir"
+                  quantas={4}
+                />
+              )}
               <ul className="lista">
                 {/* A linha e o destino SEPARADOS: colados, o número da linha e
                     a primeira terra do destino liam-se como uma palavra só. */}
@@ -559,25 +667,6 @@ export default async function Modo({ params }: { params: Promise<Params> }) {
               </p>
             </div>
           ))}
-        </section>
-      ) : null}
-
-      {m.operadores?.length ? (
-        <section aria-labelledby="bilhetes">
-          <h2 id="bilhetes">Bilhetes</h2>
-          <p>
-            Os títulos desta região não servem aqui. Os bilhetes compram-se ao operador.
-            {m.operadores.map((o) =>
-              o.bilhetes ? (
-                <span key={o.nome}>
-                  {' '}
-                  <a href={o.bilhetes} rel="noreferrer">
-                    {o.nome}
-                  </a>
-                </span>
-              ) : null,
-            )}
-          </p>
         </section>
       ) : null}
 

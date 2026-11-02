@@ -80,8 +80,15 @@ export type HorarioDeModo = {
   viagens: number;
   coordenadas: Record<string, unknown>;
   quadros: Quadro[];
+  conteudo_de?: { em_vigor_desde: string | null; texto: string | null };
+  documento?: string | null;
 };
-export type ParagemDeModo = { nome: string; concelho: string | null };
+export type ParagemDeModo = {
+  nome: string;
+  concelho: string | null;
+  /** As partidas daqui (#88); ausentes em dados de antes disso. */
+  partidas?: { hora: string }[];
+};
 export type Modo = {
   modo: string;
   quantos: number;
@@ -90,7 +97,7 @@ export type Modo = {
   sistemas: Sistema[];
   horarios: HorarioDeModo[];
   percursos: { nome: string }[];
-  pontos: { concelho: string | null }[];
+  pontos: { concelho: string | null; lat: number; lon: number }[];
   paragens: ParagemDeModo[];
   /** Os urbanos que a rede própria opera (`rede.urbanos`); ausente onde não há. */
   urbanos_da_rede?: { nome: string; concelho: string; linhas: { id: string; nome: string }[] }[];
@@ -234,6 +241,33 @@ export function linhaComMaisViagens(regiao = REGIAO): Linha {
   const todas = linhas(regiao);
   if (!todas.length) throw new Error(`a região ${regiao} não tem linhas construídas`);
   return [...todas].sort((a, b) => b.viagens - a.viagens || a.id.localeCompare(b.id))[0];
+}
+
+/**
+ * Uma viagem que ESPERA numa paragem do quadro — chega a uma hora e parte a
+ * outra —, e as duas horas. É o caso em que a página da linha e o planeador
+ * pareciam desencontrar-se (#120). `null` quando nenhuma linha tem uma.
+ */
+export function umaViagemComEspera(
+  regiao = REGIAO,
+): { linha: string; partida: string; chegada: string } | null {
+  type Q = { viagens: { horas: string[]; chegadas?: Record<string, string> }[] };
+  for (const l of [...linhas(regiao)].sort((a, b) => a.id.localeCompare(b.id))) {
+    const detalhe = lerDe<{ sentidos?: { quadro?: Q }[] }>(
+      regiao,
+      'sitio',
+      'linhas',
+      `${l.id}.json`,
+    );
+    for (const s of detalhe?.sentidos ?? []) {
+      for (const v of s.quadro?.viagens ?? []) {
+        const [i, chegada] = Object.entries(v.chegadas ?? {})[0] ?? [];
+        if (i !== undefined && chegada)
+          return { linha: l.id, partida: v.horas[Number(i)], chegada };
+      }
+    }
+  }
+  return null;
 }
 
 /** O concelho com mais paragens. */

@@ -102,6 +102,7 @@ export default function EscolherPonto({
   regiao,
   opcaoEspecial,
   linhas = false,
+  aoEscolherLinha,
   className,
 }: {
   etiqueta: string;
@@ -148,6 +149,12 @@ export default function EscolherPonto({
    * procura — num campo de «De» ou «Para» ninguém vai para uma linha.
    */
   linhas?: boolean;
+  /**
+   * Quem sabe mostrar uma linha onde está — o mapa acende-a por cima da rede
+   * — recebe-a aqui, em vez de se mudar de página. Sem isto, abre-se a página
+   * da linha, como sempre.
+   */
+  aoEscolherLinha?: (id: string) => void;
   className?: string;
 }) {
   const id = useId();
@@ -406,9 +413,13 @@ export default function EscolherPonto({
 
   function escolher(p: Ponto) {
     if (p.tipo === 'linha') {
-      // Uma linha não é um sítio: abre-se a página dela, com o horário.
+      // Uma linha não é um sítio: acende-se no mapa, quando há mapa, ou
+      // abre-se a página dela, com o horário.
       setAberto(false);
-      router.push(`/rede/linhas/${p.id.replace(/[^a-zA-Z0-9\-_]/g, '-')}/`);
+      if (aoEscolherLinha) {
+        setTexto(p.nome);
+        aoEscolherLinha(p.id);
+      } else router.push(`/rede/linhas/${p.id.replace(/[^a-zA-Z0-9\-_]/g, '-')}/`);
       return;
     }
     aoEscolher(p);

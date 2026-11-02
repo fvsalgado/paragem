@@ -140,3 +140,18 @@ export function percursoEmPortugues(percurso: string): string {
       .join(' – ')
   );
 }
+
+/**
+ * O número da carreira sem o nome do operador à frente: o feed chama-lhe
+ * «<Operador> 1018», e na lista das partidas de um operador só, o nome repetido
+ * em cada uma alargava o distintivo e não dizia nada.
+ */
+export function semOperador(linha: string, operadores: { nome: string }[]): string {
+  for (const o of operadores) {
+    const prefixo = `${o.nome} `;
+    if (o.nome && linha.toLowerCase().startsWith(prefixo.toLowerCase())) {
+      return linha.slice(prefixo.length).trim() || linha;
+    }
+  }
+  return linha;
+}

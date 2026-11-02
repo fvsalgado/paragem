@@ -22,7 +22,8 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { PROVA } from './anfitrioes';
 import { emPortugues } from '../src/lib/expressos.ts';
-import { percursosSemHorario } from '../src/lib/pagina-do-modo.ts';
+import { avisoDoCartaz, percursosSemHorario, regraDaData } from '../src/lib/pagina-do-modo.ts';
+import { metrosEntre } from '../src/lib/lista-de-paragens.ts';
 import { regraLegivel, semPrefixos } from '../src/lib/prosa.ts';
 import {
   concelhoComOutroModo,
@@ -193,7 +194,7 @@ test('os urbanos municipais separam o que se sabe do que falta', async ({ page }
 test('o expresso diz para onde vai e que os títulos daqui não servem', async ({ page }) => {
   test.skip(!EXPRESSO?.paragens.length, SEM.modo('expresso'));
   await page.goto(`/modos/expresso/`);
-  await expect(page.getByText(/Os títulos desta região não servem/)).toBeVisible();
+  await expect(page.getByText(/os títulos desta região não servem/i)).toBeVisible();
   // O destino de cada cais é o que interessa a quem está na paragem: apanhar
   // um expresso é ir para outro lado, e cortar a viagem na fronteira era
   // esconder-lhe o destino.
@@ -280,7 +281,8 @@ test('os urbanos municipais passam a dizer a que horas passa', async ({ page }) 
   // A regra de serviço vem do rodapé do cartaz, escrita como lá está.
   // Escrita como o resto do sítio (`regraLegivel`): maiúscula no início, as
   // horas como o sítio as escreve. Diz o mesmo que o cartaz.
-  for (const regra of QUADRO!.regras) {
+  // A que diz a data vai no aviso à cabeça, quando o cartaz tem anos (#191).
+  for (const regra of QUADRO!.regras.filter((r) => !regraDaData(r))) {
     await expect(seccao.first()).toContainText(regraLegivel(regra));
   }
   // E a grelha abre: está dentro de um `<details>` FECHADO, porque dezenas de
@@ -305,9 +307,10 @@ test('a primeira hora lê-se sem abrir a grelha', async ({ page }) => {
     .first()
     .locator('summary');
   await expect(resumo).toContainText(`${QUADRO!.viagens} viagens`);
-  await expect(resumo).toContainText(
-    `a primeira às ${QUADRO!.hora}, na paragem ${QUADRO!.paragem}`,
-  );
+  // A página escreve as horas com dois algarismos («07:30», `horaComZero`), e
+  // o cartaz da câmara pode tê-las com um («7:30»).
+  const hora = /^\d:\d{2}$/.test(QUADRO!.hora) ? `0${QUADRO!.hora}` : QUADRO!.hora;
+  await expect(resumo).toContainText(`a primeira às ${hora}, na paragem ${QUADRO!.paragem}`);
 });
 
 test('diz de cada linha quantas paragens estão no mapa, e nomeia as que não', async ({ page }) => {
@@ -381,4 +384,61 @@ test('a página nomeia o que ainda falta: um feed próprio do sistema', async ({
   await page.goto(`/modos/bicicleta/`);
   await abrirSobre(page);
   await expect(page.getByText(/Falta um feed de dados próprio do sistema/)).toBeVisible();
+});
+
+test('as bicicletas dizem para onde leva a ligação do concelho, e quem gere vai pelo tamanho', async ({
+  page,
+}) => {
+  // «Tudo em <concelho>», depois das bicicletas dele, prometia mais bicicletas
+  // e levava ao concelho (#158); e a frase de quem gere abria pelo sistema mais
+  // pequeno (#159).
+  test.skip(!BICICLETA?.sistemas.length, SEM.modo('bicicleta'));
+  await page.goto('/modos/bicicleta/');
+  await expect(page.locator('main')).not.toContainText(/Tudo em /);
+  await expect(
+    page.getByRole('link', { name: /: os outros transportes do concelho$/ }).first(),
+  ).toBeVisible();
+  const porTamanho = [...BICICLETA!.sistemas].sort((a, b) => b.estacoes.length - a.estacoes.length);
+  const maior = (porTamanho[0] as { operador?: string | null }).operador;
+  if (maior) await expect(page.locator('main > p').first()).toContainText(`Quem gere: ${maior}`);
+});
+
+test('o expresso diz a que horas parte de cada paragem, e a compra é um botão, uma vez', async ({
+  page,
+}) => {
+  // Só números de carreira e percursos, nem uma hora (#88); e a frase dos
+  // bilhetes duas vezes (#172).
+  const comHoras = EXPRESSO?.paragens.find((p) => (p.partidas ?? []).length > 0);
+  test.skip(!comHoras, SEM.modo('expresso'));
+  await page.goto('/modos/expresso/');
+  await expect(page.getByRole('heading', { name: 'A seguir' }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Bilhetes' })).toHaveCount(0);
+  await expect(page.getByText(/os títulos desta região não servem/i)).toHaveCount(1);
+});
+
+test('a mesma praça de táxis mapeada duas vezes aparece uma', async ({ page }) => {
+  // Duas «Praça de táxis» junto à mesma paragem, a 70 e a 60 m, eram uma (#189).
+  test.skip(!TAXI?.pontos.length, SEM.modo('taxi'));
+  await page.goto('/modos/taxi/');
+  const pontos = TAXI!.pontos;
+  const repetidos = pontos.filter((p, i) =>
+    pontos.slice(0, i).some((q) => metrosEntre(p, q) <= 50),
+  );
+  await expect(page.locator('ul.pontos-de-modo > li')).toHaveCount(
+    pontos.length - repetidos.length,
+  );
+  await expect(page.locator('main')).not.toContainText(/^Táxis$/m);
+});
+
+test('um cartaz de urbano com anos diz-se à cabeça, com o horário por baixo', async ({ page }) => {
+  // «Em vigor desde 1/2/2021, diz o cartaz» vinha em letra pequena no fim (#191).
+  const velho = URBANOS?.horarios.find((h) => avisoDoCartaz(h.conteudo_de, new Date()));
+  test.skip(!velho, 'nenhum cartaz desta região tem mais de um ano, ou deixa de dizer a data');
+  await page.goto('/modos/urbano-municipal/');
+  const seccao = page.getByRole('region', { name: velho!.nome });
+  const aviso = seccao.locator('.aviso-do-cartaz');
+  await expect(aviso).toBeVisible();
+  await expect(aviso).toContainText(/Horário em vigor desde|não indica a data de início/);
+  // O horário fica.
+  await expect(seccao.locator('details.quadro-de-horario').first()).toBeVisible();
 });

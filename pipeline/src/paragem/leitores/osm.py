@@ -342,6 +342,24 @@ def bicicletas(ctx: Contexto, saida: Saida) -> Resultado:
 nome_taxis = "osm-taxis"
 
 
+def propriedades_da_praca(etiquetas: dict[str, str]) -> dict[str, str | None]:
+    """O que se diz de uma praça de táxis, das etiquetas dela.
+
+    O TELEFONE VEM DE DUAS ETIQUETAS, e as duas são do OpenStreetMap: `phone` e
+    `contact:phone`, que é a forma que muitos mapeadores usam. Só se lia a
+    primeira, e um telefone mapeado com a segunda não chegava à página — que
+    já tem o botão «Ligar» à espera dele (auditoria de 1/11/2026, #114). Não
+    se procura em mais lado nenhum: o licenciamento é municipal, e um número
+    que ninguém publicou não se escreve.
+    """
+    return {
+        "nome": etiquetas.get("name"),
+        "operador": etiquetas.get("operator"),
+        "telefone": etiquetas.get("phone") or etiquetas.get("contact:phone"),
+        "lugares": etiquetas.get("capacity"),
+    }
+
+
 def taxis(ctx: Contexto, saida: Saida) -> Resultado:
     origem = _ficheiro(ctx, saida)
     nos = _nos_com(origem, dict(saida.params.get("filtro") or {"amenity": "taxi"}), ctx.dentro)
@@ -355,12 +373,7 @@ def taxis(ctx: Contexto, saida: Saida) -> Resultado:
                 "type": "Feature",
                 "id": n["id"],
                 "geometry": {"type": "Point", "coordinates": [n["lon"], n["lat"]]},
-                "properties": {
-                    "nome": n["etiquetas"].get("name"),
-                    "operador": n["etiquetas"].get("operator"),
-                    "telefone": n["etiquetas"].get("phone"),
-                    "lugares": n["etiquetas"].get("capacity"),
-                },
+                "properties": propriedades_da_praca(n["etiquetas"]),
             }
             for n in nos
         ],

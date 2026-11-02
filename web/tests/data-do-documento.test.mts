@@ -28,7 +28,7 @@ test('sem o dia, diz o que o documento escreve', () => {
 test('sem nada, diz que não diz — e não inventa uma data', () => {
   assert.equal(
     fraseDoConteudo({ em_vigor_desde: null, texto: null }, 'o cartaz'),
-    'O cartaz não diz desde quando vale.',
+    'O cartaz não indica a data de início.',
   );
   assert.equal(fraseDoConteudo(undefined, 'o cartaz'), null);
 });

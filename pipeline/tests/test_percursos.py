@@ -201,3 +201,58 @@ def test_um_recorte_sem_carris_nao_tem_rede_ferroviaria(tmp_path):
         encoding="utf-8",
     )
     assert ler_rede_ferroviaria(so_estrada, None, 39.6) is None
+
+
+# --- a linha no mapa -------------------------------------------------------------
+
+
+def _detalhe(codigo: str, nome: str, sentidos: list[list[str]]) -> dict:
+    return {
+        "codigo": codigo,
+        "nome": nome,
+        "modo": "autocarro",
+        "sentidos": [{"paragens": [{"id": p, "nome": p} for p in s]} for s in sentidos],
+    }
+
+
+ONDE = {"a": (40.0, -30.0), "b": (40.01, -30.0), "c": (40.02, -30.01)}
+
+
+def test_a_linha_no_mapa_leva_os_tracados_dela_e_as_paragens(tmp_path: Path) -> None:
+    import json
+
+    from paragem.percursos import codificar, linha_no_mapa
+
+    pasta = tmp_path / "percursos"
+    pasta.mkdir()
+    forma = codificar([(40.0, -30.0), (40.005, -30.002), (40.01, -30.0)])
+    # A grelha tem duas linhas com o mesmo número, de redes diferentes: fica a
+    # que tem também o nome e o modo da página.
+    (pasta / "1.json").write_text(json.dumps({"linha": "7", "trocos": {"0>1": forma}}))
+    grelha = [
+        ["7", "Outra Terra - Longe", None, "expresso", 0],
+        ["7", "Alto  - Baixo", None, "autocarro", 0],
+    ]
+    r = linha_no_mapa(
+        _detalhe("7", "Alto - Baixo", [["a", "b", "c"], ["c", "x", "a"]]), grelha, pasta, ONDE
+    )
+    assert r is not None
+    assert r["tracos"] == [forma]
+    assert r["aproximado"] is False
+    # As paragens com sítio, uma vez cada; a que não tem sítio fica de fora.
+    assert sorted(map(tuple, r["paragens"])) == sorted(ONDE.values())
+
+
+def test_sem_tracado_liga_as_paragens_a_direito_e_diz_que_e_aproximado(tmp_path: Path) -> None:
+    from paragem.percursos import linha_no_mapa
+
+    r = linha_no_mapa(_detalhe("9", "Cá - Lá", [["a", "b", "c"]]), [], tmp_path, ONDE)
+    assert r is not None
+    assert r["aproximado"] is True
+    assert len(r["tracos"]) == 1
+
+
+def test_uma_linha_sem_duas_paragens_com_sitio_nao_tem_o_que_desenhar(tmp_path: Path) -> None:
+    from paragem.percursos import linha_no_mapa
+
+    assert linha_no_mapa(_detalhe("9", "Cá - Lá", [["a", "x"]]), [], tmp_path, ONDE) is None

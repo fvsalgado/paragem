@@ -194,3 +194,36 @@ test('um quadro de partidas chama-se pela folha, e o concelho não se repete', (
   assert.equal(p?.onde, '', 'o nome já diz de onde é');
   assert.equal(p?.liga, 'as-duas');
 });
+
+test('a proposta leva o preço que o horário diz, e uma tabela de partidas não repete o nome (#192)', () => {
+  const comPreco: APedido = {
+    ...DADOS,
+    horarios: [
+      {
+        ...DADOS.horarios[0],
+        id: 'ligacoes',
+        nome: 'Ligações da Serra',
+        precos: [{ nome: 'Viagem', valor: 3, confirmado: false }],
+        quadros: [
+          {
+            nome: 'Partidas de cada terra',
+            tipo: 'partidas',
+            paragens: ['Cerro Alto', 'Vila da Serra'],
+            rotulos: [],
+            viagens: [],
+            regras: ['Ligações entre as terras da serra, todos os dias'],
+          },
+        ],
+      },
+    ],
+  };
+  const [p] = aPedidoNasPontas(
+    comPreco,
+    { nome: 'Cerro Alto', concelho: 'serra' },
+    { nome: 'Vila da Serra', concelho: 'serra' },
+    url,
+  );
+  assert.equal(p.nome, 'Ligações da Serra');
+  assert.deepEqual(p.precos, [{ nome: 'Viagem', valor: 3, confirmado: false }]);
+  assert.deepEqual(p.regras, [], 'a regra da tabela descreve a tabela, que o nome já diz');
+});

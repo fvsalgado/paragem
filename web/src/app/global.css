@@ -76,7 +76,36 @@
   --a-pedido-texto: #5c3700;
   --desligado: #4a5c66;
 
+  /* A ESCALA: os tamanhos de letra, os espaços e os raios que os componentes
+     usam, e nenhuns outros (fase 2, novembro de 2026). Eram 25 tamanhos de
+     letra diferentes — 0,85, 0,9 e 0,92 rem para a mesma coisa —, 14 raios e
+     espaços ao gosto de cada regra: o sítio lia-se feito por muitas mãos.
+     Cada passo é um papel, e o nome diz qual. Os passos da letra estão em
+     rem, para seguirem o tamanho que a pessoa escolheu no sistema. */
+  --letra-mini: 0.8rem; /* o que só se consulta: a atribuição, as notas de rodapé */
+  --letra-pequena: 0.875rem; /* o texto secundário, as etiquetas */
+  --letra-media: 0.95rem; /* as listas densas, os quadros */
+  --letra-corpo: 1.0625rem; /* o texto corrido — o do `body` */
+  --letra-destaque: 1.2rem; /* o título de um cartão, uma hora que se procura */
+  --letra-titulo: 1.3rem; /* o h2 */
+  --letra-titulo-grande: 1.75rem; /* o h1 */
+  --letra-cartaz: 2.1rem; /* os números grandes da montra */
+  --letra-montra: 2.75rem; /* o título da montra do produto */
+  /* Os espaços, em quartos de rem: o ritmo vertical e os afastamentos. */
+  --espaco-1: 0.25rem;
+  --espaco-2: 0.5rem;
+  --espaco-3: 0.75rem;
+  --espaco-4: 1rem;
+  --espaco-5: 1.5rem;
+  --espaco-6: 2rem;
+  --espaco-7: 3rem;
+  --espaco-8: 4rem;
+  /* Os raios: o das pastilhas pequenas e dos distintivos, o dos campos e das
+     caixas, o das folhas que sobem do fundo, e o das cápsulas de uma linha. */
+  --raio-pequeno: 6px;
   --raio: 10px;
+  --raio-grande: 1rem;
+  --raio-redondo: 999px;
   --alvo: 44px;
   /* DUAS MEDIDAS (P1-014): a de ler, curta, para o texto corrido; e a dos
      dados, larga, para as páginas de horários num ecrã de secretária. */
@@ -189,7 +218,7 @@ body {
      confusão a evitar nos horários e nos códigos das linhas. Trocá-lo era
      trocar de letra — e a letra é a do §6 do briefing. */
   font-family: var(--letra, 'Atkinson Hyperlegible'), 'Segoe UI', system-ui, sans-serif;
-  font-size: 1.0625rem;
+  font-size: var(--letra-corpo);
   line-height: 1.55;
 }
 
@@ -201,7 +230,7 @@ body {
   top: 0;
   background: var(--marca);
   color: #fff;
-  padding: 0.75rem 1rem;
+  padding: var(--espaco-3) var(--espaco-4);
   z-index: 100;
 }
 .saltar:focus {
@@ -228,18 +257,18 @@ h3 {
   /* Nada de rótulos em maiúsculas (§8): «PARAGEM» lê-se pior do que
      «Paragem», e um leitor de ecrã soletra-o. */
   text-transform: none;
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--espaco-2);
 }
 h1 {
-  font-size: 1.75rem;
-  margin-bottom: 0.75rem;
+  font-size: var(--letra-titulo-grande);
+  margin-bottom: var(--espaco-3);
 }
 h2 {
-  font-size: 1.3rem;
-  margin-top: 2rem;
+  font-size: var(--letra-titulo);
+  margin-top: var(--espaco-6);
 }
 h3 {
-  font-size: 1.05rem;
+  font-size: var(--letra-corpo);
 }
 
 /* --- estrutura ----------------------------------------------------------- */
@@ -248,8 +277,8 @@ h3 {
    do título. As ligações levam os 44 px de qualquer ligação autónoma; a
    margem negativa devolve ao título a folga de cima que elas comem. */
 .trilho {
-  margin: -0.85rem 0 0.25rem;
-  font-size: 0.95rem;
+  margin: -0.85rem 0 var(--espaco-1);
+  font-size: var(--letra-media);
 }
 .trilho ol {
   display: flex;
@@ -282,7 +311,7 @@ h3 {
   /* O TÍTULO NÃO SE COLA AO CABEÇALHO (P1-015). A caixa do `h1` começava
      exatamente onde o cabeçalho acabava, e a folga que se via era só a entrelinha
      do título: o ritmo da página começava mal em todas as páginas. */
-  padding: 1.5rem 1rem 4rem;
+  padding: var(--espaco-5) var(--espaco-4) var(--espaco-8);
 }
 
 /* AS PÁGINAS DE HORÁRIOS ALARGAM NUM ECRÃ LARGO (P1-014). Eram uma coluna de
@@ -349,7 +378,7 @@ code {
   font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   font-size: 0.85em;
   background: var(--superficie-suave);
-  border-radius: 4px;
+  border-radius: var(--raio-pequeno);
   padding: 0.05em 0.3em;
   overflow-wrap: anywhere;
 }
@@ -361,15 +390,15 @@ code {
 .cabecalho .interior {
   max-width: var(--medida);
   margin: 0 auto;
-  padding: 0.75rem 1rem;
+  padding: var(--espaco-3) var(--espaco-4);
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--espaco-4);
   flex-wrap: wrap;
 }
 .cabecalho a.marca {
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: var(--letra-destaque);
   color: var(--marca-texto);
   text-decoration: none;
   /* É uma ligação autónoma, não uma ligação no meio de uma frase: leva os
@@ -380,7 +409,7 @@ code {
 }
 .cabecalho nav ul {
   display: flex;
-  gap: 0.25rem 1rem;
+  gap: var(--espaco-1) var(--espaco-4);
   list-style: none;
   margin: 0;
   padding: 0;
@@ -390,7 +419,7 @@ code {
   display: inline-flex;
   align-items: center;
   min-height: var(--alvo);
-  padding: 0 0.25rem;
+  padding: 0 var(--espaco-1);
 }
 
 /* O CABEÇALHO DE UMA REGIÃO É A MARCA DELA (P4-008, P1-007): o endereço
@@ -410,9 +439,9 @@ code {
   color: var(--texto);
 }
 .cabecalho-da-regiao .interior {
-  padding: 0.5rem 1rem 0.25rem;
+  padding: var(--espaco-2) var(--espaco-4) var(--espaco-1);
   justify-content: space-between;
-  gap: 0 1.5rem;
+  gap: 0 var(--espaco-5);
 }
 /* NUM TELEMÓVEL, O INTERRUPTOR SOBE PARA A FILA DA ASSINATURA, e a segunda
    fila fica só para as três ligações (auditoria de 1/11/2026, #101): com o
@@ -427,7 +456,7 @@ code {
       'marca tema'
       'navegacao navegacao';
     align-items: center;
-    padding: 0.25rem 1rem 0;
+    padding: var(--espaco-1) var(--espaco-4) 0;
   }
   .cabecalho-da-regiao a.marca-da-regiao {
     grid-area: marca;
@@ -443,7 +472,7 @@ code {
     grid-area: tema;
   }
   .cabecalho-da-regiao nav ul {
-    gap: 0 0.75rem;
+    gap: 0 var(--espaco-3);
   }
   .cabecalho-da-regiao nav li:first-child a {
     padding-left: 0;
@@ -545,7 +574,7 @@ code {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem 1rem;
+  gap: var(--espaco-2) var(--espaco-4);
   flex: 1 1 100%;
 }
 @media (min-width: 48rem) {
@@ -560,13 +589,13 @@ code {
 .escolha-do-tema {
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
-  padding: 0.25rem 0.75rem 0.5rem;
-  margin: 1rem 0;
+  padding: var(--espaco-1) var(--espaco-3) var(--espaco-2);
+  margin: var(--espaco-4) 0;
   min-width: 0;
 }
 .escolha-do-tema legend {
   padding: 0 0.35rem;
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
   color: var(--texto-secundario);
 }
 .opcoes-do-tema {
@@ -594,8 +623,45 @@ code {
 }
 .nota-do-tema {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
   color: var(--texto-secundario);
+}
+
+/* NO RODAPÉ, UMA LINHA SÓ (#164, #195): o tema escolhe-se também no botão do
+   cabeçalho, e o grupo do rodapé ocupava uns 90 px no telemóvel, numa caixa
+   com uma nota por baixo. Fica «Tema:» e as três escolhas na mesma linha; a
+   nota passa a ser dita só a quem usa leitor de ecrã — a página de privacidade
+   di-la por inteiro. */
+.rodape .escolha-do-tema {
+  border: 0;
+  padding: 0;
+  margin: var(--espaco-3) 0;
+}
+/* A linha tem de caber num telemóvel de 360 px, e não só no de 412 dos
+   testes: «Tema» e as três escolhas pedem uns 360 px com a letra do corpo e
+   os vãos de antes, e num ecrã de 412 sobravam 20 — partia em duas com
+   qualquer letra um pouco mais larga. Na letra pequena do rodapé, com vãos de
+   8 px, são uns 320. O alvo de cada escolha continua com 44 px de altura. */
+.rodape .opcoes-do-tema {
+  gap: 0 var(--espaco-2);
+}
+.rodape .opcoes-do-tema label {
+  font-size: var(--letra-pequena);
+}
+.rodape .escolha-do-tema legend {
+  float: left;
+  padding: 0;
+  margin-right: var(--espaco-2);
+  line-height: var(--alvo);
+  font-size: var(--letra-pequena);
+}
+.rodape .nota-do-tema {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 /* Onde há régua, ela é a borda: a linha cinzenta de antes sai. No rodapé vai
@@ -607,7 +673,7 @@ code {
   border-top: 0;
 }
 .rodape > .regua-do-feixe {
-  margin: calc(3.5px - 1.5rem) -1rem calc(1.5rem - 3.5px);
+  margin: calc(3.5px - var(--espaco-5)) 0 calc(var(--espaco-5) - 3.5px);
 }
 
 /* AS CORES DA REGIÃO NAS PÁGINAS DELA. O invólucro (`app/[regiao]/layout.tsx`)
@@ -679,37 +745,41 @@ code {
 }
 .assinatura .nome-principal {
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: var(--letra-destaque);
 }
 .assinatura .nome-secundario {
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
 }
 
 /* A ASSINATURA DO PRODUTO: discreta, no fim do rodapé, da folha do mapa e do
    menu. A ligação está no meio de uma frase, e por isso não leva os 44 px das
    ligações de navegação (critério 2.5.8, a exceção das ligações no texto). */
 .feito-com {
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
   color: var(--texto-secundario);
 }
 
+/* O RODAPÉ ALINHA COM O CONTEÚDO (#170): o espaço dos lados ia por fora da
+   largura máxima, e na `.pagina` vai por dentro — no computador, os links do
+   rodapé começavam 16 px à esquerda do título. Passa para dentro, como lá. */
 .rodape {
   border-top: 1px solid var(--linhas);
-  margin-top: 3rem;
-  padding: 1.5rem 1rem 3rem;
+  margin-top: var(--espaco-7);
+  padding: var(--espaco-5) 0 var(--espaco-7);
   color: var(--texto-secundario);
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
 }
 .rodape .interior {
   max-width: var(--medida);
   margin: 0 auto;
+  padding: 0 var(--espaco-4);
 }
 .rodape ul {
   list-style: none;
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 1.25rem;
+  gap: var(--espaco-2) 1.25rem;
 }
 /* OS 44 PX SÃO DAS LIGAÇÕES DA NAVEGAÇÃO, e não das que estão numa frase
    (P1-022). A regra apanhava as duas, e a linha do «OpenStreetMap», no meio
@@ -734,8 +804,8 @@ code {
   background: var(--superficie);
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
-  padding: 1rem;
-  margin: 0.75rem 0;
+  padding: var(--espaco-4);
+  margin: var(--espaco-3) 0;
 }
 .cartao.modo-autocarro {
   border-left: 4px solid var(--autocarro);
@@ -759,15 +829,28 @@ code {
 .cartao.modo-taxi {
   border-left: 1px solid var(--linhas);
 }
-/* OS «OUTROS TRANSPORTES» DE UM CONCELHO: cartões numa lista, sem a borda da
-   lista por baixo de cada um (eram dois traços entre cartões) e com o
-   espaço de dentro de um cartão — a `.lista a` encostava o texto à borda. */
-.lista.outros-modos > li {
-  border-bottom: 0;
+/* OS «OUTROS TRANSPORTES» DE UM CONCELHO: uma lista com filetes, e não
+   quatro cartões iguais (§6). A cor do modo é um traço curto à esquerda do
+   nome — os privados, expressos e táxis, ficam sem ele —, e a contagem, com
+   a unidade, à direita. */
+.lista.outros-modos > li > a {
+  padding-left: var(--espaco-3);
+  border-left: 4px solid transparent;
 }
-.lista.outros-modos > li > a.cartao {
-  padding: 0.6rem 1rem;
-  margin: 0.5rem 0;
+.lista.outros-modos > li.modo-autocarro > a {
+  border-left-color: var(--autocarro);
+}
+.lista.outros-modos > li.modo-a-pedido > a {
+  border-left-color: var(--a-pedido);
+}
+.lista.outros-modos > li.modo-bicicleta > a {
+  border-left-color: var(--bicicleta);
+}
+.lista.outros-modos > li.modo-comboio > a {
+  border-left-color: var(--comboio);
+}
+.lista.outros-modos > li.modo-urbano-municipal > a {
+  border-left-color: var(--urbano-municipal);
 }
 
 .lista {
@@ -790,12 +873,12 @@ code {
  */
 .quadro-de-horario {
   border: 1px solid var(--linhas);
-  border-radius: 8px;
-  margin: 0.75rem 0;
+  border-radius: var(--raio-pequeno);
+  margin: var(--espaco-3) 0;
 }
 .quadro-de-horario > summary {
   cursor: pointer;
-  padding: 0.75rem 2.25rem 0.75rem 0.75rem;
+  padding: var(--espaco-3) 2.25rem var(--espaco-3) var(--espaco-3);
   min-height: var(--alvo);
   display: flex;
   align-items: center;
@@ -851,9 +934,9 @@ details.lista-fechada[open] > summary::after {
 /* A nota e as regras que a folha escreve por baixo do quadro. */
 .quadro-de-horario > .nota,
 .quadro-de-horario > .regras-do-quadro {
-  margin: 0 0.75rem 0.75rem;
+  margin: 0 var(--espaco-3) var(--espaco-3);
   color: var(--texto-secundario);
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
 }
 .quadro-de-horario > .regras-do-quadro {
   padding-left: 1.25rem;
@@ -870,7 +953,7 @@ details.lista-fechada[open] > summary::after {
  */
 .rolar-na-horizontal {
   overflow-x: auto;
-  padding: 0 0.75rem 0.75rem;
+  padding: 0 var(--espaco-3) var(--espaco-3);
   /* O texto só para leitores de ecrã é posto em posição absoluta: sem um
      antepassado posicionado, o que está nas colunas da direita ficava fora
      da caixa que rola e empurrava a PÁGINA para o lado — 555 px de largura a
@@ -879,11 +962,11 @@ details.lista-fechada[open] > summary::after {
 }
 .rolar-na-horizontal table {
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
 }
 .rolar-na-horizontal th,
 .rolar-na-horizontal td {
-  padding: 0.3rem 0.5rem;
+  padding: 0.3rem var(--espaco-2);
   text-align: right;
   white-space: nowrap;
   border-bottom: 1px solid var(--linhas);
@@ -928,7 +1011,7 @@ details.lista-fechada[open] > summary::after {
   margin: 0;
   padding: 0;
   columns: 14rem;
-  column-gap: 1.5rem;
+  column-gap: var(--espaco-5);
 }
 .colunas > li {
   break-inside: avoid;
@@ -948,7 +1031,7 @@ details.lista-fechada[open] > summary::after {
  */
 .disponibilidade {
   color: var(--texto-secundario);
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
 }
 .disponibilidade strong {
   color: var(--texto);
@@ -957,9 +1040,9 @@ details.lista-fechada[open] > summary::after {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--espaco-4);
   min-height: var(--alvo);
-  padding: 0.6rem 0.25rem;
+  padding: 0.6rem var(--espaco-1);
   text-decoration: none;
   color: var(--texto);
 }
@@ -975,11 +1058,11 @@ details.lista-fechada[open] > summary::after {
    mandar onde já mandava. */
 :where(p, span, small, em, div, li).secundario {
   color: var(--texto-secundario);
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
 }
 .lista .secundario {
   color: var(--texto-secundario);
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
   text-align: right;
   /* `flex-shrink: 0` obrigava a coluna da direita a manter-se inteira e
      empurrava a página para fora do ecrã nos concelhos com nomes de paragem
@@ -1004,8 +1087,8 @@ details.lista-fechada[open] > summary::after {
   border: 1px solid var(--linhas);
   border-left: 4px solid var(--marca);
   border-radius: var(--raio);
-  padding: 0.75rem 1rem;
-  margin: 1rem 0;
+  padding: var(--espaco-3) var(--espaco-4);
+  margin: var(--espaco-4) 0;
   background: var(--superficie);
 }
 .faixa.alerta {
@@ -1028,8 +1111,8 @@ details.lista-fechada[open] > summary::after {
   /* Sem gravidade, a borda é neutra: a cor da marca não faz de estado. */
   border-left: 6px solid var(--borda-campo);
   border-radius: var(--raio);
-  padding: 0.85rem 1rem;
-  margin: 1rem 0;
+  padding: 0.85rem var(--espaco-4);
+  margin: var(--espaco-4) 0;
   background: var(--superficie);
 }
 .aviso.atencao {
@@ -1046,18 +1129,18 @@ details.lista-fechada[open] > summary::after {
   margin-bottom: 0;
 }
 .aviso .titulo-do-aviso {
-  font-size: 1.15rem;
-  margin: 0.25rem 0 0.4rem;
+  font-size: var(--letra-destaque);
+  margin: var(--espaco-1) 0 0.4rem;
 }
 .etiqueta-do-aviso {
   display: inline-block;
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
   font-weight: 700;
   color: var(--texto);
   background: var(--superficie-suave);
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
   padding: 0.1rem 0.6rem;
-  margin: 0 0 0.25rem;
+  margin: 0 0 var(--espaco-1);
 }
 .aviso.atencao .etiqueta-do-aviso {
   color: var(--atencao);
@@ -1068,13 +1151,13 @@ details.lista-fechada[open] > summary::after {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 0.5rem 1rem;
-  margin: 0.75rem 0 0;
+  gap: var(--espaco-2) var(--espaco-4);
+  margin: var(--espaco-3) 0 0;
 }
 .filtro-dos-avisos label {
   display: block;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
 }
 .filtro-dos-avisos select {
   min-height: var(--alvo);
@@ -1089,7 +1172,7 @@ details.lista-fechada[open] > summary::after {
 .aviso .prazo-do-aviso {
   margin: 0 0 0.4rem;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: var(--letra-media);
 }
 .aviso.grave .etiqueta-do-aviso {
   color: var(--alerta-texto-forte);
@@ -1098,13 +1181,13 @@ details.lista-fechada[open] > summary::after {
 .linhas-do-aviso {
   list-style: none;
   padding: 0;
-  margin: 0.25rem 0 0.5rem;
+  margin: var(--espaco-1) 0 var(--espaco-2);
 }
 .linhas-do-aviso a,
 .linhas-do-aviso li > span {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--espaco-2);
   min-height: var(--alvo);
 }
 .avisos-da-pagina > h2 {
@@ -1118,24 +1201,35 @@ details.lista-fechada[open] > summary::after {
   min-height: var(--alvo);
 }
 
-/* OS AVISOS NO ECRÃ DO MAPA (P4-019): na folha de abertura, logo a seguir a
-   «Para onde quer ir?», que é onde o §6 põe a faixa; e no cartão da paragem
-   afetada, antes das horas. Títulos que levam à página de avisos. */
+/* OS AVISOS NO ECRÃ DO MAPA (P4-019): no alto da folha de abertura, numa
+   faixa na cor do estado, e no cartão da paragem afetada, antes das horas.
+   Títulos que levam à página de avisos. O ícone e a palavra dizem o estado;
+   a cor só o confirma. */
 .avisos-na-abertura {
-  margin: 0 0.6rem 0.6rem;
-  border: 1px solid var(--linhas);
-  border-left: 6px solid var(--atencao);
+  margin: 0 0.6rem var(--espaco-2);
+  border-left: 4px solid var(--atencao);
   border-radius: var(--raio);
-  padding: 0.35rem 0.75rem;
-  background: var(--superficie);
+  padding: 0.3rem var(--espaco-3) 0.15rem;
+  background: var(--atencao-fundo);
 }
 .avisos-na-abertura:has(li.grave) {
   border-left-color: var(--alerta);
+  background: var(--alerta-fundo);
 }
 .folha-de-abertura .avisos-na-abertura h2 {
-  margin: 0.25rem 0 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.2rem 0 0;
   padding: 0;
-  font-size: 0.95rem;
+  font-size: var(--letra-pequena);
+}
+.avisos-na-abertura h2 svg {
+  flex: none;
+  color: var(--atencao);
+}
+.avisos-na-abertura:has(li.grave) h2 svg {
+  color: var(--alerta-texto);
 }
 .avisos-na-abertura ul,
 .avisos-no-cartao {
@@ -1146,53 +1240,72 @@ details.lista-fechada[open] > summary::after {
 .avisos-na-abertura li a {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--espaco-2);
   min-height: var(--alvo);
   color: var(--texto);
 }
 .avisos-na-abertura p {
-  margin: 0 0 0.25rem;
+  margin: 0 0 var(--espaco-1);
 }
 .distintivos-do-aviso {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--espaco-1);
   flex: none;
 }
 .avisos-no-cartao {
-  margin: 0.25rem 0 0.5rem;
+  margin: var(--espaco-1) 0 var(--espaco-2);
 }
 .avisos-no-cartao li a {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--espaco-2);
   min-height: var(--alvo);
-  padding: 0.25rem 0.6rem;
+  padding: var(--espaco-1) 0.6rem;
   border-left: 4px solid var(--atencao);
   background: var(--atencao-fundo);
   color: var(--texto);
-  border-radius: 6px;
+  border-radius: var(--raio-pequeno);
 }
 .avisos-no-cartao li.grave a {
   border-left-color: var(--alerta);
   background: var(--alerta-fundo);
 }
 .avisos-no-cartao li + li {
-  margin-top: 0.25rem;
+  margin-top: var(--espaco-1);
 }
 .rotulo-do-aviso {
   font-weight: 700;
   flex: none;
 }
 
+/* A NOTA DOS DADOS («Horários planeados…»): o «i» de nota e a frase, numa
+   caixa de cantos pequenos. Era uma cápsula de raio total, e com duas linhas
+   ficava oval, com o texto encostado à curva e com ar de botão desformado
+   (auditoria de 1/11/2026, #167 e #194). O ícone é o mesmo das pastilhas de
+   estado (`Estado.tsx`), desenhado por máscara para seguir a cor do texto. */
 .marca-dados {
-  display: inline-block;
-  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--espaco-2);
+  max-width: 100%;
+  font-size: var(--letra-pequena);
+  line-height: 1.45;
   color: var(--texto-secundario);
-  border: 1px solid var(--linhas);
-  border-radius: 999px;
-  padding: 0.1rem 0.6rem;
-  background: var(--superficie);
+  border-radius: var(--raio-pequeno);
+  padding: var(--espaco-1) var(--espaco-3) var(--espaco-1) var(--espaco-2);
+  background: var(--superficie-suave);
+}
+.marca-dados::before {
+  --icone-da-nota: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9.5'/%3E%3Cpath d='M12 11v6'/%3E%3Ccircle cx='12' cy='7.6' r='1' fill='black' stroke='none'/%3E%3C/svg%3E");
+  content: '';
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.15rem;
+  background: currentColor;
+  -webkit-mask: var(--icone-da-nota) center / contain no-repeat;
+  mask: var(--icone-da-nota) center / contain no-repeat;
 }
 
 /* O NÚMERO DA LINHA, num desenho só e em três tamanhos (`Distintivo.tsx`).
@@ -1203,11 +1316,11 @@ details.lista-fechada[open] > summary::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
   font-weight: 700;
   line-height: 1.2;
   min-height: 1.4rem;
-  border-radius: 6px;
+  border-radius: var(--raio-pequeno);
   padding: 0.1rem 0.45rem;
   border: 1px solid transparent;
   min-width: 2.5em;
@@ -1221,15 +1334,15 @@ details.lista-fechada[open] > summary::after {
   vertical-align: middle;
 }
 .distintivo.medio {
-  font-size: 0.95rem;
+  font-size: var(--letra-media);
   min-height: 1.65rem;
-  padding: 0.15rem 0.5rem;
+  padding: 0.15rem var(--espaco-2);
 }
 .distintivo.grande {
-  font-size: 1.25rem;
+  font-size: var(--letra-titulo);
   min-height: 2.25rem;
   padding: 0.2rem 0.65rem;
-  border-radius: 8px;
+  border-radius: var(--raio-pequeno);
   min-width: 2.9em;
 }
 /* NO TEMA ESCURO, UM ARO NOS DISTINTIVOS QUE SE PERDIAM NO FUNDO
@@ -1255,12 +1368,12 @@ table.horario {
 table.horario caption {
   text-align: left;
   font-weight: 700;
-  padding: 0.75rem 0 0.4rem;
+  padding: var(--espaco-3) 0 0.4rem;
 }
 table.horario th,
 table.horario td {
   text-align: left;
-  padding: 0.45rem 0.5rem;
+  padding: 0.45rem var(--espaco-2);
   border-bottom: 1px solid var(--linhas);
   /* AO MEIO, e não em cima: a hora e o destino encostavam ao alto da célula e
      o distintivo da linha ficava 10 px mais abaixo — a fila parecia torta. */
@@ -1299,7 +1412,7 @@ table.horario a {
 table.horario th {
   color: var(--texto-secundario);
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
 }
 
 /* A LIGAÇÃO DO DISTINTIVO, sem o sublinhado da ligação a passar por dentro
@@ -1326,7 +1439,7 @@ table.horario.quadro-fixo {
    o rato por cima. */
 .nota-da-hora {
   display: block;
-  font-size: 0.75rem;
+  font-size: var(--letra-mini);
   font-style: italic;
   line-height: 1.15;
   color: var(--texto-secundario);
@@ -1349,9 +1462,9 @@ details.quadro-do-dia > summary {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.25rem 0.6rem;
+  gap: var(--espaco-1) 0.6rem;
   min-height: 3.25rem;
-  padding: 0.5rem 2rem 0.5rem 0.25rem;
+  padding: var(--espaco-2) var(--espaco-6) var(--espaco-2) var(--espaco-1);
   position: relative;
   cursor: pointer;
   list-style: none;
@@ -1388,21 +1501,21 @@ details.quadro-do-dia .nome-do-quadro {
 details.quadro-do-dia .quantas {
   margin-left: auto;
   font-weight: 400;
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
   color: var(--texto-secundario);
   white-space: nowrap;
 }
 details.quadro-do-dia[open] {
-  padding-bottom: 0.75rem;
+  padding-bottom: var(--espaco-3);
 }
 .hoje {
   display: inline-block;
-  font-size: 0.75rem;
+  font-size: var(--letra-mini);
   font-weight: 700;
   line-height: 1.4;
   color: #fff;
   background: var(--marca);
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
   padding: 0.05rem 0.55rem;
 }
 
@@ -1413,13 +1526,48 @@ details.quadro-do-dia[open] {
   background: var(--superficie);
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
-  padding: 0.1rem 1rem 0.5rem;
-  margin: 1rem 0 0.5rem;
+  padding: 0.1rem var(--espaco-4) var(--espaco-2);
+  margin: var(--espaco-4) 0 var(--espaco-2);
   min-height: 9rem;
 }
-.a-seguir > h2 {
-  margin-top: 0.75rem;
-  font-size: 1.15rem;
+/* O TÍTULO DO CARTÃO ENCOSTA AO ALTO, esteja onde estiver lá dentro (#166): o
+   «A seguir» vem dentro do invólucro das partidas, e não era filho direto —
+   a regra não o apanhava, e o cartão abria com 35 px vazios por cima. */
+.a-seguir h2 {
+  margin-top: var(--espaco-3);
+  font-size: var(--letra-destaque);
+}
+
+/* A ESTAÇÃO NUM ECRÃ LARGO (#83): o dia inteiro à esquerda, e à direita o que
+   parte a seguir, o autocarro à porta e o que mais há ali — uma caixa por
+   linha da grelha, com as partidas do dia a ocupar a altura das quatro. No
+   telemóvel, pela ordem em que estão. */
+@media (min-width: 64rem) {
+  .em-colunas.estacao-em-colunas {
+    grid-template-areas: none;
+    grid-template-rows: auto auto auto auto 1fr;
+  }
+  .estacao-em-colunas > .partidas-da-estacao {
+    grid-column: 1;
+    grid-row: 1 / span 5;
+    min-width: 0;
+  }
+  .estacao-em-colunas > .ao-lado {
+    grid-column: 2;
+    min-width: 0;
+  }
+  .estacao-em-colunas > .partidas-da-estacao > h2:first-child {
+    margin-top: var(--espaco-4);
+  }
+}
+.tipos-de-comboio {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-1);
+  vertical-align: middle;
+}
+.tambem-aqui > ul.pontos-de-modo {
+  margin-top: var(--espaco-2);
 }
 
 /* --- a página da linha ---------------------------------------------------- */
@@ -1441,8 +1589,8 @@ details.quadro-do-dia[open] {
 dl.pontas-do-sentido {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 0.15rem 0.75rem;
-  margin: 0.5rem 0;
+  gap: 0.15rem var(--espaco-3);
+  margin: var(--espaco-2) 0;
 }
 dl.pontas-do-sentido dt {
   font-weight: 700;
@@ -1452,17 +1600,17 @@ dl.pontas-do-sentido dd {
   min-width: 0;
 }
 h3.parte-do-sentido {
-  margin-top: 1.5rem;
+  margin-top: var(--espaco-5);
 }
 
 /* Os sentidos, à mão, no alto de uma página comprida. */
 nav.sentidos ul {
   list-style: none;
-  margin: 0.75rem 0 0;
+  margin: var(--espaco-3) 0 0;
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 1.25rem;
+  gap: var(--espaco-1) 1.25rem;
 }
 nav.sentidos a {
   display: inline-flex;
@@ -1495,9 +1643,17 @@ nav.sentidos a {
 .quadro-da-linha td.nao-passa {
   color: var(--texto-secundario);
 }
+/* A chegada onde a viagem espera, por baixo da partida (#120). */
+.quadro-da-linha .chegada-no-quadro {
+  display: block;
+  font-size: var(--letra-mini);
+  font-style: normal;
+  color: var(--texto-secundario);
+  white-space: nowrap;
+}
 .nota-do-quadro {
-  margin: 0.25rem 0.75rem 0;
-  font-size: 0.85rem;
+  margin: var(--espaco-1) var(--espaco-3) 0;
+  font-size: var(--letra-pequena);
   color: var(--texto-secundario);
 }
 
@@ -1510,12 +1666,12 @@ nav.sentidos a {
  */
 ol.percurso-da-linha {
   list-style: none;
-  margin: 0.5rem 0 0;
+  margin: var(--espaco-2) 0 0;
   padding: 0;
 }
 ol.percurso-da-linha li {
   position: relative;
-  padding-left: 2rem;
+  padding-left: var(--espaco-6);
 }
 ol.percurso-da-linha li::before {
   content: '';
@@ -1542,7 +1698,7 @@ ol.percurso-da-linha li::after {
   width: 0.85rem;
   height: 0.85rem;
   margin-top: -0.425rem;
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
   border: 3px solid
     color-mix(in oklab, var(--cor-da-linha, var(--autocarro)) var(--mistura-dos-tracos), #fff);
   background: var(--superficie);
@@ -1565,7 +1721,7 @@ ol.percurso-da-linha li.ultima::before {
    seguir ao nome. */
 ol.percurso-da-linha a {
   flex-wrap: wrap;
-  gap: 0.15rem 0.5rem;
+  gap: 0.15rem var(--espaco-2);
 }
 .ligacoes-da-paragem {
   display: inline-flex;
@@ -1589,17 +1745,17 @@ a.aviso-no-percurso {
   align-items: center;
   min-height: 1.75rem;
   margin: 0 0 0.35rem;
-  padding: 0 0.5rem;
-  border-radius: 999px;
+  padding: 0 var(--espaco-2);
+  border-radius: var(--raio-redondo);
   background: var(--alerta-fundo);
   color: var(--alerta-texto);
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
   font-weight: 700;
 }
 
 /* O ESQUEMA DA LINHA: as paragens pela ordem, num SVG pequeno no alto. */
 figure.esquema-da-linha {
-  margin: 0.5rem 0 1rem;
+  margin: var(--espaco-2) 0 var(--espaco-4);
 }
 figure.esquema-da-linha svg {
   display: block;
@@ -1641,13 +1797,13 @@ figure.esquema-da-linha svg {
 }
 figure.esquema-da-linha figcaption {
   margin-top: 0.3rem;
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
 }
 
 /* «Hoje não há»: uma frase a cheio, antes dos quadros. */
 .hoje-nao {
   font-weight: 700;
-  margin: 0.5rem 0;
+  margin: var(--espaco-2) 0;
 }
 ol.percurso-da-linha a {
   display: flex;
@@ -1673,9 +1829,9 @@ ol.percurso-da-linha a:hover {
    chegar» já preenchido. */
 table.saidas {
   width: 100%;
-  margin: 0.75rem 0 0;
+  margin: var(--espaco-3) 0 0;
   border-collapse: collapse;
-  font-size: 0.95rem;
+  font-size: var(--letra-media);
 }
 table.saidas th,
 table.saidas td {
@@ -1685,7 +1841,7 @@ table.saidas td {
   border-bottom: 1px solid var(--linhas);
 }
 table.saidas thead th {
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
   color: var(--texto-secundario);
   border-bottom-width: 2px;
 }
@@ -1710,7 +1866,7 @@ table.saidas .linhas-da-saida {
 }
 table.saidas .horas-da-saida .secundario {
   display: block;
-  font-size: 0.8rem;
+  font-size: var(--letra-mini);
   line-height: 1.3;
 }
 .linhas-da-saida,
@@ -1728,7 +1884,7 @@ table.saidas .horas-da-saida .secundario {
    nome — eram números corridos numa frase, sem cor nem ligação. */
 ul.linhas-do-concelho {
   list-style: none;
-  margin: 0.5rem 0 0;
+  margin: var(--espaco-2) 0 0;
   padding: 0;
 }
 ul.linhas-do-concelho > li {
@@ -1740,9 +1896,9 @@ ul.linhas-do-concelho > li:last-child {
 ul.linhas-do-concelho a {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--espaco-3);
   min-height: var(--alvo);
-  padding: 0.45rem 0.25rem;
+  padding: 0.45rem var(--espaco-1);
   color: var(--texto);
   text-decoration: none;
 }
@@ -1754,9 +1910,25 @@ ul.linhas-do-concelho a > span:last-child {
   min-width: 0;
   overflow-wrap: break-word;
 }
+/* OS NOMES ALINHADOS, tenha o número dois dígitos ou quatro: o distintivo tem
+   a largura do maior, e o número fica ao meio (auditoria de 1/11/2026, #160).
+   A margem esquerda dos nomes era uma escada. */
+ul.linhas-do-concelho .distintivo {
+  flex: none;
+  min-width: 3.6rem;
+  justify-content: center;
+}
+details.mais-linhas > summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--alvo);
+  font-weight: 700;
+  color: var(--marca-texto);
+  cursor: pointer;
+}
 
 ul.zonas-do-concelho {
-  margin: 0.25rem 0 0.5rem;
+  margin: var(--espaco-1) 0 var(--espaco-2);
   padding-left: 1.25rem;
 }
 /* Cada zona leva à sua entrada na página do transporte a pedido: um alvo
@@ -1810,11 +1982,11 @@ details.paragens-do-concelho > summary {
    baixo, recolhidas. */
 ul.localidades {
   list-style: none;
-  margin: 0.5rem 0 0;
+  margin: var(--espaco-2) 0 0;
   padding: 0;
 }
 ul.localidades > li + li {
-  margin-top: 0.5rem;
+  margin-top: var(--espaco-2);
 }
 ul.localidades .localidade {
   display: block;
@@ -1822,7 +1994,7 @@ ul.localidades .localidade {
   padding: 0.35rem 0 0.1rem;
 }
 ul.localidades .localidade + .paragens-com-linhas {
-  padding-left: 0.75rem;
+  padding-left: var(--espaco-3);
   border-left: 3px solid var(--linhas);
 }
 
@@ -1834,33 +2006,63 @@ ul.localidades .localidade + .paragens-com-linhas {
   background: var(--superficie);
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
-  padding: 0.25rem 1rem 0.75rem;
+  padding: var(--espaco-1) var(--espaco-4) var(--espaco-3);
 }
 .procurar-terra .sem-resposta {
-  margin: 0.75rem 0 0;
+  margin: var(--espaco-3) 0 0;
 }
 
 /* O filtro das linhas (P2-019): o campo, à largura da lista, e a frase do
    «nenhuma» logo por baixo — à vista só quando não sobra nenhuma. */
 .filtro-das-linhas {
-  margin: 0 0 0.75rem;
+  margin: 0 0 var(--espaco-3);
 }
 .filtro-das-linhas input {
   width: 100%;
 }
 .filtro-das-linhas p {
-  margin: 0.5rem 0 0;
+  margin: var(--espaco-2) 0 0;
+}
+
+/* A procura nas paragens (#103): o campo e o botão na mesma linha, e a ajuda
+   por baixo. É um formulário que o servidor responde, sem JavaScript. */
+.procurar-paragem {
+  margin: var(--espaco-2) 0 1.25rem;
+}
+.procurar-paragem .campo-e-botao {
+  display: flex;
+  gap: var(--espaco-2);
+}
+.procurar-paragem .campo-e-botao input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.procurar-paragem .campo-e-botao button {
+  flex: 0 0 auto;
+}
+.procurar-paragem > .secundario {
+  display: block;
+  margin-top: 0.3rem;
+}
+
+/* As linhas de uma paragem nas listas, por baixo do nome (#183). */
+.linhas-da-paragem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-1);
+  margin-top: 0.3rem;
 }
 ul.terras-encontradas {
   list-style: none;
-  margin: 0.75rem 0 0;
+  margin: var(--espaco-3) 0 0;
   padding: 0;
 }
 ul.terras-encontradas > li + li {
   border-top: 1px solid var(--linhas);
 }
 ul.terras-encontradas .terra {
-  margin: 0.5rem 0 0;
+  margin: var(--espaco-2) 0 0;
 }
 ul.terras-encontradas ul,
 ul.circuitos-da-zona {
@@ -1874,7 +2076,7 @@ ul.circuitos-da-zona > li {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 0 1rem;
+  gap: 0 var(--espaco-4);
   min-height: var(--alvo);
 }
 ul.circuitos-da-zona > li + li {
@@ -1905,7 +2107,7 @@ details.zona-a-pedido > summary {
   justify-content: center;
   gap: 0.15rem;
   min-height: 3.25rem;
-  padding: 0.5rem 2.25rem 0.5rem 0.25rem;
+  padding: var(--espaco-2) 2.25rem var(--espaco-2) var(--espaco-1);
   position: relative;
   cursor: pointer;
   list-style: none;
@@ -1920,14 +2122,14 @@ details.zona-a-pedido .nome-da-zona {
   font-weight: 700;
 }
 details.zona-a-pedido .circuitos-no-resumo {
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
   color: var(--texto-secundario);
 }
 details.zona-a-pedido[open] {
-  padding-bottom: 0.5rem;
+  padding-bottom: var(--espaco-2);
 }
 details.zona-a-pedido .circuitos-da-zona {
-  padding-left: 0.25rem;
+  padding-left: var(--espaco-1);
 }
 
 /* Uma lista comprida, fechada, com o nome à vista: o catálogo dos circuitos. */
@@ -1969,9 +2171,9 @@ details.lista-fechada > summary::-webkit-details-marker {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--espaco-4);
   min-height: var(--alvo);
-  padding: 0.6rem 0.25rem;
+  padding: 0.6rem var(--espaco-1);
 }
 
 /* --- a página da estação ----------------------------------------------------- */
@@ -1980,8 +2182,8 @@ details.lista-fechada > summary::-webkit-details-marker {
    e a distância, e por baixo as próximas partidas. */
 .paragem-a-porta {
   border-top: 1px solid var(--linhas);
-  padding-top: 0.25rem;
-  margin-top: 0.5rem;
+  padding-top: var(--espaco-1);
+  margin-top: var(--espaco-2);
 }
 .paragem-a-porta h3 {
   margin: 0;
@@ -2007,7 +2209,7 @@ ul.pontos-de-modo > li {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
-  padding: 0.5rem 0.25rem;
+  padding: var(--espaco-2) var(--espaco-1);
   border-bottom: 1px solid var(--linhas);
 }
 ul.pontos-de-modo > li:last-child {
@@ -2017,7 +2219,7 @@ ul.pontos-de-modo .nome {
   font-weight: 700;
 }
 ul.pontos-de-modo .onde {
-  font-size: 0.95rem;
+  font-size: var(--letra-media);
   color: var(--texto-secundario);
 }
 ul.pontos-de-modo .accoes {
@@ -2032,7 +2234,7 @@ ul.pontos-de-modo .accoes a {
   font-weight: 700;
 }
 .sobre-estes-dados details[open] > summary {
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--espaco-2);
 }
 /* A contagem de uma estação numa linha sua, por baixo do nome: cada contagem
    inteira — «8 docas» não se parte em «· 8» e «docas». */
@@ -2046,11 +2248,11 @@ ul.pontos-de-modo .accoes a {
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
   background: var(--superficie);
-  padding: 0.25rem 1rem;
-  margin: 0.75rem 0;
+  padding: var(--espaco-1) var(--espaco-4);
+  margin: var(--espaco-3) 0;
 }
 .como-se-usa h3 {
-  margin-top: 0.75rem;
+  margin-top: var(--espaco-3);
 }
 .como-se-usa ul,
 ul.notas-do-cartaz {
@@ -2061,7 +2263,7 @@ ul.notas-do-cartaz {
 details.lista-fechada.discreta > summary {
   font-weight: 400;
   color: var(--texto-secundario);
-  font-size: 0.95rem;
+  font-size: var(--letra-media);
 }
 details.lista-fechada.discreta > summary::after {
   border-color: var(--texto-secundario);
@@ -2073,12 +2275,12 @@ details.lista-fechada.discreta > summary::after {
   background: var(--superficie);
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
-  padding: 0.25rem 1rem 0.75rem;
-  margin: 0.75rem 0;
+  padding: var(--espaco-1) var(--espaco-4) var(--espaco-3);
+  margin: var(--espaco-3) 0;
 }
 .escolher-titulo fieldset {
   border: 0;
-  margin: 0.75rem 0 0;
+  margin: var(--espaco-3) 0 0;
   padding: 0;
 }
 .escolher-titulo legend,
@@ -2091,7 +2293,7 @@ details.lista-fechada.discreta > summary::after {
 .escolher-titulo fieldset label {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--espaco-2);
   min-height: var(--alvo);
   cursor: pointer;
 }
@@ -2105,7 +2307,7 @@ details.lista-fechada.discreta > summary::after {
   accent-color: var(--marca-texto);
 }
 .escolher-titulo .quantas-viagens {
-  margin-top: 0.75rem;
+  margin-top: var(--espaco-3);
 }
 .escolher-titulo .quantas-viagens input {
   display: block;
@@ -2118,12 +2320,12 @@ details.lista-fechada.discreta > summary::after {
 }
 /* A resposta: uma frase a cheio, e a conta por baixo. */
 .conta-do-titulo {
-  margin-top: 0.75rem;
-  padding-top: 0.5rem;
+  margin-top: var(--espaco-3);
+  padding-top: var(--espaco-2);
   border-top: 1px solid var(--linhas);
 }
 .conta-do-titulo ul {
-  margin: 0.25rem 0 0.5rem;
+  margin: var(--espaco-1) 0 var(--espaco-2);
   padding-left: 1.1rem;
   line-height: 1.45;
 }
@@ -2144,12 +2346,12 @@ details.lista-fechada.discreta > summary::after {
    no escuro) e o contorno dos campos. */
 .por-confirmar {
   display: inline-block;
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
   font-weight: 700;
   line-height: 1.2;
   padding: 0.1rem 0.45rem;
   border: 1px solid var(--borda-campo);
-  border-radius: 6px;
+  border-radius: var(--raio-pequeno);
   color: var(--texto-secundario);
   white-space: nowrap;
   vertical-align: middle;
@@ -2169,8 +2371,8 @@ details.lista-fechada.discreta > summary::after {
 label {
   display: block;
   font-weight: 700;
-  margin: 0.75rem 0 0.25rem;
-  font-size: 0.95rem;
+  margin: var(--espaco-3) 0 var(--espaco-1);
+  font-size: var(--letra-media);
 }
 input,
 select,
@@ -2181,7 +2383,7 @@ input,
 select {
   width: 100%;
   min-height: var(--alvo);
-  padding: 0.5rem 0.7rem;
+  padding: var(--espaco-2) 0.7rem;
   border: 1px solid var(--borda-campo);
   border-radius: var(--raio);
   background: var(--superficie);
@@ -2211,17 +2413,17 @@ button.secundario {
    está, não muda de página. Mas tem de parecer o mesmo verbo, por isso a
    classe é a mesma. */
 button.botao {
-  padding: 0 1rem;
+  padding: 0 var(--espaco-4);
   font-weight: 700;
 }
 
 /* Uma fila de botões que não se colam nem se sobrepõem em ecrã estreito. */
 .linha-accoes {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--espaco-2);
   flex-wrap: wrap;
   align-items: center;
-  margin: 0.75rem 0;
+  margin: var(--espaco-3) 0;
 }
 
 /* «Agora» ou «Partir a outra hora». É um `fieldset` com rádios a sério e não
@@ -2230,15 +2432,15 @@ button.botao {
 .quando-escolha {
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
-  padding: 0.5rem 0.75rem;
-  margin: 0.75rem 0 0;
+  padding: var(--espaco-2) var(--espaco-3);
+  margin: var(--espaco-3) 0 0;
   display: flex;
-  gap: 1rem;
+  gap: var(--espaco-4);
   flex-wrap: wrap;
 }
 .quando-escolha legend {
   padding: 0 0.35rem;
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
   color: var(--texto-secundario);
 }
 .quando-escolha label {
@@ -2271,7 +2473,7 @@ button.botao {
   display: block;
   min-height: 0;
   margin-bottom: 0.2rem;
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
   color: var(--texto-secundario);
 }
 
@@ -2294,8 +2496,8 @@ button.botao {
   right: 0.6rem;
   max-width: 30rem;
   background: var(--superficie);
-  border-radius: 1rem;
-  padding: 0.5rem 0.65rem;
+  border-radius: var(--raio-grande);
+  padding: var(--espaco-2) 0.65rem;
   box-shadow: 0 2px 12px rgb(16 44 63 / 18%);
 }
 .cartao-de-cima.em-pagina {
@@ -2303,7 +2505,7 @@ button.botao {
   max-width: none;
   box-shadow: none;
   border: 1px solid var(--linhas);
-  margin-bottom: 1rem;
+  margin-bottom: var(--espaco-4);
 }
 
 /* Um ponto na partida, um alfinete na chegada, e um tracejado a ligá-los.
@@ -2317,7 +2519,7 @@ button.botao {
     'traco linha troca'
     'ch    para  troca';
   align-items: center;
-  column-gap: 0.5rem;
+  column-gap: var(--espaco-2);
 }
 .marca-campo {
   display: inline-flex;
@@ -2379,10 +2581,10 @@ button.botao {
 }
 .escolher.sem-rotulo input {
   margin: 0;
-  border-radius: 0.6rem;
+  border-radius: var(--raio);
 }
 .escolher.sem-rotulo .sugestoes {
-  margin-top: 0.25rem;
+  margin-top: var(--espaco-1);
 }
 
 button.trocar {
@@ -2394,7 +2596,7 @@ button.trocar {
   background: var(--superficie);
   color: var(--marca-texto);
   border: 1px solid var(--linhas);
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
 }
 button.trocar:hover {
   background: var(--fundo);
@@ -2425,9 +2627,9 @@ button.trocar:hover {
      deslizar a página — e a página, por baixo do mapa, tem rodapé. */
   overscroll-behavior: contain;
   background: var(--superficie);
-  border-radius: 1rem 1rem 0 0;
+  border-radius: var(--raio-grande) var(--raio-grande) 0 0;
   box-shadow: 0 -2px 14px rgb(16 44 63 / 16%);
-  padding: 0 0 1rem;
+  padding: 0 0 var(--espaco-4);
 }
 .folha.em-pagina {
   position: static;
@@ -2504,7 +2706,7 @@ button.pega-da-folha {
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 1rem 1rem 0 0;
+  border-radius: var(--raio-grande) var(--raio-grande) 0 0;
   background: var(--superficie);
   cursor: grab;
   /* O arrasto é da pega: sem isto, o navegador desliza a página ou recarrega-a. */
@@ -2520,7 +2722,7 @@ button.pega-da-folha::before {
   display: block;
   width: 2.75rem;
   height: 0.3rem;
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
   background: var(--borda-campo);
 }
 button.pega-da-folha:hover::before,
@@ -2535,11 +2737,11 @@ button.pega-da-folha:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.25rem 1rem 0.5rem;
+  gap: var(--espaco-3);
+  padding: var(--espaco-1) var(--espaco-4) var(--espaco-2);
 }
 .folha.em-pagina .folha-titulo {
-  padding-top: 1rem;
+  padding-top: var(--espaco-4);
 }
 .folha-titulo h2 {
   margin: 0;
@@ -2547,12 +2749,12 @@ button.pega-da-folha:focus-visible {
      A 1,3 rem esta linha comia 60 px do alto da folha e repetia o que o ícone
      da fila de modos já diz. Quem abre as direções sabe que está nas
      direções. */
-  font-size: 1.05rem;
+  font-size: var(--letra-corpo);
   overflow-wrap: anywhere;
 }
 .redondos {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--espaco-2);
   flex-shrink: 0;
 }
 button.redondo {
@@ -2563,7 +2765,7 @@ button.redondo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
   background: var(--fundo);
   border: 1px solid var(--linhas);
   color: var(--texto);
@@ -2583,8 +2785,8 @@ button.redondo.activo {
    pergunta: vale a pena esperar pelo autocarro? */
 .modos {
   display: flex;
-  gap: 0.25rem;
-  padding: 0 0.5rem;
+  gap: var(--espaco-1);
+  padding: 0 var(--espaco-2);
   border-bottom: 1px solid var(--linhas);
   overflow-x: auto;
 }
@@ -2592,7 +2794,7 @@ button.modo {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.5rem 0.6rem;
+  padding: var(--espaco-2) 0.6rem;
   min-height: var(--alvo);
   background: transparent;
   border: 0;
@@ -2623,7 +2825,7 @@ button.modo.activo {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: var(--espaco-2);
   border-bottom: 1px solid var(--linhas);
 }
 .linha-de-controlos .modos {
@@ -2650,18 +2852,18 @@ button.modo.activo {
   flex-wrap: nowrap;
   align-items: center;
   margin: 0;
-  padding: 0 0.75rem 0 0;
+  padding: 0 var(--espaco-3) 0 0;
   flex-shrink: 0;
 }
 .linha-de-controlos .etiqueta {
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
   padding: 0.3rem 0.7rem;
 }
 button.etiqueta {
   background: var(--superficie);
   color: var(--texto);
   border: 1px solid var(--linhas);
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
   padding: 0.4rem 0.9rem;
   font-weight: 400;
 }
@@ -2679,8 +2881,8 @@ button.etiqueta[aria-expanded='true'] {
 .mais-cedo-ou-tarde {
   display: flex;
   justify-content: space-between;
-  gap: 0.5rem;
-  margin: 0.5rem 1rem;
+  gap: var(--espaco-2);
+  margin: var(--espaco-2) var(--espaco-4);
 }
 .mais-cedo-ou-tarde button.etiqueta {
   display: inline-flex;
@@ -2704,8 +2906,8 @@ button.etiqueta.so-icone {
 .folha .faixa,
 .folha .marca-dados,
 .folha > div > p {
-  margin-left: 1rem;
-  margin-right: 1rem;
+  margin-left: var(--espaco-4);
+  margin-right: var(--espaco-4);
 }
 
 /* AS OPÇÕES: linhas separadas por um traço, não cartões com sombra. É a
@@ -2735,9 +2937,9 @@ button.resumo-opcao {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.15rem 0.75rem;
+  gap: 0.15rem var(--espaco-3);
   width: 100%;
-  padding: 0.7rem 1rem;
+  padding: 0.7rem var(--espaco-4);
   text-align: left;
   background: transparent;
   color: var(--texto);
@@ -2769,24 +2971,24 @@ button.resumo-opcao:hover {
   color: var(--linhas);
 }
 .resumo-opcao .passo-min {
-  font-size: 0.8rem;
+  font-size: var(--letra-mini);
   font-weight: 700;
 }
 .resumo-opcao .duracao {
   flex: none;
   margin-left: auto;
-  font-size: 1.3rem;
+  font-size: var(--letra-titulo);
   font-weight: 700;
   white-space: nowrap;
 }
 .resumo-opcao .horas {
   flex: 1 0 100%;
-  font-size: 0.95rem;
+  font-size: var(--letra-media);
 }
 .resumo-opcao .nota {
   flex: 1 0 100%;
   color: var(--texto-secundario);
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
 }
 /* «amanhã, 07:30». Sem isto a hora sozinha lê-se como sendo já — e era por
    isso que o planeador não podia sequer olhar para o dia seguinte. Herda a
@@ -2804,7 +3006,7 @@ button.resumo-opcao:hover {
 }
 .opcao .percurso {
   margin: 0;
-  padding: 0 1rem 0.75rem;
+  padding: 0 var(--espaco-4) var(--espaco-3);
 }
 
 /* A BOLHA COM O TEMPO, pousada a meio do percurso. «53 min», ali, sem ser
@@ -2814,9 +3016,9 @@ button.resumo-opcao:hover {
   background: var(--marca);
   color: #fff;
   font-weight: 700;
-  font-size: 0.9rem;
-  padding: 0.25rem 0.6rem;
-  border-radius: 999px;
+  font-size: var(--letra-pequena);
+  padding: var(--espaco-1) 0.6rem;
+  border-radius: var(--raio-redondo);
   box-shadow: 0 1px 6px rgb(16 44 63 / 35%);
   white-space: nowrap;
   pointer-events: none;
@@ -2885,7 +3087,7 @@ button.resumo-opcao:hover {
   bottom: var(--tapado-a-esquerda, 0px);
 }
 .app-mapa .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group {
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
   box-shadow: 0 2px 10px rgb(16 44 63 / 28%);
   overflow: hidden;
 }
@@ -2987,7 +3189,7 @@ button.resumo-opcao:hover {
    separava do botão como se fosse de outro canto. */
 .app-mapa .maplibregl-ctrl-bottom-right .maplibregl-ctrl-scale {
   margin-top: 0.4rem;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--espaco-1);
 }
 /* === fim dos controlos do mapa ============================================ */
 
@@ -3022,7 +3224,7 @@ button.resumo-opcao:hover {
 
 .sugestoes {
   list-style: none;
-  margin: 0.25rem 0 0;
+  margin: var(--espaco-1) 0 0;
   padding: 0;
   border: 1px solid var(--borda-campo);
   border-radius: var(--raio);
@@ -3057,7 +3259,7 @@ button.resumo-opcao:hover {
 
 .quando {
   display: flex;
-  gap: 1rem;
+  gap: var(--espaco-4);
   flex-wrap: wrap;
   /* Dentro do <fieldset> dos rádios, sem isto os campos colavam-se à linha
      do «Agora / Noutra altura». */
@@ -3109,11 +3311,11 @@ ol.percurso li {
   display: grid;
   grid-template-columns: 3.1rem 1.1rem 1fr;
   align-items: center;
-  column-gap: 0.5rem;
+  column-gap: var(--espaco-2);
 }
 ol.percurso .hora {
   font-variant-numeric: tabular-nums;
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
   color: var(--texto-secundario);
   text-align: right;
 }
@@ -3133,7 +3335,7 @@ ol.percurso .no {
   justify-self: center;
   width: 0.7rem;
   height: 0.7rem;
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
   border: 2.5px solid var(--marca-texto);
   background: var(--superficie);
 }
@@ -3165,7 +3367,7 @@ ol.percurso li.espera .fio {
 ol.percurso li.espera .oque {
   padding: 0.15rem 0;
   color: var(--texto-secundario);
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
 }
 ol.percurso li.troco {
   align-items: stretch;
@@ -3176,10 +3378,10 @@ ol.percurso li.troco .oque {
   gap: 0.4rem;
   flex-wrap: wrap;
   padding: 0.3rem 0;
-  font-size: 0.95rem;
+  font-size: var(--letra-media);
 }
 ol.percurso li.troco .secundario {
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
 }
 
 /* COM A LETRA GRANDE, A HORA SOBE PARA CIMA DO NOME (P3-020). A coluna da
@@ -3245,9 +3447,9 @@ ol.percurso li.modo-bicicleta .fio {
   border-radius: var(--raio);
   background: var(--realce);
   color: var(--texto);
-  padding: 0.6rem 1rem;
+  padding: 0.6rem var(--espaco-4);
   margin: 0 0 1.25rem;
-  font-size: 0.9375rem;
+  font-size: var(--letra-media);
   line-height: 1.5;
 }
 
@@ -3268,8 +3470,8 @@ ol.percurso li.modo-bicicleta .fio {
   background: #102c3f;
   color: #ffffff;
   border-bottom: 3px solid #f2b705;
-  padding: 0.5rem 1rem;
-  font-size: 0.9375rem;
+  padding: var(--espaco-2) var(--espaco-4);
+  font-size: var(--letra-media);
   line-height: 1.5;
 }
 
@@ -3303,8 +3505,8 @@ ul.cartoes .cartao h3 {
 .numeros {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem 1.5rem;
-  margin: 0.75rem 0 0;
+  gap: 0.35rem var(--espaco-5);
+  margin: var(--espaco-3) 0 0;
 }
 .numeros > div {
   /* Sem `flex-shrink: 0`: foi o que pôs a página a deslizar para o lado a
@@ -3312,14 +3514,14 @@ ul.cartoes .cartao h3 {
   min-width: 0;
 }
 .numeros dt {
-  font-size: 0.8rem;
+  font-size: var(--letra-mini);
   color: var(--texto-secundario);
   margin: 0;
 }
 .numeros dd {
   margin: 0;
   font-weight: 700;
-  font-size: 1.15rem;
+  font-size: var(--letra-destaque);
 }
 
 /* --- as páginas do produto ---------------------------------------------- */
@@ -3339,7 +3541,7 @@ ul.cartoes .cartao h3 {
    abaixo, e um botão que cai para a segunda linha deixa de estar à vista. */
 .cabecalho-do-produto .interior {
   flex-wrap: nowrap;
-  gap: 1rem;
+  gap: var(--espaco-4);
 }
 .cabecalho-do-produto a.marca {
   gap: 0.45rem;
@@ -3523,10 +3725,10 @@ a.botao.secundario:focus-visible {
 .produto-texto {
   max-width: var(--medida);
   margin: 0 auto;
-  padding: 2rem 1rem 3rem;
+  padding: var(--espaco-6) var(--espaco-4) var(--espaco-7);
 }
 .produto-entrada {
-  font-size: 1.15rem;
+  font-size: var(--letra-destaque);
 }
 ul.produto-botoes {
   list-style: none;
@@ -3543,16 +3745,16 @@ ul.produto-botoes {
   overflow-wrap: anywhere;
 }
 .correio-por-extenso {
-  font-size: 1.35rem;
+  font-size: var(--letra-titulo);
   font-weight: 700;
-  margin: 0.5rem 0 1rem;
+  margin: var(--espaco-2) 0 var(--espaco-4);
 }
 
 /* As ligações no meio de uma frase do rodapé ficam na linha da frase. Com os
    44 px das ligações autónomas, cada uma abria um buraco na entrelinha; a
    norma isenta-as (2.5.8, «em linha»), e o teste dos alvos também. */
 .rodape-do-produto p {
-  margin: 0.5rem 0;
+  margin: var(--espaco-2) 0;
 }
 .rodape-do-produto p a {
   display: inline;
@@ -3569,10 +3771,10 @@ ul.produto-botoes {
 .produto-interior {
   max-width: 72rem;
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: 0 var(--espaco-4);
 }
 .produto-faixa {
-  padding: 3rem 0;
+  padding: var(--espaco-7) 0;
 }
 .produto-faixa.clara {
   background: var(--superficie);
@@ -3580,8 +3782,8 @@ ul.produto-botoes {
   border-bottom: 1px solid var(--linhas);
 }
 .produto-faixa h2 {
-  font-size: 1.6rem;
-  margin: 0 0 0.75rem;
+  font-size: var(--letra-titulo-grande);
+  margin: 0 0 var(--espaco-3);
 }
 /* O texto corrido fica na medida de leitura, mesmo numa faixa larga. */
 .produto-medida {
@@ -3592,7 +3794,7 @@ ul.produto-botoes {
    direita. Com ar por cima do título — na montra antiga o `h1` estava a 0 px
    do cabeçalho (P4-029). */
 .produto-heroi {
-  padding: 2.5rem 0 3rem;
+  padding: 2.5rem 0 var(--espaco-7);
 }
 .produto-heroi .produto-interior {
   display: grid;
@@ -3601,37 +3803,37 @@ ul.produto-botoes {
 .produto-sobretitulo {
   font-weight: 700;
   color: var(--texto-secundario);
-  margin: 0 0 0.75rem;
+  margin: 0 0 var(--espaco-3);
 }
 /* `balance` reparte o título pelas linhas: sem ele, num telemóvel, o «só.»
    ficava sozinho na terceira. */
 .produto-heroi h1 {
-  font-size: 2.1rem;
+  font-size: var(--letra-cartaz);
   line-height: 1.1;
-  margin: 0 0 1rem;
+  margin: 0 0 var(--espaco-4);
   max-width: 20ch;
   text-wrap: balance;
 }
 .produto-chamada {
-  font-size: 1.15rem;
+  font-size: var(--letra-destaque);
   max-width: 36rem;
 }
 .produto-heroi .produto-botoes {
-  margin: 1.5rem 0 0.5rem;
+  margin: var(--espaco-5) 0 var(--espaco-2);
 }
 .produto-garantias {
   list-style: none;
   padding: 0;
-  margin: 1.5rem 0 0;
+  margin: var(--espaco-5) 0 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--espaco-2);
 }
 .produto-garantias li {
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
   background: var(--superficie);
   border: 1px solid var(--linhas);
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
   padding: 0.3rem 0.8rem;
 }
 
@@ -3654,23 +3856,23 @@ ul.produto-botoes {
   height: auto;
 }
 .produto-telemovel figcaption {
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
   color: var(--texto-secundario);
   text-align: center;
-  margin-top: 0.75rem;
+  margin-top: var(--espaco-3);
 }
 
 @media (min-width: 64rem) {
   .produto-heroi {
-    padding: 3.5rem 0 4rem;
+    padding: 3.5rem 0 var(--espaco-8);
   }
   .produto-heroi .produto-interior {
     grid-template-columns: minmax(0, 1fr) 17rem;
-    gap: 4rem;
+    gap: var(--espaco-8);
     align-items: center;
   }
   .produto-heroi h1 {
-    font-size: 2.75rem;
+    font-size: var(--letra-montra);
   }
   .produto-telemovel {
     width: 17rem;
@@ -3684,9 +3886,9 @@ ul.produto-botoes {
 .produto-grelha {
   list-style: none;
   padding: 0;
-  margin: 1.5rem 0 0;
+  margin: var(--espaco-5) 0 0;
   display: grid;
-  gap: 1rem;
+  gap: var(--espaco-4);
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
 }
 .produto-regioes .cartao,
@@ -3703,17 +3905,17 @@ ul.produto-botoes {
   min-height: var(--alvo);
 }
 .produto-regioes h3 + .secundario {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--espaco-2);
 }
 .produto-grupo h3 {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--espaco-2);
 }
 .produto-grupo ul {
   margin: 0;
   padding-left: 1.2rem;
 }
 .produto-grupo li + li {
-  margin-top: 0.5rem;
+  margin-top: var(--espaco-2);
 }
 
 /* Os passos da entrada: um filete de 3 px na cor da marca por cima de cada
@@ -3721,24 +3923,24 @@ ul.produto-botoes {
 ol.produto-passos {
   list-style: none;
   padding: 0;
-  margin: 1.5rem 0;
+  margin: var(--espaco-5) 0;
   display: grid;
-  gap: 1.5rem 1.25rem;
+  gap: var(--espaco-5) 1.25rem;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 12.5rem), 1fr));
 }
 ol.produto-passos li {
   border-top: 3px solid var(--marca);
-  padding-top: 0.75rem;
+  padding-top: var(--espaco-3);
 }
 ol.produto-passos h3 {
-  margin: 0.25rem 0 0.4rem;
+  margin: var(--espaco-1) 0 0.4rem;
 }
 ol.produto-passos p {
   margin: 0;
 }
 .produto-numero {
   display: block;
-  font-size: 1.6rem;
+  font-size: var(--letra-titulo-grande);
   font-weight: 700;
   line-height: 1;
   color: var(--marca-texto);
@@ -3748,10 +3950,10 @@ ol.produto-passos p {
    dados», «Quem está por trás» ao lado do código e do nome. */
 .produto-duas {
   display: grid;
-  gap: 0.5rem 3rem;
+  gap: var(--espaco-2) var(--espaco-7);
 }
 .produto-duas h2 {
-  margin-top: 1.5rem;
+  margin-top: var(--espaco-5);
 }
 .produto-duas > div:first-child h2 {
   margin-top: 0;
@@ -3828,7 +4030,7 @@ main.pagina:has(.app-mapa) {
   background: var(--superficie);
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
-  padding: 0.75rem 1rem;
+  padding: var(--espaco-3) var(--espaco-4);
   margin: 0;
   /* A LARGURA É A DO TEXTO, até ao limite. Com `left: 50%` e sem largura, a
      caixa só podia ocupar a metade da direita do mapa, e o aviso de falha —
@@ -3856,7 +4058,7 @@ main.pagina:has(.app-mapa) {
   background: var(--superficie);
   border: 1px solid var(--borda-campo);
   border-radius: var(--raio);
-  padding: 0.5rem 0.75rem;
+  padding: var(--espaco-2) var(--espaco-3);
   box-shadow: 0 1px 4px rgb(16 44 63 / 12%);
 }
 
@@ -3876,9 +4078,9 @@ main.pagina:has(.app-mapa) {
   left: 0.75rem;
   right: 0.75rem;
   display: flex;
-  gap: 0.5rem;
+  gap: var(--espaco-2);
   overflow-x: auto;
-  padding-bottom: 0.25rem;
+  padding-bottom: var(--espaco-1);
   /* Deixa o dedo arrastar o mapa por baixo, entre as pílulas. */
   pointer-events: none;
   scrollbar-width: none;
@@ -3924,9 +4126,9 @@ main.pagina:has(.app-mapa) {
   background: var(--superficie);
   color: var(--texto);
   border: 1px solid var(--linhas);
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
   white-space: nowrap;
   box-shadow: 0 1px 4px rgb(16 44 63 / 12%);
   cursor: pointer;
@@ -3981,7 +4183,7 @@ main.pagina:has(.app-mapa) {
 .pilula-placa .pilula-cor {
   width: 1.25rem;
   height: 1.25rem;
-  border-radius: 5px;
+  border-radius: var(--raio-pequeno);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4012,11 +4214,11 @@ main.pagina:has(.app-mapa) {
   border-top: 1px solid var(--linhas);
   border-radius: var(--raio) var(--raio) 0 0;
   /* Sem margem em cima: é a pega que ocupa o alto. */
-  padding: 0 1rem 1rem;
+  padding: 0 var(--espaco-4) var(--espaco-4);
   box-shadow: 0 -2px 8px rgb(16 44 63 / 12%);
 }
 .cartao-de-baixo > .pega-da-folha {
-  margin: 0 -1rem 0.25rem;
+  margin: 0 -1rem var(--espaco-1);
   width: calc(100% + 2rem);
 }
 
@@ -4029,7 +4231,7 @@ main.pagina:has(.app-mapa) {
     max-height: calc(100% - 6rem);
     border: 1px solid var(--linhas);
     border-radius: var(--raio);
-    padding-top: 1rem;
+    padding-top: var(--espaco-4);
   }
   /* Numa janela larga isto não é uma folha, é um cartão ao lado do mapa. */
   .cartao-de-baixo > .pega-da-folha {
@@ -4041,11 +4243,11 @@ main.pagina:has(.app-mapa) {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: var(--espaco-3);
 }
 .cartao-cabecalho h2 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: var(--letra-destaque);
   line-height: 1.25;
   /* O nome fica com a largura toda: era ele que perdia espaço para o botão. */
   flex: 1;
@@ -4064,7 +4266,7 @@ main.pagina:has(.app-mapa) {
   padding: 0;
   display: grid;
   place-items: center;
-  font-size: 1.5rem;
+  font-size: var(--letra-titulo-grande);
   line-height: 1;
   background: none;
   border: none;
@@ -4118,7 +4320,7 @@ main.pagina:has(.app-mapa) {
 /* O que não é certo continua a dizer-se, e em itálico para não competir. */
 .partidas .estimada {
   display: block;
-  font-size: 0.8rem;
+  font-size: var(--letra-mini);
   font-style: italic;
   color: var(--texto-secundario);
 }
@@ -4136,7 +4338,7 @@ main.pagina:has(.app-mapa) {
 .partidas .quando-passa strong,
 .fantasma-das-partidas .quando-passa strong {
   display: block;
-  font-size: 1.05rem;
+  font-size: var(--letra-corpo);
   /* Tabular para as colunas de minutos assentarem umas nas outras. */
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -4144,7 +4346,7 @@ main.pagina:has(.app-mapa) {
 .partidas .quando-passa .relogio,
 .fantasma-das-partidas .quando-passa .relogio {
   display: block;
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
   color: var(--texto-secundario);
   font-variant-numeric: tabular-nums;
 }
@@ -4160,9 +4362,9 @@ main.pagina:has(.app-mapa) {
 .cartao-accoes {
   display: flex;
   align-items: center;
-  gap: 0.25rem 1.25rem;
+  gap: var(--espaco-1) 1.25rem;
   flex-wrap: wrap;
-  margin-top: 1rem;
+  margin-top: var(--espaco-4);
 }
 /* A segunda ação é uma ligação, e continua a ser um alvo: «Horário completo»
    ao lado de «Como chegar» tinha 26 px de altura. */
@@ -4178,7 +4380,7 @@ a.botao {
   display: inline-flex;
   align-items: center;
   min-height: var(--alvo);
-  padding: 0 1rem;
+  padding: 0 var(--espaco-4);
   background: var(--marca);
   color: #fff;
   border-radius: var(--raio);
@@ -4206,7 +4408,7 @@ a.botao:focus-visible {
   border: 0;
 }
 .app-procura {
-  padding: 0.4rem 0.5rem;
+  padding: 0.4rem var(--espaco-2);
 }
 /* UMA CÁPSULA SÓ, E NÃO UMA CAIXA DENTRO DE OUTRA (P1-028). O contorno passa
    para a cápsula — com a borda dos campos, que dá os 3:1 do critério 1.4.11
@@ -4285,9 +4487,9 @@ a.botao:focus-visible {
 .app-procura {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--espaco-1);
   padding: 0.3rem 0.35rem 0.3rem 0.15rem;
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
   /* Afastada do topo: encostada, a sombra e o canto arredondado ficavam
      cortados pela barra do navegador, e a pastilha parecia uma faixa. E há
      telemóveis com entalhe. */
@@ -4307,7 +4509,7 @@ button.botao-menu {
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
   background: transparent;
   color: var(--texto);
 }
@@ -4325,10 +4527,10 @@ button.botao-menu:focus-visible {
   right: 0;
   bottom: 0;
   background: var(--superficie);
-  border-radius: 1rem 1rem 0 0;
+  border-radius: var(--raio-grande) var(--raio-grande) 0 0;
   box-shadow: 0 -2px 14px rgb(16 44 63 / 16%);
   /* Sem margem em cima: é a pega que ocupa o alto. */
-  padding: 0 0.5rem 1rem;
+  padding: 0 var(--espaco-2) var(--espaco-4);
 }
 .folha-de-abertura > .pega-da-folha {
   margin: 0 -0.5rem;
@@ -4349,13 +4551,13 @@ button.botao-menu:focus-visible {
   visibility: hidden;
 }
 .folha-de-abertura h2 {
-  margin: 0 0 0.75rem;
+  margin: 0 0 var(--espaco-3);
   padding: 0 0.6rem;
-  font-size: 1.05rem;
+  font-size: var(--letra-corpo);
 }
 .folha-de-abertura .abertura-nota {
-  margin: 0.75rem 0.6rem 0;
-  font-size: 0.9rem;
+  margin: var(--espaco-3) 0.6rem 0;
+  font-size: var(--letra-pequena);
 }
 
 /* OS MODOS EM CÍRCULOS, e numa fila que desliza.
@@ -4381,7 +4583,7 @@ button.botao-menu:focus-visible {
   padding: 0 0.6rem 0.2rem;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(4.6rem, 1fr));
-  gap: 0.35rem 0.25rem;
+  gap: 0.35rem var(--espaco-1);
 }
 a.circulo {
   display: flex;
@@ -4389,7 +4591,7 @@ a.circulo {
   align-items: center;
   gap: 0.35rem;
   width: 4.6rem;
-  padding: 0.25rem 0.1rem;
+  padding: var(--espaco-1) 0.1rem;
   text-decoration: none;
   color: var(--texto);
   border-radius: var(--raio);
@@ -4402,12 +4604,12 @@ a.circulo .bolha {
      palavra por baixo. */
   width: 3.25rem;
   height: 3.25rem;
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
   background: var(--autocarro);
   color: #fff;
 }
 a.circulo .nome {
-  font-size: 0.78rem;
+  font-size: var(--letra-mini);
   line-height: 1.15;
   text-align: center;
   overflow-wrap: anywhere;
@@ -4447,8 +4649,8 @@ dialog.menu-do-mapa {
   width: min(20rem, 88vw);
   max-width: none;
   border: 0;
-  border-radius: 0 1rem 1rem 0;
-  padding: 0.75rem 0.5rem;
+  border-radius: 0 var(--raio-grande) var(--raio-grande) 0;
+  padding: var(--espaco-3) var(--espaco-2);
   background: var(--superficie);
   color: var(--texto);
 }
@@ -4459,8 +4661,8 @@ dialog.menu-do-mapa::backdrop {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0 0.25rem 0.5rem 0.75rem;
+  gap: var(--espaco-2);
+  padding: 0 var(--espaco-1) var(--espaco-2) var(--espaco-3);
   border-bottom: 1px solid var(--linhas);
 }
 .menu-marca {
@@ -4468,14 +4670,14 @@ dialog.menu-do-mapa::backdrop {
   min-width: 0;
 }
 .menu-marca .nome-principal {
-  font-size: 1rem;
+  font-size: var(--letra-corpo);
 }
 .menu-marca .nome-secundario,
 .assinatura-da-folha .nome-secundario {
   color: var(--texto-secundario);
 }
 dialog.menu-do-mapa .feito-com {
-  margin: 0.75rem;
+  margin: var(--espaco-3);
 }
 /* A LISTA DO MENU NÃO É A LISTA DA REDE.
  *
@@ -4489,7 +4691,7 @@ dialog.menu-do-mapa .lista a {
   align-items: flex-start;
   justify-content: flex-start;
   gap: 0.85rem;
-  padding: 0.6rem 0.75rem;
+  padding: 0.6rem var(--espaco-3);
   border-radius: var(--raio);
 }
 /* O pictograma à altura da primeira linha do nome, na cor da marca. */
@@ -4503,7 +4705,7 @@ dialog.menu-do-mapa .lista .secundario {
 }
 .menu-nota {
   display: block;
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
   font-weight: 400;
   margin-top: 0.1rem;
 }
@@ -4518,21 +4720,21 @@ dialog.menu-do-mapa .lista .secundario {
    horários já tinha tomado. */
 .precos-de-expresso {
   border: 1px solid var(--linhas);
-  border-radius: 6px;
+  border-radius: var(--raio-pequeno);
   padding: 0.9rem;
-  margin: 0.75rem 0 1.25rem;
+  margin: var(--espaco-3) 0 1.25rem;
 }
 
 .precos-de-expresso > label {
   display: block;
   font-weight: 700;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--espaco-2);
 }
 
 .linha-de-campos {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--espaco-2);
 }
 
 .linha-de-campos select,
@@ -4554,7 +4756,7 @@ dialog.menu-do-mapa .lista .secundario {
 }
 
 .precos-de-expresso p {
-  margin-top: 0.75rem;
+  margin-top: var(--espaco-3);
 }
 
 /* --- o painel ----------------------------------------------------------- */
@@ -4580,21 +4782,21 @@ dialog.menu-do-mapa .lista .secundario {
   text-decoration: underline;
 }
 .painel h1 {
-  margin-top: 1.5rem;
+  margin-top: var(--espaco-5);
 }
 .painel .entrada {
   color: var(--texto-secundario);
-  margin: 0 0 1rem;
+  margin: 0 0 var(--espaco-4);
 }
 .painel .secundario-texto {
   color: var(--texto-secundario);
-  font-size: 0.92rem;
+  font-size: var(--letra-pequena);
 }
 .painel .alerta-texto {
   color: var(--alerta-texto);
 }
 .painel .cartao {
-  margin: 1rem 0;
+  margin: var(--espaco-4) 0;
 }
 .painel .cartao h2 {
   margin-top: 0;
@@ -4603,14 +4805,14 @@ dialog.menu-do-mapa .lista .secundario {
   margin-top: 1.25rem;
 }
 .painel .cartoes > li.cartao {
-  margin: 0 0 1rem;
+  margin: 0 0 var(--espaco-4);
   border-bottom: 1px solid var(--linhas);
 }
 .painel dl.pares {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 0.25rem 1rem;
-  margin: 0.75rem 0;
+  gap: var(--espaco-1) var(--espaco-4);
+  margin: var(--espaco-3) 0;
 }
 .painel dl.pares dt {
   color: var(--texto-secundario);
@@ -4636,7 +4838,7 @@ dialog.menu-do-mapa .lista .secundario {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem 1rem;
+  gap: var(--espaco-2) var(--espaco-4);
   padding: 0.6rem 0;
   border-bottom: 1px solid var(--linhas);
 }
@@ -4648,21 +4850,21 @@ dialog.menu-do-mapa .lista .secundario {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 0.75rem;
-  margin: 0.5rem 0;
+  gap: var(--espaco-2) var(--espaco-3);
+  margin: var(--espaco-2) 0;
 }
 .painel .interruptores .estado {
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
 }
 .painel button.pequeno {
   padding: 0 0.9rem;
 }
 .painel form.formulario {
   max-width: 30rem;
-  margin: 1rem 0;
+  margin: var(--espaco-4) 0;
 }
 .painel form.formulario button {
-  margin-top: 0.75rem;
+  margin-top: var(--espaco-3);
 }
 .painel .em-linha > div {
   flex: 1 1 12rem;
@@ -4674,17 +4876,17 @@ dialog.menu-do-mapa .lista .secundario {
 .painel .em-linha .botoes {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--espaco-4);
   flex: 0 0 auto;
 }
 .painel form.recortes {
   align-items: flex-end;
-  margin: 1rem 0;
+  margin: var(--espaco-4) 0;
 }
 .painel label.caixa {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--espaco-2);
   font-weight: 400;
   min-height: var(--alvo);
 }
@@ -4698,17 +4900,17 @@ dialog.menu-do-mapa .lista .secundario {
 }
 .painel .rolavel {
   overflow-x: auto;
-  margin: 0.75rem 0;
+  margin: var(--espaco-3) 0;
 }
 .painel table.registo {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.92rem;
+  font-size: var(--letra-pequena);
 }
 .painel table.registo th,
 .painel table.registo td {
   text-align: left;
-  padding: 0.45rem 0.5rem;
+  padding: 0.45rem var(--espaco-2);
   border-bottom: 1px solid var(--linhas);
   vertical-align: top;
 }
@@ -4720,7 +4922,7 @@ dialog.menu-do-mapa .lista .secundario {
   display: inline-flex;
   align-items: center;
   min-height: var(--alvo);
-  padding: 0 1rem;
+  padding: 0 var(--espaco-4);
   border: 1px solid var(--marca-texto);
   border-radius: var(--raio);
   background: var(--superficie);
@@ -4743,8 +4945,8 @@ dialog.menu-do-mapa .lista .secundario {
   text-underline-offset: 0.2em;
 }
 .painel details.mudanca dl {
-  margin: 0.25rem 0 0;
-  font-size: 0.85rem;
+  margin: var(--espaco-1) 0 0;
+  font-size: var(--letra-pequena);
 }
 .painel details.mudanca dt {
   font-family: ui-monospace, monospace;
@@ -4759,9 +4961,9 @@ dialog.menu-do-mapa .lista .secundario {
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
   background: var(--superficie);
-  padding: 0.75rem;
+  padding: var(--espaco-3);
   color: var(--alerta-texto);
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
 }
 
 /* QUEM ESTÁ DENTRO, E A BARRA DELE (0009, P4-023). Duas filas e não três: a
@@ -4770,9 +4972,9 @@ dialog.menu-do-mapa .lista .secundario {
    empurrar o «Sair» para uma linha só dele, que era o que acontecia a 390 px. */
 .painel-cabecalho .interior {
   flex-wrap: nowrap;
-  gap: 0.75rem;
-  padding-top: 0.25rem;
-  padding-bottom: 0.25rem;
+  gap: var(--espaco-3);
+  padding-top: var(--espaco-1);
+  padding-bottom: var(--espaco-1);
 }
 .painel-cabecalho .quem {
   margin: 0 0 0 auto;
@@ -4780,7 +4982,7 @@ dialog.menu-do-mapa .lista .secundario {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
   color: var(--texto-secundario);
 }
 .painel-cabecalho .quem strong {
@@ -4819,7 +5021,7 @@ dialog.menu-do-mapa .lista .secundario {
 .painel-cabecalho .seletor-de-regiao {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--espaco-2);
   margin: 0;
 }
 .painel-cabecalho .seletor-de-regiao label {
@@ -4874,7 +5076,7 @@ dialog.menu-do-mapa .lista .secundario {
 .painel details.mexer,
 .painel details.perigo,
 .painel details.para-quem-gere {
-  margin: 0.75rem 0;
+  margin: var(--espaco-3) 0;
 }
 .painel details > summary {
   display: flex;
@@ -4895,7 +5097,7 @@ dialog.menu-do-mapa .lista .secundario {
 }
 .painel details.perigo[open] {
   border-left: 4px solid var(--alerta);
-  padding-left: 0.75rem;
+  padding-left: var(--espaco-3);
 }
 .painel .zona-de-perigo {
   border-color: var(--alerta);
@@ -4912,7 +5114,7 @@ dialog.menu-do-mapa .lista .secundario {
 .painel textarea {
   width: 100%;
   min-height: 9rem;
-  padding: 0.5rem 0.7rem;
+  padding: var(--espaco-2) 0.7rem;
   border: 1px solid var(--borda-campo);
   border-radius: var(--raio);
   background: var(--superficie);
@@ -4924,7 +5126,7 @@ dialog.menu-do-mapa .lista .secundario {
    à direita; num telemóvel, um por baixo do outro. */
 .painel .papeis-por-regiao {
   list-style: none;
-  margin: 0.5rem 0;
+  margin: var(--espaco-2) 0;
   padding: 0;
 }
 .painel .papeis-por-regiao > li {
@@ -4932,7 +5134,7 @@ dialog.menu-do-mapa .lista .secundario {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.25rem 1rem;
+  gap: var(--espaco-1) var(--espaco-4);
   padding: 0.35rem 0;
   border-bottom: 1px solid var(--linhas);
 }
@@ -4945,7 +5147,7 @@ dialog.menu-do-mapa .lista .secundario {
   min-width: 10rem;
 }
 .painel .pessoas > li.pessoa {
-  padding: 1rem 0;
+  padding: var(--espaco-4) 0;
   border-bottom: 1px solid var(--linhas);
 }
 .painel .pessoas > li.pessoa h3 {
@@ -4953,7 +5155,7 @@ dialog.menu-do-mapa .lista .secundario {
 }
 .painel .ligacao-uma-vez input {
   font-family: ui-monospace, monospace;
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
 }
 
 /* O GESTO DE TODOS OS DIAS, COM ASPETO DE GESTO (P4-023). «Escrever um aviso»
@@ -4977,12 +5179,12 @@ dialog.menu-do-mapa .lista .secundario {
 /* O «Retirar…» de um endereço, ao lado dele. */
 .painel details.em-linha-curta {
   display: inline-block;
-  margin: 0 0 0 0.75rem;
+  margin: 0 0 0 var(--espaco-3);
   vertical-align: middle;
 }
 .painel details.em-linha-curta[open] {
   display: block;
-  margin: 0.5rem 0;
+  margin: var(--espaco-2) 0;
 }
 
 /* O estado da região, por baixo do nome: a frase de entrada, e o «Ligar» quando há. */
@@ -5001,7 +5203,7 @@ dialog.menu-do-mapa .lista .secundario {
 .painel ol.rasto,
 .painel ul.rasto {
   list-style: none;
-  margin: 0.75rem 0;
+  margin: var(--espaco-3) 0;
   padding: 0;
 }
 .painel .rasto > li {
@@ -5013,12 +5215,12 @@ dialog.menu-do-mapa .lista .secundario {
 }
 .painel dl.mudanca-lista {
   margin: 0.35rem 0 0;
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
 }
 .painel dl.mudanca-lista > div {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 0.5rem;
+  gap: 0 var(--espaco-2);
 }
 .painel dl.mudanca-lista dt {
   color: var(--texto-secundario);
@@ -5042,9 +5244,43 @@ dialog.menu-do-mapa .lista .secundario {
 }
 
 .descargas > li {
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.6rem;
   border-bottom: 1px solid var(--linhas);
+}
+/* UM FICHEIRO NUMA LINHA (#78): o nome e os termos, por baixo o formato, o
+   tamanho e a data; a origem e a atribuição num «Detalhes» fechado. */
+.descargas > li > span {
+  display: block;
+}
+.descarga-cabeca a {
+  font-weight: 700;
+}
+.termos-da-descarga {
+  display: inline-block;
+  font-size: var(--letra-mini);
+  font-weight: 700;
+  line-height: 1.3;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio);
+  color: var(--texto);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.detalhes-da-descarga > summary {
+  cursor: pointer;
+  font-size: var(--letra-pequena);
+  color: var(--marca-texto);
+  min-height: var(--alvo);
+  display: inline-flex;
+  align-items: center;
+}
+.detalhes-da-descarga > p {
+  margin: 0 0 var(--espaco-1);
+}
+details.descargas-do-modo {
+  margin: var(--espaco-2) 0 var(--espaco-4);
 }
 
 .descargas > li:last-child {
@@ -5095,13 +5331,13 @@ button.para-onde-vais {
   width: calc(100% - 1.2rem);
   margin: 0 0.6rem 0.6rem;
   min-height: 3rem;
-  padding: 0.5rem 0.9rem;
+  padding: var(--espaco-2) 0.9rem;
   background: var(--fundo);
   color: var(--texto);
   border: 1px solid var(--borda-campo);
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
   font-weight: 700;
-  font-size: 1.05rem;
+  font-size: var(--letra-corpo);
   text-align: left;
 }
 button.para-onde-vais:hover {
@@ -5114,12 +5350,12 @@ button.para-onde-vais svg {
   flex: none;
 }
 .folha-de-abertura h2.titulo-dos-modos {
-  margin: 0.4rem 0 0.75rem;
+  margin: 0.4rem 0 var(--espaco-3);
   padding: 0 0.6rem;
-  font-size: 1.05rem;
+  font-size: var(--letra-corpo);
 }
 .folha-de-abertura .abertura-nota {
-  margin: 0.5rem 0.6rem 0;
+  margin: var(--espaco-2) 0.6rem 0;
 }
 .folha-de-abertura .abertura-nota a {
   display: inline-flex;
@@ -5132,13 +5368,13 @@ button.para-onde-vais svg {
    pega: cada linha da folha é uma linha de mapa a menos — e é por isso que a
    do produto fica no menu, e não no fundo da folha. */
 .folha-de-abertura .assinatura-da-folha {
-  margin: 0 0.6rem 0.5rem;
+  margin: 0 0.6rem var(--espaco-2);
 }
 .assinatura-da-folha .nome-principal {
-  font-size: 1rem;
+  font-size: var(--letra-corpo);
 }
 .assinatura-da-folha .nome-secundario {
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
 }
 
 /* --- «Aqui perto» dentro da folha do mapa ------------------------------ */
@@ -5147,14 +5383,30 @@ button.para-onde-vais svg {
   margin: 0 0.6rem 0.4rem;
 }
 .perto-no-mapa h2 {
-  margin: 0.25rem 0 0.4rem;
-  font-size: 1.05rem;
+  margin: var(--espaco-1) 0 0.4rem;
+  font-size: var(--letra-corpo);
+}
+/* «AQUI PERTO» E O BOTÃO NUMA LINHA: o título à vista, como o §6 pede, sem
+   custar à folha mais altura do que o botão sozinho custava. Num ecrã estreito
+   de mais para os dois, o botão passa para baixo do título. */
+.perto-cabeca {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-1) var(--espaco-3);
+}
+.folha-de-abertura .perto-cabeca h2 {
+  margin: 0;
+  padding: 0;
 }
 button.perto-botao {
-  width: 100%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.4rem;
+  min-height: var(--alvo);
+  padding: 0.35rem 0.9rem;
 }
 ul.perto-lista {
   list-style: none;
@@ -5175,10 +5427,10 @@ ul.perto-lista > li > a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: var(--espaco-3);
   width: 100%;
   min-height: var(--alvo);
-  padding: 0.25rem 0;
+  padding: var(--espaco-1) 0;
   background: none;
   border: 0;
   color: var(--marca-texto);
@@ -5214,11 +5466,11 @@ button.perto-paragem:hover {
   min-width: 1.6rem;
   height: 1.6rem;
   padding: 0 0.3rem;
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
   background: #102c3f;
   color: #fff;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
@@ -5232,7 +5484,7 @@ button.perto-paragem:hover {
 .aqui-no-mapa {
   width: 1.1rem;
   height: 1.1rem;
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
   background: #1a6fd1;
   border: 3px solid #fff;
   box-shadow:
@@ -5242,16 +5494,16 @@ button.perto-paragem:hover {
 }
 ul.perto-partidas {
   list-style: none;
-  margin: 0 0 0.25rem;
+  margin: 0 0 var(--espaco-1);
   padding: 0;
 }
 ul.perto-partidas > li {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.15rem 0.5rem;
+  gap: 0.15rem var(--espaco-2);
   padding: 0.15rem 0;
-  font-size: 0.95rem;
+  font-size: var(--letra-media);
 }
 .perto-destino {
   flex: 1 1 8rem;
@@ -5264,7 +5516,7 @@ ul.perto-partidas > li {
 }
 .perto-quando em {
   color: var(--texto-secundario);
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
 }
 .perto-dia {
   margin: 0.1rem 0;
@@ -5273,7 +5525,7 @@ ul.perto-partidas > li {
 /* --- o cartão de um ponto: as ações em cima, as horas com lugar guardado - */
 
 .cartao-de-baixo .cartao-accoes {
-  margin-top: 0.75rem;
+  margin-top: var(--espaco-3);
 }
 .cartao-de-baixo .cartao-accoes .botao {
   flex: 1 1 auto;
@@ -5292,7 +5544,7 @@ ul.perto-partidas > li {
 .fantasma-das-partidas strong,
 .fantasma-das-partidas .relogio {
   background: var(--fundo);
-  border-radius: 4px;
+  border-radius: var(--raio-pequeno);
 }
 .fantasma-das-partidas .distintivo {
   min-width: 2.9rem;
@@ -5324,7 +5576,7 @@ ul.perto-partidas > li {
   min-height: 60vh;
 }
 .zona-de-resultados .a-procurar {
-  margin: 0.75rem 1rem;
+  margin: var(--espaco-3) var(--espaco-4);
 }
 /* Uma classe à parte, e não `opcoes`: o esqueleto não é uma lista de opções,
    e quem as conta — um teste, um leitor de ecrã — não o deve contar. */
@@ -5334,7 +5586,7 @@ ul.opcoes-fantasma {
   padding: 0;
 }
 ul.opcoes-fantasma > li {
-  padding: 0.7rem 1rem;
+  padding: 0.7rem var(--espaco-4);
 }
 ul.opcoes-fantasma > li + li {
   border-top: 1px solid var(--linhas);
@@ -5350,7 +5602,7 @@ ul.opcoes-fantasma > li + li {
   display: block;
   height: 1.2rem;
   margin-bottom: 0.45rem;
-  border-radius: 4px;
+  border-radius: var(--raio-pequeno);
   background: var(--fundo);
 }
 .opcao-fantasma > span:nth-child(1) {
@@ -5365,10 +5617,10 @@ ul.opcoes-fantasma > li + li {
   height: 0.9rem;
 }
 .mais-opcoes {
-  margin: 0.5rem 1rem;
+  margin: var(--espaco-2) var(--espaco-4);
 }
 .folha .partilha {
-  margin: 0 1rem 0.5rem;
+  margin: 0 var(--espaco-4) var(--espaco-2);
 }
 
 /* O EXPRESSO É PRIVADO: o fio da linha do tempo vai a neutro (§6, P1-037), e
@@ -5379,25 +5631,25 @@ ol.percurso li.modo-expresso .fio {
 .nota-do-troco {
   flex-basis: 100%;
   color: var(--texto-secundario);
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
   line-height: 1.35;
 }
 
 /* O transporte a pedido proposto: a faixa da casa, com a regra à vista. */
 .propostas-a-pedido {
-  margin-left: 1rem;
-  margin-right: 1rem;
+  margin-left: var(--espaco-4);
+  margin-right: var(--espaco-4);
 }
 .folha.em-pagina .propostas-a-pedido {
-  margin-left: 1rem;
-  margin-right: 1rem;
+  margin-left: var(--espaco-4);
+  margin-right: var(--espaco-4);
 }
 .propostas-a-pedido h3 {
   margin: 0 0 0.4rem;
-  font-size: 1rem;
+  font-size: var(--letra-corpo);
 }
 .propostas-a-pedido ul {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--espaco-2);
   padding-left: 1.1rem;
 }
 .propostas-a-pedido li + li {
@@ -5413,16 +5665,16 @@ ol.percurso li.modo-expresso .fio {
 
 .sem-resultados {
   margin: 0.35rem 0 0;
-  padding: 0.5rem 0.7rem;
+  padding: var(--espaco-2) 0.7rem;
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
   background: var(--superficie);
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
   line-height: 1.35;
 }
 .sugestoes-nota {
   margin: 0.35rem 0 0;
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
 }
 
 /* NA CÁPSULA DO MAPA, O QUE SE ABRE DESCE POR BAIXO DELA, e não a estica: com
@@ -5448,7 +5700,7 @@ ol.percurso li.modo-expresso .fio {
   padding: 0.3rem 0.7rem;
   background: var(--superficie);
   border: 1px solid var(--linhas);
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
 }
 .app-procura .sem-resultados {
   margin: 0;
@@ -5472,7 +5724,7 @@ ol.percurso li.modo-expresso .fio {
 /* «A carregar o mapa…» é pequeno: o esboço por trás é que diz que o mapa
    está a chegar. */
 .mapa-aviso.a-carregar {
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
   padding: 0.35rem 0.8rem;
 }
 
@@ -5497,8 +5749,8 @@ a[href^='mailto:'] {
 /* A FAIXA DA DEMONSTRAÇÃO NO ECRÃ DO MAPA, mais baixa: continua em todas as
    páginas, e aqui cada linha dela é uma linha de mapa a menos. */
 :root:has(meta[name='paragem-ecra'][content='mapa'], .app-mapa) .marca-demonstracao {
-  font-size: 0.85rem;
-  padding: 0.35rem 0.75rem;
+  font-size: var(--letra-pequena);
+  padding: 0.35rem var(--espaco-3);
   line-height: 1.4;
 }
 
@@ -5612,7 +5864,7 @@ a[href^='mailto:'] {
       'campos previa'
       'botoes previa'
       'nota previa';
-    gap: 0 1.5rem;
+    gap: 0 var(--espaco-5);
     align-items: start;
   }
   .editor-de-aviso > .faixa {
@@ -5636,24 +5888,24 @@ a[href^='mailto:'] {
 .pre-visualizacao {
   border: 1px dashed var(--borda-campo);
   border-radius: var(--raio);
-  padding: 0.75rem 1rem;
-  margin: 1rem 0;
+  padding: var(--espaco-3) var(--espaco-4);
+  margin: var(--espaco-4) 0;
   background: var(--fundo);
 }
 .painel .pre-visualizacao h3 {
-  margin: 0 0 0.5rem;
-  font-size: 0.95rem;
+  margin: 0 0 var(--espaco-2);
+  font-size: var(--letra-media);
   color: var(--texto-secundario);
 }
 .pre-visualizacao .aviso {
-  margin: 0.5rem 0;
+  margin: var(--espaco-2) 0;
 }
 .painel .botoes-do-aviso {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem;
-  margin-top: 1rem;
+  gap: var(--espaco-3);
+  margin-top: var(--espaco-4);
 }
 .painel form.formulario .botoes-do-aviso button {
   margin-top: 0;
@@ -5669,19 +5921,19 @@ a[href^='mailto:'] {
 .pilulas-de-escolha {
   border: 0;
   padding: 0;
-  margin: 0.75rem 0 0;
+  margin: var(--espaco-3) 0 0;
   min-width: 0;
 }
 .pilulas-de-escolha legend {
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: var(--letra-media);
   padding: 0;
   margin-bottom: 0.35rem;
 }
 .pilulas {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--espaco-2);
 }
 .painel .pilulas label {
   display: inline-flex;
@@ -5691,7 +5943,7 @@ a[href^='mailto:'] {
   margin: 0;
   padding: 0 0.8rem;
   border: 1px solid var(--borda-campo);
-  border-radius: 999px;
+  border-radius: var(--raio-redondo);
   background: var(--superficie);
   font-weight: 400;
   cursor: pointer;
@@ -5717,18 +5969,18 @@ a[href^='mailto:'] {
 .painel fieldset#aviso-modos {
   border: 0;
   padding: 0;
-  margin: 0.75rem 0 0;
+  margin: var(--espaco-3) 0 0;
 }
 .painel fieldset#aviso-modos legend {
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: var(--letra-media);
   padding: 0;
 }
 
 /* O QUE FALTA, AO PÉ DO CAMPO: no vermelho de alerta e em letra cheia — é a
    frase que diz o que mudar, e o foco chega ao campo com ela. */
 .painel .erro-do-campo {
-  margin: 0.25rem 0 0;
+  margin: var(--espaco-1) 0 0;
   color: var(--alerta-texto);
   font-weight: 700;
 }
@@ -5749,7 +6001,7 @@ a[href^='mailto:'] {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.25rem;
+  padding: var(--espaco-1);
   border: 1px solid var(--borda-campo);
   border-radius: var(--raio);
   background: var(--superficie);
@@ -5786,8 +6038,8 @@ a[href^='mailto:'] {
   align-items: center;
   gap: 0.35rem;
   min-height: var(--alvo);
-  padding: 0 0 0 0.5rem;
-  border-radius: 6px;
+  padding: 0 0 0 var(--espaco-2);
+  border-radius: var(--raio-pequeno);
   background: var(--realce);
   max-width: 100%;
 }
@@ -5803,7 +6055,7 @@ a[href^='mailto:'] {
   border: 0;
   background: transparent;
   color: var(--texto);
-  font-size: 1.2rem;
+  font-size: var(--letra-destaque);
   line-height: 1;
 }
 .campo-de-escolhas .escolhas button:hover {
@@ -5814,8 +6066,8 @@ a[href^='mailto:'] {
   z-index: 5;
   left: 0;
   right: 0;
-  margin: 0.25rem 0 0;
-  padding: 0.25rem 0;
+  margin: var(--espaco-1) 0 0;
+  padding: var(--espaco-1) 0;
   list-style: none;
   border: 1px solid var(--borda-campo);
   border-radius: var(--raio);
@@ -5830,9 +6082,9 @@ a[href^='mailto:'] {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.25rem 0.5rem;
+  gap: var(--espaco-1) var(--espaco-2);
   min-height: var(--alvo);
-  padding: 0.25rem 0.75rem;
+  padding: var(--espaco-1) var(--espaco-3);
   cursor: pointer;
 }
 .opcoes-de-escolha > li[aria-selected='true'],
@@ -5847,7 +6099,7 @@ a[href^='mailto:'] {
 /* A LISTA DOS AVISOS DO PAINEL: o estado por cima, o cartão público, os
    gestos por baixo. */
 .painel .lista-de-avisos > li {
-  padding: 0.75rem 0 1rem;
+  padding: var(--espaco-3) 0 var(--espaco-4);
   border-bottom: 1px solid var(--linhas);
 }
 .painel .estado-do-aviso {
@@ -5857,7 +6109,7 @@ a[href^='mailto:'] {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 0.75rem;
+  gap: var(--espaco-2) var(--espaco-3);
 }
 .painel .accoes-do-aviso form {
   margin: 0;
@@ -5874,8 +6126,8 @@ a[href^='mailto:'] {
 .painel fieldset.grupo-de-campos {
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
-  padding: 0.25rem 1rem 1rem;
-  margin: 1rem 0 0;
+  padding: var(--espaco-1) var(--espaco-4) var(--espaco-4);
+  margin: var(--espaco-4) 0 0;
   min-width: 0;
 }
 .painel fieldset.grupo-de-campos > legend {
@@ -5899,11 +6151,11 @@ main.widget {
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
   background: var(--superficie);
-  padding: 0.75rem 1rem;
+  padding: var(--espaco-3) var(--espaco-4);
 }
 .widget .titulo-da-caixa {
-  font-size: 1.15rem;
-  margin: 0 0 0.5rem;
+  font-size: var(--letra-destaque);
+  margin: 0 0 var(--espaco-2);
 }
 .widget .titulo-da-caixa a {
   color: var(--texto);
@@ -5914,13 +6166,13 @@ main.widget {
 }
 .widget .rodape-da-caixa,
 .widget .assinatura-da-caixa {
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
   color: var(--texto-secundario);
-  margin: 0.5rem 0 0;
+  margin: var(--espaco-2) 0 0;
 }
 .widget .campo-e-botao {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--espaco-2);
 }
 .widget .campo-e-botao input {
   flex: 1 1 auto;
@@ -5930,7 +6182,7 @@ main.widget {
 /* O construtor: escolhe-se em cima, vê-se a caixa a sério, copia-se em baixo. */
 .construtor-da-caixa {
   display: grid;
-  gap: 1rem;
+  gap: var(--espaco-4);
 }
 /* Sem isto, a linha de código mais comprida alargava a grelha — e a página
    inteira deslizava para o lado num telemóvel. O código desliza por dentro. */
@@ -5940,7 +6192,7 @@ main.widget {
 .construtor-previa {
   border: 1px dashed var(--borda-campo);
   border-radius: var(--raio);
-  padding: 0.75rem;
+  padding: var(--espaco-3);
 }
 .construtor-previa h3,
 .construtor-codigo h3 {
@@ -5954,24 +6206,54 @@ main.widget {
 }
 pre.codigo-para-copiar {
   overflow-x: auto;
-  margin: 0.5rem 0;
-  padding: 0.75rem;
+  margin: var(--espaco-2) 0;
+  padding: var(--espaco-3);
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
   background: var(--superficie);
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
 }
-.tabela-de-opcoes {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.92rem;
+/* Os atributos da caixa para as câmaras, um de cada vez (#175): eram uma
+   tabela de quatro colunas que se espremia no telemóvel. */
+.atributos-da-caixa {
+  list-style: none;
+  padding: 0;
+  margin: var(--espaco-2) 0;
 }
-.tabela-de-opcoes th,
-.tabela-de-opcoes td {
-  text-align: left;
-  vertical-align: top;
-  padding: 0.45rem 0.5rem;
-  border-bottom: 1px solid var(--linhas);
+.atributos-da-caixa > li {
+  border-top: 1px solid var(--linhas);
+  padding: 0.6rem 0;
+}
+.atributos-da-caixa > li > p {
+  margin: 0 0 0.3rem;
+}
+.atributos-da-caixa dl {
+  margin: 0;
+  display: grid;
+  gap: 0.15rem;
+  font-size: var(--letra-pequena);
+}
+.atributos-da-caixa dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.4rem;
+}
+.atributos-da-caixa dt {
+  font-weight: 700;
+}
+.atributos-da-caixa dt::after {
+  content: ':';
+}
+.atributos-da-caixa dd {
+  margin: 0;
+  color: var(--texto-secundario);
+}
+
+/* Os botões de opção e as caixas de escolha na cor do sítio (#174): os do
+   construtor da caixa ficavam no azul do navegador, ao lado do tema e da
+   calculadora do tarifário, que já tinham a da marca. */
+:where(input[type='radio'], input[type='checkbox']) {
+  accent-color: var(--marca-texto);
 }
 
 /* A CONTAGEM AO LADO DE UM NOME COMPRIDO NÃO SE PARTE A MEIO (ronda de
@@ -5994,7 +6276,7 @@ pre.codigo-para-copiar {
   grid-template-columns: repeat(auto-fill, minmax(3rem, 1fr));
   gap: 0.4rem;
   list-style: none;
-  margin: 0.5rem 0 1rem;
+  margin: var(--espaco-2) 0 var(--espaco-4);
   padding: 0;
 }
 .grelha-de-iniciais a {
@@ -6015,10 +6297,10 @@ pre.codigo-para-copiar {
 }
 .grelha-de-iniciais .letra {
   font-weight: 700;
-  font-size: 1.15rem;
+  font-size: var(--letra-destaque);
 }
 .grelha-de-iniciais .quantas {
-  font-size: 0.75rem;
+  font-size: var(--letra-mini);
   color: var(--texto-secundario);
 }
 /* A barra compacta, no alto de cada página de letra: só as letras, e a de
@@ -6027,9 +6309,9 @@ pre.codigo-para-copiar {
    procurar; num ecrã largo cabe numa fila e não desliza. */
 .grelha-de-iniciais.compacta ul {
   display: flex;
-  gap: 0.25rem;
+  gap: var(--espaco-1);
   overflow-x: auto;
-  padding-bottom: 0.25rem;
+  padding-bottom: var(--espaco-1);
   scroll-padding-inline: 1rem;
 }
 .grelha-de-iniciais.compacta li {
@@ -6048,7 +6330,7 @@ pre.codigo-para-copiar {
 
 /* As paragens de fora da região, no fim da página da letra e fechadas (#106). */
 details.fora-da-regiao {
-  margin-top: 1.5rem;
+  margin-top: var(--espaco-5);
   border-top: 1px solid var(--linhas);
 }
 
@@ -6057,9 +6339,9 @@ details.fora-da-regiao {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 0.5rem 1rem;
+  gap: var(--espaco-2) var(--espaco-4);
   list-style: none;
-  margin: 1.5rem 0 0;
+  margin: var(--espaco-5) 0 0;
   padding: 0;
 }
 .letras-vizinhas a {
@@ -6074,8 +6356,8 @@ details.fora-da-regiao {
    seguir»: os números a levar à página de cada linha. Cada ligação é um alvo
    de 44 px. */
 .linhas-aqui > h2 {
-  font-size: 1.05rem;
-  margin: 1.25rem 0 0.25rem;
+  font-size: var(--letra-corpo);
+  margin: 1.25rem 0 var(--espaco-1);
 }
 .distintivos-das-linhas {
   display: flex;
@@ -6088,7 +6370,7 @@ details.fora-da-regiao {
 .distintivos-das-linhas a {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--espaco-1);
   min-height: var(--alvo);
   min-width: var(--alvo);
   text-decoration: none;
@@ -6100,14 +6382,14 @@ details.fora-da-regiao {
 
 /* As outras paragens do mesmo sítio — quase sempre o outro lado da estrada. */
 .mesmo-sitio {
-  margin: 0.5rem 0 1rem;
+  margin: var(--espaco-2) 0 var(--espaco-4);
 }
 .mesmo-sitio > .titulo-pequeno {
-  font-size: 1.05rem;
-  margin: 1rem 0 0.25rem;
+  font-size: var(--letra-corpo);
+  margin: var(--espaco-4) 0 var(--espaco-1);
 }
 .mesmo-sitio > p {
-  margin: 0 0 0.25rem;
+  margin: 0 0 var(--espaco-1);
 }
 
 /* AS PARTIDAS DE UM DIA (#14): a escolha do dia, em rádios à vista como o
@@ -6115,11 +6397,11 @@ details.fora-da-regiao {
 .escolha-do-dia {
   border: 0;
   padding: 0;
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--espaco-2);
   min-width: 0;
 }
 .escolha-do-dia legend {
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
   color: var(--texto-secundario);
   padding: 0;
 }
@@ -6148,21 +6430,26 @@ details.fora-da-regiao {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.25rem 0.75rem;
-  margin: 0.25rem 0 0;
+  gap: var(--espaco-1) var(--espaco-3);
+  margin: var(--espaco-1) 0 0;
 }
 .outro-dia label {
   margin: 0;
 }
+/* Para onde, numa estação com vários sentidos (#81). */
+.para-onde {
+  margin: var(--espaco-1) 0 0;
+  max-width: 24rem;
+}
 .dia-escolhido {
-  margin: 0.5rem 0;
+  margin: var(--espaco-2) 0;
 }
 /* As que já passaram hoje ficam, mas apagadas: o dia inteiro está lá. */
 .partidas-do-dia-tabela tr.passou td {
   color: var(--texto-secundario);
 }
 details.todos-os-quadros {
-  margin-top: 1.5rem;
+  margin-top: var(--espaco-5);
   border-top: 1px solid var(--linhas);
 }
 details.todos-os-quadros > summary {
@@ -6173,12 +6460,12 @@ details.todos-os-quadros > summary {
 
 /* As pontas da linha pela ordem do caminho, por baixo do título (#92). */
 .pontas-da-linha {
-  margin: -0.25rem 0 0.5rem;
+  margin: -0.25rem 0 var(--espaco-2);
 }
 
 /* «Neste sentido só se conhecem as paragens com hora marcada» (#93). */
 .faixa.so-pontos {
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
 }
 
 /* O MEIO DE UM PERCURSO COMPRIDO, fechado (#95). O resumo continua o fio da
@@ -6188,7 +6475,7 @@ details.meio-do-percurso > summary {
   display: flex;
   align-items: center;
   min-height: var(--alvo);
-  padding-left: 2rem;
+  padding-left: var(--espaco-6);
   color: var(--marca-texto);
   font-weight: 700;
   cursor: pointer;
@@ -6217,6 +6504,43 @@ details.meio-do-percurso + ol.percurso-da-linha {
 .lista.por-modo a.cartao > span:first-child {
   flex-shrink: 0;
 }
+/* «POR MODO» SEM RUÍDO (#186): cada modo era um cartão com borda, um traço de
+   cor que o raio dobrava em crescente, um filete da lista entre cartões, e
+   fundos diferentes — dois coloridos, cinco brancos. Fica o traço de cor, que
+   é o que distingue os modos, direito; o fundo é o mesmo em todos, e o
+   filete sai. Só aqui: os cartões dos modos noutras páginas são outra coisa. */
+.lista.por-modo > li {
+  border-bottom: 0;
+}
+.lista.por-modo .cartao {
+  background: var(--superficie);
+  border-radius: 0 var(--raio) var(--raio) 0;
+  margin: 0.4rem 0;
+}
+/* Os privados ficam sem cor (§6), mas com o traço da mesma largura: o nome
+   deles começava quatro píxeis à esquerda do dos outros. */
+.lista.por-modo .cartao:is(.modo-expresso, .modo-taxi) {
+  border-left: 4px solid var(--linhas);
+}
+
+/* «A REDE» NUM ECRÃ LARGO (#110): duas colunas iguais — o que se faz à
+   esquerda, por onde se procura à direita — e os concelhos em duas colunas por
+   baixo. Era uma coluna de 576 px com três ecrãs e meio de altura. */
+@media (min-width: 64rem) {
+  .em-colunas.catalogo-da-rede {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .em-colunas.catalogo-da-rede > * > section:first-child > h2 {
+    margin-top: 0;
+  }
+  body:has(.catalogo-da-rede) .lista.concelhos-da-rede {
+    columns: 2;
+    column-gap: 2.5rem;
+  }
+  body:has(.catalogo-da-rede) .lista.concelhos-da-rede > li {
+    break-inside: avoid;
+  }
+}
 
 /* --- a folha do mapa: o que junta, o a pedido, os preços (#90, #173) ------- */
 
@@ -6229,37 +6553,37 @@ details.meio-do-percurso + ol.percurso-da-linha {
 @media (min-width: 64rem) {
   .folha-de-abertura .o-que-junta {
     display: block;
-    margin: 0 0.6rem 0.75rem;
-    font-size: 0.95rem;
+    margin: 0 0.6rem var(--espaco-3);
+    font-size: var(--letra-media);
     line-height: 1.4;
     color: var(--texto);
   }
 }
 /* O transporte a pedido, na cor dele (§6), e compacto: o telefone é o botão. */
 .folha-de-abertura .a-pedido-na-folha {
-  margin: 0.75rem 0.6rem 0;
-  padding: 0.6rem 0.75rem 0.4rem;
+  margin: var(--espaco-3) 0.6rem 0;
+  padding: 0.6rem var(--espaco-3) 0.4rem;
   border-left: 4px solid var(--a-pedido);
   border-radius: var(--raio);
   background: var(--a-pedido-fundo);
   color: var(--a-pedido-texto);
 }
 .folha-de-abertura .a-pedido-na-folha h2 {
-  margin: 0 0 0.25rem;
+  margin: 0 0 var(--espaco-1);
   padding: 0;
-  font-size: 1rem;
+  font-size: var(--letra-corpo);
 }
 .folha-de-abertura .a-pedido-na-folha p {
   margin: 0 0 0.4rem;
 }
 .folha-de-abertura .a-pedido-na-folha .secundario {
   color: var(--a-pedido-texto);
-  font-size: 0.85rem;
+  font-size: var(--letra-pequena);
 }
 /* Os dois preços, a levar ao tarifário: o preço numa linha, a pergunta na
    seguinte. Um alvo só, de 44 px. */
 .folha-de-abertura .precos-na-folha {
-  margin: 0.75rem 0.6rem 0;
+  margin: var(--espaco-3) 0.6rem 0;
 }
 .folha-de-abertura .precos-na-folha a {
   display: flex;
@@ -6281,15 +6605,505 @@ details.meio-do-percurso + ol.percurso-da-linha {
 /* A espera até à primeira ligação, quando passa de uma hora: à vista, por
    cima dos cartões, e não só para quem ouve. */
 .espera-grande {
-  margin: 0.5rem 0;
-  padding: 0 0.75rem;
+  margin: var(--espaco-2) 0;
+  padding: 0 var(--espaco-3);
   font-weight: 700;
 }
 /* O prazo da reserva para o dia escolhido. Fechado, diz-se na cor do a pedido
    e com um traço à esquerda — o estado não depende só da cor. */
 .propostas-a-pedido .prazo-fechado,
 .propostas-a-pedido .prazo-aberto {
-  margin: 0.25rem 0 0.5rem;
+  margin: var(--espaco-1) 0 var(--espaco-2);
   padding-left: 0.6rem;
   border-left: 3px solid currentColor;
+}
+
+/* --- o mapa por baixo das folhas: o que o compositor não pode saltar ------ */
+
+/* AS FOLHAS QUE DESLIZAM POR CIMA DO MAPA NÃO SÃO OPACAS — a 99,6 %, e não a
+   100 % (auditoria de 1/11/2026, #11). Com o fundo opaco, o Chromium com o
+   desenho por Vulkan dava a folha por «tapa o que está por baixo» e deixava de
+   pintar um retângulo do mapa — mas o retângulo errado: o reflexo vertical do
+   conteúdo da folha, no ALTO do ecrã. No telemóvel, o primeiro ecrã abria com
+   o mapa vazio entre a procura e a folha, nos dois temas e em qualquer zoom.
+   Medido: tirar o fundo, ou a deslocação, ou a folha, devolvia o mapa; e um
+   fundo com uma fração de transparência também — que é o que não se vê. O
+   compositor não esconde nada por baixo de uma camada que não é opaca. Um
+   teste a 390 × 844 vê se a metade de cima do mapa tem mais do que uma cor
+   (`tests/primeiro-ecra.spec.ts`). */
+.folha-de-abertura,
+.cartao-de-baixo,
+.folha:not(.em-pagina),
+.folha-de-abertura > .pega-da-folha,
+.cartao-de-baixo > .pega-da-folha,
+.folha:not(.em-pagina) > .pega-da-folha {
+  background-color: color-mix(in srgb, var(--superficie) 99.6%, transparent);
+}
+
+/* --- a linha escolhida no mapa ------------------------------------------- */
+
+/* O cartão de uma linha acesa no mapa: o número e o nome no título, os
+   sentidos numa lista curta, e o horário a um toque. É o cartão de um ponto,
+   com outra cabeça. */
+.cartao-da-linha .cartao-cabecalho h2 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--espaco-1) var(--espaco-2);
+}
+.cartao-da-linha h2:focus {
+  outline: none;
+}
+ul.sentidos-no-cartao {
+  list-style: none;
+  margin: var(--espaco-1) 0 0;
+  padding: 0;
+}
+ul.sentidos-no-cartao li {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--linhas);
+}
+ul.sentidos-no-cartao li:last-child {
+  border-bottom: 0;
+}
+
+/* --- o planeador com o mapa ao lado (#122) --------------------------------- */
+
+/* NUM ECRÃ LARGO, AS OPÇÕES E O MAPA LADO A LADO: a coluna das opções com a
+   largura de ler, e o mapa com o resto, preso ao alto enquanto se desce pelas
+   opções. Num telemóvel não há mapa aqui — o mapa com as direções é a página
+   inicial —, e a caixa nem se desenha. */
+.mapa-da-viagem {
+  display: none;
+}
+@media (min-width: 64rem) {
+  .em-colunas.viagem-e-mapa {
+    grid-template-columns: minmax(0, 30rem) minmax(0, 1fr);
+  }
+  .mapa-da-viagem {
+    display: block;
+    position: sticky;
+    top: 1rem;
+    height: calc(100dvh - 2rem);
+    min-height: 28rem;
+    border: 1px solid var(--linhas);
+    border-radius: var(--raio);
+    overflow: hidden;
+    background: var(--fundo-do-mapa);
+  }
+  .mapa-da-viagem .mapa-caixa,
+  .mapa-da-viagem .mapa {
+    position: absolute;
+    inset: 0;
+  }
+}
+
+/* --- o concelho no mapa (#75) ------------------------------------------- */
+
+/* Uma caixa com o tamanho e a cor do mapa desde o primeiro instante: o mapa
+   entra nela quando se aproxima do ecrã, e nada à volta salta. Larga e baixa
+   num ecrã largo — é a cabeça da página —, e quase quadrada num telemóvel. */
+figure.mapa-do-concelho {
+  margin: var(--espaco-4) 0 var(--espaco-5);
+}
+.caixa-do-mapa-do-concelho {
+  position: relative;
+  height: 16rem;
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  overflow: hidden;
+  background: var(--fundo-do-mapa);
+}
+.caixa-do-mapa-do-concelho .mapa-caixa,
+.caixa-do-mapa-do-concelho .mapa {
+  position: absolute;
+  inset: 0;
+}
+figure.mapa-do-concelho figcaption {
+  margin-top: 0.4rem;
+  font-size: var(--letra-pequena);
+}
+@media (min-width: 64rem) {
+  .caixa-do-mapa-do-concelho {
+    height: 22rem;
+  }
+}
+/* Num mapa pequeno, os botões cabem à justa: o da localização fica para o
+   mapa grande, que é onde «onde estou» quer dizer alguma coisa. */
+.caixa-do-mapa-do-concelho .maplibregl-ctrl-group:has(> .maplibregl-ctrl-geolocate) {
+  display: none;
+}
+
+/* --- as pastilhas de estado (`Estado.tsx`) ------------------------------- */
+
+/* O ÍCONE E A PALAVRA, e a cor só a confirmar (1.4.1). Para uma linha de
+   texto: uma frase comprida não vai numa cápsula. A de atenção e a de alerta
+   levam as cores de estado do §6; a que está bem e a nota ficam neutras — um
+   verde de «está bem» confundia-se com o das bicicletas, que é um modo. */
+.estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.65rem 0.15rem 0.45rem;
+  border-radius: var(--raio-redondo);
+  font-size: var(--letra-pequena);
+  font-weight: 700;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.estado svg {
+  flex: none;
+}
+.estado-atencao {
+  background: var(--atencao-fundo);
+  color: var(--texto);
+}
+.estado-atencao svg {
+  color: var(--atencao);
+}
+.estado-alerta {
+  background: var(--alerta-fundo);
+  color: var(--alerta-texto-forte);
+}
+.estado-certo,
+.estado-informacao {
+  background: var(--superficie-suave);
+  color: var(--texto);
+}
+.estado-certo svg,
+.estado-informacao svg {
+  color: var(--texto-secundario);
+}
+.estado-no-cartao {
+  margin: 0.4rem 0 0;
+}
+/* No painel, a marca é um rótulo e não uma nota: sem o «i». */
+.painel-cabecalho .marca-dados::before {
+  content: none;
+}
+
+/* --- o índice de uma página comprida ------------------------------------- */
+
+/* «NESTA PÁGINA»: as secções, por ordem, numa fila que quebra. Uma página de
+   mais de seis ecrãs num telemóvel sem um índice obriga a rolar às cegas à
+   procura da parte que interessa. Ligações com o alvo de 44 px, separadas por
+   um ponto que não se lê. */
+nav.indice-da-pagina {
+  margin: 0 0 var(--espaco-5);
+  font-size: var(--letra-pequena);
+}
+nav.indice-da-pagina ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--espaco-3);
+}
+nav.indice-da-pagina li {
+  display: flex;
+  align-items: center;
+}
+nav.indice-da-pagina li + li::before {
+  content: '·';
+  margin-right: var(--espaco-3);
+  color: var(--texto-secundario);
+}
+nav.indice-da-pagina a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+}
+
+/* «SAIR DO CONCELHO» NUM TELEMÓVEL: cada destino numa linha com as horas, e os
+   distintivos por baixo, à largura toda (#74). Na tabela de três colunas, a
+   das linhas empilhava-os dois a dois e o destino partia-se em três linhas.
+   Continua a ser uma tabela — os cabeçalhos dizem-se a quem não vê —, só
+   arrumada de outra maneira no ecrã estreito. */
+@media (max-width: 47.99rem) {
+  table.saidas thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  table.saidas tr {
+    display: grid;
+    /* As horas nunca passam de metade: com a nota do período comprida, a
+       coluna crescia até o destino se partir por cima dela. */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 50%);
+    grid-template-areas:
+      'destino horas'
+      'linhas linhas';
+    column-gap: var(--espaco-3);
+    padding: var(--espaco-2) 0;
+    border-bottom: 1px solid var(--linhas);
+  }
+  table.saidas th[scope='row'],
+  table.saidas td {
+    padding: 0;
+    border: 0;
+  }
+  table.saidas th[scope='row'] {
+    grid-area: destino;
+  }
+  table.saidas td:has(.linhas-da-saida) {
+    grid-area: linhas;
+  }
+  table.saidas td.horas-da-saida {
+    grid-area: horas;
+    text-align: right;
+    padding-top: 0.6rem;
+  }
+  table.saidas .linhas-da-saida {
+    min-width: 0;
+  }
+}
+
+/* --- a linha: um sentido de cada vez (#94) --------------------------------- */
+
+/* Os sentidos num par de botões de rádio com forma de cápsula: o escolhido
+   cheio, os outros com contorno — a diferença lê-se em cinzento, e não só
+   pela cor. O botão nativo fica escondido e continua a receber o foco, que
+   se vê no contorno da cápsula. */
+fieldset.escolha-do-sentido {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-2);
+  margin: var(--espaco-5) 0 var(--espaco-2);
+  padding: 0;
+  border: 0;
+}
+fieldset.escolha-do-sentido legend {
+  margin-bottom: var(--espaco-2);
+  padding: 0;
+  font-size: var(--letra-pequena);
+  color: var(--texto-secundario);
+}
+.escolha-do-sentido label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+  padding: var(--espaco-1) var(--espaco-4);
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio-redondo);
+  background: var(--superficie);
+  color: var(--texto);
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+}
+.escolha-do-sentido input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.escolha-do-sentido label:has(input:checked) {
+  background: var(--texto);
+  border-color: var(--texto);
+  color: var(--fundo);
+}
+.escolha-do-sentido label:has(input:focus-visible) {
+  outline: 3px solid var(--foco);
+  outline-offset: 2px;
+}
+/* SÓ A SECÇÃO DO SENTIDO ESCOLHIDO, e o título dela fica para quem ouve: o
+   botão escolhido já o diz a quem vê. Sem `:has()`, tudo à vista, como era. */
+@supports selector(:has(*)) {
+  main:has(.escolha-do-sentido) .sentidos-da-linha > section > h2 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  main:has(.escolha-do-sentido label:nth-of-type(1) input:checked)
+    .sentidos-da-linha
+    > section:not(:nth-of-type(1)),
+  main:has(.escolha-do-sentido label:nth-of-type(2) input:checked)
+    .sentidos-da-linha
+    > section:not(:nth-of-type(2)),
+  main:has(.escolha-do-sentido label:nth-of-type(3) input:checked)
+    .sentidos-da-linha
+    > section:not(:nth-of-type(3)),
+  main:has(.escolha-do-sentido label:nth-of-type(4) input:checked)
+    .sentidos-da-linha
+    > section:not(:nth-of-type(4)) {
+    display: none;
+  }
+}
+
+/* --- os botões do mapa no traço dos outros ícones ------------------------ */
+
+/* OS ÍCONES DO MAPLIBRE ERAM OUTRO DESENHO — cheios, de outra espessura —, ao
+   lado dos do sítio, que são todos traço de 2 px com as pontas redondas
+   (`Icones.tsx`). Os três botões passam aos nossos: o mais, o menos e a mira
+   da localização, que é a mesma do «Aqui perto» da folha. Desenhados por
+   máscara, seguem a cor do texto nos dois temas, e o filtro do tema escuro
+   deixa de ser preciso. */
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon,
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon,
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-geolocate .maplibregl-ctrl-icon {
+  background-image: none !important;
+  background-color: var(--texto);
+  filter: none !important;
+  -webkit-mask: var(--icone-do-botao) center / 22px no-repeat;
+  mask: var(--icone-do-botao) center / 22px no-repeat;
+}
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-zoom-in {
+  --icone-do-botao: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");
+}
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-zoom-out {
+  --icone-do-botao: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3C/svg%3E");
+}
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-geolocate {
+  --icone-do-botao: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='6.5'/%3E%3Ccircle cx='12' cy='12' r='2.2' fill='black' stroke='none'/%3E%3Cpath d='M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3'/%3E%3C/svg%3E");
+}
+/* Com a posição dada, a mira na cor das ligações: diz que respondeu. */
+.mapa-caixa
+  .maplibregl-ctrl
+  button.maplibregl-ctrl-geolocate:is(
+    .maplibregl-ctrl-geolocate-active,
+    .maplibregl-ctrl-geolocate-background
+  )
+  .maplibregl-ctrl-icon {
+  background-color: var(--marca-texto);
+}
+
+/* --- as páginas dos modos (auditoria de 1/11/2026, fase 2) ---------------- */
+
+/* Cada terminal dos expressos com ar por cima (#171): o título de um encostava
+   à última carreira do anterior. */
+.paragem-de-expresso + .paragem-de-expresso {
+  margin-top: 1.75rem;
+}
+.paragem-de-expresso > h3 {
+  margin-bottom: var(--espaco-1);
+}
+.paragem-de-expresso h4 {
+  margin: var(--espaco-2) 0 var(--espaco-1);
+  font-size: var(--letra-corpo);
+}
+
+/* Os urbanos municipais no roxo do modo (§6), e cada linha com a cor dela
+   antes do nome (#190). Um traço à esquerda, e não um cartão. */
+.horario-de-modo.modo-urbano-municipal {
+  border-left: 4px solid var(--urbano-municipal);
+  padding-left: 0.9rem;
+  margin: var(--espaco-6) 0;
+}
+.horario-de-modo.modo-urbano-municipal > h2 {
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-2);
+}
+.cor-da-linha-do-cartaz {
+  flex: 0 0 auto;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: var(--raio-pequeno);
+  border: 1px solid var(--linhas);
+}
+.aviso-do-cartaz {
+  margin: var(--espaco-3) 0;
+}
+
+/* --- o transporte a pedido (auditoria de 1/11/2026, fase 2) ------------- */
+
+/* As regras de uma folha, numa lista dentro da caixa da reserva (#156). */
+.faixa.a-pedido .titulo-das-regras {
+  margin: var(--espaco-3) 0 var(--espaco-1);
+}
+.faixa.a-pedido ul.regras-da-reserva {
+  margin: 0 0 var(--espaco-1);
+  padding-left: 1.25rem;
+}
+.faixa.a-pedido ul.regras-da-reserva > li + li {
+  margin-top: var(--espaco-1);
+}
+
+/* Um concelho de cada vez, fechado (#55): o mesmo desenho das zonas, e as
+   zonas dentro dele, cada uma com o nome numa linha e os circuitos por baixo. */
+details.concelho-a-pedido {
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio);
+  background: var(--superficie);
+  margin: var(--espaco-2) 0;
+}
+details.concelho-a-pedido > summary {
+  cursor: pointer;
+  list-style: none;
+  position: relative;
+  min-height: var(--alvo);
+  padding: 0.65rem 2.25rem 0.65rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+details.concelho-a-pedido > summary::-webkit-details-marker {
+  display: none;
+}
+details.concelho-a-pedido > summary .nome-da-zona {
+  font-weight: 700;
+}
+details.concelho-a-pedido > summary .circuitos-no-resumo {
+  font-size: var(--letra-pequena);
+  color: var(--texto-secundario);
+}
+details.concelho-a-pedido > .zona-a-pedido {
+  border-top: 1px solid var(--linhas);
+  padding: var(--espaco-2) 0.85rem var(--espaco-3);
+}
+details.concelho-a-pedido > .zona-a-pedido > h3 {
+  margin: var(--espaco-1) 0 var(--espaco-1);
+  font-size: var(--letra-corpo);
+}
+details.concelho-a-pedido > summary::after {
+  content: '';
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-top: -0.4rem;
+  border-right: 2px solid var(--marca-texto);
+  border-bottom: 2px solid var(--marca-texto);
+  transform: rotate(45deg);
+}
+details.concelho-a-pedido[open] > summary::after {
+  transform: rotate(-135deg);
+  margin-top: -0.1rem;
+}
+details.concelho-a-pedido > summary:focus-visible {
+  outline: 3px solid var(--foco);
+  outline-offset: -3px;
+}
+
+/* As condições de uma tabela do tarifário, por baixo dela (#188). */
+.nota-da-tabela {
+  margin: var(--espaco-2) 0 0;
+  font-size: var(--letra-media);
+}
+
+/* A lista das linhas: o distintivo numa coluna sua, e o nome alinhado consigo
+   mesmo quando parte (#179). */
+.lista a.linha-na-lista {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  justify-content: start;
+  align-items: start;
+  column-gap: 0.6rem;
+}
+.lista a.linha-na-lista > .distintivo {
+  margin-top: 0.1rem;
+}
+.lista a.linha-na-lista > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }

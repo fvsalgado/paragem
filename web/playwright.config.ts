@@ -31,6 +31,8 @@ import { defineConfig, devices } from '@playwright/test';
 import { BASE, DOMINIOS, PORTA, PRODUTO } from './tests/anfitrioes';
 
 const DADOS = process.env.PARAGEM_DADOS ?? 'http://127.0.0.1:4322';
+/** A porta do servidor dos dados, tirada do endereço: a mesma regra da do sítio. */
+const PORTA_DOS_DADOS = new URL(DADOS).port || '4322';
 
 export default defineConfig({
   testDir: './tests',
@@ -68,8 +70,8 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'node scripts/servir-dados.mjs ../build 4322',
-      url: 'http://127.0.0.1:4322/',
+      command: `node scripts/servir-dados.mjs ../build ${PORTA_DOS_DADOS}`,
+      url: `http://127.0.0.1:${PORTA_DOS_DADOS}/`,
       reuseExistingServer: true,
       timeout: 30_000,
     },

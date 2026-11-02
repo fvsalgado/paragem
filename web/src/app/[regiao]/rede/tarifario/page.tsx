@@ -124,6 +124,10 @@ export default async function Tarifario({ params }: { params: Promise<{ regiao: 
                   com «os preços são os que a operadora publica» — por baixo
                   de tabelas do comboio e das bicicletas, que não são dela. A
                   fonte é a que a região declara para cada uma. */}
+              {/* AS CONDIÇÕES DA TABELA TODA, por baixo dela (#188): iam na
+                  célula de um título, em seis linhas que afastavam o preço do
+                  nome. */}
+              {redes[rede]?.nota && <p className="nota-da-tabela">{redes[rede].nota}</p>}
               {redes[rede]?.fonte && (
                 <p className="secundario fonte-da-tabela">
                   Fonte: {redes[rede].fonte}

@@ -4,7 +4,7 @@
  */
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { PROVA } from './anfitrioes';
+import { PRODUTO, PROVA } from './anfitrioes';
 
 /** O contraste entre o texto e o fundo de um elemento, como o navegador os pinta. */
 async function contraste(l: import('@playwright/test').Locator): Promise<number> {
@@ -95,7 +95,7 @@ test('«Para onde quer ir?» é um formulário que abre o planeador da região',
 test('a linha para colar é JavaScript, e a caixa só existe nos domínios das regiões', async ({
   page,
 }) => {
-  const resposta = await page.request.get('http://127.0.0.1:4321/widget/viagem/');
+  const resposta = await page.request.get(`${PRODUTO}/widget/viagem/`);
   expect(resposta.status()).toBe(404);
   await page.goto(`${PROVA}/levar/`);
   const tipo = await page.evaluate(async () => {
@@ -103,4 +103,24 @@ test('a linha para colar é JavaScript, e a caixa só existe nos domínios das r
     return r.headers.get('content-type');
   });
   expect(tipo).toMatch(/javascript/);
+});
+
+test('«Levar para o sítio da câmara»: as opções na cor do sítio, e os atributos um a um', async ({
+  page,
+}) => {
+  // Os botões de opção eram o azul do navegador (#174), e a tabela dos
+  // atributos espremia-se em quatro colunas no telemóvel (#175).
+  await page.goto(`${PROVA}/levar/`);
+  const radio = page.locator('main input[type="radio"]').first();
+  await expect(radio).toBeVisible();
+  const [doRadio, daMarca] = await radio.evaluate((r) => [
+    getComputedStyle(r).accentColor,
+    getComputedStyle(document.documentElement).getPropertyValue('--marca-texto').trim(),
+  ]);
+  expect(doRadio).not.toBe('auto');
+  expect(daMarca).not.toBe('');
+  await expect(page.locator('table.tabela-de-opcoes')).toHaveCount(0);
+  const atributos = page.getByRole('list', { name: 'Os atributos que a caixa aceita' });
+  await expect(atributos.locator('> li')).toHaveCount(3);
+  await expect(atributos).toContainText('data-paragem');
 });

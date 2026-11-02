@@ -1,7 +1,20 @@
 import type { Metadata } from 'next';
 import { motorDaRegiao } from '@/lib/enderecos';
 import DireccoesDaPagina from '@/componentes/DireccoesDaPagina';
-import { aPedido, exigirRegiao, lacunas, servicosSemDatas, regiao } from '@/lib/dados';
+import {
+  aPedido,
+  exigirRegiao,
+  lacunas,
+  procura,
+  servicosSemDatas,
+  regiao,
+  temMosaicos,
+  concelhos,
+  sitios,
+} from '@/lib/dados';
+import { sedesDosConcelhos } from '@/lib/sedes';
+import { enderecoDosDados } from '@/lib/dados-do-navegador';
+import { limitesDaRede } from '@/lib/pontos-no-mapa';
 import { metadadosDaRegiao } from '@/lib/metadados';
 import { dataDosHorarios } from '@/lib/formato';
 
@@ -32,6 +45,24 @@ export default async function Viagem({ params }: { params: Promise<{ regiao: str
   const { regiao: rid } = await params;
   const r = await exigirRegiao(rid);
   const l = await lacunas(rid);
+  // O MAPA AO LADO DOS RESULTADOS, num ecrã largo, quando a região tem mapa:
+  // a mesma área e a mesma rede do mapa da página inicial.
+  const pontos = (await temMosaicos(rid)) ? await procura(rid) : null;
+  const limites = pontos ? limitesDaRede(pontos) : null;
+  const mapa = pontos
+    ? {
+        mosaicos: enderecoDosDados(rid, 'regiao.pmtiles'),
+        atribuicao: r.mapa?.atribuicao,
+        limites,
+        centro: [
+          (r.caixa.lat_min + r.caixa.lat_max) / 2,
+          (r.caixa.lon_min + r.caixa.lon_max) / 2,
+        ] as [number, number],
+        rede: enderecoDosDados(rid, 'rede-no-mapa.json'),
+        tipos: [...new Set(pontos.map((p) => p.tipo))],
+        sedes: sedesDosConcelhos(await concelhos(rid), await sitios(rid)),
+      }
+    : null;
 
   return (
     <>
@@ -49,6 +80,7 @@ export default async function Viagem({ params }: { params: Promise<{ regiao: str
         servicosSemDatas={servicosSemDatas(l)}
         dadosDe={dataDosHorarios(r)}
         temAPedido={r.modos.includes('a-pedido') && !!(await aPedido(rid))}
+        mapa={mapa}
       />
     </>
   );

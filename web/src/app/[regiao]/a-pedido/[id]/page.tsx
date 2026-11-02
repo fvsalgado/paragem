@@ -12,7 +12,7 @@ import {
   idDoQuadro,
   reservaOnlineDoHorario,
 } from '@/lib/a-pedido';
-import { lista, plural, regraLegivel } from '@/lib/prosa';
+import { comPonto, lista, plural, regraLegivel } from '@/lib/prosa';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
 /**
@@ -171,15 +171,28 @@ export default async function HorarioAPedido({ params }: { params: Promise<Param
         {/* AS REGRAS DA FOLHA DENTRO DA CAIXA DA RESERVA, e não soltas por
             baixo dela: é o que se tem de saber antes de contar com uma hora —
             e um horário que é o exemplo de um dia lia-se, cá fora, como o
-            horário do circuito (auditoria de 1/11/2026). */}
-        {h.regras.map((regra) => (
-          <p key={regra}>{regraLegivel(regra)}</p>
-        ))}
+            horário do circuito (auditoria de 1/11/2026). Mais do que uma é
+            uma lista, e cada uma acaba em ponto (#156): eram parágrafos soltos
+            do tamanho do texto, sem pontuação. */}
+        {h.regras.length === 1 && <p>{comPonto(regraLegivel(h.regras[0]))}</p>}
+        {h.regras.length > 1 && (
+          <>
+            <p className="titulo-das-regras">
+              <strong>As regras</strong>
+            </p>
+            <ul className="regras-da-reserva">
+              {h.regras.map((regra) => (
+                <li key={regra}>{comPonto(regraLegivel(regra))}</li>
+              ))}
+            </ul>
+          </>
+        )}
       </div>
 
       <h2>{h.quadros.length === 1 ? 'O horário' : 'Os circuitos'}</h2>
       {h.quadros.length > 1 && (
-        <p className="secundario">Toque num circuito para ver as horas, paragem a paragem.</p>
+        // «Abra», e não «Toque»: num computador não se toca (#182).
+        <p className="secundario">Abra um circuito para ver as horas, paragem a paragem.</p>
       )}
       {/* UM QUADRO SÓ VEM ABERTO: não há o que escolher, e as horas eram o
           segundo toque de quem chegava. */}
@@ -192,13 +205,23 @@ export default async function HorarioAPedido({ params }: { params: Promise<Param
           aberto={h.quadros.length === 1}
         />
       ))}
-      <DataDoDocumento conteudo={h.conteudo_de} documento="o documento" />
+      {/* «A brochura», quando foi uma brochura transcrita: «o documento»
+          soava a nota interna (#155). */}
+      <DataDoDocumento
+        conteudo={h.conteudo_de}
+        documento={h.transcrito_por ? 'a brochura' : 'o documento'}
+      />
       <Transcricao por={h.transcrito_por} em={h.transcrito_em} de="da brochura" />
 
       <p className="cartao-accoes">
         <Link href={url(rid, 'a-pedido/')}>Todo o transporte a pedido</Link>
+        {/* «O concelho <nome>» faltava-lhe o «de» (#155) — e o artigo de um
+            concelho não está nos dados: «de Pedra Alta», mas «do Sável». A frase
+            não precisa dele. */}
         {h.concelho && (
-          <Link href={urlRede(rid, `concelhos/${h.concelho}/`)}>O concelho {h.concelho_nome}</Link>
+          <Link href={urlRede(rid, `concelhos/${h.concelho}/`)}>
+            {h.concelho_nome}: os outros transportes do concelho
+          </Link>
         )}
       </p>
     </>

@@ -51,6 +51,9 @@ export default function PartidasDoDia({
   nomesDosServicos,
   noServidor = null,
   caminhoDasLinhas,
+  modo,
+  deQue = 'desta paragem',
+  porDestino = false,
 }: {
   regiao: string;
   partidas: PartidasCompactas;
@@ -59,8 +62,21 @@ export default function PartidasDoDia({
   nomesDosServicos: Record<string, string>;
   /** O dia em que a página se fez, e os serviços desta paragem que andavam nele. */
   noServidor?: { hoje: string; servicos: string[] } | null;
-  /** O princípio do endereço da página de uma linha: `/rede/linhas/`. */
-  caminhoDasLinhas: string;
+  /**
+   * O princípio do endereço da página de uma linha: `/rede/linhas/`. `null`
+   * quando as linhas não têm página — os comboios de uma estação.
+   */
+  caminhoDasLinhas: string | null;
+  /** O modo das partidas, quando são todas de um: dá a cor ao distintivo. */
+  modo?: string;
+  /** De onde são, para as frases: «desta paragem», «desta estação». */
+  deQue?: string;
+  /**
+   * Escolher para onde (#81). Numa estação com vários sentidos, a lista do
+   * dia misturava o Sul, o Norte e os ramais pela hora, e quem ia para um
+   * lado tinha de ler as de todos.
+   */
+  porDestino?: boolean;
 }) {
   const lista = useMemo(() => expandir(partidas), [partidas]);
   const campo = useId();
@@ -88,6 +104,17 @@ export default function PartidasDoDia({
 
   const [escolha, setEscolha] = useState<Escolha>('hoje');
   const [outro, setOutro] = useState('');
+  const [destino, setDestino] = useState('');
+  // OS DESTINOS PELO NÚMERO DE PARTIDAS, os mais servidos à frente: é por
+  // onde se procura. Só quando há por onde escolher.
+  const destinos = useMemo(() => {
+    if (!porDestino) return [];
+    const conta = new Map<string, number>();
+    for (const p of lista) if (p.destino) conta.set(p.destino, (conta.get(p.destino) ?? 0) + 1);
+    return [...conta.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'pt'))
+      .map(([d]) => d);
+  }, [lista, porDestino]);
 
   const hoje = agora?.chave ?? noServidor?.hoje ?? null;
   const chave = !hoje
@@ -101,12 +128,14 @@ export default function PartidasDoDia({
   // As do dia: da tabela do navegador, quando já chegou; antes dela, as do
   // servidor — só para o dia dele. `undefined` é «à espera».
   const doDia = useMemo((): PartidaLeve[] | null | undefined => {
-    if (chave && calendario) return partidasDoDia(lista, calendario, chave);
+    const comDestino = (ps: PartidaLeve[] | null) =>
+      ps && destino ? ps.filter((p) => p.destino === destino) : ps;
+    if (chave && calendario) return comDestino(partidasDoDia(lista, calendario, chave));
     if (chave && noServidor && chave === noServidor.hoje)
-      return partidasComServicos(lista, new Set(noServidor.servicos));
+      return comDestino(partidasComServicos(lista, new Set(noServidor.servicos)));
     if (calendario === null) return null;
     return undefined;
-  }, [lista, calendario, chave, noServidor]);
+  }, [lista, calendario, chave, noServidor, destino]);
   const notas = useMemo(
     () => notasDosPeriodos(doDia ?? [], nomesDosServicos),
     [doDia, nomesDosServicos],
@@ -159,6 +188,23 @@ export default function PartidasDoDia({
           </p>
         )}
       </fieldset>
+      {destinos.length > 3 && (
+        <p className="para-onde">
+          <label htmlFor={`${campo}-destino`}>Para onde</label>
+          <select
+            id={`${campo}-destino`}
+            value={destino}
+            onChange={(e) => setDestino(e.target.value)}
+          >
+            <option value="">Todos os destinos</option>
+            {destinos.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+        </p>
+      )}
 
       <div aria-live="polite">
         {doDia === undefined ? (
@@ -172,24 +218,30 @@ export default function PartidasDoDia({
                 : 'Os horários carregados não dizem o que passa nesse dia.'}
           </p>
         ) : doDia.length === 0 ? (
-          <p className="hoje-nao">{nomeDoDia}: não há partidas desta paragem.</p>
+          <p className="hoje-nao">
+            {nomeDoDia}: não há partidas {deQue}
+            {destino ? ` para ${destino}` : ''}.
+          </p>
         ) : (
           <p className="dia-escolhido">
             <strong>{nomeDoDia}</strong> · {plural(doDia.length, 'partida', 'partidas')}
+            {destino ? ` para ${destino}` : ''}
           </p>
         )}
       </div>
 
       {doDia && doDia.length > 0 && (
         <table className="horario quadro-fixo partidas-do-dia-tabela">
-          <caption className="so-para-leitores">Partidas desta paragem: {nomeDoDia}</caption>
+          <caption className="so-para-leitores">
+            Partidas {deQue}: {nomeDoDia}
+          </caption>
           <thead>
             <tr>
               <th scope="col" style={{ width: '4.75rem' }}>
                 Hora
               </th>
               <th scope="col" style={{ width: '5.5rem' }}>
-                Linha
+                {modo === 'comboio' ? 'Comboio' : 'Linha'}
               </th>
               <th scope="col">Destino</th>
             </tr>
@@ -211,10 +263,24 @@ export default function PartidasDoDia({
                     {h.diaSeguinte && <span className="nota-da-hora">dia seguinte</span>}
                   </td>
                   <td>
-                    <Link className="ligacao-da-linha" href={`${caminhoDasLinhas}${d.linha_id}/`}>
-                      <span className="so-para-leitores">Linha </span>
-                      <Distintivo codigo={d.linha} cor={cores[d.linha_id]} tamanho="medio" />
-                    </Link>
+                    {caminhoDasLinhas && d.linha_id ? (
+                      <Link className="ligacao-da-linha" href={`${caminhoDasLinhas}${d.linha_id}/`}>
+                        <span className="so-para-leitores">Linha </span>
+                        <Distintivo
+                          codigo={d.linha}
+                          cor={cores[d.linha_id]}
+                          modo={modo}
+                          tamanho="medio"
+                        />
+                      </Link>
+                    ) : (
+                      <Distintivo
+                        codigo={d.linha}
+                        cor={cores[d.linha_id]}
+                        modo={modo}
+                        tamanho="medio"
+                      />
+                    )}
                   </td>
                   <td>
                     {d.circular ? 'circular · volta aqui' : d.destino}

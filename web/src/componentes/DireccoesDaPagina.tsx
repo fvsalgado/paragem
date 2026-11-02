@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Direccoes from './Direccoes';
+import Direccoes, { type Percurso } from './Direccoes';
+import dynamic from 'next/dynamic';
+import type { Limites } from './Mapa';
+import type { Sede } from '@/lib/sedes';
 import type { Ponto } from '@/lib/formato';
 import { usePontos } from '@/lib/pontos-do-navegador';
 import {
@@ -47,6 +50,7 @@ export default function DireccoesDaPagina({
   servicosSemDatas = 0,
   dadosDe = null,
   temAPedido = false,
+  mapa = null,
 }: {
   regiao: string;
   /** A caixa da região: uma ponta pedida por coordenadas tem de cair perto dela. */
@@ -59,6 +63,22 @@ export default function DireccoesDaPagina({
   /** De quando são os horários — ver `Direccoes`. */
   dadosDe?: string | null;
   temAPedido?: boolean;
+  /**
+   * O MAPA AO LADO DOS RESULTADOS, num ecrã largo (auditoria de 1/11/2026,
+   * #122): os mosaicos, de quem é o mapa, a área da rede e o ficheiro dela.
+   * `null` numa região sem mapa — a página fica a coluna de sempre.
+   */
+  mapa?: {
+    mosaicos: string;
+    atribuicao?: string;
+    limites: Limites | null;
+    centro: [number, number];
+    rede: string;
+    /** Os tipos de ponto da região, para as camadas existirem antes de os pontos chegarem. */
+    tipos: string[];
+    /** As sedes de concelho, nomeadas como na página inicial (`sedes.ts`). */
+    sedes: Sede[];
+  } | null;
 }) {
   const [inicial, setInicial] = useState<{
     de: Ponto | null;
@@ -70,6 +90,23 @@ export default function DireccoesDaPagina({
   }>({ de: null, para: null, dia: null, hora: null, aviso: null, vez: 0 });
 
   const { pontos, tentar } = usePontos(regiao, modosDesligados);
+
+  // O PERCURSO DA OPÇÃO ABERTA, para o mapa do lado. Era uma coluna estreita
+  // no meio de um ecrã de 1 440 px, sem mapa nenhum — no ecrã que mais se
+  // mostra, e que mais tem para mostrar.
+  const [percurso, setPercurso] = useState<Percurso | null>(null);
+  // SÓ NUM ECRÃ LARGO: num telemóvel, o mapa com as direções é a página
+  // inicial, e esta é a coluna de quem chega por uma ligação. O MapLibre não
+  // se descarrega para um mapa que não se mostra.
+  const [largo, setLargo] = useState(false);
+  useEffect(() => {
+    if (!mapa) return;
+    const m = window.matchMedia('(min-width: 64rem)');
+    const ver = () => setLargo(m.matches);
+    ver();
+    m.addEventListener('change', ver);
+    return () => m.removeEventListener('change', ver);
+  }, [mapa]);
 
   // O ENDEREÇO LÊ-SE ANTES DE SE ESCREVER. Os efeitos dos filhos correm antes
   // dos do pai: sem esta marca, as direções escreviam o endereço vazio da
@@ -102,10 +139,8 @@ export default function DireccoesDaPagina({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pontosLidos]);
 
-  return (
+  const direccoes = (
     <Direccoes
-      // Montado outra vez com o que o endereço trouxe — antes de alguém
-      // poder escrever, e com a mesma altura: não se vê nada a mexer.
       key={inicial.vez}
       regiao={regiao}
       pontos={pontos}
@@ -120,11 +155,9 @@ export default function DireccoesDaPagina({
       servicosSemDatas={servicosSemDatas}
       dadosDe={dadosDe}
       temAPedido={temAPedido}
+      aoDesenhar={mapa ? (p) => setPercurso(p) : undefined}
       aoMudar={(v) => {
         if (!lido.current) return;
-        // SUBSTITUI, NÃO EMPILHA: cada hora escolhida não é uma página a que
-        // o «voltar» tenha de regressar. O caminho fica o da página — numa
-        // região sem mapa isto vive no início, e não em `/viagem/`.
         const q = escreverViagem(v);
         const endereco = `${window.location.pathname}${comoProcura(q)}`;
         if (endereco !== `${window.location.pathname}${window.location.search}`) {
@@ -133,4 +166,45 @@ export default function DireccoesDaPagina({
       }}
     />
   );
+  if (!mapa) return direccoes;
+  // DUAS COLUNAS NUM ECRÃ LARGO: as opções à esquerda, o mapa da opção aberta
+  // à direita, preso ao alto enquanto se desce pelas opções. A caixa do mapa
+  // existe desde o primeiro instante — o mapa entra nela —, e nada salta.
+  return (
+    <div className="em-colunas viagem-e-mapa">
+      <div className="coluna-principal">{direccoes}</div>
+      <div className="coluna-lateral mapa-da-viagem">
+        {largo && (
+          <Mapa
+            centro={mapa.centro}
+            // As paragens e as estações, esbatidas por baixo do percurso: o
+            // que está à volta da viagem orienta, sem competir com ela.
+            pontos={Array.isArray(pontos) ? pontos : SEM_PONTOS}
+            tipos={mapa.tipos}
+            mosaicos={mapa.mosaicos}
+            atribuicao={mapa.atribuicao}
+            limites={mapa.limites}
+            rede={mapa.rede}
+            modosDesligados={modosDesligados}
+            margemInferior={0}
+            percurso={percurso?.geo ?? null}
+            alternativas={percurso?.outras ?? null}
+            etiqueta={percurso?.meio ?? null}
+            enquadrar={percurso?.caixa ?? null}
+            sedes={mapa.sedes}
+          />
+        )}
+      </div>
+    </div>
+  );
 }
+
+/**
+ * O MAPA À PARTE, e só quando se mostra: o código dele não vai no JavaScript
+ * da página, que é o mesmo num telemóvel — onde não há mapa aqui. Pede-se
+ * quando a janela é larga (`largo`), como o MapLibre que ele pede depois.
+ */
+const Mapa = dynamic(() => import('./Mapa'), { ssr: false });
+
+/** Uma lista vazia que é sempre a mesma: o mapa compara-a. */
+const SEM_PONTOS: Ponto[] = [];

@@ -1,5 +1,5 @@
-import type { QuadroDeCartaz, ViagemDeCartaz } from '@/lib/formato';
-import { nomeDoSistema, regraLegivel } from '@/lib/prosa';
+import { horaComZero, type QuadroDeCartaz, type ViagemDeCartaz } from '@/lib/formato';
+import { comPonto, nomeDoSistema, regraLegivel } from '@/lib/prosa';
 
 /**
  * A grelha de um horário lido de um cartaz: paragens em linha, viagens em coluna.
@@ -53,7 +53,7 @@ export default function QuadroDeHorario({
   // «NA PARAGEM …», e não «da …»: a contração tem de concordar com o nome que
   // vem a seguir, e um cartaz não diz o género de ninguém — lia-se «da Centro
   // de Saúde», «da Bairro da Cabrita».
-  const aPrimeira = `a primeira às ${primeira.passagens[0][1]}, na paragem ${primeira.passagens[0][0]}`;
+  const aPrimeira = `a primeira às ${horaComZero(primeira.passagens[0][1])}, na paragem ${primeira.passagens[0][0]}`;
 
   return (
     <details className="quadro-de-horario" id={id} open={aberto || undefined}>
@@ -83,7 +83,7 @@ export default function QuadroDeHorario({
               <th scope="col">Paragem</th>
               {viagens.map((v, i) => (
                 <th key={i} scope="col">
-                  {v.passagens[0][1]}
+                  {horaComZero(v.passagens[0][1])}
                   {v.rotulo ? <span className="so-para-leitores"> · {v.rotulo}</span> : null}
                 </th>
               ))}
@@ -94,7 +94,7 @@ export default function QuadroDeHorario({
               <tr key={ip}>
                 <th scope="row">{paragem}</th>
                 {viagens.map((v, i) => (
-                  <td key={i}>{horaEm(v, paragem) ?? '—'}</td>
+                  <td key={i}>{horaComZero(horaEm(v, paragem) ?? '—')}</td>
                 ))}
               </tr>
             ))}
@@ -165,7 +165,7 @@ function Partidas({
               <tr key={ip}>
                 <th scope="row">{paragem}</th>
                 {Array.from({ length: colunas }, (_, j) => (
-                  <td key={j}>{horas[ip]?.[j] || '—'}</td>
+                  <td key={j}>{horaComZero(horas[ip]?.[j] || '—')}</td>
                 ))}
               </tr>
             ))}
@@ -186,7 +186,7 @@ function Regras({ regras }: { regras?: string[] }) {
   return (
     <ul className="regras-do-quadro">
       {regras.map((r, i) => (
-        <li key={i}>{regraLegivel(r)}</li>
+        <li key={i}>{comPonto(regraLegivel(r))}</li>
       ))}
     </ul>
   );

@@ -1,3 +1,4 @@
+import { fraseDoPrazoDasMedicoes } from '@/lib/prosa';
 /**
  * O que o artigo 13.º do RGPD manda dizer e a privacidade não dizia: com que
  * fundamento, durante quanto tempo, que direitos há e a quem reclamar, e
@@ -26,11 +27,18 @@ export default function DireitosDePrivacidade({
   mede,
   identificada,
   email,
+  prazo = null,
 }: {
   mede: boolean;
   identificada: boolean;
   /** A quem se escreve para exercer os direitos; sem ele, diz-se para escrever a quem responde. */
   email: string | null;
+  /**
+   * Quanto tempo o serviço de medição guarda as medições, como está
+   * configurado lá (`PARAGEM_MEDICAO_PRAZO`, «12 meses»). O RGPD pede o prazo
+   * ou o critério (#184); sem ele, diz-se o critério, e não se inventa um número.
+   */
+  prazo?: string | null;
 }) {
   const escrever = email ? (
     <>
@@ -55,12 +63,7 @@ export default function DireitosDePrivacidade({
 
       <h2>Durante quanto tempo</h2>
       <ul>
-        {mede ? (
-          <li>
-            As medições ficam no serviço de medição pelo prazo de conservação dele, e nunca se
-            juntam a um nome nem a um contacto.
-          </li>
-        ) : null}
+        {mede ? <li>{fraseDoPrazoDasMedicoes(prazo)}</li> : null}
         <li>Os emails, enquanto a conversa durar e o que dela resultar o exigir.</li>
       </ul>
 

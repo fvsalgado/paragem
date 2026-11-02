@@ -10,11 +10,15 @@ import type {
 import {
   ATRIBUICAO_OSM,
   CORES_DOS_PONTOS,
+  FONTE_DA_LINHA,
   FONTE_DA_REDE,
+  FONTE_DAS_PARAGENS_DA_LINHA,
+  camadasDaLinha,
   camadasDaRede,
   camadasDosNomesDosPontos,
   classeDasViagens,
   estiloDoMapa,
+  type CorDaLinha,
   type TemaDoMapa,
 } from '@/lib/estilo-mapa';
 import {
@@ -28,6 +32,7 @@ import { DENSIDADE, LADO, imagemDaPlaca } from '@/lib/icones-do-mapa';
 import type { Ponto } from '@/lib/formato';
 import { descodificarLinha, type PercursoGeo } from '@/lib/otp';
 import { ouvirTema, temaEfetivo } from '@/lib/tema';
+import type { Sede } from '@/lib/sedes';
 
 /**
  * O mapa. Não é um componente numa página — é a página.
@@ -58,6 +63,13 @@ import { ouvirTema, temaEfetivo } from '@/lib/tema';
  */
 
 export type Marca = Ponto & { partidas?: number };
+
+/** Listas vazias que são sempre as mesmas, para o valor por omissão não mudar a cada pintura. */
+const SEM_SEDES: readonly Sede[] = [];
+const SEM_ESTACOES: readonly string[] = [];
+
+/** A cor do anel das estações sem autocarro perto: a de atenção (§6), em cada tema. */
+const ANEL_DE_ATENCAO: Record<TemaDoMapa, string> = { claro: '#b54708', escuro: '#f5a524' };
 
 /** O que o MapLibre escreve nos controlos que este mapa usa, em português. */
 const NOMES_DOS_CONTROLOS = {
@@ -551,6 +563,9 @@ export default function Mapa({
   limites = null,
   lembrarVista = null,
   perto = null,
+  sedes = SEM_SEDES,
+  linha = null,
+  estacoesSemAutocarro = SEM_ESTACOES,
 }: {
   centro: [number, number];
   zoom?: number;
@@ -629,6 +644,31 @@ export default function Mapa({
     comPonto: boolean;
     paragens: { lat: number; lon: number; n: number }[];
   } | null;
+  /**
+   * As sedes de concelho, com o sítio do lugar delas no OpenStreetMap
+   * (`sedes.ts`): o mapa nomeia-as a todos os zooms, por cima das outras
+   * terras. Sem elas, os nomes são só os do mapa de base.
+   */
+  sedes?: readonly Sede[];
+  /**
+   * A LINHA ESCOLHIDA, acesa por cima da rede: o traçado dela, as paragens, e
+   * a cor por tema (`camadasDaLinha`). O resto do mapa esbate-se, como com uma
+   * viagem desenhada. O enquadramento é de quem a escolheu (`enquadrar`).
+   */
+  linha?: {
+    tracos: string[];
+    aproximado: boolean;
+    paragens: [number, number][];
+    cor: CorDaLinha;
+  } | null;
+  /**
+   * AS ESTAÇÕES SEM AUTOCARRO A MENOS DE 300 m, pelos identificadores: no mapa
+   * levam um anel na cor de atenção à volta da placa (§6.4 do briefing da
+   * região de origem — e de qualquer região com comboio). Quem chega de
+   * comboio a uma delas tem de arranjar outra maneira de sair de lá, e é
+   * melhor sabê-lo antes de apanhar o comboio.
+   */
+  estacoesSemAutocarro?: readonly string[];
 }) {
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<MapaLibre | null>(null);
@@ -716,7 +756,7 @@ export default function Mapa({
           // O MAPA NO TEMA DA PÁGINA, como o resto dela (P1-044): um mapa
           // claro no meio de uma página escura encandeava exatamente onde o
           // tema escuro devia poupar os olhos.
-          style: estiloDoMapa(mosaicos, atribuicao || undefined, temaDaPagina()),
+          style: estiloDoMapa(mosaicos, atribuicao || undefined, temaDaPagina(), sedes),
           center: [inicio.centro[1], inicio.centro[0]],
           zoom: inicio.zoom,
           // A ATRIBUIÇÃO JÁ ESCRITA QUANDO O CONTROLO NASCE. Vinha só da fonte
@@ -948,6 +988,51 @@ export default function Mapa({
             });
           }
 
+          // O ANEL DAS ESTAÇÕES SEM AUTOCARRO PERTO, por baixo da placa delas e
+          // um pouco maior: vê-se à volta, e a forma diz o que a cor confirma.
+          // O cartão da estação di-lo por extenso.
+          const estacao = camadasDe(tiposDasCamadas.current).find((c) => c.tipo === 'estacao');
+          if (estacao && estacoesSemAutocarro.length && criado!.getLayer('pontos-estacao')) {
+            criado!.addLayer(
+              {
+                id: 'estacoes-sem-autocarro',
+                type: 'circle',
+                source: 'paragens',
+                minzoom: estacao.minzoom,
+                filter: [
+                  'all',
+                  ['==', ['get', 'tipo'], 'estacao'],
+                  ['in', ['get', 'id'], ['literal', [...estacoesSemAutocarro]]],
+                  JA_APARECEU,
+                ],
+                paint: {
+                  'circle-radius': pelosZooms(estacao.raios, (r) => r + 4),
+                  'circle-color': 'rgba(0,0,0,0)',
+                  'circle-stroke-color': ANEL_DE_ATENCAO[tema],
+                  'circle-stroke-width': 2.5,
+                },
+              } as unknown as LayerSpecification,
+              'pontos-estacao',
+            );
+          }
+
+          // A LINHA ESCOLHIDA, por cima dos pontos e por baixo dos nomes: é a
+          // única coisa acesa, e os nomes continuam a ler-se por cima dela.
+          // Nasce vazia; enche-se quando alguém escolhe uma linha.
+          for (const fonte of [FONTE_DA_LINHA, FONTE_DAS_PARAGENS_DA_LINHA]) {
+            criado!.addSource(fonte, {
+              type: 'geojson',
+              data: { type: 'FeatureCollection', features: [] },
+            });
+          }
+          for (const camada of camadasDaLinha(
+            tema,
+            { claro: '#0a5c7a', escuro: '#6cb8d6' },
+            false,
+          )) {
+            criado!.addLayer(camada, antesDosNomes);
+          }
+
           // OS NOMES DAS ESTAÇÕES E DAS PARAGENS, por cima dos das aldeias e
           // por baixo dos das vilas: entre uma estação e uma aldeia que não
           // cabem as duas, fica a estação; a vila fica sempre.
@@ -1004,20 +1089,13 @@ export default function Mapa({
             guardarVista(lembrarVista, { lon: c.lng, lat: c.lat, zoom: criado!.getZoom() });
           });
 
-          // COM A LOCALIZAÇÃO JÁ CONCEDIDA, o mapa abre na pessoa, a z15. Só
-          // quando já foi dada — perguntar à entrada era um diálogo do sistema
-          // antes de se ver o que quer que fosse —, e só se o endereço não
-          // pediu outra coisa (um ponto, uma viagem).
-          const pedido = new URLSearchParams(window.location.search);
-          if (lembrarVista && !['ponto', 'de', 'para'].some((k) => pedido.has(k))) {
-            navigator.permissions
-              ?.query({ name: 'geolocation' as PermissionName })
-              .then((estadoDaPermissao) => {
-                if (!vivo || estadoDaPermissao.state !== 'granted') return;
-                if (localizacao.trigger()) vistaDecidida.current = true;
-              })
-              .catch(() => {});
-          }
+          // COM A LOCALIZAÇÃO JÁ CONCEDIDA, quem pergunta é a folha, e não o
+          // mapa (`PertoDeTi`): o mapa abria na pessoa a z15 e a folha, logo
+          // a seguir, enquadrava-a com as paragens mais perto — dois voos
+          // seguidos, e o primeiro a desfazer o segundo quando chegava
+          // depois. A folha diz o que passa ali e o mapa mostra-o, numerado,
+          // num movimento só (`perto`). O botão continua a perguntar quando
+          // se carrega.
 
           setEstado('pronto');
         });
@@ -1083,9 +1161,18 @@ export default function Mapa({
   }, [rotas, estado]);
 
   /** As camadas que o sítio acrescenta, com a tinta do tema — para o trocar. */
-  const esbatida = !!percurso;
+  // Uma «linha» sem traços é só um grupo de pontos acesos — as paragens de um
+  // concelho, no mapa dele: acendem-se sem esbater o resto.
+  const esbatida = !!percurso || !!linha?.tracos.length;
   const camadasNossas = (tema: TemaDoMapa): LayerSpecification[] => [
     ...camadasDaRede(tema, esbatida),
+    ...(linha ? camadasDaLinha(tema, linha.cor, linha.aproximado) : []),
+    {
+      id: 'estacoes-sem-autocarro',
+      type: 'circle',
+      source: 'paragens',
+      paint: { 'circle-stroke-color': ANEL_DE_ATENCAO[tema] },
+    } as LayerSpecification,
     ...camadasDosNomesDosPontos(tema, 'paragens'),
     // As placas são imagens, e não mudam com o tema: só os círculos.
     ...camadasDe(tiposDasCamadas.current)
@@ -1095,14 +1182,68 @@ export default function Mapa({
   const nossas = useRef(camadasNossas);
   nossas.current = camadasNossas;
 
-  // COM UMA VIAGEM ESCOLHIDA, A REDE RECUA: fica a 25 %, e a viagem é a única
-  // linha que se lê. Sem isto o percurso escolhido era mais um traço azul no
-  // meio de cem.
+  // COM UMA VIAGEM OU UMA LINHA ESCOLHIDA, A REDE RECUA: fica a 25 %, e a
+  // viagem ou a linha é a única que se lê. Sem isto o percurso escolhido era
+  // mais um traço azul no meio de cem.
+  //
+  // E OS PONTOS DOS OUTROS RECUAM TAMBÉM, a um terço: as paragens da linha
+  // acendem-se por cima, e as outras continuam lá — veem-se, tocam-se, e não
+  // competem. A opacidade fica fora das camadas de `camadaDosPontos`, que o
+  // tema volta a pintar; é só daqui que ela muda.
   useEffect(() => {
     const m = mapa.current;
     if (!m || estado !== 'pronto') return;
     pintar(m, camadasDaRede(temaDaPagina(), esbatida));
+    const quanto = esbatida ? 0.35 : 1;
+    for (const c of camadasDe(tiposDasCamadas.current)) {
+      const id = `pontos-${c.tipo}`;
+      const camada = m.getLayer(id);
+      if (!camada) continue;
+      if (camada.type === 'symbol') m.setPaintProperty(id, 'icon-opacity', quanto);
+      else {
+        m.setPaintProperty(id, 'circle-opacity', quanto);
+        m.setPaintProperty(id, 'circle-stroke-opacity', quanto);
+      }
+    }
+    if (m.getLayer('estacoes-sem-autocarro')) {
+      m.setPaintProperty('estacoes-sem-autocarro', 'circle-stroke-opacity', quanto);
+    }
+    for (const id of ['nomes-de-paragens', 'nomes-de-estacoes']) {
+      if (m.getLayer(id)) m.setPaintProperty(id, 'text-opacity', esbatida ? 0.6 : 1);
+    }
   }, [esbatida, estado]);
+
+  // A LINHA ESCOLHIDA: o traçado, as paragens e a cor dela.
+  useEffect(() => {
+    const m = mapa.current;
+    if (!m || estado !== 'pronto') return;
+    const vazio = { type: 'FeatureCollection' as const, features: [] };
+    (m.getSource(FONTE_DA_LINHA) as GeoJSONSource | undefined)?.setData(
+      linha
+        ? {
+            type: 'FeatureCollection',
+            features: linha.tracos.map((t) => ({
+              type: 'Feature',
+              geometry: { type: 'LineString', coordinates: descodificarLinha(t) },
+              properties: {},
+            })),
+          }
+        : vazio,
+    );
+    (m.getSource(FONTE_DAS_PARAGENS_DA_LINHA) as GeoJSONSource | undefined)?.setData(
+      linha
+        ? {
+            type: 'FeatureCollection',
+            features: linha.paragens.map(([lat, lon]) => ({
+              type: 'Feature',
+              geometry: { type: 'Point', coordinates: [lon, lat] },
+              properties: {},
+            })),
+          }
+        : vazio,
+    );
+    if (linha) pintar(m, camadasDaLinha(temaDaPagina(), linha.cor, linha.aproximado));
+  }, [linha, estado]);
 
   // O TEMA SEGUE O DA PÁGINA COM O MAPA ABERTO: quem escolhe o escuro no
   // menu, ou tem o telemóvel a mudar sozinho ao anoitecer, vê o mapa mudar
@@ -1301,7 +1442,9 @@ export default function Mapa({
       m.fitBounds(caixaDePerto, {
         padding: { top: estreito ? 150 : 56, bottom: 40, left: 40, right: 72 },
         duration: semMovimento() ? 0 : 900,
-        maxZoom: 17,
+        // A z16 e não mais perto: a z17 a rede da rua enchia o ecrã, e
+        // perdia-se para que lado ficava o resto da terra.
+        maxZoom: 16,
       });
     };
     // Quem carregou no botão do mapa vê-o voar até si: enquadra-se depois.

@@ -8,7 +8,28 @@
  */
 import { test, expect } from '@playwright/test';
 
-import { fusoDaRegiao, linhaComMaisViagens, linhas } from './dados-da-regiao';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { BUILD, REGIAO } from './anfitrioes';
+import { fusoDaRegiao, linhaComMaisViagens, linhas, umaViagemComEspera } from './dados-da-regiao';
+
+/** A linha com mais viagens entre as que têm dois sentidos, ou nenhuma. */
+function linhaDeDoisSentidos(): { id: string } | null {
+  const comDois = linhas()
+    .slice()
+    .sort((a, b) => b.viagens - a.viagens || a.id.localeCompare(b.id))
+    .find((l) => {
+      const f = join(
+        BUILD,
+        REGIAO,
+        'sitio',
+        'linhas',
+        `${l.id.replace(/[^a-zA-Z0-9\-_]/g, '-')}.json`,
+      );
+      return existsSync(f) && (JSON.parse(readFileSync(f, 'utf8')).sentidos ?? []).length > 1;
+    });
+  return comDois ?? null;
+}
 
 const LINHA = linhaComMaisViagens();
 
@@ -38,6 +59,21 @@ test('o horário tem as horas de cada viagem, por tipo de dia', async ({ page })
   }
   const horas = primeiro.locator('tbody td');
   await expect(horas.filter({ hasText: /^(cerca das )?\d{2}:\d{2}/ }).first()).toBeVisible();
+});
+
+test('onde a viagem espera, o quadro diz a partida e, por baixo, a chegada', async ({ page }) => {
+  // A linha dizia só a partida, e o planeador, para a mesma viagem, a chegada
+  // dez minutos antes (#120). As duas certas; agora o quadro diz as duas.
+  const espera = umaViagemComEspera();
+  test.skip(!espera, 'nenhuma viagem desta região espera numa paragem do quadro');
+  await page.goto(`/rede/linhas/${espera!.linha}/`);
+  await page.evaluate(() => document.querySelectorAll('details').forEach((d) => (d.open = true)));
+  const celula = page.locator('td', { hasText: `chega ${espera!.chegada}` }).first();
+  await expect(celula).toBeAttached();
+  await expect(celula).toContainText(espera!.partida);
+  await expect(
+    page.locator('.nota-do-quadro', { hasText: 'As horas são de partida' }).first(),
+  ).toBeAttached();
 });
 
 test('o percurso liga a cada paragem, e as pontas destacam-se', async ({ page }) => {
@@ -70,7 +106,10 @@ test('o esquema desenha um sentido de cada vez, sem o traço por cima dos nomes'
   // Os dois sentidos sobrepostos pareciam um rabisco (#13).
   await page.goto(`/rede/linhas/${LINHA.id}/`);
   const esquemas = page.locator('figure.esquema-da-linha');
-  test.skip((await esquemas.count()) === 0, 'a linha não tem paragens com sítio');
+  test.skip(
+    (await esquemas.count()) === 0,
+    'com mapa na região, a página leva ao mapa com a linha acesa em vez do esquema; ou a linha não tem paragens com sítio',
+  );
   for (const f of await esquemas.all()) {
     await expect(f.locator('polyline')).toHaveCount(1);
     // Os nomes das pontas não se cruzam com o traço: nenhum ponto do traço
@@ -127,4 +166,44 @@ test('a lista separa a rede das linhas de outros operadores, e diz de quem são'
   await expect(outras.locator('ul.lista > li')).toHaveCount(deFora.length);
   await expect(outras.locator('ul.lista > li').first()).toContainText(' · ');
   await expect(page.locator('main > p').first()).toContainText('de outros operadores');
+});
+
+test('os sentidos escolhem-se num par de botões, e mostra-se um de cada vez', async ({ page }) => {
+  // Eram duas ligações do tamanho de um título, e o mesmo título repetido a
+  // seguir; para ver o outro sentido rolavam-se quatro ecrãs (#94).
+  const l = linhaDeDoisSentidos();
+  test.skip(!l, 'nenhuma linha desta região tem dois sentidos');
+  await page.goto(`/rede/linhas/${l!.id}/`);
+  const escolha = page.getByRole('group', { name: 'Sentido' });
+  const botoes = escolha.getByRole('radio');
+  expect(await botoes.count()).toBeGreaterThan(1);
+  await expect(botoes.first()).toBeChecked();
+  const seccoes = page.locator('.sentidos-da-linha > section');
+  await expect(seccoes.nth(0)).toBeVisible();
+  await expect(seccoes.nth(1)).toBeHidden();
+  await escolha.locator('label').nth(1).click();
+  await expect(botoes.nth(1)).toBeChecked();
+  await expect(seccoes.nth(1)).toBeVisible();
+  await expect(seccoes.nth(0)).toBeHidden();
+});
+
+test('com mapa, a página da linha leva ao mapa com ela acesa', async ({ page }) => {
+  await page.goto(`/rede/linhas/${LINHA.id}/`);
+  const noMapa = page.getByRole('link', { name: 'Ver o percurso no mapa' });
+  test.skip((await noMapa.count()) === 0, 'a região não tem mapa');
+  await expect(noMapa).toHaveAttribute('href', `/?linha=${encodeURIComponent(LINHA.id)}`);
+});
+
+test('na lista das linhas, o nome alinha consigo mesmo e não diz uma soma de viagens', async ({
+  page,
+}) => {
+  // A segunda linha de um nome comprido começava debaixo do distintivo (#179),
+  // e «53 viagens» somava todos os dias e os dois sentidos (#180).
+  await page.goto('/rede/linhas/');
+  const primeira = page.locator('a.linha-na-lista').first();
+  await expect(primeira).toBeVisible();
+  const numero = (await primeira.locator('.distintivo').boundingBox())!;
+  const nome = (await primeira.locator('> span:last-child').boundingBox())!;
+  expect(nome.x).toBeGreaterThanOrEqual(numero.x + numero.width);
+  await expect(page.locator('a.linha-na-lista', { hasText: /\d+ viage(m|ns)$/ })).toHaveCount(0);
 });

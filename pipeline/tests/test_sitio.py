@@ -518,6 +518,36 @@ def test_o_que_se_descarrega_sai_com_o_ficheiro_e_os_termos(raiz, tmp_path):
         assert "OpenStreetMap" in d["atribuicao"], f"{d['caminho']}: ODbL sem o OpenStreetMap"
 
 
+def test_o_ficheiro_de_um_servico_com_nome_descarrega_se_com_o_nome_dele(raiz, tmp_path):
+    """«Pedra Alta — Circuito Azul», e não «tap/pa-azul.json» (#78).
+
+    O nome é o que a receita dá ao horário (`linha`); os ficheiros sem nome
+    ficam com o caminho, que é o que a página mostra.
+    """
+    import shutil
+
+    from paragem.sitio import construir
+
+    regiao = regiao_ou_salta("demo")
+    feito = raiz / "build" / "demo"
+    if not (feito / "gtfs").is_dir():
+        pytest.skip("sem build/demo — corre `uv run pipeline build --regiao demo`")
+    for pasta in ("gtfs", "geojson", "gbfs", "tap", "urbanos"):
+        if (feito / pasta).is_dir():
+            shutil.copytree(feito / pasta, tmp_path / pasta)
+
+    construir(raiz, regiao, tmp_path)
+    manifesto = json.loads((tmp_path / "sitio" / "dados-abertos.json").read_text(encoding="utf-8"))
+    por_caminho = {d["caminho"]: d for d in manifesto}
+    com_nome = [x for x in regiao.saidas if x.publica and x.saida and (x.params or {}).get("linha")]
+    assert com_nome, "a demonstração tem horários com nome"
+    vistos = [x for x in com_nome if x.saida in por_caminho]
+    assert vistos, "os horários com nome descarregam-se"
+    for x in vistos:
+        assert por_caminho[x.saida].get("nome") == x.params["linha"], f"{x.saida}: sem o nome"
+    assert all(d.get("nome") or d["caminho"] for d in manifesto)
+
+
 def test_um_feed_de_outra_entidade_nao_se_apresenta_como_nosso():
     """Os termos de um ficheiro de terceiro são dele, e a página diz isso."""
     from paragem.sitio import _termos
@@ -1286,3 +1316,31 @@ fontes:
     }
     assert _conteudo_de(tmp_path, "sem-nada") == {"em_vigor_desde": None, "texto": None}
     assert _conteudo_de(tmp_path, "nao-existe") == {"em_vigor_desde": None, "texto": None}
+
+
+def test_o_horario_leva_o_endereco_publico_do_documento(tmp_path, monkeypatch):
+    """Um cartaz com anos leva quem o lê até à fonte (#191): o `url`, e não o arquivo."""
+    from paragem.sitio import _documento_de
+
+    monkeypatch.delenv("PARAGEM_RAIZES", raising=False)
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "sources.yaml").write_text(
+        """\
+versao: 1
+fontes:
+  - id: cartaz
+    nome: cartaz da câmara
+    formato: pdf
+    url: https://camara.example/cartaz.pdf
+    url_arquivo: https://web.archive.org/web/2026/https://camara.example/cartaz.pdf
+    obtido_em: 2026-09-20
+  - id: sem-endereco
+    nome: cartaz entregue à mão
+    formato: pdf
+    obtido_em: 2026-09-20
+""",
+        encoding="utf-8",
+    )
+    assert _documento_de(tmp_path, "cartaz") == "https://camara.example/cartaz.pdf"
+    assert _documento_de(tmp_path, "sem-endereco") is None
+    assert _documento_de(tmp_path, "nao-existe") is None

@@ -79,3 +79,22 @@ def test_sem_nenhuma_hora_marcada_nao_ha_quadro():
     q = quadro_do_sentido([_viagem("A-U", ("T", "07:00", False), ("F", "07:30", False))], {})
     assert q == {"paragens": [], "viagens": []}
     assert quadro_do_sentido([], {}) == {"paragens": [], "viagens": []}
+
+
+def test_onde_a_viagem_espera_o_quadro_guarda_a_chegada_ao_lado_da_partida():
+    """O caderno dá chegada e partida na paragem onde o autocarro espera.
+
+    O quadro mostra a partida — é a hora de quem apanha ali —, e a chegada vai
+    ao lado, pelo índice: sem ela, a linha dizia uma hora e o planeador outra
+    para a mesma viagem.
+    """
+    nomes = {"A": "Início", "T": "Terminal", "F": "Fim"}
+    espera = _viagem("A-U", ("A", "12:35", True), ("T", "13:45", True), ("F", "14:30", True))
+    espera.passagens[1].chegada = "13:35"
+    # A chegada igual à partida não é espera nenhuma: não se escreve.
+    seguida = _viagem("A-U", ("A", "15:00", True), ("T", "16:00", True), ("F", "16:40", True))
+    seguida.passagens[1].chegada = "16:00"
+    q = quadro_do_sentido([espera, seguida], nomes)
+    assert q["viagens"][0]["horas"] == ["12:35", "13:45", "14:30"]
+    assert q["viagens"][0]["chegadas"] == {"1": "13:35"}
+    assert "chegadas" not in q["viagens"][1]

@@ -288,3 +288,78 @@ def escrever(destino: Path, r: Resultado, grelha: dict[str, Any]) -> tuple[int, 
     indice = json.dumps(sorted(r.por_linha), separators=(",", ":"))
     (pasta / "indice.json").write_text(indice + "\n", encoding="utf-8")
     return len(r.por_linha), bytes_totais + len(indice) + 1
+
+
+# --- a linha no mapa ------------------------------------------------------------
+
+
+def _sem_espacos_a_mais(texto: Any) -> str:
+    return " ".join(str(texto or "").split())
+
+
+def linha_no_mapa(
+    linha: dict[str, Any],
+    linhas_da_grelha: list[list[Any]],
+    pasta: Path,
+    onde: dict[str, tuple[float, float]],
+) -> dict[str, Any] | None:
+    """Por onde a linha passa e onde para, para o mapa a acender por cima da rede.
+
+    O mapa desenha a rede inteira por troços, sem dizer de que linha é cada um
+    (`rede_no_mapa.py`), e quem escolhia uma linha via a página dela — com um
+    esquema ligado a direito —, mas não o percurso no mapa. Isto junta, para
+    UMA linha, os pedaços de traçado que as viagens dela percorrem
+    (`percursos/<i>.json`, os do planeador) e as paragens dela com sítio.
+
+    A linha da grelha encontra-se pelo número, pelo nome e pelo modo: a grelha
+    numera as linhas pela ordem dos feeds, e o detalhe chama-as pelo
+    identificador do feed — o que os liga é o que as duas dizem da linha. Sem
+    correspondência, ou sem traçado, as paragens ligam-se a direito pela
+    ordem de cada sentido, e diz-se (`aproximado`): o mapa desenha-o a
+    tracejado, como o planeador faz a uma perna sem traçado.
+
+    Uma linha sem duas paragens com sítio não tem o que desenhar: `None`.
+    """
+    codigo = _sem_espacos_a_mais(linha.get("codigo"))
+    nome = _sem_espacos_a_mais(linha.get("nome"))
+    modo = linha.get("modo")
+    paragens: dict[tuple[float, float], None] = {}
+    sequencias: list[list[tuple[float, float]]] = []
+    for s in linha.get("sentidos") or []:
+        seq = [
+            (round(onde[p["id"]][0], 5), round(onde[p["id"]][1], 5))
+            for p in s.get("paragens") or []
+            if p.get("id") in onde
+        ]
+        paragens.update(dict.fromkeys(seq))
+        if len(seq) > 1:
+            sequencias.append(seq)
+    if len(paragens) < 2:
+        return None
+
+    tracos: list[str] = []
+    for i, da_grelha in enumerate(linhas_da_grelha):
+        if (
+            _sem_espacos_a_mais(da_grelha[0]) != codigo
+            or _sem_espacos_a_mais(da_grelha[1]) != nome
+            or (len(da_grelha) > 3 and modo and da_grelha[3] != modo)
+        ):
+            continue
+        caminho = pasta / f"{i}.json"
+        if not caminho.exists():
+            break
+        dados = json.loads(caminho.read_text(encoding="utf-8"))
+        # O ficheiro diz de que linha é, e confere-se — a mesma regra de quem
+        # desenha as pernas do planeador.
+        if _sem_espacos_a_mais(dados.get("linha")) == codigo:
+            tracos = sorted(set((dados.get("trocos") or {}).values()))
+        break
+
+    aproximado = not tracos
+    if aproximado:
+        tracos = [codificar(seq) for seq in sequencias]
+    return {
+        "tracos": tracos,
+        "aproximado": aproximado,
+        "paragens": [list(p) for p in paragens],
+    }

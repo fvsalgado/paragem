@@ -127,3 +127,18 @@ test('«Ver no mapa» abre o mapa do sítio nesta paragem, com o cartão dela', 
   await expect(page).toHaveURL(/\?ponto=/);
   await expect(page.locator('.cartao-de-baixo h2')).toHaveText(nome, { timeout: 15_000 });
 });
+
+test('o mapa do sítio está uma vez, no topo, e as coordenadas ficam fechadas', async ({ page }) => {
+  // «Ver no mapa» no topo e «Ver no mapa desta região» no fim, e as
+  // coordenadas à vista de quem viaja (#181).
+  await page.goto(`/rede/paragens/${PARAGEM.id}/`);
+  await expect(page.getByRole('link', { name: 'Ver no mapa desta região' })).toHaveCount(0);
+  await expect(page.getByText(/^Coordenadas:/)).toHaveCount(0);
+  // «Abra», e não «Toque»: num computador não se toca (#182).
+  await expect(page.locator('main')).not.toContainText(/Toque n(o|um)/);
+  const onde = page.getByRole('region', { name: 'Onde fica' });
+  if (await onde.count()) {
+    await expect(onde.getByRole('link', { name: 'Abrir no OpenStreetMap' })).toBeVisible();
+    await expect(onde.locator('details')).not.toHaveAttribute('open', '');
+  }
+});

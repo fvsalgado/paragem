@@ -42,10 +42,10 @@ export default function EsquemaDaLinha({
   cor: string;
   codigo: string;
   /**
-   * O endereço do mapa desta região numa paragem da linha, ou `null` numa
-   * região sem mapa — só aí a legenda pode mandar para lá.
+   * O endereço do mapa desta região com a linha acesa (`/?linha=`), ou `null`
+   * numa região sem mapa — só aí a legenda pode mandar para lá.
    */
-  noMapa?: ((id: string) => string) | null;
+  noMapa?: string | null;
 }) {
   const comSitio = sentidos.map((s) => s.filter((p) => onde.has(p.id)));
   const desenhaveis = comSitio.filter((s) => s.length > 1);
@@ -131,7 +131,7 @@ export default function EsquemaDaLinha({
           {noMapa && (
             <>
               {' '}
-              O traçado nas ruas vê-se <Link href={noMapa(primeira.id)}>no mapa</Link>.
+              O traçado nas ruas vê-se <Link href={noMapa}>no mapa</Link>.
             </>
           )}
         </span>

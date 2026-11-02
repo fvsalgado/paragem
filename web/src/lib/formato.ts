@@ -620,6 +620,12 @@ export type ViagemDoQuadro = {
   horas: string[];
   /** Os índices das horas estimadas por nós (`timepoint=0`). */
   estimadas: number[];
+  /**
+   * A hora de CHEGADA onde a viagem espera na paragem, pelo índice — as
+   * `horas` são as de partida (`quadros.py`). Ausente quando não espera em
+   * nenhuma, e em dados de antes disto.
+   */
+  chegadas?: Record<string, string>;
 };
 
 export type Sentido = {
@@ -643,7 +649,19 @@ export type Sentido = {
   quadro?: { paragens: { id: string; nome: string }[]; viagens: ViagemDoQuadro[] };
 };
 
-export type LinhaDetalhe = Linha & { sentidos: Sentido[] };
+/**
+ * A LINHA NO MAPA (`percursos.linha_no_mapa`, no pipeline): os pedaços de
+ * traçado que as viagens dela percorrem, em polilinhas, e as paragens dela com
+ * sítio, `[lat, lon]`. `aproximado` quando não há traçado e as paragens se
+ * ligam a direito — o mapa desenha-o a tracejado. Ausente em dados de antes.
+ */
+export type LinhaNoMapa = {
+  tracos: string[];
+  aproximado: boolean;
+  paragens: [number, number][];
+};
+
+export type LinhaDetalhe = Linha & { sentidos: Sentido[]; no_mapa?: LinhaNoMapa };
 
 export type Estacao = {
   id: string;
@@ -704,6 +722,8 @@ export type RedeDoTarifario = {
   /** A frase que se mostra por baixo da tabela: «Tabela tarifária da operadora…». */
   fonte?: string;
   url?: string;
+  /** As condições que valem para a tabela toda, numa nota por baixo dela (#188). */
+  nota?: string;
 };
 
 export type Tarifas = {
@@ -756,6 +776,8 @@ export type Descarga = {
   atribuicao: string | null;
   atribuicao_obrigatoria: boolean;
   descricao?: string;
+  /** O nome do serviço, quando o ficheiro é de um serviço com nome (#78). */
+  nome?: string;
 };
 
 /** 3 379 988 → «3,2 MB». Quem descarrega num telemóvel quer saber antes. */
@@ -774,6 +796,16 @@ export function seguro(identificador: string): string {
 }
 
 // --- prosa -----------------------------------------------------------------
+
+/**
+ * UMA HORA COM DOIS ALGARISMOS ANTES DOS DOIS PONTOS: «08:00», e não «8:00»
+ * (#154). As folhas escrevem-na como lhes apetece — uma brochura «8:00», o
+ * sítio de reservas «08:55» —, e a página dizia as duas na mesma lista. O que
+ * não for uma hora fica como está.
+ */
+export function horaComZero(hora: string): string {
+  return /^\d:\d{2}$/.test(hora.trim()) ? `0${hora.trim()}` : hora;
+}
 
 /** Uma hora `25:10` do GTFS é 01:10 do dia seguinte, e tem de o dizer. */
 export function horaLegivel(hora: string): { texto: string; diaSeguinte: boolean } {
@@ -853,6 +885,8 @@ export type HorarioAPedido = {
    * a receita os diz. Ausente em dados de antes disto.
    */
   tarifas?: string[];
+  /** O preço desses títulos, já resolvido (#192). Ausente em dados de antes disto. */
+  precos?: PrecoAPedido[];
   regras: string[];
   paragens: string[];
   viagens: number;
@@ -876,6 +910,9 @@ export type HorarioAPedido = {
  * vazios quando o documento não diz nada — e nunca a data de obtenção no
  * lugar deles (`sitio.py`, `_conteudo_de`).
  */
+/** Um título que se paga num serviço a pedido, com o valor e se está confirmado. */
+export type PrecoAPedido = { nome: string; valor: number; confirmado: boolean };
+
 export type ConteudoDe = { em_vigor_desde: string | null; texto: string | null };
 
 /**
@@ -894,7 +931,9 @@ export function fraseDoConteudo(
     return `Em vigor desde ${dia}/${mes}/${ano}, diz ${documento}.`;
   }
   if (c.texto) return `${Documento} não diz o dia em que entra em vigor: ${c.texto}.`;
-  return `${Documento} não diz desde quando vale.`;
+  // «Não indica a data de início», e não «não diz desde quando vale», que
+  // soava a nota interna (#155).
+  return `${Documento} não indica a data de início.`;
 }
 
 export type APedido = {
@@ -907,6 +946,8 @@ export type APedido = {
     telefone_apresentado?: string;
     telefone_nota?: string;
     email?: string;
+    /** A frase que diz para que serve o correio eletrónico, antes dele (#153). */
+    email_nota?: string;
     com_reserva_online?: string[];
     tolerancia?: string;
   };
@@ -1005,6 +1046,11 @@ export type ParagemDeModo = {
    * autocarro.
    */
   destinos?: { id: string; nome: string }[];
+  /**
+   * As partidas daqui, com a forma das de uma paragem da rede (#88). Ausente
+   * em dados de antes disto.
+   */
+  partidas?: Partida[];
 };
 
 export type OperadorDeModo = { nome: string; sitio: string | null; bilhetes: string | null };
@@ -1075,6 +1121,8 @@ export type HorarioDeModo = {
   transcrito_em?: string;
   /** De quando é o cartaz, pelo que ele diz (`ConteudoDe`). */
   conteudo_de?: ConteudoDe;
+  /** O endereço público do cartaz, no sítio de quem o publica (#191). */
+  documento?: string | null;
   /**
    * Onde fica cada paragem, para as que se sabe. NUNCA é a lista toda, e
    * nunca se completa por estimativa: o cartaz dá o nome, e o nome só se
@@ -1227,4 +1275,18 @@ export function operadorCurto(nome: string): string {
   return /^(unipessoal[ ,.]*)?(l\.?d\.?a\.?|s\.?a\.?|crl|e\.?m\.?|e\.?p\.?e\.?)\.?$/i.test(cauda)
     ? partes.slice(0, -1).join(',').trim()
     : limpo;
+}
+
+const DIAS_CURTOS = ['dom.', 'seg.', 'ter.', 'qua.', 'qui.', 'sex.', 'sáb.'];
+
+/**
+ * «seg., 2/11»: o dia da semana à frente (#193). «02/11» sozinho obrigava a
+ * fazer a conta de que dia é — e quem planeia para segunda quer ver segunda.
+ * `iso` é `AAAA-MM-DD`; o dia da semana conta-se no calendário, sem fuso.
+ */
+export function diaComSemana(iso: string): string {
+  const [ano, mes, dia] = iso.split('-').map(Number);
+  if (!ano || !mes || !dia) return iso;
+  const semana = DIAS_CURTOS[new Date(Date.UTC(ano, mes - 1, dia)).getUTCDay()];
+  return `${semana}, ${dia}/${mes}`;
 }

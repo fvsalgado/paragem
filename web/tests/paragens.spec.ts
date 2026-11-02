@@ -9,7 +9,7 @@
  */
 import { test, expect } from '@playwright/test';
 
-import { paragens } from './dados-da-regiao';
+import { buscaDeUmaParagem, paragemComMaisPartidas, paragens } from './dados-da-regiao';
 
 const letraDe = (nome: string) =>
   nome
@@ -71,4 +71,41 @@ test('a letra tem a barra das iniciais em cima e a seguinte no fim', async ({ pa
   if (porLetra.size > 1) {
     await expect(fim.locator('a[rel="next"], a[rel="prev"]').first()).toBeVisible();
   }
+});
+
+test('a procura pelo nome acha a paragem sem JavaScript, e a lista diz as linhas em distintivos', async ({
+  browser,
+}) => {
+  // SEM JAVASCRIPT, de propósito: é o caminho de quem não usa o mapa (#103).
+  const contexto = await browser.newContext({ javaScriptEnabled: false });
+  const page = await contexto.newPage();
+  const { nome, busca } = buscaDeUmaParagem();
+  await page.goto('/rede/paragens/');
+  await page.getByRole('searchbox', { name: 'Procurar paragem ou linha' }).fill(busca);
+  await page.getByRole('button', { name: 'Procurar' }).click();
+  await expect(page).toHaveURL(/\/rede\/paragens\/procurar\/\?q=/);
+  const resultado = page.getByRole('link', {
+    name: new RegExp(`^${nome.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`),
+  });
+  await expect(resultado.first()).toBeVisible();
+  // As linhas são distintivos, pela ordem dos números (#183).
+  const p = paragemComMaisPartidas();
+  if (p.linhas.length > 1) {
+    const numeros = await resultado
+      .first()
+      .locator('.linhas-da-paragem .distintivo')
+      .allInnerTexts();
+    expect(numeros.length).toBeGreaterThan(0);
+    const ordenados = [...numeros].sort((a, b) => a.localeCompare(b, 'pt', { numeric: true }));
+    expect(numeros).toEqual(ordenados);
+  }
+  await contexto.close();
+});
+
+test('a procura sem resultados diz o que fazer, e não deixa a página em branco', async ({
+  page,
+}) => {
+  await page.goto('/rede/paragens/procurar/?q=zzqqxx');
+  await expect(page.locator('.sem-resultados')).toContainText('Nenhuma paragem nem linha');
+  await expect(page.getByRole('link', { name: 'Ver as paragens pela inicial' })).toBeVisible();
 });
