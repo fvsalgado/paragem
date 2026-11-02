@@ -6868,6 +6868,7 @@ fieldset.escolha-do-sentido legend {
   )
   .maplibregl-ctrl-icon {
   background-color: var(--marca-texto);
+}
 
 /* --- as páginas dos modos (auditoria de 1/11/2026, fase 2) ---------------- */
 
@@ -6912,14 +6913,14 @@ fieldset.escolha-do-sentido legend {
 
 /* As regras de uma folha, numa lista dentro da caixa da reserva (#156). */
 .faixa.a-pedido .titulo-das-regras {
-  margin: 0.75rem 0 0.25rem;
+  margin: var(--espaco-3) 0 var(--espaco-1);
 }
 .faixa.a-pedido ul.regras-da-reserva {
-  margin: 0 0 0.25rem;
+  margin: 0 0 var(--espaco-1);
   padding-left: 1.25rem;
 }
 .faixa.a-pedido ul.regras-da-reserva > li + li {
-  margin-top: 0.25rem;
+  margin-top: var(--espaco-1);
 }
 
 /* Um concelho de cada vez, fechado (#55): o mesmo desenho das zonas, e as
@@ -6928,7 +6929,7 @@ details.concelho-a-pedido {
   border: 1px solid var(--linhas);
   border-radius: var(--raio);
   background: var(--superficie);
-  margin: 0.5rem 0;
+  margin: var(--espaco-2) 0;
 }
 details.concelho-a-pedido > summary {
   cursor: pointer;
@@ -6947,16 +6948,16 @@ details.concelho-a-pedido > summary .nome-da-zona {
   font-weight: 700;
 }
 details.concelho-a-pedido > summary .circuitos-no-resumo {
-  font-size: 0.9rem;
+  font-size: var(--letra-pequena);
   color: var(--texto-secundario);
 }
 details.concelho-a-pedido > .zona-a-pedido {
   border-top: 1px solid var(--linhas);
-  padding: 0.5rem 0.85rem 0.75rem;
+  padding: var(--espaco-2) 0.85rem var(--espaco-3);
 }
 details.concelho-a-pedido > .zona-a-pedido > h3 {
-  margin: 0.25rem 0 0.25rem;
-  font-size: 1rem;
+  margin: var(--espaco-1) 0 var(--espaco-1);
+  font-size: var(--letra-corpo);
 }
 details.concelho-a-pedido > summary::after {
   content: '';
@@ -6981,6 +6982,6 @@ details.concelho-a-pedido > summary:focus-visible {
 
 /* As condições de uma tabela do tarifário, por baixo dela (#188). */
 .nota-da-tabela {
-  margin: 0.5rem 0 0;
-  font-size: 0.95rem;
+  margin: var(--espaco-2) 0 0;
+  font-size: var(--letra-media);
 }
