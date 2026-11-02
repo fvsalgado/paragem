@@ -6641,3 +6641,80 @@ nav.indice-da-pagina a {
     min-width: 0;
   }
 }
+
+/* --- a linha: um sentido de cada vez (#94) --------------------------------- */
+
+/* Os sentidos num par de botões de rádio com forma de cápsula: o escolhido
+   cheio, os outros com contorno — a diferença lê-se em cinzento, e não só
+   pela cor. O botão nativo fica escondido e continua a receber o foco, que
+   se vê no contorno da cápsula. */
+fieldset.escolha-do-sentido {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-2);
+  margin: var(--espaco-5) 0 var(--espaco-2);
+  padding: 0;
+  border: 0;
+}
+fieldset.escolha-do-sentido legend {
+  margin-bottom: var(--espaco-2);
+  padding: 0;
+  font-size: var(--letra-pequena);
+  color: var(--texto-secundario);
+}
+.escolha-do-sentido label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+  padding: var(--espaco-1) var(--espaco-4);
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio-redondo);
+  background: var(--superficie);
+  color: var(--texto);
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+}
+.escolha-do-sentido input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.escolha-do-sentido label:has(input:checked) {
+  background: var(--texto);
+  border-color: var(--texto);
+  color: var(--fundo);
+}
+.escolha-do-sentido label:has(input:focus-visible) {
+  outline: 3px solid var(--foco);
+  outline-offset: 2px;
+}
+/* SÓ A SECÇÃO DO SENTIDO ESCOLHIDO, e o título dela fica para quem ouve: o
+   botão escolhido já o diz a quem vê. Sem `:has()`, tudo à vista, como era. */
+@supports selector(:has(*)) {
+  main:has(.escolha-do-sentido) .sentidos-da-linha > section > h2 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  main:has(.escolha-do-sentido label:nth-of-type(1) input:checked)
+    .sentidos-da-linha
+    > section:not(:nth-of-type(1)),
+  main:has(.escolha-do-sentido label:nth-of-type(2) input:checked)
+    .sentidos-da-linha
+    > section:not(:nth-of-type(2)),
+  main:has(.escolha-do-sentido label:nth-of-type(3) input:checked)
+    .sentidos-da-linha
+    > section:not(:nth-of-type(3)),
+  main:has(.escolha-do-sentido label:nth-of-type(4) input:checked)
+    .sentidos-da-linha
+    > section:not(:nth-of-type(4)) {
+    display: none;
+  }
+}

@@ -283,167 +283,190 @@ export default async function Linha({
       />
       <AvisosDaPagina avisos={avisos} catalogo={catalogo} titulo="Avisos nesta linha" />
 
-      {/* Com dois sentidos, a página é comprida: o segundo começa depois do
-          horário e do percurso do primeiro. Os dois à mão, logo em cima. */}
-      {sentidos.length > 1 && (
-        <nav aria-label="Sentidos desta linha" className="sentidos">
-          <ul>
-            {sentidos.map(({ ancora, titulo }) => (
-              <li key={ancora}>
-                <a href={`#${ancora}`}>{titulo}</a>
-              </li>
-            ))}
-          </ul>
-        </nav>
+      {/* A LINHA NO MAPA, à cabeça: o traçado dela aceso por cima da rede, e
+          não um esquema ligado a direito — o esquema da linha é o percurso de
+          cada sentido, mais abaixo, desenhado como num mapa de metro. */}
+      {comMapa && (
+        <p className="cartao-accoes">
+          <Link className="botao secundario" href={url(rid, `/?linha=${encodeURIComponent(l.id)}`)}>
+            Ver o percurso no mapa
+          </Link>
+        </p>
       )}
 
-      {sentidos.map(({ s, ancora, titulo, quadros, hoje }, i) => {
-        const ultima = s.paragens.length - 1;
-        return (
-          <section key={s.sentido} aria-labelledby={ancora}>
-            <h2 id={ancora}>{titulo}</h2>
-            {/* DE ONDE PARTEM E ATÉ ONDE VÃO, DE VERDADE, com as contas: há
+      {/* UM SENTIDO DE CADA VEZ, escolhido num par de botões (#94). Eram duas
+          ligações do tamanho de um título, seguidas do mesmo título repetido,
+          e para ver o outro sentido rolavam-se quatro ecrãs. São botões de
+          rádio — as setas mudam de um para o outro, e um leitor de ecrã diz
+          qual está escolhido —, e o CSS mostra a secção do escolhido. Sem
+          `:has()`, mostram-se as duas, uma a seguir à outra, como antes. */}
+      {sentidos.length > 1 && (
+        <fieldset className="escolha-do-sentido">
+          <legend>Sentido</legend>
+          {sentidos.map(({ ancora, titulo }, i) => (
+            <label key={ancora}>
+              <input type="radio" name="sentido" value={ancora} defaultChecked={i === 0} />
+              <span>{titulo}</span>
+            </label>
+          ))}
+        </fieldset>
+      )}
+
+      <div className="sentidos-da-linha">
+        {sentidos.map(({ s, ancora, titulo, quadros, hoje }) => {
+          const ultima = s.paragens.length - 1;
+          return (
+            <section key={s.sentido} aria-labelledby={ancora}>
+              <h2 id={ancora}>{titulo}</h2>
+              {/* DE ONDE PARTEM E ATÉ ONDE VÃO, DE VERDADE, com as contas: há
                 sentidos em que as viagens não começam todas no mesmo sítio, e
                 o título só diz o destino mais comum. */}
-            <dl className="pontas-do-sentido">
-              <dt>De</dt>
-              <dd>{pontasEmTexto(pontas(s).origens)}</dd>
-              <dt>Até</dt>
-              <dd>{pontasEmTexto(pontas(s).destinos)}</dd>
-            </dl>
-            <p className="secundario">{plural(s.viagens, 'viagem', 'viagens')} neste sentido.</p>
-            <EsquemaDaLinha
-              sentidos={l.sentidos.map((x) => x.paragens)}
-              qual={i}
-              onde={onde}
-              cor={traco(l.cor) ?? '#0a5c7a'}
-              codigo={l.codigo}
-              noMapa={comMapa ? url(rid, `/?linha=${encodeURIComponent(l.id)}`) : null}
-            />
+              <dl className="pontas-do-sentido">
+                <dt>De</dt>
+                <dd>{pontasEmTexto(pontas(s).origens)}</dd>
+                <dt>Até</dt>
+                <dd>{pontasEmTexto(pontas(s).destinos)}</dd>
+              </dl>
+              <p className="secundario">{plural(s.viagens, 'viagem', 'viagens')} neste sentido.</p>
+              {/* SEM MAPA NA REGIÃO, o esquema ligado a direito ainda diz para
+                que lado a linha vai; com mapa, o mapa di-lo melhor. */}
+              {!comMapa && (
+                <EsquemaDaLinha
+                  sentidos={l.sentidos.map((x) => x.paragens)}
+                  qual={l.sentidos.indexOf(s)}
+                  onde={onde}
+                  cor={traco(l.cor) ?? '#0a5c7a'}
+                  codigo={l.codigo}
+                  noMapa={null}
+                />
+              )}
 
-            {/* NUM ECRÃ LARGO, O HORÁRIO E O PERCURSO LADO A LADO (P1-014). Era
+              {/* NUM ECRÃ LARGO, O HORÁRIO E O PERCURSO LADO A LADO (P1-014). Era
                 uma coluna de 608 px num ecrã de 1440, com 400 px vazios de
                 cada lado e o percurso a começar depois do último quadro. */}
-            <div className="em-colunas horario-e-percurso">
-              <div className="coluna-principal">
-                <h3 className="parte-do-sentido">Horário</h3>
-                {quadros.length > 0 ? (
-                  <QuadrosPorDia
-                    regiao={rid}
-                    quadros={quadros}
-                    noServidor={hoje}
-                    semHoje="esta linha não tem viagens neste sentido"
-                  />
-                ) : (
-                  // DADOS DE ANTES DO HORÁRIO DA LINHA: diz-se onde estão as
-                  // horas, em vez de deixar a secção vazia a parecer que não há.
-                  <p>
-                    As horas desta linha estão nas páginas de cada paragem do percurso, aqui em
-                    baixo.
-                  </p>
-                )}
-              </div>
+              <div className="em-colunas horario-e-percurso">
+                <div className="coluna-principal">
+                  <h3 className="parte-do-sentido">Horário</h3>
+                  {quadros.length > 0 ? (
+                    <QuadrosPorDia
+                      regiao={rid}
+                      quadros={quadros}
+                      noServidor={hoje}
+                      semHoje="esta linha não tem viagens neste sentido"
+                    />
+                  ) : (
+                    // DADOS DE ANTES DO HORÁRIO DA LINHA: diz-se onde estão as
+                    // horas, em vez de deixar a secção vazia a parecer que não há.
+                    <p>
+                      As horas desta linha estão nas páginas de cada paragem do percurso, aqui em
+                      baixo.
+                    </p>
+                  )}
+                </div>
 
-              <div className="coluna-lateral">
-                <h3 className="parte-do-sentido">Percurso</h3>
-                {soPontosDeHorario(s, l.sentidos) && (
-                  <p className="faixa informacao so-pontos">
-                    Neste sentido só se conhecem as paragens com hora marcada no horário da
-                    operadora. As do caminho entre elas não estão nos dados — no sentido contrário
-                    estão — e não se inventam.
-                  </p>
-                )}
-                {s.variantes > 1 && (
-                  <p className="secundario">
-                    {s.variantes} percursos diferentes neste sentido. Mostra-se o mais servido (
-                    {plural(s.viagens_deste_percurso, 'viagem', 'viagens')}) — há viagens que não
-                    param em todas estas paragens.
-                  </p>
-                )}
-                {/* O PERCURSO DESENHADO NA COR DA LINHA, como nos mapas de rede:
+                <div className="coluna-lateral">
+                  <h3 className="parte-do-sentido">Percurso</h3>
+                  {soPontosDeHorario(s, l.sentidos) && (
+                    <p className="faixa informacao so-pontos">
+                      Neste sentido só se conhecem as paragens com hora marcada no horário da
+                      operadora. As do caminho entre elas não estão nos dados — no sentido contrário
+                      estão — e não se inventam.
+                    </p>
+                  )}
+                  {s.variantes > 1 && (
+                    <p className="secundario">
+                      {s.variantes} percursos diferentes neste sentido. Mostra-se o mais servido (
+                      {plural(s.viagens_deste_percurso, 'viagem', 'viagens')}) — há viagens que não
+                      param em todas estas paragens.
+                    </p>
+                  )}
+                  {/* O PERCURSO DESENHADO NA COR DA LINHA, como nos mapas de rede:
                 um fio com um nó por paragem, cheio nas pontas. Era uma lista
                 numerada, com o número de ordem à direita a fazer de ruído, e
                 a cor da linha não aparecia em lado nenhum além do distintivo. */}
-                {/* O PERCURSO COMPRIDO ENCOLHE PELO MEIO (#95): as primeiras e as
+                  {/* O PERCURSO COMPRIDO ENCOLHE PELO MEIO (#95): as primeiras e as
                     últimas paragens à vista, e as do meio num botão. Num ecrã
                     largo, o horário acabava aos 1 180 px e o percurso descia
                     mais 2 500, ao lado de uma coluna vazia. */}
-                {(() => {
-                  const item = (p: { id: string; nome: string }, i: number) => {
-                    const ligacoes = ligacoesDe(p.id);
-                    const aviso = avisoDaParagem.get(p.id);
-                    const classes = [
-                      i === 0 ? 'ponta primeira' : i === ultima ? 'ponta ultima' : '',
-                      aviso ? 'afetada' : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ');
-                    return (
-                      <li key={`${p.id}-${i}`} className={classes || undefined}>
-                        <Link href={urlDaParagem(rid, p.id)}>
-                          <span className="nome-no-percurso">{p.nome}</span>
-                          {ligacoes.length > 0 && (
-                            <span className="ligacoes-da-paragem">
-                              <span className="so-para-leitores">
-                                ,{' '}
-                                {ligacoes.length === 1 ? 'também a linha' : 'também as linhas'}{' '}
+                  {(() => {
+                    const item = (p: { id: string; nome: string }, i: number) => {
+                      const ligacoes = ligacoesDe(p.id);
+                      const aviso = avisoDaParagem.get(p.id);
+                      const classes = [
+                        i === 0 ? 'ponta primeira' : i === ultima ? 'ponta ultima' : '',
+                        aviso ? 'afetada' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ');
+                      return (
+                        <li key={`${p.id}-${i}`} className={classes || undefined}>
+                          <Link href={urlDaParagem(rid, p.id)}>
+                            <span className="nome-no-percurso">{p.nome}</span>
+                            {ligacoes.length > 0 && (
+                              <span className="ligacoes-da-paragem">
+                                <span className="so-para-leitores">
+                                  ,{' '}
+                                  {ligacoes.length === 1
+                                    ? 'também a linha'
+                                    : 'também as linhas'}{' '}
+                                </span>
+                                {ligacoes.slice(0, 5).map((c) => (
+                                  <Distintivo key={c} codigo={c} cor={corDoCodigo.get(c)} />
+                                ))}
+                                {ligacoes.length > 5 && (
+                                  <span className="secundario">+{ligacoes.length - 5}</span>
+                                )}
                               </span>
-                              {ligacoes.slice(0, 5).map((c) => (
-                                <Distintivo key={c} codigo={c} cor={corDoCodigo.get(c)} />
-                              ))}
-                              {ligacoes.length > 5 && (
-                                <span className="secundario">+{ligacoes.length - 5}</span>
-                              )}
-                            </span>
+                            )}
+                          </Link>
+                          {aviso && (
+                            <a className="aviso-no-percurso" href={`#aviso-${aviso}`}>
+                              Aviso<span className="so-para-leitores"> sobre esta paragem</span>
+                            </a>
                           )}
-                        </Link>
-                        {aviso && (
-                          <a className="aviso-no-percurso" href={`#aviso-${aviso}`}>
-                            Aviso<span className="so-para-leitores"> sobre esta paragem</span>
-                          </a>
-                        )}
-                      </li>
-                    );
-                  };
-                  const todas = s.paragens.map((p, i) => ({ p, i }));
-                  if (todas.length <= PERCURSO_INTEIRO) {
-                    return (
-                      <ol className="percurso-da-linha" style={cor}>
-                        {todas.map(({ p, i }) => item(p, i))}
-                      </ol>
-                    );
-                  }
-                  const inicio = todas.slice(0, PERCURSO_PONTAS);
-                  const meio = todas.slice(PERCURSO_PONTAS, -PERCURSO_PONTAS);
-                  const fim = todas.slice(-PERCURSO_PONTAS);
-                  return (
-                    <>
-                      <ol className="percurso-da-linha" style={cor}>
-                        {inicio.map(({ p, i }) => item(p, i))}
-                      </ol>
-                      <details className="meio-do-percurso" style={cor}>
-                        <summary>
-                          Mais {plural(meio.length, 'paragem', 'paragens')} pelo meio
-                        </summary>
-                        <ol className="percurso-da-linha" start={PERCURSO_PONTAS + 1}>
-                          {meio.map(({ p, i }) => item(p, i))}
+                        </li>
+                      );
+                    };
+                    const todas = s.paragens.map((p, i) => ({ p, i }));
+                    if (todas.length <= PERCURSO_INTEIRO) {
+                      return (
+                        <ol className="percurso-da-linha" style={cor}>
+                          {todas.map(({ p, i }) => item(p, i))}
                         </ol>
-                      </details>
-                      <ol
-                        className="percurso-da-linha"
-                        style={cor}
-                        start={todas.length - PERCURSO_PONTAS + 1}
-                      >
-                        {fim.map(({ p, i }) => item(p, i))}
-                      </ol>
-                    </>
-                  );
-                })()}
+                      );
+                    }
+                    const inicio = todas.slice(0, PERCURSO_PONTAS);
+                    const meio = todas.slice(PERCURSO_PONTAS, -PERCURSO_PONTAS);
+                    const fim = todas.slice(-PERCURSO_PONTAS);
+                    return (
+                      <>
+                        <ol className="percurso-da-linha" style={cor}>
+                          {inicio.map(({ p, i }) => item(p, i))}
+                        </ol>
+                        <details className="meio-do-percurso" style={cor}>
+                          <summary>
+                            Mais {plural(meio.length, 'paragem', 'paragens')} pelo meio
+                          </summary>
+                          <ol className="percurso-da-linha" start={PERCURSO_PONTAS + 1}>
+                            {meio.map(({ p, i }) => item(p, i))}
+                          </ol>
+                        </details>
+                        <ol
+                          className="percurso-da-linha"
+                          style={cor}
+                          start={todas.length - PERCURSO_PONTAS + 1}
+                        >
+                          {fim.map(({ p, i }) => item(p, i))}
+                        </ol>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
-            </div>
-          </section>
-        );
-      })}
+            </section>
+          );
+        })}
+      </div>
     </>
   );
 }

@@ -8,7 +8,28 @@
  */
 import { test, expect } from '@playwright/test';
 
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { BUILD, REGIAO } from './anfitrioes';
 import { fusoDaRegiao, linhaComMaisViagens, linhas } from './dados-da-regiao';
+
+/** A linha com mais viagens entre as que têm dois sentidos, ou nenhuma. */
+function linhaDeDoisSentidos(): { id: string } | null {
+  const comDois = linhas()
+    .slice()
+    .sort((a, b) => b.viagens - a.viagens || a.id.localeCompare(b.id))
+    .find((l) => {
+      const f = join(
+        BUILD,
+        REGIAO,
+        'sitio',
+        'linhas',
+        `${l.id.replace(/[^a-zA-Z0-9\-_]/g, '-')}.json`,
+      );
+      return existsSync(f) && (JSON.parse(readFileSync(f, 'utf8')).sentidos ?? []).length > 1;
+    });
+  return comDois ?? null;
+}
 
 const LINHA = linhaComMaisViagens();
 
@@ -70,7 +91,10 @@ test('o esquema desenha um sentido de cada vez, sem o traço por cima dos nomes'
   // Os dois sentidos sobrepostos pareciam um rabisco (#13).
   await page.goto(`/rede/linhas/${LINHA.id}/`);
   const esquemas = page.locator('figure.esquema-da-linha');
-  test.skip((await esquemas.count()) === 0, 'a linha não tem paragens com sítio');
+  test.skip(
+    (await esquemas.count()) === 0,
+    'com mapa na região, a página leva ao mapa com a linha acesa em vez do esquema; ou a linha não tem paragens com sítio',
+  );
   for (const f of await esquemas.all()) {
     await expect(f.locator('polyline')).toHaveCount(1);
     // Os nomes das pontas não se cruzam com o traço: nenhum ponto do traço
@@ -127,4 +151,30 @@ test('a lista separa a rede das linhas de outros operadores, e diz de quem são'
   await expect(outras.locator('ul.lista > li')).toHaveCount(deFora.length);
   await expect(outras.locator('ul.lista > li').first()).toContainText(' · ');
   await expect(page.locator('main > p').first()).toContainText('de outros operadores');
+});
+
+test('os sentidos escolhem-se num par de botões, e mostra-se um de cada vez', async ({ page }) => {
+  // Eram duas ligações do tamanho de um título, e o mesmo título repetido a
+  // seguir; para ver o outro sentido rolavam-se quatro ecrãs (#94).
+  const l = linhaDeDoisSentidos();
+  test.skip(!l, 'nenhuma linha desta região tem dois sentidos');
+  await page.goto(`/rede/linhas/${l!.id}/`);
+  const escolha = page.getByRole('group', { name: 'Sentido' });
+  const botoes = escolha.getByRole('radio');
+  expect(await botoes.count()).toBeGreaterThan(1);
+  await expect(botoes.first()).toBeChecked();
+  const seccoes = page.locator('.sentidos-da-linha > section');
+  await expect(seccoes.nth(0)).toBeVisible();
+  await expect(seccoes.nth(1)).toBeHidden();
+  await escolha.locator('label').nth(1).click();
+  await expect(botoes.nth(1)).toBeChecked();
+  await expect(seccoes.nth(1)).toBeVisible();
+  await expect(seccoes.nth(0)).toBeHidden();
+});
+
+test('com mapa, a página da linha leva ao mapa com ela acesa', async ({ page }) => {
+  await page.goto(`/rede/linhas/${LINHA.id}/`);
+  const noMapa = page.getByRole('link', { name: 'Ver o percurso no mapa' });
+  test.skip((await noMapa.count()) === 0, 'a região não tem mapa');
+  await expect(noMapa).toHaveAttribute('href', `/?linha=${encodeURIComponent(LINHA.id)}`);
 });
