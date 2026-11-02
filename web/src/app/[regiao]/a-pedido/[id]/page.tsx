@@ -191,7 +191,8 @@ export default async function HorarioAPedido({ params }: { params: Promise<Param
 
       <h2>{h.quadros.length === 1 ? 'O horário' : 'Os circuitos'}</h2>
       {h.quadros.length > 1 && (
-        <p className="secundario">Toque num circuito para ver as horas, paragem a paragem.</p>
+        // «Abra», e não «Toque»: num computador não se toca (#182).
+        <p className="secundario">Abra um circuito para ver as horas, paragem a paragem.</p>
       )}
       {/* UM QUADRO SÓ VEM ABERTO: não há o que escolher, e as horas eram o
           segundo toque de quem chegava. */}

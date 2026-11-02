@@ -373,20 +373,25 @@ export default async function Paragem({
 
       {/* ONDE FICA, em palavras de quem viaja. Eram coordenadas cruas —
           «39.463, -8.213525» —, que não dizem nada a ninguém e faziam a página
-          parecer um extrato de base de dados. O sítio tem o seu mapa; as
-          coordenadas ficam, em pequeno, para quem as quer. */}
-      <section aria-labelledby="onde">
-        <h2 id="onde">Onde fica</h2>
-        {(noMapa || noOsm) && (
+          parecer um extrato de base de dados. E o mapa do sítio aparecia duas
+          vezes, com dois nomes — «Ver no mapa» no topo e «Ver no mapa desta
+          região» aqui (#181). Fica o do topo; aqui, o mapa de fora, e as
+          coordenadas fechadas, para quem as quer. Numa região inventada não há
+          mapa de fora, e a secção não aparece. */}
+      {noOsm && (
+        <section aria-labelledby="onde">
+          <h2 id="onde">Onde fica</h2>
           <p className="cartao-accoes">
-            {noMapa && <a href={noMapa}>Ver no mapa desta região</a>}
-            {noOsm && <a href={noOsm}>Ver no OpenStreetMap</a>}
+            <a href={noOsm}>Abrir no OpenStreetMap</a>
           </p>
-        )}
-        <p className="secundario">
-          Coordenadas: {p.lat}, {p.lon}
-        </p>
-      </section>
+          <details className="lista-fechada discreta">
+            <summary>As coordenadas</summary>
+            <p className="secundario">
+              {p.lat}, {p.lon}
+            </p>
+          </details>
+        </section>
+      )}
     </>
   );
 }
