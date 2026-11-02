@@ -18,6 +18,7 @@ import { corDaRede, misturar, type CorDaLinha } from '@/lib/estilo-mapa';
 import { descodificarLinha } from '@/lib/otp';
 import { aplicaAParagem, redeToda, type AvisoNoMapa } from '@/lib/avisos';
 import Distintivo from '@/componentes/Distintivo';
+import Estado from '@/componentes/Estado';
 import { calendarioDe, horaDoRelogio, proximas, type Calendario } from '@/lib/dias';
 import ASeguir from '@/componentes/ASeguir';
 import PertoDeTi from '@/componentes/PertoDeTi';
@@ -243,6 +244,7 @@ export default function AppDoMapa({
   aPedidoNaFolha = null,
   oQueJunta = null,
   sedes = [],
+  estacoesSemAutocarro = [],
 }: {
   regiao: string;
   /**
@@ -303,6 +305,8 @@ export default function AppDoMapa({
   oQueJunta?: string | null;
   /** As sedes de concelho, para o mapa as nomear a todos os zooms (`sedes.ts`). */
   sedes?: Sede[];
+  /** As estações sem autocarro a menos de 300 m — um anel no mapa, e uma palavra no cartão. */
+  estacoesSemAutocarro?: string[];
 }) {
   const [menu, setMenu] = useState(false);
 
@@ -1118,6 +1122,15 @@ export default function AppDoMapa({
               <ContagemDaEstacao id={escolhido.tipo === 'bicicleta' ? escolhido.id : null} />
             </p>
 
+            {/* SEM AUTOCARRO À PORTA, DITO À CABEÇA: quem chega de comboio a
+              esta estação tem de arranjar outra maneira de sair dela. É o que
+              o anel à volta dela no mapa quer dizer. */}
+            {escolhido.tipo === 'estacao' && estacoesSemAutocarro.includes(escolhido.id) && (
+              <p className="estado-no-cartao">
+                <Estado tipo="atencao">Sem autocarro a menos de 300&nbsp;m</Estado>
+              </p>
+            )}
+
             {/* OS DOIS GESTOS, À CABEÇA DO CARTÃO (P2-001, P3-024).
               Havia um só, «Como chegar», que punha este sítio no DESTINO — e
               a única instrução do ecrã inicial mandava escrever primeiro DE
@@ -1374,6 +1387,7 @@ export default function AppDoMapa({
           perto={!direcoes && !escolhido && !linha ? perto : null}
           sedes={sedes}
           linha={linhaNoMapa}
+          estacoesSemAutocarro={estacoesSemAutocarro}
         />
 
         {/* A FOLHA DE ABERTURA: por onde se pode ir, antes de se perguntar nada.

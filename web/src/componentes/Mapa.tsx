@@ -64,8 +64,12 @@ import type { Sede } from '@/lib/sedes';
 
 export type Marca = Ponto & { partidas?: number };
 
-/** Uma lista vazia que é sempre a mesma, para o valor por omissão não mudar a cada pintura. */
+/** Listas vazias que são sempre as mesmas, para o valor por omissão não mudar a cada pintura. */
 const SEM_SEDES: readonly Sede[] = [];
+const SEM_ESTACOES: readonly string[] = [];
+
+/** A cor do anel das estações sem autocarro perto: a de atenção (§6), em cada tema. */
+const ANEL_DE_ATENCAO: Record<TemaDoMapa, string> = { claro: '#b54708', escuro: '#f5a524' };
 
 /** O que o MapLibre escreve nos controlos que este mapa usa, em português. */
 const NOMES_DOS_CONTROLOS = {
@@ -561,6 +565,7 @@ export default function Mapa({
   perto = null,
   sedes = SEM_SEDES,
   linha = null,
+  estacoesSemAutocarro = SEM_ESTACOES,
 }: {
   centro: [number, number];
   zoom?: number;
@@ -656,6 +661,14 @@ export default function Mapa({
     paragens: [number, number][];
     cor: CorDaLinha;
   } | null;
+  /**
+   * AS ESTAÇÕES SEM AUTOCARRO A MENOS DE 300 m, pelos identificadores: no mapa
+   * levam um anel na cor de atenção à volta da placa (§6.4 do briefing da
+   * região de origem — e de qualquer região com comboio). Quem chega de
+   * comboio a uma delas tem de arranjar outra maneira de sair de lá, e é
+   * melhor sabê-lo antes de apanhar o comboio.
+   */
+  estacoesSemAutocarro?: readonly string[];
 }) {
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<MapaLibre | null>(null);
@@ -975,6 +988,34 @@ export default function Mapa({
             });
           }
 
+          // O ANEL DAS ESTAÇÕES SEM AUTOCARRO PERTO, por baixo da placa delas e
+          // um pouco maior: vê-se à volta, e a forma diz o que a cor confirma.
+          // O cartão da estação di-lo por extenso.
+          const estacao = camadasDe(tiposDasCamadas.current).find((c) => c.tipo === 'estacao');
+          if (estacao && estacoesSemAutocarro.length && criado!.getLayer('pontos-estacao')) {
+            criado!.addLayer(
+              {
+                id: 'estacoes-sem-autocarro',
+                type: 'circle',
+                source: 'paragens',
+                minzoom: estacao.minzoom,
+                filter: [
+                  'all',
+                  ['==', ['get', 'tipo'], 'estacao'],
+                  ['in', ['get', 'id'], ['literal', [...estacoesSemAutocarro]]],
+                  JA_APARECEU,
+                ],
+                paint: {
+                  'circle-radius': pelosZooms(estacao.raios, (r) => r + 4),
+                  'circle-color': 'rgba(0,0,0,0)',
+                  'circle-stroke-color': ANEL_DE_ATENCAO[tema],
+                  'circle-stroke-width': 2.5,
+                },
+              } as unknown as LayerSpecification,
+              'pontos-estacao',
+            );
+          }
+
           // A LINHA ESCOLHIDA, por cima dos pontos e por baixo dos nomes: é a
           // única coisa acesa, e os nomes continuam a ler-se por cima dela.
           // Nasce vazia; enche-se quando alguém escolhe uma linha.
@@ -1126,6 +1167,12 @@ export default function Mapa({
   const camadasNossas = (tema: TemaDoMapa): LayerSpecification[] => [
     ...camadasDaRede(tema, esbatida),
     ...(linha ? camadasDaLinha(tema, linha.cor, linha.aproximado) : []),
+    {
+      id: 'estacoes-sem-autocarro',
+      type: 'circle',
+      source: 'paragens',
+      paint: { 'circle-stroke-color': ANEL_DE_ATENCAO[tema] },
+    } as LayerSpecification,
     ...camadasDosNomesDosPontos(tema, 'paragens'),
     // As placas são imagens, e não mudam com o tema: só os círculos.
     ...camadasDe(tiposDasCamadas.current)
@@ -1157,6 +1204,9 @@ export default function Mapa({
         m.setPaintProperty(id, 'circle-opacity', quanto);
         m.setPaintProperty(id, 'circle-stroke-opacity', quanto);
       }
+    }
+    if (m.getLayer('estacoes-sem-autocarro')) {
+      m.setPaintProperty('estacoes-sem-autocarro', 'circle-stroke-opacity', quanto);
     }
     for (const id of ['nomes-de-paragens', 'nomes-de-estacoes']) {
       if (m.getLayer(id)) m.setPaintProperty(id, 'text-opacity', esbatida ? 0.6 : 1);

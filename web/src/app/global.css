@@ -6436,3 +6436,47 @@ figure.mapa-do-concelho figcaption {
 .caixa-do-mapa-do-concelho .maplibregl-ctrl-group:has(> .maplibregl-ctrl-geolocate) {
   display: none;
 }
+
+/* --- as pastilhas de estado (`Estado.tsx`) ------------------------------- */
+
+/* O ÍCONE E A PALAVRA, e a cor só a confirmar (1.4.1). Para uma linha de
+   texto: uma frase comprida não vai numa cápsula. A de atenção e a de alerta
+   levam as cores de estado do §6; a que está bem e a nota ficam neutras — um
+   verde de «está bem» confundia-se com o das bicicletas, que é um modo. */
+.estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.65rem 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-size: var(--letra-pequena, 0.9rem);
+  font-weight: 700;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.estado svg {
+  flex: none;
+}
+.estado-atencao {
+  background: var(--atencao-fundo);
+  color: var(--texto);
+}
+.estado-atencao svg {
+  color: var(--atencao);
+}
+.estado-alerta {
+  background: var(--alerta-fundo);
+  color: var(--alerta-texto-forte);
+}
+.estado-certo,
+.estado-informacao {
+  background: var(--superficie-suave);
+  color: var(--texto);
+}
+.estado-certo svg,
+.estado-informacao svg {
+  color: var(--texto-secundario);
+}
+.estado-no-cartao {
+  margin: 0.4rem 0 0;
+}
