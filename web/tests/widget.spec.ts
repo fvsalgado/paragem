@@ -4,7 +4,7 @@
  */
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { PROVA } from './anfitrioes';
+import { PRODUTO, PROVA } from './anfitrioes';
 
 /** O contraste entre o texto e o fundo de um elemento, como o navegador os pinta. */
 async function contraste(l: import('@playwright/test').Locator): Promise<number> {
@@ -95,7 +95,7 @@ test('«Para onde quer ir?» é um formulário que abre o planeador da região',
 test('a linha para colar é JavaScript, e a caixa só existe nos domínios das regiões', async ({
   page,
 }) => {
-  const resposta = await page.request.get('http://127.0.0.1:4321/widget/viagem/');
+  const resposta = await page.request.get(`${PRODUTO}/widget/viagem/`);
   expect(resposta.status()).toBe(404);
   await page.goto(`${PROVA}/levar/`);
   const tipo = await page.evaluate(async () => {
