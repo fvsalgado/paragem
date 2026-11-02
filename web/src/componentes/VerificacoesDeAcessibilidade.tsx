@@ -17,19 +17,26 @@
  *
  * O que muda de uma para a outra fica de fora: o contraste dos números de
  * linha só existe onde há linhas.
+ *
+ * NA LÍNGUA DE QUEM DECLARA, E SEM PORTA ABERTA (auditoria de 1/11/2026,
+ * #157). Dizia «no ramo que se publica» e acabava em «Não trava a publicação
+ * sozinha» — verdade, e lida por uma entidade pública como a admissão de que
+ * uma falha pode ir para o ar. Fazer o teste travar a publicação é da
+ * plataforma, e não deste ficheiro; o que se diz aqui é o que é verdade e
+ * serve a quem lê: que a falha se vê na hora.
  */
 export default function VerificacoesDeAcessibilidade({ comLinhas }: { comLinhas: boolean }) {
   return (
     <>
       <p>
-        Em cada alteração proposta ao código, e no ramo que se publica, correm estes testes
-        automáticos sobre páginas de cada tipo — o axe-core e o Lighthouse no tema claro e no
-        escuro:
+        Em cada alteração ao sítio, testes automáticos de acessibilidade verificam páginas de cada
+        tipo, no tema claro e no escuro:
       </p>
       <ul>
         <li>
-          o <a href="https://github.com/dequelabs/axe-core">axe-core</a>, com as regras das WCAG 2.0
-          e 2.1 de nível A e AA — entre elas, o contraste mínimo de 4,5:1 no texto
+          as regras das WCAG 2.0 e 2.1 de nível A e AA, com a ferramenta{' '}
+          <a href="https://github.com/dequelabs/axe-core">axe-core</a> — entre elas, o contraste
+          mínimo de 4,5:1 no texto
           {comLinhas
             ? ', incluindo os números de linha, cuja cor vem do horário da operadora e é corrigida quando não contrasta'
             : ''}
@@ -40,12 +47,9 @@ export default function VerificacoesDeAcessibilidade({ comLinhas }: { comLinhas:
         <li>nada que obrigue a deslizar para o lado num ecrã de telemóvel;</li>
         <li>uma ligação, à cabeça da página, para saltar diretamente ao conteúdo;</li>
         <li>o tema claro ou escuro à escolha de quem vê — por omissão, o do aparelho;</li>
-        <li>o Lighthouse, com a nota de acessibilidade de pelo menos 95 em telemóvel.</li>
+        <li>a nota de acessibilidade do Lighthouse, de pelo menos 95 em telemóvel.</li>
       </ul>
-      <p>
-        Uma falha deixa a verificação a vermelho, à vista de quem publica. Não trava a publicação
-        sozinha.
-      </p>
+      <p>Quando um destes testes falha, quem publica o sítio vê-o na hora.</p>
       <p>O que está no desenho do sítio e nenhum teste automático confirma:</p>
       <ul>
         <li>o foco visível em todos os elementos que o recebem;</li>
