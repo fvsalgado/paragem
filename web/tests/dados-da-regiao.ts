@@ -80,8 +80,15 @@ export type HorarioDeModo = {
   viagens: number;
   coordenadas: Record<string, unknown>;
   quadros: Quadro[];
+  conteudo_de?: { em_vigor_desde: string | null; texto: string | null };
+  documento?: string | null;
 };
-export type ParagemDeModo = { nome: string; concelho: string | null };
+export type ParagemDeModo = {
+  nome: string;
+  concelho: string | null;
+  /** As partidas daqui (#88); ausentes em dados de antes disso. */
+  partidas?: { hora: string }[];
+};
 export type Modo = {
   modo: string;
   quantos: number;
@@ -90,7 +97,7 @@ export type Modo = {
   sistemas: Sistema[];
   horarios: HorarioDeModo[];
   percursos: { nome: string }[];
-  pontos: { concelho: string | null }[];
+  pontos: { concelho: string | null; lat: number; lon: number }[];
   paragens: ParagemDeModo[];
   /** Os urbanos que a rede própria opera (`rede.urbanos`); ausente onde não há. */
   urbanos_da_rede?: { nome: string; concelho: string; linhas: { id: string; nome: string }[] }[];

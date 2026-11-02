@@ -1023,6 +1023,11 @@ export type ParagemDeModo = {
    * autocarro.
    */
   destinos?: { id: string; nome: string }[];
+  /**
+   * As partidas daqui, com a forma das de uma paragem da rede (#88). Ausente
+   * em dados de antes disto.
+   */
+  partidas?: Partida[];
 };
 
 export type OperadorDeModo = { nome: string; sitio: string | null; bilhetes: string | null };
@@ -1093,6 +1098,8 @@ export type HorarioDeModo = {
   transcrito_em?: string;
   /** De quando é o cartaz, pelo que ele diz (`ConteudoDe`). */
   conteudo_de?: ConteudoDe;
+  /** O endereço público do cartaz, no sítio de quem o publica (#191). */
+  documento?: string | null;
   /**
    * Onde fica cada paragem, para as que se sabe. NUNCA é a lista toda, e
    * nunca se completa por estimativa: o cartaz dá o nome, e o nome só se

@@ -12,6 +12,7 @@
  */
 import type { Modos } from './formato.ts';
 import { metrosEntre } from './lista-de-paragens.ts';
+import { juntarPontos } from './pagina-do-modo.ts';
 
 /** Até onde é «à porta»: o que se anda a pé com uma mala, sem atravessar a vila. */
 export const RAIO_DA_PORTA = 400;
@@ -51,7 +52,8 @@ export function tambemAqui(
           coisas.push({ modo, nome: e.nome ?? 'Estação', de: s.nome, metros, id: e.id ?? null });
       }
     }
-    for (const p of d.pontos ?? []) {
+    // A mesma praça mapeada duas vezes é uma (`juntarPontos`, #189).
+    for (const p of juntarPontos(d.pontos ?? [])) {
       const metros = perto(p);
       if (metros !== null) {
         coisas.push({

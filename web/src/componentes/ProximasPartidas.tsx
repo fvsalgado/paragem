@@ -28,7 +28,7 @@ export default function ProximasPartidas({
   regiao: string;
   partidas: PartidasCompactas;
   cores: Record<string, string | null>;
-  Titulo?: 'h2' | 'h3' | null;
+  Titulo?: 'h2' | 'h3' | 'h4' | null;
   id?: string;
   titulo?: string;
   quantas?: number;

@@ -38,7 +38,7 @@ export default function ASeguir({
    * `null` quando quem o usa já pôs o título por cima (a paragem à porta de
    * uma estação, com o nome dela e a distância).
    */
-  Titulo?: 'h2' | 'h3' | null;
+  Titulo?: 'h2' | 'h3' | 'h4' | null;
   id?: string;
   /** O texto do título: «A seguir», «Comboios a seguir». */
   titulo?: string;

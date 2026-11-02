@@ -1548,6 +1548,11 @@ class Sitio:
                     "transcrito_por": linha.get("transcrito_por", ""),
                     "transcrito_em": linha.get("transcrito_em", ""),
                     "conteudo_de": _conteudo_de(self.raiz, decl.fonte),
+                    # ONDE SE CONFERE O CARTAZ: o endereço público de onde ele
+                    # veio, no sítio de quem o publica (#191). Um horário com
+                    # anos tem de levar quem o lê até à fonte, e não só dizer
+                    # que é velho.
+                    "documento": _documento_de(self.raiz, decl.fonte),
                     "concelho": decl.params.get("concelho") or None,
                     "coordenadas": {
                         nome: {"lat": p["lat"], "lon": p["lon"], "fonte": p["fonte"]}
@@ -1646,6 +1651,20 @@ class Sitio:
             )
         paragens.sort(key=lambda p: _simples(str(p["nome"])))
 
+        # AS PARTIDAS DE CADA PARAGEM, como as de uma paragem da rede
+        # (auditoria de 1/11/2026, #88). A página dava o número das carreiras e
+        # o percurso, e nem uma hora nem um dia — e o feed tem-nas. Saem com a
+        # mesma forma e a mesma chave de serviço (`<feed>:<serviço>`), para a
+        # página perguntar à tabela dos dias o que anda hoje. Sem o operador em
+        # cada uma: é um só, e a página di-lo uma vez.
+        partidas: dict[str, list[dict[str, Any]]] = collections.defaultdict(list)
+        self._partidas_do_feed(feed, partidas, collections.defaultdict(set), Path(decl.saida).stem)
+        for p in paragens:
+            p["partidas"] = sorted(
+                ({k: v for k, v in x.items() if k != "operador"} for x in partidas[str(p["id"])]),
+                key=lambda x: (x["hora"], x["linha"]),
+            )
+
         # O OPERADOR SAI DAS ROTAS QUE PARAM AQUI, e não da tabela de agências.
         #
         # O feed da FlixBus traz também a FlixTrain. Tirar o operador de
@@ -1672,10 +1691,10 @@ class Sitio:
                     "bilhetes": (a.get("agency_fare_url") or "").strip() or None,
                 }
             )
-        notas = [
-            "Serviço de um operador privado. Os bilhetes vendem-se no sítio "
-            "dele, e os títulos desta região não servem.",
-        ]
+        # A FRASE DO OPERADOR PRIVADO JÁ NÃO VAI NAS NOTAS: a página di-la à
+        # cabeça, com o botão da compra, a partir de `operadores`. Nas notas era
+        # a terceira vez na mesma página (auditoria de 1/11/2026, #172).
+        notas: list[str] = []
         # A INTERFACE É EM PORTUGUÊS (§1) E ESTES NOMES PODEM NÃO SER.
         #
         # Vêm do feed do operador, e há operadores que os escrevem em inglês
@@ -2588,6 +2607,25 @@ def _conteudo_de(raiz: Path | None, id_fonte: str | None) -> dict[str, str | Non
         "em_vigor_desde": f.em_vigor_desde.isoformat() if f.em_vigor_desde else None,
         "texto": f.data_do_conteudo or None,
     }
+
+
+def _documento_de(raiz: Path | None, id_fonte: str | None) -> str | None:
+    """O endereço público do documento de onde saem estes horários, se o registo o tiver.
+
+    É o `url` da fonte — a página ou o PDF de quem o publica —, e não a cópia
+    arquivada, que é para quem confere a construção. Uma fonte sem endereço
+    (entrou à mão, sem origem na rede) não tem para onde levar.
+    """
+    from .fontes import ErroDeFonte, Registo
+
+    if not id_fonte or raiz is None:
+        return None
+    try:
+        f = Registo.carregar(raiz).obter(id_fonte)
+    except ErroDeFonte:
+        return None
+    url = (f.url or "").strip()
+    return url if url.startswith(("https://", "http://")) else None
 
 
 def datas_dos_horarios(raiz: Path, regiao: Regiao) -> dict[str, str | None]:

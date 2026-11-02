@@ -6868,4 +6868,42 @@ fieldset.escolha-do-sentido legend {
   )
   .maplibregl-ctrl-icon {
   background-color: var(--marca-texto);
+
+/* --- as páginas dos modos (auditoria de 1/11/2026, fase 2) ---------------- */
+
+/* Cada terminal dos expressos com ar por cima (#171): o título de um encostava
+   à última carreira do anterior. */
+.paragem-de-expresso + .paragem-de-expresso {
+  margin-top: 1.75rem;
+}
+.paragem-de-expresso > h3 {
+  margin-bottom: var(--espaco-1);
+}
+.paragem-de-expresso h4 {
+  margin: var(--espaco-2) 0 var(--espaco-1);
+  font-size: var(--letra-corpo);
+}
+
+/* Os urbanos municipais no roxo do modo (§6), e cada linha com a cor dela
+   antes do nome (#190). Um traço à esquerda, e não um cartão. */
+.horario-de-modo.modo-urbano-municipal {
+  border-left: 4px solid var(--urbano-municipal);
+  padding-left: 0.9rem;
+  margin: var(--espaco-6) 0;
+}
+.horario-de-modo.modo-urbano-municipal > h2 {
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-2);
+}
+.cor-da-linha-do-cartaz {
+  flex: 0 0 auto;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: var(--raio-pequeno);
+  border: 1px solid var(--linhas);
+}
+.aviso-do-cartaz {
+  margin: var(--espaco-3) 0;
 }
