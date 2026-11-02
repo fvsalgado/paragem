@@ -193,3 +193,17 @@ test('com mapa, a página da linha leva ao mapa com ela acesa', async ({ page })
   test.skip((await noMapa.count()) === 0, 'a região não tem mapa');
   await expect(noMapa).toHaveAttribute('href', `/?linha=${encodeURIComponent(LINHA.id)}`);
 });
+
+test('na lista das linhas, o nome alinha consigo mesmo e não diz uma soma de viagens', async ({
+  page,
+}) => {
+  // A segunda linha de um nome comprido começava debaixo do distintivo (#179),
+  // e «53 viagens» somava todos os dias e os dois sentidos (#180).
+  await page.goto('/rede/linhas/');
+  const primeira = page.locator('a.linha-na-lista').first();
+  await expect(primeira).toBeVisible();
+  const numero = (await primeira.locator('.distintivo').boundingBox())!;
+  const nome = (await primeira.locator('> span:last-child').boundingBox())!;
+  expect(nome.x).toBeGreaterThanOrEqual(numero.x + numero.width);
+  await expect(page.locator('a.linha-na-lista', { hasText: /\d+ viage(m|ns)$/ })).toHaveCount(0);
+});

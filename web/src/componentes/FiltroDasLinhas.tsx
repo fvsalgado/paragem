@@ -97,14 +97,18 @@ export default function FiltroDasLinhas({ grupos }: { grupos: GrupoDeLinhas[] })
             <ul className="lista">
               {g.linhas.map((l) => (
                 <li key={l.id}>
-                  <Link href={l.href}>
+                  {/* O DISTINTIVO NUMA COLUNA SUA (#179): o nome comprido voltava
+                      para debaixo do número, e a segunda linha dele começava
+                      fora da coluna de leitura.
+                      SEM A CONTAGEM DAS VIAGENS (#180): «53 viagens» somava
+                      todos os tipos de dia e os dois sentidos, e uma linha com
+                      39 podia ter duas ao sábado — um número que não ajudava a
+                      escolher. As viagens de cada dia estão na página dela. */}
+                  <Link href={l.href} className="linha-na-lista">
+                    <Distintivo codigo={l.codigo} cor={l.cor} />
                     <span>
-                      <Distintivo codigo={l.codigo} cor={l.cor} /> {l.nome}
+                      {l.nome}
                       {l.operador && <span className="secundario"> · {l.operador}</span>}
-                    </span>
-                    {/* Uma contagem nunca se parte: era «3 / viagen / s» (#98). */}
-                    <span className="secundario contagem">
-                      {plural(l.viagens, 'viagem', 'viagens')}
                     </span>
                   </Link>
                 </li>

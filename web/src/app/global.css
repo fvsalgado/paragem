@@ -6985,3 +6985,20 @@ details.concelho-a-pedido > summary:focus-visible {
   margin: var(--espaco-2) 0 0;
   font-size: var(--letra-media);
 }
+
+/* A lista das linhas: o distintivo numa coluna sua, e o nome alinhado consigo
+   mesmo quando parte (#179). */
+.lista a.linha-na-lista {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  justify-content: start;
+  align-items: start;
+  column-gap: 0.6rem;
+}
+.lista a.linha-na-lista > .distintivo {
+  margin-top: 0.1rem;
+}
+.lista a.linha-na-lista > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
