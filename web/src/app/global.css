@@ -6718,3 +6718,40 @@ fieldset.escolha-do-sentido legend {
     display: none;
   }
 }
+
+/* --- os botões do mapa no traço dos outros ícones ------------------------ */
+
+/* OS ÍCONES DO MAPLIBRE ERAM OUTRO DESENHO — cheios, de outra espessura —, ao
+   lado dos do sítio, que são todos traço de 2 px com as pontas redondas
+   (`Icones.tsx`). Os três botões passam aos nossos: o mais, o menos e a mira
+   da localização, que é a mesma do «Aqui perto» da folha. Desenhados por
+   máscara, seguem a cor do texto nos dois temas, e o filtro do tema escuro
+   deixa de ser preciso. */
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon,
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon,
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-geolocate .maplibregl-ctrl-icon {
+  background-image: none !important;
+  background-color: var(--texto);
+  filter: none !important;
+  -webkit-mask: var(--icone-do-botao) center / 22px no-repeat;
+  mask: var(--icone-do-botao) center / 22px no-repeat;
+}
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-zoom-in {
+  --icone-do-botao: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");
+}
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-zoom-out {
+  --icone-do-botao: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3C/svg%3E");
+}
+.mapa-caixa .maplibregl-ctrl button.maplibregl-ctrl-geolocate {
+  --icone-do-botao: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='6.5'/%3E%3Ccircle cx='12' cy='12' r='2.2' fill='black' stroke='none'/%3E%3Cpath d='M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3'/%3E%3C/svg%3E");
+}
+/* Com a posição dada, a mira na cor das ligações: diz que respondeu. */
+.mapa-caixa
+  .maplibregl-ctrl
+  button.maplibregl-ctrl-geolocate:is(
+    .maplibregl-ctrl-geolocate-active,
+    .maplibregl-ctrl-geolocate-background
+  )
+  .maplibregl-ctrl-icon {
+  background-color: var(--marca-texto);
+}
