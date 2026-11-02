@@ -53,6 +53,7 @@ import {
   type CalendarioEmMascaras,
 } from './dias';
 import { diaNoFuso } from './fuso';
+import { juntarPontos } from './pagina-do-modo';
 
 /**
  * Onde estão os dados. Em produção é a porta pública do balde `sitio` do
@@ -403,7 +404,14 @@ export const aPedido = cache(async (r: string): Promise<APedido | null> => {
 export const modos = cache(async (r: string): Promise<Modos> => {
   const todos = await ler<Modos>(r, 'modos.json', {});
   const fora = await modulosDesligados(r);
-  return Object.fromEntries(Object.entries(todos).filter(([m]) => !fora.includes(m)));
+  // A MESMA PRAÇA MAPEADA DUAS VEZES É UMA (`juntarPontos`, #189), em todas as
+  // contas: a página do modo, «Por modo», os concelhos, o que há à porta de
+  // uma estação. Juntada só numa, as outras diziam outro número.
+  return Object.fromEntries(
+    Object.entries(todos)
+      .filter(([m]) => !fora.includes(m))
+      .map(([m, d]) => [m, { ...d, pontos: juntarPontos(d.pontos ?? []) }]),
+  );
 });
 export const modo = async (r: string, m: string): Promise<ModoDetalhe | null> =>
   (await modos(r))[m] ?? null;

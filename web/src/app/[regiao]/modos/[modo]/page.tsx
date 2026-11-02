@@ -43,7 +43,6 @@ import Distintivo from '@/componentes/Distintivo';
 import { aRede, lista, nomeDaRede, plural, regraLegivel, semPrefixos } from '@/lib/prosa';
 import {
   avisoDoCartaz,
-  juntarPontos,
   regraDaData,
   percursosSemHorario,
   quemGerePorOrdem,
@@ -213,10 +212,9 @@ function Ponto({
 export default async function Modo({ params }: { params: Promise<Params> }) {
   const { regiao: rid, modo: mid } = await params;
   const r = await exigirRegiao(rid);
-  const lido: ModoDetalhe | null = await lerModo(rid, mid);
-  if (!lido) notFound();
-  // A MESMA PRAÇA MAPEADA DUAS VEZES CONTA UMA (#189), na lista e na conta.
-  const m: ModoDetalhe = { ...lido, pontos: juntarPontos(lido.pontos) };
+  // A mesma praça mapeada duas vezes já vem junta (`modos`, em `lib/dados.ts`).
+  const m: ModoDetalhe | null = await lerModo(rid, mid);
+  if (!m) notFound();
 
   const cs = await concelhos(rid);
   const nomes = new Map(cs.map((c) => [c.id, c.nome]));
