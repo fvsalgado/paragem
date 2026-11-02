@@ -885,6 +885,8 @@ export type HorarioAPedido = {
    * a receita os diz. Ausente em dados de antes disto.
    */
   tarifas?: string[];
+  /** O preço desses títulos, já resolvido (#192). Ausente em dados de antes disto. */
+  precos?: PrecoAPedido[];
   regras: string[];
   paragens: string[];
   viagens: number;
@@ -908,6 +910,9 @@ export type HorarioAPedido = {
  * vazios quando o documento não diz nada — e nunca a data de obtenção no
  * lugar deles (`sitio.py`, `_conteudo_de`).
  */
+/** Um título que se paga num serviço a pedido, com o valor e se está confirmado. */
+export type PrecoAPedido = { nome: string; valor: number; confirmado: boolean };
+
 export type ConteudoDe = { em_vigor_desde: string | null; texto: string | null };
 
 /**
@@ -1270,4 +1275,18 @@ export function operadorCurto(nome: string): string {
   return /^(unipessoal[ ,.]*)?(l\.?d\.?a\.?|s\.?a\.?|crl|e\.?m\.?|e\.?p\.?e\.?)\.?$/i.test(cauda)
     ? partes.slice(0, -1).join(',').trim()
     : limpo;
+}
+
+const DIAS_CURTOS = ['dom.', 'seg.', 'ter.', 'qua.', 'qui.', 'sex.', 'sáb.'];
+
+/**
+ * «seg., 2/11»: o dia da semana à frente (#193). «02/11» sozinho obrigava a
+ * fazer a conta de que dia é — e quem planeia para segunda quer ver segunda.
+ * `iso` é `AAAA-MM-DD`; o dia da semana conta-se no calendário, sem fuso.
+ */
+export function diaComSemana(iso: string): string {
+  const [ano, mes, dia] = iso.split('-').map(Number);
+  if (!ano || !mes || !dia) return iso;
+  const semana = DIAS_CURTOS[new Date(Date.UTC(ano, mes - 1, dia)).getUTCDay()];
+  return `${semana}, ${dia}/${mes}`;
 }

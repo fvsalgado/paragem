@@ -528,3 +528,36 @@ def test_um_horario_a_pedido_diz_que_titulos_se_pagam_nele(tmp_path):
     (pasta / "fontes.yaml").write_text(yaml.safe_dump(d), encoding="utf-8")
     with pytest.raises(ErroDeRegiao, match="outra"):
         Regiao.carregar(pasta)
+
+
+def test_o_horario_a_pedido_leva_o_preco_dos_titulos_que_se_pagam_nele(tmp_path):
+    """O planeador propunha a ligação sem dizer quanto custa (#192).
+
+    O preço vai já resolvido, com o «por confirmar» de cada título; um título
+    sem valor não vai.
+    """
+    import json
+
+    from paragem.sitio import _horarios_a_pedido
+
+    pasta = _com_a_pedido(tmp_path / "x", ["norte"])
+    d = yaml.safe_load((pasta / "fontes.yaml").read_text(encoding="utf-8"))
+    d["saidas"][0]["params"]["tarifas"] = ["viagem", "sem-valor"]
+    (pasta / "fontes.yaml").write_text(yaml.safe_dump(d), encoding="utf-8")
+    r = yaml.safe_load((pasta / "regiao.yaml").read_text(encoding="utf-8"))
+    r["inclui"]["tarifas"] = "tarifas.yaml"
+    (pasta / "regiao.yaml").write_text(yaml.safe_dump(r), encoding="utf-8")
+    titulos = {
+        "titulos": [
+            {"id": "viagem", "rede": "X", "nome": "Viagem", "valor": 3, "confirmado": False},
+            {"id": "sem-valor", "rede": "X", "nome": "Passe"},
+        ]
+    }
+    (pasta / "tarifas.yaml").write_text(yaml.safe_dump(titulos), encoding="utf-8")
+    construcao = tmp_path / "build"
+    (construcao / "tap").mkdir(parents=True)
+    (construcao / "tap" / "ligacoes.json").write_text(
+        json.dumps({"id": "ligacoes", "nome": "Ligações", "quadros": []}), encoding="utf-8"
+    )
+    [h] = _horarios_a_pedido(construcao, Regiao.carregar(pasta))
+    assert h["precos"] == [{"nome": "Viagem", "valor": 3, "confirmado": False}]

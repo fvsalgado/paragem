@@ -33,7 +33,7 @@ import {
   periodoDe,
   quandoE,
 } from '@/lib/dias';
-import { fraseDosHorarios, seguro, type APedido, type Ponto } from '@/lib/formato';
+import { diaComSemana, fraseDosHorarios, seguro, type APedido, type Ponto } from '@/lib/formato';
 import {
   planear,
   capacidadeDe,
@@ -641,8 +641,16 @@ export default function Direccoes({
     return melhor?.c ?? null;
   }
 
+  // Quantos botões a fila dos modos teria: o transporte público sempre, e os
+  // outros quando têm opções.
+  const modosComOpcoes =
+    estado.tipo === 'resultados'
+      ? (Object.keys(MODOS) as Modo[]).filter(
+          (m) => m === 'transporte' || (porModo[m]?.length ?? 0) > 0,
+        ).length
+      : 0;
   const quandoLegivel =
-    quando === 'agora' ? 'Partir agora' : `Partir às ${hora}, ${diaLegivel(data)}`;
+    quando === 'agora' ? 'Partir agora' : `Partir ${diaComSemana(data)}, às ${hora}`;
   const noMapa = variante === 'mapa';
 
   /**
@@ -892,7 +900,10 @@ export default function Direccoes({
             autocarro? São botões e não separadores ARIA de propósito — um
             padrão de separadores mal feito é pior do que botões bem feitos. */}
         <div className="linha-de-controlos">
-          {estado.tipo === 'resultados' && (
+          {/* COM UM MODO SÓ, A FILA NÃO ESCOLHE NADA (#193): um separador
+              sozinho, com o mesmo tempo do cartão logo abaixo, parecia uma
+              aba partida. */}
+          {estado.tipo === 'resultados' && modosComOpcoes > 1 && (
             <div className="modos" role="group" aria-label="Como ir">
               {(Object.keys(MODOS) as Modo[]).map((m) => {
                 const todas = porModo[m];
@@ -932,15 +943,17 @@ export default function Direccoes({
 
           {/* As etiquetas, como as do Maps: recarregar e a hora de partida. */}
           <p className="etiquetas">
+            {/* COM O NOME À VISTA (#193): a seta circular sozinha só dizia o
+                que fazia a quem usa leitor de ecrã. */}
             <button
               type="submit"
               form="nenhum"
-              className="etiqueta so-icone"
-              aria-label="Procurar de novo"
+              className="etiqueta"
               aria-busy={estado.tipo === 'a-procurar'}
               onClick={() => procurar(true)}
             >
               <Recarregar />
+              Atualizar
             </button>
             <button
               type="button"
@@ -1522,6 +1535,52 @@ const VER: Record<PropostaAPedido['oQue'], string> = {
   zonas: 'Ver as zonas',
 };
 
+const EUROS = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' });
+
+/**
+ * UMA PROPOSTA NUMA FRASE (#192): o nome, de onde a onde, quanto custa e onde
+ * estão as horas. Era «<serviço> — ligações entre cidades — liga as duas pontas:
+ * passa em A e em B. Ligações entre as cidades e sedes de concelho, todos os
+ * dias da semana.» — «ligações entre cidades» duas vezes, «liga as duas
+ * pontas» na língua de quem programou, e nem o preço.
+ */
+function Proposta({ p }: { p: PropostaAPedido }) {
+  const de = p.naPartida[0];
+  const a = p.naChegada[0];
+  return (
+    <>
+      <strong>{p.nome}</strong>
+      {p.onde ? ` ${p.onde}` : ''}
+      {p.liga === 'as-duas' && de && a
+        ? `, de ${de} a ${a}`
+        : (de ?? a)
+          ? `, passa em ${de ?? a}`
+          : p.liga === 'as-duas'
+            ? ', entre as duas terras'
+            : ''}
+      .
+      {/* O PREÇO COMO A PÁGINA DO CIRCUITO O DIZ: «Cada viagem: 3,00 €», e,
+          com mais do que um título, o nome de cada um. */}
+      {p.precos.map((x, i) => (
+        <Fragment key={`${x.nome}-${i}`}>
+          {' '}
+          {p.precos.length === 1 ? 'Cada viagem' : x.nome}:{' '}
+          {x.valor === 0 ? 'grátis' : EUROS.format(x.valor)}
+          {!x.confirmado && (
+            <>
+              {' '}
+              <span className="por-confirmar">por confirmar</span>
+            </>
+          )}
+          .
+        </Fragment>
+      ))}
+      {p.regras.length > 0 && ` ${p.regras.join('. ')}.`}{' '}
+      {p.horario && <a href={p.horario}>{VER[p.oQue]}</a>}
+    </>
+  );
+}
+
 function PropostasAPedido({
   propostas,
   d,
@@ -1546,28 +1605,21 @@ function PropostasAPedido({
   return (
     <section className="faixa a-pedido propostas-a-pedido" aria-labelledby="a-pedido-proposto">
       <h3 id="a-pedido-proposto">Transporte a pedido</h3>
-      <ul>
-        {propostas.map((p) => (
-          <li key={`${p.nome}-${p.horario}`}>
-            <strong>{p.nome}</strong>
-            {p.onde ? ` ${p.onde}` : ''}
-            {/* O QUE INTERESSA É SE LIGA AS DUAS PONTAS — e diz-se assim,
-                com uma paragem de cada lado, e não com a lista toda. */}
-            {p.liga === 'as-duas' && p.naPartida.length > 0 && p.naChegada.length > 0 ? (
-              <>
-                {' '}
-                — liga as duas pontas: passa em {p.naPartida[0]} e em {p.naChegada[0]}
-              </>
-            ) : p.liga === 'as-duas' ? (
-              <> — liga as duas pontas</>
-            ) : (p.naPartida[0] ?? p.naChegada[0]) ? (
-              <> — passa em {p.naPartida[0] ?? p.naChegada[0]}</>
-            ) : null}
-            .{p.regras.length > 0 && ` ${p.regras.join('. ')}.`}{' '}
-            {p.horario && <a href={p.horario}>{VER[p.oQue]}</a>}
-          </li>
-        ))}
-      </ul>
+      {/* UMA PROPOSTA NÃO É UMA LISTA (#192): o marcador de um ponto só
+          parecia o princípio de uma enumeração que não vinha. */}
+      {propostas.length === 1 ? (
+        <p>
+          <Proposta p={propostas[0]} />
+        </p>
+      ) : (
+        <ul>
+          {propostas.map((p) => (
+            <li key={`${p.nome}-${p.horario}`}>
+              <Proposta p={p} />
+            </li>
+          ))}
+        </ul>
+      )}
       <p>
         <strong>Só passa se for reservado</strong>
         {v.prazo ? `: ${v.prazo.charAt(0).toLowerCase()}${v.prazo.slice(1)}.` : '.'}
@@ -1649,10 +1701,6 @@ export function duracaoLegivel(segundos: number): string {
 }
 
 /** «24/09» — o dia na etiqueta, sem o ano, que é quase sempre este. */
-function diaLegivel(iso: string): string {
-  const [, mes, dia] = iso.split('-');
-  return `${dia}/${mes}`;
-}
 
 /** Quantas vezes se muda de veículo. Fica com este nome para quem já o usava. */
 export const transbordos = contarTransbordos;

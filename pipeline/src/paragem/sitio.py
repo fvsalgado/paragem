@@ -2845,6 +2845,7 @@ def _horarios_a_pedido(
     if construcao is None:
         return []
     nomes = {c.id: c.nome for c in regiao.concelhos}
+    titulos = {str(t.get("id")): t for t in (regiao.tarifas or {}).get("titulos") or []}
     saida: list[dict[str, Any]] = []
     for decl in regiao.saidas:
         if decl.leitor not in LEITORES_DE_HORARIO or decl.modo != "a-pedido":
@@ -2874,6 +2875,18 @@ def _horarios_a_pedido(
                 # de ligações não dizia quanto custa, e o preço só estava no
                 # tarifário.
                 "tarifas": [str(t) for t in decl.params.get("tarifas") or []],
+                # E O PREÇO DELES, já resolvido, para quem não lê o tarifário:
+                # o planeador propunha a ligação sem dizer quanto custa (#192).
+                # Só os que têm valor, e com o «por confirmar» de cada um.
+                "precos": [
+                    {
+                        "nome": str(t.get("nome") or ""),
+                        "valor": t["valor"],
+                        "confirmado": bool(t.get("confirmado")),
+                    }
+                    for i in decl.params.get("tarifas") or []
+                    if (t := titulos.get(str(i))) and isinstance(t.get("valor"), (int, float))
+                ],
                 "regras": d.get("regras") or [],
                 "paragens": sorted({n for q in quadros for n in q.get("paragens", [])}),
                 "viagens": sum(len(q.get("viagens") or []) for q in quadros),

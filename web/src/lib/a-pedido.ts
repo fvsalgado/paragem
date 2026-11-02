@@ -3,7 +3,7 @@
  *
  * Funções puras, sem leituras: a página dá-lhes o que leu do `a-pedido.json`.
  */
-import type { APedido, HorarioAPedido, ZonaAPedido } from './formato';
+import type { APedido, HorarioAPedido, PrecoAPedido, ZonaAPedido } from './formato';
 import { simples } from './letras.ts';
 
 /** O endereço do horário de um grupo de circuitos — uma brochura, um folheto. */
@@ -257,6 +257,8 @@ export type PropostaAPedido = {
   oQue: 'ligacao' | 'circuito' | 'zona' | 'zonas';
   /** Se a reserva online serve esta zona — quando a fonte o diz. */
   reservaOnline: boolean | null;
+  /** Quanto custa, quando o tarifário o diz (#192). */
+  precos: PrecoAPedido[];
 };
 
 /** O nome sem o que vem entre parênteses: «Pedra Alta (Centro)» → «pedra alta». */
@@ -319,6 +321,7 @@ export function aPedidoNasPontas(
         liga: 'as-duas',
         oQue: 'ligacao',
         reservaOnline: reservaOnlineDaZona(d, z),
+        precos: horariosDaZona(d, z).flatMap((h) => h.precos ?? []),
       });
     }
   }
@@ -347,11 +350,15 @@ export function aPedidoNasPontas(
             : '',
         naPartida: nasDe,
         naChegada: nasPara,
-        regras: semOPrazo(q.regras ?? []),
+        // AS REGRAS DE UMA TABELA DE PARTIDAS DESCREVEM A TABELA — «Ligações
+        // entre as cidades e sedes de concelho, todos os dias da semana» —, e
+        // ao lado do nome dela diziam duas vezes o mesmo (#192).
+        regras: q.tipo === 'partidas' ? [] : semOPrazo(q.regras ?? []),
         horario: url(`${caminhoDoHorario(h.id)}#${idDoQuadro(nome)}`),
         liga,
         oQue: 'circuito',
         reservaOnline: reservaOnlineDoHorario(d, h).serve,
+        precos: h.precos ?? [],
       });
     }
   }
@@ -378,6 +385,7 @@ export function aPedidoNasPontas(
         regras: [],
         horario: url(`a-pedido/#z-${zonas[0].id}`),
         liga,
+        precos: [],
         oQue: zonas.length === 1 ? 'zona' : 'zonas',
         reservaOnline: zonas.every((z) => reservaOnlineDaZona(d, z) === true)
           ? true

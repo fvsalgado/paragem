@@ -262,7 +262,10 @@ test('a viagem escolhida fica no endereço, e o endereço volta a abri-la', asyn
   await outra.goto(page.url());
   await expect(outra.getByRole('combobox', { name: 'De', exact: true })).toHaveValue(a.nome);
   await expect(outra.getByRole('combobox', { name: 'Para', exact: true })).toHaveValue(b.nome);
-  await expect(outra.getByRole('button', { name: /^Partir às 09:00/ })).toBeVisible();
+  // Com o dia da semana à frente (#193): «Partir seg., 2/11, às 09:00».
+  await expect(
+    outra.getByRole('button', { name: /^Partir \S+\., \d{1,2}\/\d{1,2}, às 09:00/ }),
+  ).toBeVisible();
 });
 
 test('um destino por coordenadas chega com o nome que se lhe deu', async ({ page }) => {
@@ -488,8 +491,14 @@ test.describe('as viagens de prova da região, pela interface', () => {
     await expect(escolhida).toHaveCount(1);
     await expect(escolhida.getByRole('button').first()).toHaveAttribute('aria-expanded', 'true');
     // E a fila dos modos diz quanto demora cada um: é a primeira resposta à
-    // primeira pergunta, que é se vale a pena esperar pelo autocarro.
-    await expect(page.locator('.modos button.activo')).toContainText(/min|h/);
+    // primeira pergunta, que é se vale a pena esperar pelo autocarro. Com um
+    // modo só não há fila, que não escolhia nada (#193) — e a opção diz-o.
+    const fila = page.locator('.modos');
+    if (await fila.count()) {
+      await expect(fila.locator('button.activo')).toContainText(/min|h/);
+    } else {
+      await expect(escolhida).toContainText(/min|h/);
+    }
   });
 
   test('escolher uma opção desce a folha, e a pega volta a subi-la', async ({ page }) => {
@@ -573,10 +582,13 @@ test.describe('com o relógio antes da primeira partida', () => {
     await expect(page.getByText(/estimadas em linha reta/)).toBeVisible();
 
     // E não se oferece o que não se sabe responder: «a pé» e «de bicicleta»
-    // são a pergunta «por onde», e essa não se responde sem as ruas.
-    const modos = page.getByRole('group', { name: 'Como ir' });
-    await expect(modos).toBeVisible();
-    expect(await modos.getByRole('button').count()).toBe(1);
+    // são a pergunta «por onde», e essa não se responde sem as ruas. Fica o
+    // transporte público sozinho — e um modo sozinho não leva fila, que não
+    // escolhia nada e parecia uma aba partida (#193).
+    await expect(page.getByRole('group', { name: 'Como ir' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^(A pé|De bicicleta)/ })).toHaveCount(0);
+    // A seta de procurar de novo diz o que faz.
+    await expect(page.getByRole('button', { name: 'Atualizar' })).toBeVisible();
   });
 });
 

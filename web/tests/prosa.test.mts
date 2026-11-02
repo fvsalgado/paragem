@@ -22,7 +22,7 @@ import {
   redeEQuemAGere,
   regiaoNoInicio,
 } from '../src/lib/prosa.ts';
-import { horaComZero } from '../src/lib/formato.ts';
+import { diaComSemana, horaComZero } from '../src/lib/formato.ts';
 
 test('o número e o nome concordam, e os milhares separam-se como a casa os escreve', () => {
   assert.equal(plural(1, 'paragem perto', 'paragens perto'), '1 paragem perto');
@@ -261,4 +261,10 @@ test('a página de privacidade diz o prazo das medições quando é declarado, e
   assert.match(fraseDoPrazoDasMedicoes('12 meses'), /durante 12 meses, e depois apagam-se/);
   assert.match(fraseDoPrazoDasMedicoes(null), /pelo prazo de conservação dele/);
   assert.match(fraseDoPrazoDasMedicoes('  '), /pelo prazo de conservação dele/);
+});
+
+test('o dia da partida diz o dia da semana (#193)', () => {
+  assert.equal(diaComSemana('2026-11-02'), 'seg., 2/11');
+  assert.equal(diaComSemana('2026-11-01'), 'dom., 1/11');
+  assert.equal(diaComSemana('não é data'), 'não é data');
 });
