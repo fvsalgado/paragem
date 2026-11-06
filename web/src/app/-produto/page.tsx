@@ -13,7 +13,6 @@ import {
   AUTOR,
   CODIGO,
   CONTACTO,
-  CORETO,
   correioPara,
   eDaMontra,
   fraseDaDemonstracao,
@@ -417,10 +416,6 @@ export default async function Produto() {
               O Paragem.pt é desenhado e desenvolvido por {AUTOR.nome}: o nome, o código e o desenho
               são dele. O sítio de cada região é publicado em nome da autoridade de transportes, e
               abrir os dados dela com uma licença aberta é decisão dela.
-            </p>
-            <p>
-              Da mesma casa: o <a href={CORETO}>Coreto</a>, a agenda cultural do seu território,
-              numa agenda só.
             </p>
           </div>
           <div>
