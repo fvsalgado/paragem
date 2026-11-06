@@ -675,7 +675,21 @@ test.describe('a abertura de uma região', () => {
     // A permissão chega DEPOIS de a página abrir, como quando se responde ao
     // diálogo do sistema: com ela já dada à entrada, a folha responde sozinha
     // (o teste seguinte), e não haveria botão para carregar.
+    //
+    // «DEPOIS DE ABRIR» É DEPOIS DE A FOLHA TER PERGUNTADO, e não depois de o
+    // título aparecer. O título vem do servidor e vê-se antes de o React
+    // acordar a página; a folha só pergunta pela permissão quando acorda
+    // (`PertoDeTi`). Dada nesse intervalo, a pergunta já a encontrava dada, a
+    // folha respondia sozinha — como deve — e o botão saía do ecrã debaixo
+    // do clique: «element was detached from the DOM», uma corrida em cada
+    // quatro, no CI e aqui. O mapa só nasce depois de a página acordar, e a
+    // pergunta da folha vai à frente da nossa: quando esta responde, a dela
+    // já respondeu, e a permissão chega mesmo depois.
     await expect(page.getByRole('heading', { name: 'Aqui perto' })).toBeVisible();
+    await page.waitForFunction(() => !!(window as unknown as { __mapa?: unknown }).__mapa);
+    await page.evaluate(() =>
+      navigator.permissions.query({ name: 'geolocation' as PermissionName }).then(() => {}),
+    );
     await context.grantPermissions(['geolocation']);
     await page.getByRole('button', { name: 'Usar a localização' }).click();
 
