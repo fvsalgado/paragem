@@ -46,6 +46,19 @@
   --atencao: #b54708;
   --atencao-fundo: #fef0e6;
   --foco: #f2b705;
+  /* O ANEL DO FOCO TEM DOIS TONS: o contorno amarelo e, por baixo, um halo
+     escuro que o envolve por dentro e por fora. O amarelo sozinho dava 1,7:1
+     sobre o papel claro (WCAG 1.4.11 pede 3:1): via-se sobre o escuro e
+     sobre as cores fortes, e perdia-se onde mais se navega. Com o halo, o
+     amarelo tem o escuro dos dois lados e lê-se em qualquer fundo, nos dois
+     temas — o halo é o mesmo azul-noite nos dois, e no escuro é o amarelo
+     que se separa da página. São 7 px: os 2 do afastamento, os 3 do
+     contorno e 2 de halo por fora dele. */
+  --foco-halo: #102c3f;
+  --anel-do-foco: 0 0 0 7px var(--foco-halo);
+  /* Por DENTRO, para o que o desenha para dentro (`outline-offset` negativo)
+     e para o que está numa fila que rola, que cortava o anel por fora. */
+  --anel-do-foco-dentro: inset 0 0 0 5px var(--foco-halo);
 
   /* A marca do produto — o feixe (§6) —, de fora para dentro. Só a página do
      produto a pinta: nas regiões e no painel o vermelho quer dizer alerta, e
@@ -240,6 +253,7 @@ body {
 :focus-visible {
   outline: 3px solid var(--foco);
   outline-offset: 2px;
+  box-shadow: var(--anel-do-foco);
 }
 
 a {
@@ -929,6 +943,7 @@ details.lista-fechada[open] > summary::after {
 .quadro-de-horario > summary:focus-visible {
   outline: 3px solid var(--foco);
   outline-offset: -3px;
+  box-shadow: var(--anel-do-foco-dentro);
 }
 
 /* A nota e as regras que a folha escreve por baixo do quadro. */
@@ -1494,6 +1509,7 @@ details.quadro-do-dia > summary:hover {
 }
 details.quadro-do-dia > summary:focus-visible {
   outline-offset: -3px;
+  box-shadow: var(--anel-do-foco-dentro);
 }
 details.quadro-do-dia .nome-do-quadro {
   min-width: 0;
@@ -2731,6 +2747,7 @@ button.pega-da-folha:focus-visible::before {
 }
 button.pega-da-folha:focus-visible {
   outline-offset: -3px;
+  box-shadow: var(--anel-do-foco-dentro);
 }
 
 .folha-titulo {
@@ -4455,6 +4472,7 @@ a.botao:focus-visible {
 .app-procura:focus-within {
   outline: 3px solid var(--foco);
   outline-offset: 2px;
+  box-shadow: var(--anel-do-foco);
 }
 
 /* --- O ECRÃ DE ABERTURA: o mapa de bordo a bordo ------------------------- */
@@ -5761,12 +5779,22 @@ ol.percurso li.modo-expresso .fio {
    do MapLibre, que no canto do ecrã passava despercebida. */
 .maplibregl-ctrl button:focus-visible,
 .maplibregl-ctrl a:focus-visible {
-  box-shadow: none;
   outline: 3px solid var(--foco);
   outline-offset: 2px;
+  box-shadow: var(--anel-do-foco);
 }
 .maplibregl-ctrl-group button:focus:not(:focus-visible) {
   box-shadow: none;
+}
+
+/* O ANEL POR DENTRO ONDE POR FORA SE CORTAVA: nas filas que rolam na
+   horizontal (as pílulas das camadas, os modos das direções, as iniciais) e
+   no botão redondo da localização, que o grupo dele recorta em círculo. Por
+   fora, o anel ficava cortado ao meio — ou desaparecia. */
+:is(.app-camadas, .modos, .grelha-de-iniciais.compacta ul) :focus-visible,
+.app-mapa .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group button:focus-visible {
+  outline-offset: -3px;
+  box-shadow: var(--anel-do-foco-dentro);
 }
 
 /* Um endereço de correio não se parte sozinho, e com a letra grande empurrava
@@ -6038,6 +6066,7 @@ a[href^='mailto:'] {
 .campo-de-escolhas:focus-within {
   outline: 3px solid var(--foco);
   outline-offset: 2px;
+  box-shadow: var(--anel-do-foco);
 }
 .campo-de-escolhas > input {
   flex: 1 1 10rem;
@@ -6997,6 +7026,7 @@ fieldset.escolha-do-sentido legend {
 .escolha-do-sentido label:has(input:focus-visible) {
   outline: 3px solid var(--foco);
   outline-offset: 2px;
+  box-shadow: var(--anel-do-foco);
 }
 /* SÓ A SECÇÃO DO SENTIDO ESCOLHIDO, e o título dela fica para quem ouve: o
    botão escolhido já o diz a quem vê. Sem `:has()`, tudo à vista, como era. */
@@ -7170,6 +7200,7 @@ details.concelho-a-pedido[open] > summary::after {
 details.concelho-a-pedido > summary:focus-visible {
   outline: 3px solid var(--foco);
   outline-offset: -3px;
+  box-shadow: var(--anel-do-foco-dentro);
 }
 
 /* As condições de uma tabela do tarifário, por baixo dela (#188). */
