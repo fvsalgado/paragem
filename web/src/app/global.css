@@ -4311,11 +4311,17 @@ main.pagina:has(.app-mapa) {
   margin: 0.4rem 0 0;
   padding: 0;
 }
+/* AS LINHAS TÊM TODAS A MESMA ALTURA, as verdadeiras e as fantasmas. A
+   fantasma tem a espera e a hora, em duas linhas; uma partida sem espera só
+   tem a hora, e era 15 px mais baixa. A caixa guarda a altura das fantasmas
+   para nada saltar quando as horas chegam (`ProximasPartidas`), e cinco
+   partidas sem espera deixavam um buraco de 75 px no fundo do «A seguir». */
 .partidas li,
 .fantasma-das-partidas li {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  min-height: 3.8rem;
   padding: 0.55rem 0;
   border-bottom: 1px solid var(--linhas);
 }

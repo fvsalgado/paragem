@@ -226,3 +226,25 @@ test('«Como chegar» vazio: a frase tem margem, e não se oferece «Atualizar»
   const texto = (await frase.boundingBox())!;
   expect(texto.x - caixa.x).toBeGreaterThanOrEqual(12);
 });
+
+test('o «A seguir» não guarda um buraco: as partidas têm a altura das fantasmas', async ({
+  page,
+}) => {
+  // A caixa guarda a altura das linhas fantasmas para nada saltar quando as
+  // horas chegam; uma partida sem espera era 15 px mais baixa do que elas, e
+  // cinco deixavam 75 px vazios por baixo da lista.
+  await page.goto(`/rede/paragens/${paragemComMaisPartidas().id}/`);
+  const linhas = page.locator('ul.partidas > li');
+  await expect(linhas.first()).toBeVisible({ timeout: 15_000 });
+  const alturas = await linhas.evaluateAll((ls) => ls.map((l) => l.getBoundingClientRect().height));
+  const minima = await linhas.first().evaluate((l) => parseFloat(getComputedStyle(l).minHeight));
+  for (const a of alturas) expect(a).toBeGreaterThanOrEqual(minima - 0.5);
+  // E a caixa guardada não fica maior do que o que lá está.
+  const folga = await linhas.first().evaluate((l) => {
+    const caixa = l.closest<HTMLElement>('div[style*="min-height"]');
+    if (!caixa) return 0;
+    const conteudo = [...caixa.children].reduce((s, c) => s + c.getBoundingClientRect().height, 0);
+    return parseFloat(caixa.style.minHeight) - conteudo;
+  });
+  expect(folga).toBeLessThan(12);
+});
