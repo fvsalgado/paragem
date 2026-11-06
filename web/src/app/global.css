@@ -6786,8 +6786,12 @@ figure.mapa-do-concelho figcaption {
 
 /* «NESTA PÁGINA»: as secções, por ordem, numa fila que quebra. Uma página de
    mais de seis ecrãs num telemóvel sem um índice obriga a rolar às cegas à
-   procura da parte que interessa. Ligações com o alvo de 44 px, separadas por
-   um ponto que não se lê. */
+   procura da parte que interessa. Ligações com o alvo de 44 px.
+
+   PASTILHAS, e não ligações separadas por um ponto: no telemóvel a fila quebra,
+   e a segunda linha começava com um «·» solto («· Outros transportes ·
+   Linhas»). Uma pastilha não precisa de separador — a forma separa —, e lê-se
+   de relance como «saltar para». */
 nav.indice-da-pagina {
   margin: 0 0 var(--espaco-5);
   font-size: var(--letra-pequena);
@@ -6798,21 +6802,65 @@ nav.indice-da-pagina ul {
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  column-gap: var(--espaco-3);
-}
-nav.indice-da-pagina li {
-  display: flex;
-  align-items: center;
-}
-nav.indice-da-pagina li + li::before {
-  content: '·';
-  margin-right: var(--espaco-3);
-  color: var(--texto-secundario);
+  gap: var(--espaco-2);
 }
 nav.indice-da-pagina a {
   display: inline-flex;
   align-items: center;
   min-height: var(--alvo);
+  padding: 0 var(--espaco-4);
+  border: 1px solid var(--linhas);
+  border-radius: var(--raio-grande);
+  background: var(--superficie);
+  text-decoration: none;
+}
+nav.indice-da-pagina a:hover {
+  border-color: var(--borda-campo);
+  text-decoration: underline;
+}
+
+/* O CONCELHO EM NÚMEROS, debaixo do título: cada número com a borda da cor do
+   seu modo — a mesma linguagem da coluna «Outros transportes», mais abaixo.
+   Sem sombra e sem caixa à volta: são números, não botões, e não se podem
+   confundir com uma coisa em que se toca. Dois por linha num telemóvel de
+   360 px, todos numa linha num ecrã largo. */
+ul.numeros-do-concelho {
+  list-style: none;
+  margin: var(--espaco-4) 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--espaco-2) var(--espaco-4);
+  max-width: 48rem;
+}
+ul.numeros-do-concelho li {
+  display: flex;
+  flex-direction: column;
+  padding: var(--espaco-1) 0 var(--espaco-1) var(--espaco-3);
+  border-left: 4px solid var(--linhas);
+}
+ul.numeros-do-concelho strong {
+  font-size: var(--letra-titulo-grande);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+@media (min-width: 40rem) {
+  ul.numeros-do-concelho strong {
+    font-size: var(--letra-cartaz);
+  }
+}
+ul.numeros-do-concelho span {
+  font-size: var(--letra-pequena);
+  color: var(--texto-secundario);
+}
+ul.numeros-do-concelho li.modo-autocarro {
+  border-left-color: var(--autocarro);
+}
+ul.numeros-do-concelho li.modo-comboio {
+  border-left-color: var(--comboio);
+}
+ul.numeros-do-concelho li.modo-a-pedido {
+  border-left-color: var(--a-pedido);
 }
 
 /* A AGENDA CULTURAL DO CONCELHO, perto do alto: o que há para ver, e por
