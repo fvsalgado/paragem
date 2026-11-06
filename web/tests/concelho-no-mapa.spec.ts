@@ -51,3 +51,17 @@ test('o mapa do concelho não prende o dedo que rola a página; o do início, de
   await expect(page.locator('canvas.maplibregl-canvas')).toBeVisible({ timeout: 20_000 });
   await expect.poll(cooperativo).toBe(false);
 });
+
+test('os botões do mapa do concelho têm o alvo de 44 px', async ({ page }) => {
+  test.skip(!temMosaicos(), SEM.mosaicos);
+  await page.goto(`/rede/concelhos/${concelhoComMaisParagens().id}/`);
+  const figura = page.locator('figure.mapa-do-concelho');
+  await figura.scrollIntoViewIfNeeded();
+  for (const nome of ['Aproximar', 'Afastar']) {
+    const botao = figura.getByRole('button', { name: nome });
+    await expect(botao).toBeVisible({ timeout: 20_000 });
+    const caixa = (await botao.boundingBox())!;
+    expect(caixa.width, nome).toBeGreaterThanOrEqual(44);
+    expect(caixa.height, nome).toBeGreaterThanOrEqual(44);
+  }
+});
