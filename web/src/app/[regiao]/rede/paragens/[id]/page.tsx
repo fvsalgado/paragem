@@ -307,6 +307,11 @@ export default async function Paragem({
           Como chegar aqui
         </Link>
         {noMapa && <a href={noMapa}>Ver no mapa</a>}
+        {/* A FOLHA PARA AFIXAR NA PARAGEM, em A4: o horário em grelha, para
+            imprimir. Só onde há horas para pôr nela. */}
+        {partidas.length > 0 && (
+          <Link href={`${urlDaParagem(rid, p.id)}horario/`}>Horário para imprimir</Link>
+        )}
       </p>
       {outras.length > 0 && (
         <section aria-labelledby="mesmo-sitio" className="mesmo-sitio">

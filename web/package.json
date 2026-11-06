@@ -25,6 +25,7 @@
     "next": "15.5.28",
     "pmtiles": "4.4.0",
     "posthog-js": "^1.434.2",
+    "qrcode-generator": "2.0.4",
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "server-only": "^0.0.1"

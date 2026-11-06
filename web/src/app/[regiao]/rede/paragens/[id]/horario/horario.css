@@ -1,0 +1,238 @@
+/*
+ * A FOLHA PARA AFIXAR NA PARAGEM (`page.tsx`), no ecrã e no papel.
+ *
+ * No ecrã é uma pré-visualização: a folha em branco, do tamanho de um A4, com
+ * «Imprimir» por cima. No papel sai só a folha — sem o cabeçalho do sítio, sem
+ * o rodapé, sem a faixa da demonstração —, e as cores das linhas saem como
+ * estão, que é o que as distingue a quem está à espera.
+ *
+ * A folha é papel nos dois temas: escura no ecrã, imprimia-se preta.
+ */
+
+.horario-para-afixar {
+  margin: var(--espaco-2) 0 var(--espaco-6);
+}
+.accoes-da-folha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-2) var(--espaco-4);
+  margin-bottom: var(--espaco-4);
+}
+.accoes-da-folha > p {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.folha-a4 {
+  --folha-texto: #102c3f;
+  --folha-secundario: #4a5c66;
+  --folha-linhas: #d5ddd9;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 12mm;
+  background: #fff;
+  color: var(--folha-texto);
+  border: 1px solid var(--linhas);
+  display: flex;
+  flex-direction: column;
+  gap: 5mm;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 40rem) {
+  /* No telemóvel a folha não tem de ter o tamanho do papel: tem de se ler. */
+  .folha-a4 {
+    min-height: 0;
+    padding: var(--espaco-4);
+  }
+}
+
+.folha-cabecalho {
+  border-bottom: 2px solid var(--folha-texto);
+  padding-bottom: 3mm;
+}
+.folha-marca {
+  margin-bottom: 3mm;
+}
+.folha-tipo {
+  margin: 0;
+  font-size: var(--letra-pequena);
+  font-weight: 700;
+  color: var(--folha-secundario);
+}
+.folha-a4 h1 {
+  margin: 1mm 0 0;
+  font-size: 2rem;
+  line-height: 1.1;
+  color: var(--folha-texto);
+}
+.folha-concelho {
+  margin: 1mm 0 0;
+  color: var(--folha-secundario);
+}
+
+.folha-linhas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2mm 6mm;
+}
+.folha-linhas li {
+  display: flex;
+  align-items: center;
+  gap: 2mm;
+  margin: 0;
+}
+
+.folha-quadro {
+  break-inside: avoid;
+}
+.folha-quadro h2 {
+  margin: 0 0 1.5mm;
+  font-size: var(--letra-destaque);
+  color: var(--folha-texto);
+}
+.folha-contagem {
+  font-weight: 400;
+  font-size: var(--letra-pequena);
+  color: var(--folha-secundario);
+}
+
+.folha-grelha {
+  width: 100%;
+  border-collapse: collapse;
+}
+.folha-grelha th,
+.folha-grelha td {
+  border-top: 1px solid var(--folha-linhas);
+  padding: 1.2mm 2mm;
+  vertical-align: middle;
+  text-align: left;
+}
+.folha-grelha tbody tr:last-child th,
+.folha-grelha tbody tr:last-child td {
+  border-bottom: 1px solid var(--folha-linhas);
+}
+.folha-grelha th[scope='row'] {
+  width: 3.2rem;
+  font-size: var(--letra-destaque);
+  font-weight: 700;
+  background: #f5f7f4;
+  color: var(--folha-texto);
+}
+.folha-grelha td {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1mm 4mm;
+}
+.folha-minuto {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.15rem;
+  font-size: var(--letra-destaque);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.folha-minuto .distintivo {
+  align-self: center;
+  margin-left: 0.15rem;
+}
+.folha-letra {
+  font-size: var(--letra-mini);
+  font-weight: 700;
+  color: var(--folha-secundario);
+}
+.folha-sinal {
+  font-weight: 400;
+  color: var(--folha-secundario);
+}
+
+.folha-rodape {
+  margin-top: auto;
+  display: flex;
+  gap: 6mm;
+  align-items: flex-end;
+  border-top: 1px solid var(--folha-linhas);
+  padding-top: 3mm;
+  font-size: var(--letra-pequena);
+  color: var(--folha-secundario);
+}
+.folha-notas {
+  flex: 1;
+  min-width: 0;
+}
+.folha-legenda {
+  list-style: none;
+  margin: 0 0 2mm;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1mm 5mm;
+}
+.folha-legenda li {
+  margin: 0;
+}
+.folha-legenda strong {
+  color: var(--folha-texto);
+}
+.folha-rodape .marca-dados {
+  margin: 0 0 2mm;
+  background: none;
+  padding: 0;
+  color: var(--folha-secundario);
+}
+.folha-endereco {
+  margin: 0;
+}
+.folha-url {
+  font-weight: 700;
+  color: var(--folha-texto);
+  overflow-wrap: anywhere;
+}
+.folha-qr {
+  flex: none;
+  width: 30mm;
+  height: 30mm;
+}
+.folha-vazia {
+  margin: 0;
+}
+
+@page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+@media print {
+  .cabecalho,
+  .rodape,
+  .marca-demonstracao,
+  .accoes-da-folha,
+  .trilho {
+    display: none !important;
+  }
+  html,
+  body,
+  .sitio-da-regiao,
+  main.pagina {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+  .horario-para-afixar {
+    margin: 0;
+  }
+  .folha-a4 {
+    max-width: none;
+    min-height: calc(297mm - 20mm);
+    padding: 0;
+    border: 0;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
