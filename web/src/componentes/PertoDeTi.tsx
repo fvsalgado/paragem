@@ -88,7 +88,9 @@ function distanciaEAPe(metros: number): string {
   // Em cima dela, «0 m · uns 1 min a pé» dizia duas coisas que não se dizem.
   if (metros < 15) return 'Aqui mesmo';
   if (metros > A_PE_ATE_METROS) return `${distanciaLegivel(metros)} em linha reta`;
-  return `${distanciaLegivel(metros)} · uns ${minutosAPe(metros)} min a pé`;
+  // «Uns 1 min» não é português: um minuto diz-se por extenso.
+  const minutos = minutosAPe(metros);
+  return `${distanciaLegivel(metros)} · ${minutos === 1 ? 'um minuto' : `uns ${minutos} min`} a pé`;
 }
 
 /**

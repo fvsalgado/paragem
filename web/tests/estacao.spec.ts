@@ -143,3 +143,13 @@ test('na lista, cada estação diz o concelho e os comboios que lá param', asyn
   const ligacao = page.getByRole('link', { name: new RegExp(`^${e!.nome}`) }).first();
   await expect(ligacao.locator('.linhas-da-paragem')).toBeVisible();
 });
+
+test('depois das tabuletas dos comboios não fica um ponto solto', async ({ page }) => {
+  const e = COM_AUTOCARRO ?? SEM_AUTOCARRO;
+  test.skip(!e, SEM.comboio);
+  await page.goto(`/rede/estacoes/${seguro(e!.id)}/`);
+  const frase = page.locator('h1 + p');
+  test.skip(!(await frase.locator('.tipos-de-comboio').count()), 'a estação não tem comboios');
+  // O último pedaço da frase é a fila das tabuletas, e não um «.» a seguir.
+  expect(await frase.evaluate((p) => (p.lastChild?.textContent ?? '').trim())).not.toBe('.');
+});

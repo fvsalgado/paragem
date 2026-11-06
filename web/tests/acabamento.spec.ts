@@ -248,3 +248,12 @@ test('o «A seguir» não guarda um buraco: as partidas têm a altura das fantas
   });
   expect(folga).toBeLessThan(12);
 });
+
+test('o número de quadros não se cola ao nome deles', async ({ page }) => {
+  await page.goto(`/rede/paragens/${paragemComMaisPartidas().id}/`);
+  const resumo = page.locator('details.todos-os-quadros > summary');
+  await expect(resumo).toBeVisible();
+  expect(await resumo.evaluate((s) => parseFloat(getComputedStyle(s).columnGap))).toBeGreaterThan(
+    0,
+  );
+});

@@ -177,7 +177,7 @@ export default async function Estacao({
             {' · '}
             <span className="so-para-leitores">
               {tipos.length === 1 ? 'comboio ' : 'comboios '}
-              {lista(tipos)}
+              {lista(tipos)}.
             </span>
             <span aria-hidden="true" className="tipos-de-comboio">
               {tipos.map((t) => (
@@ -186,7 +186,10 @@ export default async function Estacao({
             </span>
           </>
         )}
-        .
+        {/* O PONTO SÓ QUANDO A FRASE ACABA EM PALAVRAS: depois das tabuletas
+            dos comboios ficava um ponto solto, a seguir a uma pastilha. Quem
+            ouve tem-no na frase escondida. */}
+        {tipos.length === 0 && '.'}
       </p>
 
       {/* NUM ECRÃ LARGO, LADO A LADO (#83), como a paragem: a estação usava

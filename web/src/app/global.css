@@ -2149,9 +2149,12 @@ details.zona-a-pedido .circuitos-da-zona {
 }
 
 /* Uma lista comprida, fechada, com o nome à vista: o catálogo dos circuitos. */
+/* Com um intervalo entre o nome e a contagem: numa fila flexível, o espaço
+   do texto antes do `<span>` some-se, e saía «da operadora(2)». */
 details.lista-fechada > summary {
   display: flex;
   align-items: center;
+  gap: var(--espaco-1);
   min-height: var(--alvo);
   padding-right: 2.25rem;
   position: relative;
