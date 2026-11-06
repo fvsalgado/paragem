@@ -32,7 +32,7 @@ import { metadadosDaRegiao } from '@/lib/metadados';
 import { cartaoDaParagem } from '@/lib/partilha';
 import { linhasNumaFrase, lista, numero } from '@/lib/prosa';
 import { feedsDosServicos } from '@/lib/formato';
-import { servicosNoDia } from '@/lib/dias';
+import { horaDoRelogio, servicosNoDia } from '@/lib/dias';
 import { diaNoFuso } from '@/lib/fuso';
 import { doMesmoSitio, metrosEntre, paraOnde } from '@/lib/lista-de-paragens';
 
@@ -222,6 +222,19 @@ export default async function Paragem({
       }
     : null;
 
+  // QUANTAS PARTIDAS FALTAM HOJE, à hora em que a página se faz: é o lugar que
+  // o «A seguir» guarda enquanto o navegador faz as contas. Guardava sempre
+  // seis, e numa paragem a que faltavam quatro ficava um buraco no fundo do
+  // cartão. A página vive na cache até uma hora, e nessa hora só podem faltar
+  // MENOS — o buraco, quando o há, é de uma fila. Quando já não falta nenhuma,
+  // o cartão mostra as do próximo dia, e guarda-se como dantes.
+  const horaNoServidor = horaDoRelogio(new Date());
+  const faltamHoje = ativosHoje
+    ? partidas.filter(
+        (d) => (!d.servico_id || ativosHoje.has(d.servico_id)) && d.hora >= horaNoServidor,
+      ).length
+    : 0;
+
   // AS LINHAS QUE PARAM AQUI, cada uma a levar à página dela (auditoria de
   // 1/11/2026, #100). Para saber se a linha X passa ali era preciso abrir os
   // quadros um a um. Pelo identificador, das partidas — há números que se
@@ -347,6 +360,7 @@ export default async function Paragem({
           nomesDosServicos={nomesDosServicos}
           doDiaNoServidor={doDiaNoServidor}
           caminhoDasLinhas={urlRede(rid, 'linhas/')}
+          reservarASeguir={faltamHoje > 0 ? faltamHoje : undefined}
           aoLado={
             linhasAqui.length > 0 && (
               <section aria-labelledby="linhas-aqui" className="linhas-aqui">

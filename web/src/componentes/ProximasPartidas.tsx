@@ -24,6 +24,7 @@ export default function ProximasPartidas({
   titulo,
   quantas = 6,
   modo,
+  reservar,
 }: {
   regiao: string;
   partidas: PartidasCompactas;
@@ -34,6 +35,13 @@ export default function ProximasPartidas({
   quantas?: number;
   /** O modo das partidas, quando são todas de um (os comboios de uma estação). */
   modo?: string;
+  /**
+   * Quantas filas guardar enquanto se fazem as contas, quando quem chama sabe
+   * melhor do que `quantas`. A página da paragem sabe quantas partidas faltam
+   * hoje à hora em que se fez: guardar seis numa paragem a que faltam quatro
+   * deixava um buraco de duas filas no fundo do cartão.
+   */
+  reservar?: number;
 }) {
   const lista = useMemo(() => expandir(partidas), [partidas]);
 
@@ -71,7 +79,7 @@ export default function ProximasPartidas({
   useLayoutEffect(() => {
     if (aEspera && caixa.current) reservado.current = caixa.current.offsetHeight;
   });
-  const linhas = Math.min(quantas, lista.length);
+  const linhas = Math.min(quantas, lista.length, reservar ?? Infinity);
 
   if (aEspera) {
     return (
