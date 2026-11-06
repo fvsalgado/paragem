@@ -30,7 +30,7 @@ import FeriadoMunicipalDoConcelho, {
 } from '@/componentes/FeriadoMunicipal';
 import Distintivo from '@/componentes/Distintivo';
 import Estado from '@/componentes/Estado';
-import { aAutoridade, lista, numero, plural } from '@/lib/prosa';
+import { aAutoridade, lista, numero, plural, semPalavrasSoltas } from '@/lib/prosa';
 import {
   fraseDoDistrito,
   numerosDoConcelho,
@@ -338,7 +338,7 @@ export default async function Concelho({
                               {dia.horas.length > 1 &&
                                 ` · ${horaLegivel(dia.horas[dia.horas.length - 1]).texto}`}
                             </span>
-                            <span className="secundario">{dia.dia}</span>
+                            <span className="secundario">{semPalavrasSoltas(dia.dia)}</span>
                           </>
                         ) : (
                           <span className="secundario">sem hora marcada</span>
@@ -436,7 +436,7 @@ export default async function Concelho({
                         {e.sem_ligacao ? (
                           <Estado tipo="atencao">Sem autocarro perto</Estado>
                         ) : (
-                          <span className="secundario">com autocarro perto</span>
+                          <span className="secundario estado-da-estacao">com autocarro perto</span>
                         )}
                       </Link>
                     </li>

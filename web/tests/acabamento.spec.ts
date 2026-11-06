@@ -314,3 +314,22 @@ test('na caixa de procura do mapa, o anel do foco é o da cápsula, e não um se
     'solid',
   );
 });
+
+test('no concelho, o estado de cada estação e o dia de cada saída não deixam palavras soltas', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto(`/rede/concelhos/${concelhoComMaisParagens().id}/`);
+  for (const estado of await page.locator('.estado-da-estacao').all()) {
+    const [altura, linha] = await estado.evaluate((e) => [
+      e.getBoundingClientRect().height,
+      parseFloat(getComputedStyle(e).lineHeight) || 24,
+    ]);
+    expect(altura, 'uma linha só').toBeLessThanOrEqual(linha * 1.2);
+  }
+  for (const dia of await page
+    .locator('table.saidas .horas-da-saida .secundario')
+    .allTextContents()) {
+    expect(dia, 'os pedaços curtos não partem').not.toMatch(/(^|· )(Dias úteis|Todo o ano)/);
+  }
+});
