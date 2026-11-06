@@ -435,6 +435,22 @@ code {
   min-height: var(--alvo);
   padding: 0 var(--espaco-1);
 }
+/* A SECÇÃO ONDE SE ESTÁ, com um traço de 3 px por baixo em vez do sublinhado
+   das outras: a forma diz o que o `aria-current` diz a quem ouve, e não
+   depende da cor (`LigacaoDaSeccao`). */
+.cabecalho nav a[aria-current] {
+  position: relative;
+  text-decoration: none;
+}
+.cabecalho nav a[aria-current]::after {
+  content: '';
+  position: absolute;
+  left: var(--espaco-1);
+  right: var(--espaco-1);
+  bottom: 0.5rem;
+  height: 3px;
+  background: currentColor;
+}
 
 /* O CABEÇALHO DE UMA REGIÃO É A MARCA DELA (P4-008, P1-007): o endereço
    dela desenhado em feixe, nos tons dela, sobre a superfície — como o do

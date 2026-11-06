@@ -257,3 +257,24 @@ test('o número de quadros não se cola ao nome deles', async ({ page }) => {
     0,
   );
 });
+
+test('o cabeçalho diz em que secção se está, com o traço e para quem ouve', async ({ page }) => {
+  const nav = page.getByRole('navigation', { name: 'Principal' });
+  const rede = nav.getByRole('link', { name: 'A rede' });
+  const comoChegar = nav.getByRole('link', { name: 'Como chegar' });
+
+  await page.goto('/rede/');
+  await expect(rede).toHaveAttribute('aria-current', 'page');
+  await expect(comoChegar).not.toHaveAttribute('aria-current');
+
+  // Uma paragem está DENTRO de «A rede», e não é ela.
+  await page.goto(`/rede/paragens/${paragemComMaisPartidas().id}/`);
+  await expect(rede).toHaveAttribute('aria-current', 'true');
+  // O traço vê-se, e não depende da cor: é uma forma.
+  const traco = await rede.evaluate((a) => getComputedStyle(a, '::after').height);
+  expect(traco).toBe('3px');
+
+  await page.goto('/viagem/');
+  await expect(comoChegar).toHaveAttribute('aria-current', 'page');
+  await expect(rede).not.toHaveAttribute('aria-current');
+});

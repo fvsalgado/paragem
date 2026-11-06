@@ -1,5 +1,6 @@
 import Link from '@/componentes/Ligacao';
 import AssinaturaDaRegiao from '@/componentes/AssinaturaDaRegiao';
+import LigacaoDaSeccao from '@/componentes/LigacaoDaSeccao';
 import BotaoDoTema from '@/componentes/BotaoDoTema';
 import { exigirRegiao, temMosaicos, url } from '@/lib/dados';
 import { assinaturaDaRegiao, marcaDaRegiao } from '@/lib/marca';
@@ -51,14 +52,17 @@ export default async function Cabecalho({ regiao: id }: { regiao: string }) {
         <div className="acoes-do-cabecalho">
           <nav aria-label="Principal">
             <ul>
+              {/* Marcam a secção onde se está (`LigacaoDaSeccao`). */}
               <li>
-                <Link href={url(id)}>{temMapa ? 'Mapa' : 'Início'}</Link>
+                <LigacaoDaSeccao href={url(id)} so>
+                  {temMapa ? 'Mapa' : 'Início'}
+                </LigacaoDaSeccao>
               </li>
               <li>
-                <Link href={url(id, 'viagem/')}>Como chegar</Link>
+                <LigacaoDaSeccao href={url(id, 'viagem/')}>Como chegar</LigacaoDaSeccao>
               </li>
               <li>
-                <Link href={url(id, 'rede/')}>A rede</Link>
+                <LigacaoDaSeccao href={url(id, 'rede/')}>A rede</LigacaoDaSeccao>
               </li>
             </ul>
           </nav>
