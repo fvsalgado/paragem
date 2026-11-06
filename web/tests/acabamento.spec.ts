@@ -212,3 +212,17 @@ test('no rodapé, o tema escolhe-se numa linha só', async ({ page }) => {
   expect((await tema.boundingBox())!.height).toBeLessThanOrEqual(60);
   await expect(tema.getByRole('radio', { name: 'Escuro' })).toBeVisible();
 });
+
+test('«Como chegar» vazio: a frase tem margem, e não se oferece «Atualizar» sem procura', async ({
+  page,
+}) => {
+  // Antes das duas pontas não há procura para atualizar, e a frase que pede
+  // as pontas estava colada à borda da caixa dos resultados.
+  await page.goto('/viagem/');
+  const frase = page.getByText('Escolha de onde parte e para onde vai.');
+  await expect(frase).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Atualizar' })).toHaveCount(0);
+  const caixa = (await page.locator('.zona-de-resultados').boundingBox())!;
+  const texto = (await frase.boundingBox())!;
+  expect(texto.x - caixa.x).toBeGreaterThanOrEqual(12);
+});

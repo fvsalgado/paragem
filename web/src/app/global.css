@@ -2876,7 +2876,12 @@ button.modo.activo {
   font-size: var(--letra-pequena);
   padding: 0.3rem 0.7rem;
 }
+/* O ÍCONE AO MEIO DA LETRA: em linha, o «Atualizar» tinha a seta 3 px acima
+   do texto, assente na linha de base. */
 button.etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   background: var(--superficie);
   color: var(--texto);
   border: 1px solid var(--linhas);
@@ -5622,7 +5627,8 @@ ul.perto-partidas > li {
 .zona-de-resultados.em-pagina {
   min-height: 60vh;
 }
-.zona-de-resultados .a-procurar {
+.zona-de-resultados .a-procurar,
+.zona-de-resultados .falta-escolher {
   margin: var(--espaco-3) var(--espaco-4);
 }
 /* Uma classe à parte, e não `opcoes`: o esqueleto não é uma lista de opções,
