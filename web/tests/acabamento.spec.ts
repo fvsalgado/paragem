@@ -278,3 +278,25 @@ test('o cabeçalho diz em que secção se está, com o traço e para quem ouve',
   await expect(comoChegar).toHaveAttribute('aria-current', 'page');
   await expect(rede).not.toHaveAttribute('aria-current');
 });
+
+test('o título da página cresce no computador, e não fica mais pequeno do que os números', async ({
+  page,
+}) => {
+  const c = concelhoComMaisParagens();
+  const tamanho = (seletor: string) =>
+    page
+      .locator(seletor)
+      .first()
+      .evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/rede/concelhos/${c.id}/`);
+  expect(await tamanho('h1')).toBe(28);
+  for (const largura of [640, 800, 1440]) {
+    await page.setViewportSize({ width: largura, height: 900 });
+    const titulo = await tamanho('h1');
+    expect(titulo, `${largura} px`).toBeGreaterThanOrEqual(
+      await tamanho('ul.numeros-do-concelho strong'),
+    );
+    if (largura === 1440) expect(titulo).toBe(40);
+  }
+});

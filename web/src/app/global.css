@@ -101,7 +101,14 @@
   --letra-corpo: 1.0625rem; /* o texto corrido — o do `body` */
   --letra-destaque: 1.2rem; /* o título de um cartão, uma hora que se procura */
   --letra-titulo: 1.3rem; /* o h2 */
-  --letra-titulo-grande: 1.75rem; /* o h1 */
+  --letra-titulo-grande: 1.75rem; /* o h1 num telemóvel, e os números grandes */
+  /* O H1 DAS PÁGINAS CRESCE COM O ECRÃ: 1,75 rem num telemóvel, 2,5 rem a
+     partir de uns 840 px. No computador, um título de 28 px por cima de uma
+     página de 1 440 lia-se como mais um parágrafo — e ficava mais pequeno do
+     que os números por modo do concelho (2,1 rem a partir dos 40 rem), que
+     estão por baixo dele. A conta garante-lhe pelo menos esses 2,1 rem a
+     partir daí. */
+  --letra-titulo-da-pagina: clamp(1.75rem, 1.05rem + 2.75vw, 2.5rem);
   --letra-cartaz: 2.1rem; /* os números grandes da montra */
   --letra-montra: 2.75rem; /* o título da montra do produto */
   /* Os espaços, em quartos de rem: o ritmo vertical e os afastamentos. */
@@ -274,7 +281,7 @@ h3 {
   margin: 0 0 var(--espaco-2);
 }
 h1 {
-  font-size: var(--letra-titulo-grande);
+  font-size: var(--letra-titulo-da-pagina);
   margin-bottom: var(--espaco-3);
 }
 h2 {
