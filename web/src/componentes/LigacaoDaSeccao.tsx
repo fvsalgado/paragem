@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
-import Link from '@/componentes/Ligacao';
+import Link from 'next/link';
 
 /**
  * UMA LIGAÇÃO DO CABEÇALHO QUE DIZ SE É ONDE SE ESTÁ. As três do cabeçalho —
@@ -15,6 +15,10 @@ import Link from '@/componentes/Ligacao';
  *
  * O caminho é o público (`/rede/…`), e não o de dentro, com a região à
  * frente: é o que o navegador mostra, e o que as ligações escrevem.
+ *
+ * O `Link` do Next diretamente, com `prefetch={false}` por extenso, como faz
+ * `Ligacao.tsx`: este vai para o navegador em todas as páginas, e importar
+ * aquele levava mais um módulo para cada uma.
  */
 export default function LigacaoDaSeccao({
   href,
@@ -29,7 +33,7 @@ export default function LigacaoDaSeccao({
   const caminho = usePathname() ?? '';
   const atual = caminho === href ? 'page' : !so && caminho.startsWith(href) ? 'true' : undefined;
   return (
-    <Link href={href} aria-current={atual}>
+    <Link href={href} prefetch={false} aria-current={atual}>
       {children}
     </Link>
   );
