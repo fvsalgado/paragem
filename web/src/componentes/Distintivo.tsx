@@ -1,4 +1,4 @@
-import { contraste, MINIMO, normalizar, somemNoEscuro } from '@/lib/cor';
+import { contraste, MINIMO, normalizar, somemNoEscuro, traco } from '@/lib/cor';
 
 /**
  * O número da linha, com a cor que o feed lhe dá.
@@ -77,15 +77,13 @@ export default function Distintivo({
 /**
  * A cor da linha para desenhar o PERCURSO sobre o fundo claro da página.
  *
- * É a mesma do distintivo, e pela mesma razão: o `comContrasteSuficiente`
- * escurece-a até o branco passar os 4,5:1 por cima dela — e uma cor que dá
- * 4,5:1 contra o branco dá mais de 3:1 contra o fundo da página, que é o que
- * a WCAG 1.4.11 pede a um traço que diz alguma coisa. Um fio amarelo-claro num
- * fundo claro não se via; escurecido, continua amarelo e vê-se.
+ * NÃO É A DO DISTINTIVO. O `comContrasteSuficiente` garante o número POR CIMA
+ * da cor, e um bege com o número escuro passa sem mudar — mas o mesmo bege
+ * como fio, sobre o branco, dava 2,3:1. O traço tem a sua conta
+ * (`tracoDaLinha`): 3:1 sobre os fundos claros, e a mistura do escuro também.
  */
 export function corDoTraco(cor?: string | null): string {
-  const original = normalizar(cor);
-  return original ? comContrasteSuficiente(original) : 'var(--marca)';
+  return traco(cor) ?? 'var(--marca)';
 }
 
 export function textoSobre(fundo: string): string {

@@ -12,9 +12,8 @@ import {
   type Ponto,
 } from '@/lib/formato';
 import { tituloDoSentido } from '@/lib/sentidos';
-import { comContrasteSuficiente } from '@/componentes/Distintivo';
-import { normalizar } from '@/lib/cor';
-import { corDaRede, misturar, type CorDaLinha } from '@/lib/estilo-mapa';
+import { tracoDaLinha } from '@/lib/cor';
+import { corDaRede, type CorDaLinha } from '@/lib/estilo-mapa';
 import { descodificarLinha } from '@/lib/otp';
 import { aplicaAParagem, redeToda, type AvisoNoMapa } from '@/lib/avisos';
 import Distintivo from '@/componentes/Distintivo';
@@ -192,16 +191,18 @@ function escrever(camada: Camada | null, endereco: string, empilhar: boolean): v
 }
 
 /**
- * A cor de uma linha no mapa, nos dois temas: a do feed escurecida até se ler
- * sobre o branco (a mesma do distintivo e do percurso da página), e no escuro
- * misturada com branco, como os traços da página (`--mistura-dos-tracos`).
- * Sem cor no feed, a do modo.
+ * A cor de uma linha no mapa, nos dois temas: a do traço da linha
+ * (`tracoDaLinha`), a ≥ 3:1 do fundo do mapa e do contorno branco no claro, e
+ * misturada com branco no escuro, como os traços da página
+ * (`--mistura-dos-tracos`). Sem cor no feed, a do modo.
  */
 function corDaLinhaNoMapa(l: Pick<LinhaDetalhe, 'cor' | 'modo'>): CorDaLinha {
-  const original = normalizar(l.cor);
-  if (!original) return { claro: corDaRede('claro', l.modo), escuro: corDaRede('escuro', l.modo) };
-  const claro = comContrasteSuficiente(original);
-  return { claro, escuro: misturar(claro, '#ffffff', 0.58) };
+  return (
+    tracoDaLinha(l.cor) ?? {
+      claro: corDaRede('claro', l.modo),
+      escuro: corDaRede('escuro', l.modo),
+    }
+  );
 }
 
 /** A caixa que leva a linha inteira — as paragens e o traçado. */
