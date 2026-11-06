@@ -122,6 +122,9 @@ test('a montra vende: o produto a funcionar, para quem é, e com quem se fala', 
   const cartoes = page.locator('#demonstracao .produto-regioes > li');
   expect(await cartoes.count()).toBeGreaterThan(0);
   await expect(cartoes.filter({ hasNotText: 'Demonstração.' })).toHaveCount(0);
+  // E cada uma diz o que tem de seu: nenhuma frase se repete entre cartões.
+  const frases = await cartoes.locator('p', { hasText: 'Demonstração.' }).allTextContents();
+  expect(new Set(frases).size, frases.join(' | ')).toBe(frases.length);
 
   // As âncoras do cabeçalho levam a secções que existem.
   for (const ancora of ['demonstracao', 'para-quem', 'entrada']) {

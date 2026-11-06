@@ -93,6 +93,54 @@ export function ordemDaMontra<T extends { id: string; paragens: number }>(fichas
   return [...fichas].sort((a, b) => b.paragens - a.paragens || a.id.localeCompare(b.id, 'pt'));
 }
 
+/** Os modos da região por extenso, em minúsculas, para uma frase. */
+const MODO_NUMA_FRASE: Record<string, string> = {
+  autocarro: 'autocarro',
+  'a-pedido': 'transporte a pedido',
+  comboio: 'comboio',
+  'urbano-municipal': 'urbano municipal',
+  bicicleta: 'bicicleta partilhada',
+  expresso: 'expresso',
+  taxi: 'táxi',
+};
+
+/** Quem é a autoridade de uma demonstração, com o género do nome dela. */
+const QUEM_E: Record<string, { nome: string; feminino: boolean }> = {
+  cim: { nome: 'uma comunidade intermunicipal', feminino: true },
+  municipio: { nome: 'um município', feminino: false },
+  'area-metropolitana': { nome: 'uma área metropolitana', feminino: true },
+};
+
+const POR_EXTENSO = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
+
+/**
+ * O QUE CADA DEMONSTRAÇÃO TEM DE SEU, numa frase: o tipo de autoridade e os
+ * modos. Os três cartões da montra diziam a mesma frase — «uma região
+ * inventada, para ver o produto a funcionar» —, e quem os lia não sabia porque
+ * havia três. Cada uma prova uma coisa diferente: uma comunidade
+ * intermunicipal com os modos todos, outra com poucos, e um município sozinho,
+ * só com autocarro. A frase sai do que a região declara — não se escreve o
+ * nome de nenhuma —, e uma demonstração nova diz o que tem no dia em que é
+ * construída.
+ */
+export function fraseDaDemonstracao(r: {
+  autoridade?: { tipo?: string };
+  modos: readonly string[];
+}): string {
+  const quem = QUEM_E[r.autoridade?.tipo ?? ''] ?? {
+    nome: 'uma autoridade de transportes',
+    feminino: true,
+  };
+  const inventada = quem.feminino ? 'inventada' : 'inventado';
+  const modos = r.modos.map((m) => MODO_NUMA_FRASE[m] ?? m);
+  const sujeito = `${quem.nome[0].toUpperCase()}${quem.nome.slice(1)} ${inventada}`;
+  if (modos.length === 0) return `${sujeito}.`;
+  if (modos.length === 1) return `${sujeito}, só com ${modos[0]}.`;
+  const quantos = POR_EXTENSO[modos.length] ?? String(modos.length);
+  const emLista = `${modos.slice(0, -1).join(', ')} e ${modos[modos.length - 1]}`;
+  return `${sujeito}, com ${quantos} modos: ${emLista}.`;
+}
+
 /**
  * A morada da montra, quando está declarada e é absoluta: a mesma
  * `NEXT_PUBLIC_PARAGEM_PRODUTO` para onde já levam a marca e o «Sobre o
