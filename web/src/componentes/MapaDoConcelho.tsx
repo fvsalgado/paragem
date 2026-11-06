@@ -139,6 +139,8 @@ export default function MapaDoConcelho({
             modosDesligados={modosDesligados}
             margemInferior={0}
             sedes={sedes}
+            // No meio da página: um dedo rola a página, dois mexem o mapa.
+            embutido
             // AS PARAGENS DELE ACESAS A TODOS OS ZOOMS, como as de uma linha
             // escolhida: no zoom do concelho inteiro o mapa só mostra as mais
             // servidas, e quem o abre quer ver onde há paragens no concelho

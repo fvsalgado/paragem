@@ -83,6 +83,10 @@ const NOMES_DOS_CONTROLOS = {
   'NavigationControl.ZoomIn': 'Aproximar',
   'NavigationControl.ZoomOut': 'Afastar',
   'Popup.Close': 'Fechar',
+  // Os avisos dos mapas embutidos numa página (`embutido`), por cima do mapa.
+  'CooperativeGesturesHandler.WindowsHelpText': 'Use Ctrl + deslocar para aproximar o mapa',
+  'CooperativeGesturesHandler.MacHelpText': 'Use ⌘ + deslocar para aproximar o mapa',
+  'CooperativeGesturesHandler.MobileHelpText': 'Use dois dedos para mover o mapa',
 };
 
 /**
@@ -566,6 +570,7 @@ export default function Mapa({
   sedes = SEM_SEDES,
   linha = null,
   estacoesSemAutocarro = SEM_ESTACOES,
+  embutido = false,
 }: {
   centro: [number, number];
   zoom?: number;
@@ -669,6 +674,16 @@ export default function Mapa({
    * melhor sabê-lo antes de apanhar o comboio.
    */
   estacoesSemAutocarro?: readonly string[];
+  /**
+   * UM MAPA NO MEIO DE UMA PÁGINA, e não o ecrã inteiro: o do concelho, o do
+   * planeador ao lado das opções. Aí o dedo que só queria descer a página
+   * ficava preso no mapa, que se mexia em vez dela — e a roda do rato
+   * aproximava o mapa em vez de rolar. Embutido, o mapa só se arrasta com dois
+   * dedos e só se aproxima com Ctrl (⌘ num Mac) e a roda, e diz isso por cima
+   * dele quando alguém tenta. No mapa de ecrã inteiro não há página para
+   * rolar, e um dedo mexe o mapa como em qualquer aplicação de mapas.
+   */
+  embutido?: boolean;
 }) {
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<MapaLibre | null>(null);
@@ -769,6 +784,7 @@ export default function Mapa({
           // inglês: quem parava o rato no botão da localização lia «Find my
           // location», numa página que é toda em português.
           locale: NOMES_DOS_CONTROLOS,
+          cooperativeGestures: embutido,
           // O tipo de letra do sistema para as etiquetas — sem servidor de
           // glifos de terceiro. Ver `estilo-mapa.ts`.
           localIdeographFontFamily: "'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif",

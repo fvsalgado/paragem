@@ -192,6 +192,9 @@ export default function DireccoesDaPagina({
             etiqueta={percurso?.meio ?? null}
             enquadrar={percurso?.caixa ?? null}
             sedes={mapa.sedes}
+            // Ao lado das opções, que se descem com a roda: a roda não fica
+            // presa no mapa (Ctrl e a roda aproximam-no).
+            embutido
           />
         )}
       </div>
