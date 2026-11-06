@@ -1,5 +1,7 @@
 """A declaração de uma região, e o que ela recusa."""
 
+from urllib.parse import urlparse
+
 import pytest
 import yaml
 
@@ -572,7 +574,11 @@ def test_a_prova_declara_a_agenda_so_para_um_concelho_e_o_savel_nenhuma():
     assert prova.agenda_cultural is not None
     com = [c.id for c in prova.concelhos if prova.agenda_cultural.pagina(c.id)]
     assert com and len(com) < len(prova.concelhos)
-    assert all(".example.org/" in str(prova.agenda_cultural.pagina(c)) for c in com)
+    # Um endereço inventado, e reservado para exemplos: o anfitrião é de
+    # example.org, e não só um pedaço do texto do endereço.
+    for c in com:
+        anfitriao = urlparse(str(prova.agenda_cultural.pagina(c))).hostname or ""
+        assert anfitriao == "example.org" or anfitriao.endswith(".example.org")
     assert regiao_ou_salta("prova-municipio").agenda_cultural is None
 
 
