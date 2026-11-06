@@ -27,9 +27,6 @@ export const CODIGO = 'https://github.com/fvsalgado/paragem';
 /** A política de segurança do código: como se comunica uma vulnerabilidade. */
 export const SEGURANCA = `${CODIGO}/blob/main/SECURITY.md`;
 
-/** O produto irmão, da mesma casa, que se vende às mesmas autoridades. */
-export const CORETO = 'https://coreto.org';
-
 /**
  * O contacto publicado no repositório — o do `AUTORIA.md` e do `SECURITY.md`.
  *
