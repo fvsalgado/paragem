@@ -1,6 +1,6 @@
 import Link from '@/componentes/Ligacao';
 import { DO_PRODUTO, lerContactos } from '@/lib/contactos';
-import { exigirRegiao, url } from '@/lib/dados';
+import { exigirRegiao, tarifas, url, urlRede } from '@/lib/dados';
 import { redeEQuemAGere } from '@/lib/prosa';
 import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
 import { EscolhaDoTema } from '@/componentes/EscolherTema';
@@ -13,12 +13,23 @@ export default async function Rodape({ regiao: id }: { regiao: string }) {
   // acessibilidade, para as duas nunca dizerem endereços diferentes.
   const contactos = await lerContactos(id);
   const correio = contactos?.acessibilidade_email || DO_PRODUTO.email;
+  const temTarifario = (await tarifas(id)).titulos.length > 0;
   return (
     <footer className="rodape">
       <span className="regua-do-feixe" aria-hidden="true" />
       <div className="interior">
         <nav aria-label="Rodapé">
           <ul>
+            {/* O TARIFÁRIO À MÃO EM TODAS AS PÁGINAS. Só se chegava a ele pelo
+                menu do mapa e pela rede, e «quanto custa» é a pergunta que vem
+                logo a seguir a «a que horas passa». No rodapé e não no
+                cabeçalho, que é do mapa e da procura. Só quando há títulos:
+                uma ligação para uma tabela vazia é pior do que nenhuma. */}
+            {temTarifario && (
+              <li>
+                <Link href={urlRede(id, 'tarifario/')}>Tarifário</Link>
+              </li>
+            )}
             <li>
               {/* UM NOME POR COISA (P2-042): «Dados abertos» aqui, no menu e no
                   título da página. Eram «Dados e licenças» num sítio e «Dados
