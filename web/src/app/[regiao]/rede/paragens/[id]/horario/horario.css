@@ -1,12 +1,14 @@
 /*
  * A FOLHA PARA AFIXAR NA PARAGEM (`page.tsx`), no ecrã e no papel.
  *
- * No ecrã é uma pré-visualização: a folha em branco, do tamanho de um A4, com
- * «Imprimir» por cima. No papel sai só a folha — sem o cabeçalho do sítio, sem
- * o rodapé, sem a faixa da demonstração —, e as cores das linhas saem como
- * estão, que é o que as distingue a quem está à espera.
+ * No ecrã é uma pré-visualização: a folha em papel branco, com «Imprimir» por
+ * cima. No papel sai só a folha, com as cores das linhas como estão, e repete
+ * em cada folha o cabeçalho (o `thead` da tabela de paginação) e o rodapé
+ * (`position: fixed`, com o lugar guardado pelo `tfoot`).
  *
- * A folha é papel nos dois temas: escura no ecrã, imprimia-se preta.
+ * A folha é papel nos dois temas: escura no ecrã, imprimia-se preta. As cores
+ * são as do §6 (o azul-noite do texto, o cinzento das linhas) e as da região
+ * — o feixe dela na régua, a linha de fora nos acentos.
  */
 
 .horario-para-afixar {
@@ -24,82 +26,156 @@
   margin: 0;
 }
 
+/* --- o papel -------------------------------------------------------------- */
+
 .folha-a4 {
   --folha-texto: #102c3f;
   --folha-secundario: #4a5c66;
   --folha-linhas: #d5ddd9;
+  --folha-papel-tinto: #f2f5f3;
+  --folha-acento: var(--regiao-feixe-1, #0a5c7a);
   box-sizing: border-box;
   width: 100%;
   max-width: 210mm;
-  min-height: 297mm;
   margin: 0 auto;
-  padding: 12mm;
+  padding: 12mm 12mm 10mm;
   background: #fff;
   color: var(--folha-texto);
   border: 1px solid var(--linhas);
-  display: flex;
-  flex-direction: column;
-  gap: 5mm;
   font-variant-numeric: tabular-nums;
 }
 @media (max-width: 40rem) {
   /* No telemóvel a folha não tem de ter o tamanho do papel: tem de se ler. */
   .folha-a4 {
-    min-height: 0;
     padding: var(--espaco-4);
   }
 }
 
+/* A tabela que pagina: no ecrã não se vê que é uma tabela. */
+/* Largura fixa: uma tabela automática alarga-se ao conteúdo mais largo, e a
+   360 px a folha passava 9 px do ecrã. */
+.folha-paginas {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+.folha-paginas > thead > tr > td,
+.folha-paginas > tbody > tr > td,
+.folha-paginas > tfoot > tr > td {
+  padding: 0;
+  border: 0;
+  vertical-align: top;
+}
+.folha-espaco-do-rodape {
+  display: none;
+}
+
+/* A régua do feixe da região: as três linhas, nos tons claros dela. */
+.folha-regua {
+  display: block;
+  height: 2.5px;
+  margin: 3.5px 0;
+  background: var(--regiao-feixe-2, #3f92d4);
+  box-shadow:
+    0 -3.5px 0 var(--regiao-feixe-1, #c2281c),
+    0 3.5px 0 var(--regiao-feixe-3, #7fbbf7);
+}
+
+/* --- o cabeçalho ---------------------------------------------------------- */
+
 .folha-cabecalho {
-  border-bottom: 2px solid var(--folha-texto);
-  padding-bottom: 3mm;
+  padding-bottom: 5mm;
+}
+.folha-topo {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 6mm;
+  margin-bottom: 3mm;
 }
 .folha-marca {
-  margin-bottom: 3mm;
+  min-width: 0;
 }
 .folha-tipo {
   margin: 0;
+  text-align: right;
   font-size: var(--letra-pequena);
   font-weight: 700;
+  line-height: 1.2;
   color: var(--folha-secundario);
 }
 .folha-a4 h1 {
-  margin: 1mm 0 0;
-  font-size: 2rem;
-  line-height: 1.1;
+  margin: 4mm 0 0;
+  font-size: 2.4rem;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
   color: var(--folha-texto);
 }
 .folha-concelho {
-  margin: 1mm 0 0;
+  margin: 1.5mm 0 0;
+  font-size: var(--letra-destaque);
   color: var(--folha-secundario);
 }
 
+/* --- as linhas que param aqui -------------------------------------------- */
+
 .folha-linhas {
   list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2mm 6mm;
+  margin: 0 0 6mm;
+  padding: 3mm 4mm;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 78mm), 1fr));
+  gap: 2.5mm 6mm;
+  background: var(--folha-papel-tinto);
+  border-radius: var(--raio-pequeno);
 }
 .folha-linhas li {
   display: flex;
   align-items: center;
-  gap: 2mm;
+  gap: 3mm;
   margin: 0;
+  min-width: 0;
+}
+.folha-linhas li > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
+/* --- os quadros: um por tipo de dia --------------------------------------- */
+
+.folha-grelhas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 8mm;
+}
+.folha-grelhas.duas {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media screen and (max-width: 40rem) {
+  .folha-grelhas.duas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .folha-quadro {
   break-inside: avoid;
+  margin: 0 0 6mm;
 }
 .folha-quadro h2 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 3mm;
   margin: 0 0 1.5mm;
+  padding: 1.6mm 0 1.6mm 3mm;
+  border-left: 4px solid var(--folha-acento);
   font-size: var(--letra-destaque);
+  line-height: 1.2;
   color: var(--folha-texto);
 }
 .folha-contagem {
+  flex: none;
   font-weight: 400;
-  font-size: var(--letra-pequena);
+  font-size: var(--letra-mini);
   color: var(--folha-secundario);
 }
 
@@ -109,103 +185,179 @@
 }
 .folha-grelha th,
 .folha-grelha td {
-  border-top: 1px solid var(--folha-linhas);
-  padding: 1.2mm 2mm;
+  padding: 1.1mm 0;
+  border-bottom: 1px solid var(--folha-linhas);
   vertical-align: middle;
   text-align: left;
 }
-.folha-grelha tbody tr:last-child th,
-.folha-grelha tbody tr:last-child td {
-  border-bottom: 1px solid var(--folha-linhas);
-}
 .folha-grelha th[scope='row'] {
-  width: 3.2rem;
-  font-size: var(--letra-destaque);
+  width: 11mm;
+  padding-right: 3mm;
+  font-size: 1.3rem;
   font-weight: 700;
-  background: #f5f7f4;
+  line-height: 1;
   color: var(--folha-texto);
 }
-.folha-grelha td {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1mm 4mm;
-}
-.folha-minuto {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.15rem;
-  font-size: var(--letra-destaque);
-  font-weight: 700;
-  white-space: nowrap;
-}
-.folha-minuto .distintivo {
-  align-self: center;
-  margin-left: 0.15rem;
-}
-.folha-letra {
-  font-size: var(--letra-mini);
-  font-weight: 700;
-  color: var(--folha-secundario);
-}
-.folha-sinal {
+.folha-asterisco {
   font-weight: 400;
   color: var(--folha-secundario);
 }
+.folha-minutos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2mm 1.6mm;
+}
+
+/* UM MINUTO: o número, e — quando há mais do que uma linha ou destino — a
+   pastilha na cor da linha com a letra por cima, como a pastilha do
+   distintivo, mais pequena. */
+.folha-minuto {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.1rem;
+  min-width: 2.3em;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--folha-texto);
+}
+.folha-minuto.colorido {
+  justify-content: center;
+  padding: 0 0.85rem 0 0.4rem;
+  border: 1px solid var(--folha-linhas);
+  border-radius: var(--raio-pequeno);
+}
+.folha-letra {
+  position: absolute;
+  top: 0.05rem;
+  right: 0.22rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.folha-sinal {
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+/* --- o rodapé de cada folha ----------------------------------------------- */
 
 .folha-rodape {
-  margin-top: auto;
-  display: flex;
-  gap: 6mm;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'legenda qr'
+    'regua regua';
+  gap: 3mm 8mm;
+  align-items: end;
+  margin-top: 6mm;
+  padding-top: 4mm;
   border-top: 1px solid var(--folha-linhas);
-  padding-top: 3mm;
-  font-size: var(--letra-pequena);
+  font-size: var(--letra-mini);
   color: var(--folha-secundario);
+  background: #fff;
 }
-.folha-notas {
-  flex: 1;
+.folha-rodape > .folha-regua {
+  grid-area: regua;
+  margin-top: 2mm;
+}
+.folha-legenda-e-notas {
+  grid-area: legenda;
   min-width: 0;
 }
 .folha-legenda {
   list-style: none;
   margin: 0 0 2mm;
   padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1mm 5mm;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.2mm 5mm;
 }
 .folha-legenda li {
+  display: flex;
+  align-items: center;
+  gap: 1.8mm;
   margin: 0;
+  min-width: 0;
+  color: var(--folha-texto);
 }
-.folha-legenda strong {
+.folha-legenda li > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.folha-amostra {
+  min-width: 1.6rem;
+  height: 1.15rem;
+  padding: 0;
+}
+.folha-amostra .folha-letra {
+  position: static;
+  font-size: 0.7rem;
+}
+.folha-notas {
+  margin: 0 0 1.5mm;
   color: var(--folha-texto);
 }
 .folha-rodape .marca-dados {
-  margin: 0 0 2mm;
-  background: none;
+  margin: 0;
   padding: 0;
+  background: none;
   color: var(--folha-secundario);
 }
-.folha-endereco {
+
+.folha-qr-bloco {
+  grid-area: qr;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2mm;
+  width: 36mm;
+  text-align: center;
+}
+.folha-qr {
+  flex: none;
+  width: 25mm;
+  height: 25mm;
+}
+.folha-qr-bloco p {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4mm;
   margin: 0;
+  line-height: 1.25;
+}
+.folha-qr-bloco strong {
+  font-size: var(--letra-pequena);
+  color: var(--folha-texto);
 }
 .folha-url {
   font-weight: 700;
   color: var(--folha-texto);
   overflow-wrap: anywhere;
 }
-.folha-qr {
-  flex: none;
-  width: 30mm;
-  height: 30mm;
-}
 .folha-vazia {
   margin: 0;
 }
 
+@media screen and (max-width: 40rem) {
+  .folha-rodape {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'legenda'
+      'qr'
+      'regua';
+  }
+  .folha-legenda {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- na impressão --------------------------------------------------------- */
+
 @page {
   size: A4 portrait;
-  margin: 10mm;
+  margin: 10mm 11mm;
 }
 @media print {
   .cabecalho,
@@ -229,10 +381,33 @@
   }
   .folha-a4 {
     max-width: none;
-    min-height: calc(297mm - 20mm);
     padding: 0;
     border: 0;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+  }
+  .folha-a4 * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  /* O rodapé no fundo de CADA folha, e o lugar dele guardado em cada uma:
+     sem o `tfoot` com a mesma altura, a última fila da grelha passava por
+     baixo dele. */
+  .folha-espaco-do-rodape {
+    display: table-footer-group;
+  }
+  .folha-espaco-do-rodape td {
+    height: var(--folha-rodape, 40mm);
+  }
+  .folha-rodape {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--folha-rodape, 40mm);
+    box-sizing: border-box;
+    margin: 0;
+    align-content: end;
+    font-size: 0.7rem;
   }
 }
