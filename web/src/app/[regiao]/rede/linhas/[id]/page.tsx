@@ -20,6 +20,7 @@ import {
   urlRede,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
+import BotaoDePartilha from '@/componentes/BotaoDePartilha';
 import { AvisosDaPagina } from '@/componentes/Avisos';
 import { avisosDaLinha, catalogoDosAvisos } from '@/lib/avisos-do-sitio';
 import { lista, numero, plural } from '@/lib/prosa';
@@ -276,7 +277,10 @@ export default async function Linha({
             {' '}
             <span className="secundario">Quem gere: {l.operador}.</span>
           </>
-        )}
+        )}{' '}
+        {/* «PARTILHAR» NO FIM DA FRASE, como na paragem: há com e sem mapa, e
+            numa fila só sua empurrava o horário para baixo. */}
+        <BotaoDePartilha caminho={urlRede(rid, `linhas/${id}/`)} />
       </p>
       {daLinha && (
         <p className="pontas-da-linha">

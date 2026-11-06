@@ -21,6 +21,7 @@ import {
   type Paragem as ParagemDaLista,
 } from '@/lib/dados';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
+import BotaoDePartilha from '@/componentes/BotaoDePartilha';
 import FeriadoMunicipalDoConcelho from '@/componentes/FeriadoMunicipal';
 import { AvisosDaPagina } from '@/componentes/Avisos';
 import { avisosDaParagem, catalogoDosAvisos } from '@/lib/avisos-do-sitio';
@@ -277,7 +278,12 @@ export default async function Paragem({
           </>
         ) : (
           'Esta paragem fica fora dos concelhos da região. A linha que a serve atravessa a fronteira.'
-        )}
+        )}{' '}
+        {/* «PARTILHAR» NO FIM DA FRASE, e não na fila das ações: lá não cabia
+            ao lado do «Como chegar aqui» e do «Ver no mapa», e uma fila a mais
+            empurrava as partidas da paragem mais servida para baixo da dobra.
+            Aqui segue a frase, e quase sempre fica na mesma linha. */}
+        <BotaoDePartilha caminho={urlDaParagem(rid, p.id)} />
       </p>
       {/* A AÇÃO NO TOPO, junto do nome. Estava no fim da página — a 19 000 px
           na paragem mais servida —, e chegava-lhe quem já tinha desistido. O

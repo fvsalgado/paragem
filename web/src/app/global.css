@@ -4375,6 +4375,35 @@ main.pagina:has(.app-mapa) {
   font-weight: 700;
 }
 
+/* «PARTILHAR», com o peso de uma ligação e a forma de um botão: vai no fim
+   da frase da paragem, ou ao lado do «Ver o percurso no mapa» na linha, e
+   nunca numa fila só sua — uma fila a mais empurrava o horário para baixo da
+   dobra. O texto vai sempre escrito; o ícone ajuda quem vê. A frase de
+   «copiada» fica ao lado, e só ocupa lugar quando diz alguma coisa. */
+button.partilhar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  vertical-align: middle;
+  padding: 0 var(--espaco-1);
+  background: transparent;
+  border-color: transparent;
+  color: var(--marca-texto);
+}
+button.partilhar:hover {
+  background: transparent;
+  border-color: transparent;
+  color: var(--marca-texto-hover);
+}
+/* A frase vai inteira para a linha de baixo quando não cabe, e não partida a
+   meio; a de quando não se copiou leva o endereço, que se parte onde for. */
+.estado-da-partilha:not(:empty) {
+  display: inline-block;
+  max-width: 100%;
+  margin-left: var(--espaco-2);
+  overflow-wrap: anywhere;
+}
+
 /* O botão «Como chegar» — o verbo do Maps, e por isso o único destacado. */
 a.botao {
   display: inline-flex;
