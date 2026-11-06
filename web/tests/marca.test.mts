@@ -5,7 +5,8 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { contraste, lab } from '../src/lib/cor.ts';
+import { lab } from '../src/lib/cielab.ts';
+import { contraste } from '../src/lib/cor.ts';
 import {
   assinaturaDaRegiao,
   COR_DO_PRODUTO,

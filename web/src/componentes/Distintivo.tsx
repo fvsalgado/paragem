@@ -1,4 +1,4 @@
-import { contraste, MINIMO, normalizar, somemNoEscuro, traco } from '@/lib/cor';
+import { contraste, MINIMO, normalizar, somemNoEscuro } from '@/lib/cor';
 
 /**
  * O número da linha, com a cor que o feed lhe dá.
@@ -72,18 +72,6 @@ export default function Distintivo({
       {codigo}
     </span>
   );
-}
-
-/**
- * A cor da linha para desenhar o PERCURSO sobre o fundo claro da página.
- *
- * NÃO É A DO DISTINTIVO. O `comContrasteSuficiente` garante o número POR CIMA
- * da cor, e um bege com o número escuro passa sem mudar — mas o mesmo bege
- * como fio, sobre o branco, dava 2,3:1. O traço tem a sua conta
- * (`tracoDaLinha`): 3:1 sobre os fundos claros, e a mistura do escuro também.
- */
-export function corDoTraco(cor?: string | null): string {
-  return traco(cor) ?? 'var(--marca)';
 }
 
 export function textoSobre(fundo: string): string {

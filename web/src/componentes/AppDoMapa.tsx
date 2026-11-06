@@ -12,7 +12,6 @@ import {
   type Ponto,
 } from '@/lib/formato';
 import { tituloDoSentido } from '@/lib/sentidos';
-import { tracoDaLinha } from '@/lib/cor';
 import { corDaRede, type CorDaLinha } from '@/lib/estilo-mapa';
 import { descodificarLinha } from '@/lib/otp';
 import { aplicaAParagem, redeToda, type AvisoNoMapa } from '@/lib/avisos';
@@ -196,7 +195,10 @@ function escrever(camada: Camada | null, endereco: string, empilhar: boolean): v
  * misturada com branco no escuro, como os traços da página
  * (`--mistura-dos-tracos`). Sem cor no feed, a do modo.
  */
-function corDaLinhaNoMapa(l: Pick<LinhaDetalhe, 'cor' | 'modo'>): CorDaLinha {
+function corDaLinhaNoMapa(
+  l: Pick<LinhaDetalhe, 'cor' | 'modo'>,
+  tracoDaLinha: (cor?: string | null) => CorDaLinha | null,
+): CorDaLinha {
   return (
     tracoDaLinha(l.cor) ?? {
       claro: corDaRede('claro', l.modo),
@@ -332,6 +334,12 @@ export default function AppDoMapa({
    * mapa — que é onde se vê por onde ela vai — ficava para trás.
    */
   const [linha, setLinha] = useState<LinhaDetalhe | 'falhou' | null>(null);
+  /**
+   * A CONTA DA COR DA LINHA NO MAPA (`traco.ts`), descarregada com a primeira
+   * linha que se acende, e não com a página: quem abre o mapa e não escolhe
+   * linha nenhuma não a leva.
+   */
+  const tracos = useRef<typeof import('@/lib/traco') | null>(null);
   const [alturaDaLinha, setAlturaDaLinha] = useState<Altura>('media');
   const tituloDaLinha = useRef<HTMLHeadingElement>(null);
 
@@ -726,9 +734,16 @@ export default function AppDoMapa({
     setDirecoes(null);
     setPercurso(null);
     setAlturaDaLinha('media');
-    fetch(enderecoDosDados(regiao, `linhas/${seguro(id)}.json`))
-      .then((r) => (r.ok ? (r.json() as Promise<LinhaDetalhe>) : Promise.reject(r.status)))
-      .then((l) => setLinha(l))
+    Promise.all([
+      fetch(enderecoDosDados(regiao, `linhas/${seguro(id)}.json`)).then((r) =>
+        r.ok ? (r.json() as Promise<LinhaDetalhe>) : Promise.reject(r.status),
+      ),
+      import('@/lib/traco'),
+    ])
+      .then(([l, modulo]) => {
+        tracos.current = modulo;
+        setLinha(l);
+      })
       .catch(() => setLinha('falhou'));
   }
 
@@ -920,7 +935,7 @@ export default function AppDoMapa({
     if (!linha || linha === 'falhou' || !linha.no_mapa) return null;
     return {
       ...linha.no_mapa,
-      cor: corDaLinhaNoMapa(linha),
+      cor: corDaLinhaNoMapa(linha, tracos.current?.tracoDaLinha ?? (() => null)),
       caixa: caixaDaLinha(linha.no_mapa),
     };
   }, [linha]);

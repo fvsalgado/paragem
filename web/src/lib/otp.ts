@@ -12,7 +12,6 @@
  * há é um motor desligado é mentir a quem está à espera do autocarro.
  */
 import { FUSO, relogioNoFuso } from './fuso.ts';
-import { traco } from './cor.ts';
 
 /**
  * DOZE HORAS, e é a decisão que mais pesa nesta página.
@@ -41,7 +40,17 @@ export type Perna = {
   distance: number;
   startTime: number;
   endTime: number;
-  route: { shortName: string | null; longName: string | null; color: string | null } | null;
+  route: {
+    shortName: string | null;
+    longName: string | null;
+    color: string | null;
+    /**
+     * A cor da linha desenhada como fio (`traco`, em `traco.ts`), posta pelo
+     * planeador quando a viagem chega (`comOsTracos`). Não vem do motor nem da
+     * grelha: é uma conta, e a conta só se descarrega quando há viagens.
+     */
+    corDoTraco?: string | null;
+  } | null;
   from: { name: string };
   to: { name: string };
   /** A geometria da perna, em polilinha codificada. É o que o mapa desenha. */
@@ -318,6 +327,24 @@ export type PercursoGeo = {
 };
 
 /**
+ * CADA PERNA COM A COR DA SUA LINHA COMO TRAÇO (`route.corDoTraco`), pela
+ * conta que se lhe dá — a de `traco.ts`. O planeador chama isto quando as
+ * viagens chegam, e é só então que descarrega a conta: as páginas que têm o
+ * planeador e onde ninguém procura nada não a levam no código delas.
+ */
+export function comOsTracos(
+  its: Itinerario[],
+  traco: (cor?: string | null) => string | null,
+): Itinerario[] {
+  return its.map((it) => ({
+    ...it,
+    legs: it.legs.map((p) =>
+      p.route ? { ...p, route: { ...p.route, corDoTraco: traco(p.route.color) } } : p,
+    ),
+  }));
+}
+
+/**
  * O itinerário como geometria, uma perna por traço.
  *
  * A cor é a do MODO e não a da linha: numa rede com 122 linhas as cores do
@@ -340,13 +367,14 @@ export function percursoDe(it: Itinerario): PercursoGeo {
           // E CADA TROÇO NA COR DA SUA LINHA. Um transbordo entre a 2 e a 1
           // desenhava-se num traço azul só, e quem olhava para o mapa não via
           // onde se muda. A cor é a da linha, escurecida até se ver sobre o
-          // contorno branco (`traco`); sem cor, a do modo.
+          // contorno branco (`corDoTraco`, de `comOsTracos`); sem cor, a do
+          // modo.
           cor:
             p.modo === 'expresso'
               ? '#4a5c66'
               : p.mode === 'WALK' || p.mode === 'BICYCLE'
                 ? (COR_DO_MODO[p.mode] ?? '#4a5c66')
-                : (traco(p.route?.color) ?? COR_DO_MODO[p.mode] ?? '#0a5c7a'),
+                : (p.route?.corDoTraco ?? COR_DO_MODO[p.mode] ?? '#0a5c7a'),
           linha: p.route?.shortName ?? '',
           aproximado: !!p.aproximado,
         },

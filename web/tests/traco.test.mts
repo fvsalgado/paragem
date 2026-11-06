@@ -11,15 +11,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { lab } from '../src/lib/cielab.ts';
+import { contraste } from '../src/lib/cor.ts';
 import {
-  contraste,
   FUNDOS_DOS_TRACOS,
-  lab,
   MISTURA_DOS_TRACOS_NO_ESCURO,
   misturarEmOklab,
   traco,
   tracoDaLinha,
-} from '../src/lib/cor.ts';
+} from '../src/lib/traco.ts';
 import { corDaRede, FUNDO_DO_MAPA } from '../src/lib/estilo-mapa.ts';
 
 const CSS = readFileSync(join(import.meta.dirname, '..', 'src', 'app', 'global.css'), 'utf8');

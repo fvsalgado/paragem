@@ -6,7 +6,6 @@ import EscolherPonto from './EscolherPonto';
 import PegaDaFolha, { type Altura } from './PegaDaFolha';
 import type { PontosNoNavegador } from '@/lib/pontos-do-navegador';
 import Distintivo from './Distintivo';
-import { traco } from '@/lib/cor';
 import {
   APe,
   Bicicleta as IconeBicicleta,
@@ -1372,7 +1371,7 @@ function Opcao({
             const espera = antes ? Math.round((p.startTime - antes.endTime) / 60_000) : 0;
             // CADA TROÇO NA COR DA SUA LINHA, como no mapa: a 2 e a 1 eram
             // dois fios do mesmo azul, e o transbordo não se via.
-            const cor = p.modo === 'expresso' ? null : traco(corDaPerna(p));
+            const cor = tracoDaPerna(p);
             return (
               <Fragment key={j}>
                 <li className="paragem">
@@ -1454,6 +1453,17 @@ function corDaPerna(p: Perna): string | null {
   if (p.modo === 'expresso') return null;
   if (p.mode === 'RAIL' && semCor(p.route?.color)) return '#3f4852';
   return p.route?.color ?? null;
+}
+
+/**
+ * A cor do fio da perna na linha do tempo: a da linha como traço, que o
+ * planeador lhe pôs quando a viagem chegou (`route.corDoTraco`), ou a do
+ * comboio do §6, que já passa como traço. O expresso fica neutro.
+ */
+function tracoDaPerna(p: Perna): string | null {
+  if (p.modo === 'expresso') return null;
+  if (p.mode === 'RAIL' && semCor(p.route?.color)) return '#3f4852';
+  return p.route?.corDoTraco ?? null;
 }
 
 /**

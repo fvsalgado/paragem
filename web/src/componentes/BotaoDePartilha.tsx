@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Partilhar as IconeDePartilha } from '@/componentes/Icones';
+import IconeDePartilha from '@/componentes/IconeDePartilha';
 
 /**
  * «PARTILHAR», na paragem e na linha: o endereço da página, pela folha de

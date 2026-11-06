@@ -20,7 +20,8 @@
  * que não se lesse com branco nem com o azul-escuro do texto ficava a do
  * produto. A faixa saiu, e a regra com ela (`pipeline/src/paragem/marca.py`).
  */
-import { deLch, lab, normalizar } from './cor.ts';
+import { deLch, lab } from './cielab.ts';
+import { normalizar } from './cor.ts';
 import { desenharEndereco, type EnderecoDesenhado } from './feixe.ts';
 import type { Regiao } from './formato';
 

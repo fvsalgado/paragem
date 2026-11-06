@@ -251,15 +251,13 @@ export function Lista(p: Props) {
   );
 }
 
-/** Partilhar: uma caixa com a seta a sair dela, como nos telemóveis. */
-export function Partilhar(p: Props) {
-  return (
-    <Svg {...p}>
-      <path d="M12 3v12M7.5 7.5 12 3l4.5 4.5" />
-      <path d="M5 11v8.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V11" />
-    </Svg>
-  );
-}
+/**
+ * Partilhar: uma caixa com a seta a sair dela, como nos telemóveis. Está no
+ * seu ficheiro (`IconeDePartilha.tsx`) e não aqui: o botão de partilhar da
+ * paragem e da linha importava-o daqui, e a página levava com ele os ícones
+ * todos que o sítio usa — um quilobyte e meio por um ícone.
+ */
+export { default as Partilhar } from './IconeDePartilha';
 
 /** Três traços. O menu que toda a gente já sabe abrir. */
 export function Hamburguer(p: Props) {
