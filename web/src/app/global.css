@@ -6563,6 +6563,51 @@ details.fora-da-regiao {
 .partidas-do-dia-tabela tr.passou td {
   color: var(--texto-secundario);
 }
+/* As que já passaram, atrás de um botão, e a frase de quando já não há mais. */
+.ja-passaram {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-1) var(--espaco-3);
+  margin: 0 0 var(--espaco-2);
+}
+/* A LEGENDA DA LISTA DO DIA, dita uma vez: o que é «≈» e o que quer dizer
+   cada letra. Era a mesma frase em cada fila. */
+.legenda-do-dia {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--espaco-2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: var(--letra-pequena);
+  color: var(--texto-secundario);
+}
+.legenda-do-dia li {
+  margin: 0;
+}
+/* A chamada de uma nota: uma letra numa pastilha pequena, ao lado do destino
+   e na legenda, como num horário impresso. */
+.chamada {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  padding: 0 var(--espaco-1);
+  border: 1px solid var(--borda-campo);
+  border-radius: var(--raio-redondo);
+  font-size: var(--letra-mini);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--texto-secundario);
+  vertical-align: 0.1em;
+}
+.marca-estimada {
+  margin-right: 0.15rem;
+  color: var(--texto-secundario);
+  font-weight: 400;
+}
 details.todos-os-quadros {
   margin-top: var(--espaco-5);
   border-top: 1px solid var(--linhas);
