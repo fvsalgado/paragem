@@ -212,3 +212,124 @@ test('no rodapé, o tema escolhe-se numa linha só', async ({ page }) => {
   expect((await tema.boundingBox())!.height).toBeLessThanOrEqual(60);
   await expect(tema.getByRole('radio', { name: 'Escuro' })).toBeVisible();
 });
+
+test('«Como chegar» vazio: a frase tem margem, e não se oferece «Atualizar» sem procura', async ({
+  page,
+}) => {
+  // Antes das duas pontas não há procura para atualizar, e a frase que pede
+  // as pontas estava colada à borda da caixa dos resultados.
+  await page.goto('/viagem/');
+  const frase = page.getByText('Escolha de onde parte e para onde vai.');
+  await expect(frase).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Atualizar' })).toHaveCount(0);
+  const caixa = (await page.locator('.zona-de-resultados').boundingBox())!;
+  const texto = (await frase.boundingBox())!;
+  expect(texto.x - caixa.x).toBeGreaterThanOrEqual(12);
+});
+
+test('o «A seguir» não guarda um buraco: as partidas têm a altura das fantasmas', async ({
+  page,
+}) => {
+  // A caixa guarda a altura das linhas fantasmas para nada saltar quando as
+  // horas chegam; uma partida sem espera era 15 px mais baixa do que elas, e
+  // cinco deixavam 75 px vazios por baixo da lista.
+  await page.goto(`/rede/paragens/${paragemComMaisPartidas().id}/`);
+  const linhas = page.locator('ul.partidas > li');
+  await expect(linhas.first()).toBeVisible({ timeout: 15_000 });
+  const alturas = await linhas.evaluateAll((ls) => ls.map((l) => l.getBoundingClientRect().height));
+  const minima = await linhas.first().evaluate((l) => parseFloat(getComputedStyle(l).minHeight));
+  for (const a of alturas) expect(a).toBeGreaterThanOrEqual(minima - 0.5);
+  // E a caixa guardada não fica maior do que o que lá está.
+  const folga = await linhas.first().evaluate((l) => {
+    const caixa = l.closest<HTMLElement>('div[style*="min-height"]');
+    if (!caixa) return 0;
+    const conteudo = [...caixa.children].reduce((s, c) => s + c.getBoundingClientRect().height, 0);
+    return parseFloat(caixa.style.minHeight) - conteudo;
+  });
+  expect(folga).toBeLessThan(12);
+});
+
+test('o número de quadros não se cola ao nome deles', async ({ page }) => {
+  await page.goto(`/rede/paragens/${paragemComMaisPartidas().id}/`);
+  const resumo = page.locator('details.todos-os-quadros > summary');
+  await expect(resumo).toBeVisible();
+  expect(await resumo.evaluate((s) => parseFloat(getComputedStyle(s).columnGap))).toBeGreaterThan(
+    0,
+  );
+});
+
+test('o cabeçalho diz em que secção se está, com o traço e para quem ouve', async ({ page }) => {
+  const nav = page.getByRole('navigation', { name: 'Principal' });
+  const rede = nav.getByRole('link', { name: 'A rede' });
+  const comoChegar = nav.getByRole('link', { name: 'Como chegar' });
+
+  await page.goto('/rede/');
+  await expect(rede).toHaveAttribute('aria-current', 'page');
+  await expect(comoChegar).not.toHaveAttribute('aria-current');
+
+  // Uma paragem está DENTRO de «A rede», e não é ela.
+  await page.goto(`/rede/paragens/${paragemComMaisPartidas().id}/`);
+  await expect(rede).toHaveAttribute('aria-current', 'true');
+  // O traço vê-se, e não depende da cor: é uma forma.
+  const traco = await rede.evaluate((a) => getComputedStyle(a, '::after').height);
+  expect(traco).toBe('3px');
+
+  await page.goto('/viagem/');
+  await expect(comoChegar).toHaveAttribute('aria-current', 'page');
+  await expect(rede).not.toHaveAttribute('aria-current');
+});
+
+test('o título da página cresce no computador, e não fica mais pequeno do que os números', async ({
+  page,
+}) => {
+  const c = concelhoComMaisParagens();
+  const tamanho = (seletor: string) =>
+    page
+      .locator(seletor)
+      .first()
+      .evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/rede/concelhos/${c.id}/`);
+  expect(await tamanho('h1')).toBe(28);
+  for (const largura of [640, 800, 1440]) {
+    await page.setViewportSize({ width: largura, height: 900 });
+    const titulo = await tamanho('h1');
+    expect(titulo, `${largura} px`).toBeGreaterThanOrEqual(
+      await tamanho('ul.numeros-do-concelho strong'),
+    );
+    if (largura === 1440) expect(titulo).toBe(40);
+  }
+});
+
+test('na caixa de procura do mapa, o anel do foco é o da cápsula, e não um segundo à volta do campo', async ({
+  page,
+}) => {
+  test.skip(!temMosaicos(), SEM.mosaicos);
+  await page.goto('/');
+  const campo = page.getByRole('combobox');
+  await campo.focus();
+  await page.keyboard.type('a');
+  expect(await campo.evaluate((e) => getComputedStyle(e).boxShadow)).toBe('none');
+  expect(await page.locator('.app-procura').evaluate((e) => getComputedStyle(e).outlineStyle)).toBe(
+    'solid',
+  );
+});
+
+test('no concelho, o estado de cada estação e o dia de cada saída não deixam palavras soltas', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto(`/rede/concelhos/${concelhoComMaisParagens().id}/`);
+  for (const estado of await page.locator('.estado-da-estacao').all()) {
+    const [altura, linha] = await estado.evaluate((e) => [
+      e.getBoundingClientRect().height,
+      parseFloat(getComputedStyle(e).lineHeight) || 24,
+    ]);
+    expect(altura, 'uma linha só').toBeLessThanOrEqual(linha * 1.2);
+  }
+  for (const dia of await page
+    .locator('table.saidas .horas-da-saida .secundario')
+    .allTextContents()) {
+    expect(dia, 'os pedaços curtos não partem').not.toMatch(/(^|· )(Dias úteis|Todo o ano)/);
+  }
+});

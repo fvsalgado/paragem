@@ -5,7 +5,13 @@
  */
 import { test, expect } from '@playwright/test';
 
-import { aPedido, temAPedido, temMosaicos, SEM } from './dados-da-regiao';
+import {
+  aPedido,
+  concelhos as lerConcelhos,
+  temAPedido,
+  temMosaicos,
+  SEM,
+} from './dados-da-regiao';
 
 test('o a pedido tem o telefone na folha, e os preços levam ao tarifário', async ({ page }) => {
   test.skip(!temMosaicos(), SEM.mosaicos);
@@ -21,6 +27,14 @@ test('o a pedido tem o telefone na folha, e os preços levam ao tarifário', asy
     await expect(precos).toHaveAttribute('href', '/rede/tarifario/');
     await expect(precos).toContainText('€');
   }
+  // OS CONCELHOS, no fim da folha (§6), cada um a levar à página dele.
+  const concelhos = folha.getByRole('region', { name: 'Concelhos' });
+  await expect(concelhos.getByRole('link')).toHaveCount(lerConcelhos().length);
+  const primeiro = lerConcelhos()[0];
+  await expect(concelhos.getByRole('link', { name: primeiro.nome })).toHaveAttribute(
+    'href',
+    `/rede/concelhos/${primeiro.id}/`,
+  );
   // A «Tudo em lista» continua a ser o último filho da folha (a folha só se
   // pinta inteira quando ele chega).
   await expect(folha.locator('> :last-child')).toHaveClass(/abertura-nota/);

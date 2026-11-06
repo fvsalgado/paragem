@@ -14,6 +14,7 @@ import {
   contactoDoProduto,
   correioPara,
   eDaMontra,
+  fraseDaDemonstracao,
   ordemDaMontra,
   origemDoProduto,
 } from '../src/lib/produto.ts';
@@ -149,5 +150,24 @@ test('a montra abre pela demonstração mais completa, e a ordem não muda sozin
   assert.deepEqual(
     fichas.map((f) => f.id),
     ['b', 'c', 'a'],
+  );
+});
+
+test('cada demonstração diz o que tem de seu: o tipo de autoridade e os modos', () => {
+  assert.equal(
+    fraseDaDemonstracao({ autoridade: { tipo: 'municipio' }, modos: ['autocarro'] }),
+    'Um município inventado, só com autocarro.',
+  );
+  assert.equal(
+    fraseDaDemonstracao({
+      autoridade: { tipo: 'cim' },
+      modos: ['autocarro', 'urbano-municipal', 'bicicleta', 'taxi'],
+    }),
+    'Uma comunidade intermunicipal inventada, com quatro modos: autocarro, urbano municipal, bicicleta partilhada e táxi.',
+  );
+  // Sem tipo declarado, não se adivinha: diz-se o que é.
+  assert.match(
+    fraseDaDemonstracao({ modos: ['autocarro', 'comboio'] }),
+    /^Uma autoridade de transportes inventada, com dois modos: autocarro e comboio\.$/,
   );
 });

@@ -283,3 +283,18 @@ test('dois sítios com o mesmo nome dizem de que concelho são', async ({ page }
   await expect(opcoes.nth(0)).toContainText(`· ${a.nome}`);
   await expect(opcoes.nth(1)).toContainText(`· ${b.nome}`);
 });
+
+test('cada resultado leva o ícone do que é, escondido de quem ouve', async ({ page }) => {
+  // O ícone ajuda a ver; quem ouve tem o rótulo por extenso, e não ouve o
+  // desenho duas vezes.
+  await page.goto('/');
+  await page.getByRole('combobox').fill(BUSCA);
+  const opcoes = page.getByRole('option');
+  await expect.poll(() => opcoes.count(), { timeout: 15_000 }).toBeGreaterThan(0);
+  const primeira = opcoes.filter({ hasText: PARAGEM }).first();
+  const icone = primeira.locator('.icone-do-resultado svg');
+  await expect(icone).toHaveCount(1);
+  await expect(icone).toHaveAttribute('aria-hidden', 'true');
+  // E o nome acessível da opção é o texto dela, sem nada do desenho.
+  expect((await primeira.textContent())?.trim().startsWith(PARAGEM)).toBe(true);
+});

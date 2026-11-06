@@ -16,7 +16,7 @@
  * linha reta, e as direções a pé e de bicicleta deixam de existir — essas são
  * a pergunta «por onde», e essa não se responde sem as ruas.
  */
-import { MODOS, planear as planearComMotor, type Itinerario, type Modo } from './otp';
+import { MODOS, comOsTracos, planear as planearComMotor, type Itinerario, type Modo } from './otp';
 import {
   prepararRede,
   planearLocal,
@@ -253,16 +253,22 @@ export async function planear(
   /** O endereço do motor, quando esta região tem um. */
   motor = '',
 ): Promise<Itinerario[]> {
-  if (motor)
-    return semRepetidas(
+  // A CONTA DAS CORES DOS TRAÇOS PEDE-SE AQUI, ao mesmo tempo que a viagem, e
+  // não no código da página: só se precisa dela quando há viagens para pintar
+  // (`comOsTracos`).
+  const tracos = import('./traco.ts');
+  if (motor) {
+    const its = semRepetidas(
       (await planearComMotor(motor, de, para, data, hora, modo)).map(limparPernas),
     );
+    return comOsTracos(its, (await tracos).traco);
+  }
 
   const rede = await redeDe(regiao, semModos);
   if (!rede) throw new Error('sem horários para esta região');
   if (modo !== 'transporte') return [];
   const its = await comEstradas(regiao, rede, planearLocal(rede, de, para, data, hora, 5));
-  return semRepetidas(its.map(limparPernas));
+  return comOsTracos(semRepetidas(its.map(limparPernas)), (await tracos).traco);
 }
 
 /**

@@ -5,7 +5,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  numerosDoConcelho,
   paragemDeExemplo,
+  passaNoConcelho,
   porLocalidade,
   quantosNoConcelho,
   saidasDoConcelho,
@@ -254,4 +256,33 @@ test('a agenda cultural diz de quem é e para onde se sai, sem o «www.»', asyn
     ondeFicaAAgenda({ nome: 'Agenda', url: 'não é um endereço' }),
     'na agenda cultural Agenda',
   );
+});
+
+test('os números do concelho: paragens e linhas sempre, e os outros modos só quando os há', () => {
+  assert.deepEqual(
+    numerosDoConcelho({ paragens: 1, linhas: 3, estacoes: 0, zonas: 0 }).map((x) => x.rotulo),
+    ['paragem', 'linhas'],
+  );
+  const todos = numerosDoConcelho({ paragens: 40, linhas: 1, estacoes: 2, zonas: 1 });
+  assert.deepEqual(
+    todos.map((x) => [x.modo, x.n, x.rotulo]),
+    [
+      ['autocarro', 40, 'paragens'],
+      ['autocarro', 1, 'linha'],
+      ['comboio', 2, 'estações de comboio'],
+      ['a-pedido', 1, 'zona de transporte a pedido'],
+    ],
+  );
+});
+
+test('uma linha passa no concelho pelas paragens dos sentidos ou do horário, e não pelo número', () => {
+  const aqui = new Set(['c1', 'c2']);
+  const sentido = (ids: string[], doQuadro: string[] = []) =>
+    ({
+      paragens: ids.map((id) => ({ id })),
+      quadro: doQuadro.length ? { paragens: doQuadro.map((id) => ({ id })) } : undefined,
+    }) as unknown as LinhaDetalhe['sentidos'][number];
+  assert.equal(passaNoConcelho(linha('a', [sentido(['m1', 'c2'])]), aqui), true);
+  assert.equal(passaNoConcelho(linha('b', [sentido(['m1'], ['c1'])]), aqui), true);
+  assert.equal(passaNoConcelho(linha('c', [sentido(['m1', 'b1'])]), aqui), false);
 });

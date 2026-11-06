@@ -268,3 +268,15 @@ test('o dia da partida diz o dia da semana (#193)', () => {
   assert.equal(diaComSemana('2026-11-01'), 'dom., 1/11');
   assert.equal(diaComSemana('não é data'), 'não é data');
 });
+
+test('uma nota curta não deixa palavras soltas, e uma comprida parte onde precisa', async () => {
+  const { semPalavrasSoltas } = await import('../src/lib/prosa.ts');
+  const ns = ' ';
+  assert.equal(semPalavrasSoltas('Dias úteis'), `Dias${ns}úteis`);
+  assert.equal(semPalavrasSoltas('Todo o ano · Dias úteis'), `Todo${ns}o${ns}ano · Dias${ns}úteis`);
+  // O pedaço comprido continua a poder partir; o curto, ao lado, não.
+  assert.equal(
+    semPalavrasSoltas('Em tempo de aulas · Dias úteis'),
+    `Em tempo de aulas · Dias${ns}úteis`,
+  );
+});

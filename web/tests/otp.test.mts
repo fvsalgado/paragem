@@ -13,7 +13,14 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { descodificarLinha, percursoDe, caixaDe, type Itinerario } from '../src/lib/otp.ts';
+import {
+  caixaDe,
+  comOsTracos,
+  descodificarLinha,
+  percursoDe,
+  type Itinerario,
+} from '../src/lib/otp.ts';
+import { traco } from '../src/lib/traco.ts';
 import { contraste } from '../src/lib/cor.ts';
 
 test('descodifica o vetor conhecido da polilinha do Google', () => {
@@ -56,16 +63,18 @@ test('cada troço leva a cor da sua linha, escurecida até se ver sobre o contor
   const it = itinerario();
   it.legs.push({ ...it.legs[1], route: { shortName: '1', longName: null, color: '0A5C7A' } });
   it.legs[1].route = { shortName: '2', longName: null, color: '8C3B2A' };
-  const [, segunda, terceira] = percursoDe(it).features.map((f) => f.properties.cor);
+  const [, segunda, terceira] = percursoDe(comOsTracos([it], traco)[0]).features.map(
+    (f) => f.properties.cor,
+  );
   assert.equal(segunda, '#8c3b2a');
   assert.equal(terceira, '#0a5c7a');
   // Uma cor clara (2,27:1 sobre o branco) escurece até aos 3:1 de um traço.
   it.legs[1].route = { shortName: '2', longName: null, color: 'CA9E67' };
-  const clara = percursoDe(it).features[1].properties.cor;
+  const clara = percursoDe(comOsTracos([it], traco)[0]).features[1].properties.cor;
   assert.ok(contraste(clara, '#ffffff') >= 3, `${clara} não se vê sobre o branco`);
   // Branco é «sem cor» no GTFS: fica a do modo.
   it.legs[1].route = { shortName: 'R', longName: null, color: 'FFFFFF' };
-  assert.equal(percursoDe(it).features[1].properties.cor, '#0a5c7a');
+  assert.equal(percursoDe(comOsTracos([it], traco)[0]).features[1].properties.cor, '#0a5c7a');
 });
 
 test('uma perna sem geometria fica de fora em vez de desenhar um traço vazio', () => {

@@ -28,3 +28,40 @@ test('a página do concelho tem o mapa dele, com as paragens acesas', async ({ p
     )
     .toBeGreaterThan(0);
 });
+
+test('o mapa do concelho não prende o dedo que rola a página; o do início, de ecrã inteiro, mexe-se com um dedo', async ({
+  page,
+}) => {
+  test.skip(!temMosaicos(), SEM.mosaicos);
+  type ComGestos = { __mapa?: { cooperativeGestures: { isEnabled(): boolean } } };
+  const cooperativo = () =>
+    page.evaluate(() => (window as unknown as ComGestos).__mapa?.cooperativeGestures.isEnabled());
+
+  await page.goto(`/rede/concelhos/${concelhoComMaisParagens().id}/`);
+  const figura = page.locator('figure.mapa-do-concelho');
+  await figura.scrollIntoViewIfNeeded();
+  await expect(figura.locator('canvas.maplibregl-canvas')).toBeVisible({ timeout: 20_000 });
+  await expect.poll(cooperativo).toBe(true);
+  // O aviso por cima do mapa, em português.
+  await expect(figura.locator('.maplibregl-mobile-message')).toHaveText(
+    'Use dois dedos para mover o mapa',
+  );
+
+  await page.goto('/');
+  await expect(page.locator('canvas.maplibregl-canvas')).toBeVisible({ timeout: 20_000 });
+  await expect.poll(cooperativo).toBe(false);
+});
+
+test('os botões do mapa do concelho têm o alvo de 44 px', async ({ page }) => {
+  test.skip(!temMosaicos(), SEM.mosaicos);
+  await page.goto(`/rede/concelhos/${concelhoComMaisParagens().id}/`);
+  const figura = page.locator('figure.mapa-do-concelho');
+  await figura.scrollIntoViewIfNeeded();
+  for (const nome of ['Aproximar', 'Afastar']) {
+    const botao = figura.getByRole('button', { name: nome });
+    await expect(botao).toBeVisible({ timeout: 20_000 });
+    const caixa = (await botao.boundingBox())!;
+    expect(caixa.width, nome).toBeGreaterThanOrEqual(44);
+    expect(caixa.height, nome).toBeGreaterThanOrEqual(44);
+  }
+});

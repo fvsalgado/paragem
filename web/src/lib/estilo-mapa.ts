@@ -234,11 +234,50 @@ const ESTRADAS: {
 ];
 
 /**
- * A atribuição de um mapa do OpenStreetMap — a de omissão, para os dados de
- * antes de a região dizer de quem é o mapa dela.
+ * O CRÉDITO DO ESQUEMA DOS MOSAICOS. Os de uma região real saem do Planetiler,
+ * e o Planetiler escreve-os no esquema do OpenMapTiles — as camadas, os nomes
+ * e as classes que este estilo lê. O desenho desse esquema está sob CC BY 4.0,
+ * e a licença pede o crédito à vista em quem usa mapas feitos com ele; o canto
+ * do mapa só nomeava o OpenStreetMap, que é de onde vêm os DADOS.
+ *
+ * Os mosaicos de uma região inventada imitam as camadas (`mosaicos_proprios.py`)
+ * e não saem do OpenMapTiles: não levam o crédito, como não levam o do
+ * OpenStreetMap.
+ *
+ * O espaço depois do «©» não parte: num telemóvel a atribuição vai em duas
+ * linhas, e o «©» ficava sozinho no fim da primeira.
  */
-export const ATRIBUICAO_OSM =
+export const ATRIBUICAO_OPENMAPTILES =
+  '©&nbsp;<a href="https://openmaptiles.org/">OpenMapTiles</a>';
+
+const ATRIBUICAO_DOS_DADOS_OSM =
   '© contribuidores do <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, sob ODbL';
+
+/**
+ * A atribuição de um mapa do OpenStreetMap feito pelo Planetiler — a de
+ * omissão, para os dados de antes de a região dizer de quem é o mapa dela, que
+ * eram todos assim.
+ */
+export const ATRIBUICAO_OSM = `${ATRIBUICAO_DOS_DADOS_OSM} · ${ATRIBUICAO_OPENMAPTILES}`;
+
+/**
+ * O que o canto do mapa de uma região diz, em HTML: a atribuição que os dados
+ * dela trazem (`regiao.json`, `mapa`), e o crédito do OpenMapTiles quando os
+ * mosaicos são do OpenStreetMap — que é quando saem do Planetiler. Um mapa
+ * desenhado por nós diz só o que a receita declara. Sem a declaração (dados
+ * de antes dela), `undefined`, e o mapa usa a de omissão (`ATRIBUICAO_OSM`).
+ */
+export function atribuicaoDoMapa(
+  mapa: { atribuicao: string; fonte: string } | null | undefined,
+): string | undefined {
+  if (!mapa) return undefined;
+  // UMA VEZ SÓ: se os dados um dia já trouxerem o crédito, não se repete. É
+  // pelo nome, e não pelo endereço — isto não valida ligação nenhuma.
+  if (mapa.fonte !== 'openstreetmap' || /\bOpenMapTiles\b/.test(mapa.atribuicao)) {
+    return mapa.atribuicao;
+  }
+  return mapa.atribuicao ? `${mapa.atribuicao} · ${ATRIBUICAO_OPENMAPTILES}` : ATRIBUICAO_OSM;
+}
 
 export const FONTE_REGULAR = ['Atkinson Hyperlegible Regular'];
 export const FONTE_NEGRITO = ['Atkinson Hyperlegible Bold'];
@@ -634,41 +673,191 @@ export function estiloDoMapa(
 // --- a rede, por cima das estradas e por baixo dos pontos -------------------
 
 /**
- * A ESPESSURA PELA FREQUÊNCIA, em três classes de viagens por dia útil:
- * ≥ 20, de 6 a 19, e até 5 (ou desconhecida). Três e não uma escala
- * contínua: a diferença entre 7 e 8 viagens não se lê num traço, e a entre
- * «passa de hora a hora» e «passa duas vezes por dia» lê-se de longe.
+ * A ESPESSURA PELA FREQUÊNCIA, em quatro classes de viagens por dia útil:
+ * 12 ou mais, de 4 a 11, de 1 a 3, e nenhuma (ou desconhecida). Classes e não
+ * uma escala contínua: a diferença entre 7 e 8 viagens não se lê num traço, e
+ * a entre «passa de hora a hora» e «passa duas vezes por dia» lê-se de longe.
+ *
+ * OS LIMIARES SÃO OS DE UMA REDE DO INTERIOR, e foi a medição que os mudou.
+ * Eram 20 e 6, que é como se conta numa cidade. Numa região real, pesada pelo
+ * comprimento, a rede de autocarro tem a mediana nas 2 viagens por dia e o
+ * percentil 90 nas 7: 72 % dos quilómetros caíam na classe fina e 1 % na
+ * grossa, e a hierarquia que o código desenhava não se via — era um novelo.
+ * Com 12 e 4, os corredores separam-se das carreiras de duas ou três
+ * viagens, e estas das que nesse dia não andam.
+ *
+ * Zero viagens é uma linha que no dia de referência não anda (só ao sábado,
+ * só nas férias); sem número é um urbano de que não se conhece a frequência
+ * (`rede_no_mapa.py`). As duas ficam com o traço mais fino, que é não afirmar
+ * o que não se sabe.
  */
-export function classeDasViagens(viagens: number | null | undefined): 1 | 2 | 3 {
+export type ClasseDasViagens = 0 | 1 | 2 | 3;
+
+const LIMIARES_DA_REDE = [1, 4, 12] as const;
+
+export function classeDasViagens(viagens: number | null | undefined): ClasseDasViagens {
   const n = viagens ?? 0;
-  return n >= 20 ? 3 : n >= 6 ? 2 : 1;
+  return n >= LIMIARES_DA_REDE[2]
+    ? 3
+    : n >= LIMIARES_DA_REDE[1]
+      ? 2
+      : n >= LIMIARES_DA_REDE[0]
+        ? 1
+        : 0;
+}
+
+/** Os zooms das tabelas de larguras. */
+const ZOOMS_DAS_LARGURAS = [8, 11, 14, 16] as const;
+type Larguras = readonly [number, number, number, number];
+
+/**
+ * AS LARGURAS, a z8, z11, z14 e z16. Afastadas umas das outras de longe — à
+ * escala da região eram 1,5, 1 e 0,6 px, e ao olho o mesmo fio — e de perto
+ * como eram. A de z16 não passa dos 7 px porque a forma vem do traçado a 8 m
+ * (`rede_no_mapa.TOLERANCIA_FINA`): com os 25 m dos percursos do planeador,
+ * um traço de 7 px desviado vinte e sete píxeis atravessava um quarteirão a
+ * direito e parecia um erro.
+ */
+const LARGURAS_DA_REDE: Record<ClasseDasViagens, Larguras> = {
+  3: [3, 4, 5.5, 7],
+  2: [1.6, 2.4, 3.5, 5],
+  1: [0.8, 1.3, 2.2, 3],
+  0: [0.5, 0.9, 1.6, 2.5],
+};
+
+/**
+ * O COMBOIO FICA COMO ESTAVA: os limiares de antes (20 e 6 viagens) e as
+ * larguras de antes. São poucas linhas, cinzentas e com travessas, e não se
+ * perdiam no novelo; medi-las com a régua do autocarro engrossava o caminho
+ * de ferro até gritar mais alto do que a rede de autocarros que o mapa mostra.
+ */
+const LIMIARES_DO_COMBOIO = [6, 20] as const;
+const LARGURAS_DO_COMBOIO: readonly [Larguras, Larguras, Larguras] = [
+  [0.6, 1.2, 2, 3],
+  [1, 2, 3.5, 5],
+  [1.5, 3, 5, 7],
+];
+
+/**
+ * O CONTORNO NASCE COM O ZOOM. Era um traço claro de +2 px à volta de cada
+ * linha a todas as escalas, e à da região, com mil e quinhentos traços finos,
+ * havia mais contorno do que linha: o novelo era sobretudo ele, desenhado com
+ * a mesma gramática das estradas. Até z9,5 a rede vai sem contorno; daí até
+ * z12 ele aparece, e de perto separa a linha das ruas por onde ela passa,
+ * como antes. O comboio leva-o sempre, como levava.
+ */
+export const CONTORNO_DESDE = 9.5;
+const CONTORNO_INTEIRO = 12;
+
+/**
+ * O que o contorno tem a mais do que a linha, de cada lado somado: nada até
+ * z9,5, 2 px a partir de z12, e a crescer entre os dois. Até z9,5 ele nem se
+ * pinta (`line-opacity` em degrau, em `camadasDaRede`): da mesma largura da
+ * linha, um contorno claro por baixo ainda aclarava a orla dos traços finos.
+ */
+export function haloDoContorno(z: number): number {
+  return 2 * Math.min(1, Math.max(0, (z - CONTORNO_DESDE) / (CONTORNO_INTEIRO - CONTORNO_DESDE)));
+}
+
+/** Os zooms da expressão: os das tabelas e os do contorno, para a interpolação do MapLibre ser a desta conta. */
+const ZOOMS_DA_REDE = [8, CONTORNO_DESDE, 11, CONTORNO_INTEIRO, 14, 16] as const;
+
+const arredondar = (n: number) => Math.round(n * 100) / 100;
+
+/** Uma tabela a um zoom qualquer: a interpolação linear que o MapLibre faz entre as paragens. */
+function aoZoom(tabela: Larguras, z: number): number {
+  const zs = ZOOMS_DAS_LARGURAS;
+  if (z <= zs[0]) return tabela[0];
+  for (let i = 1; i < zs.length; i++) {
+    if (z <= zs[i]) {
+      return tabela[i - 1] + ((tabela[i] - tabela[i - 1]) * (z - zs[i - 1])) / (zs[i] - zs[i - 1]);
+    }
+  }
+  return tabela[tabela.length - 1];
+}
+
+export type TracoDaRede = { modo: string; viagens: number | null | undefined };
+
+/**
+ * A LARGURA DE UM TRAÇO DA REDE, em píxeis, a um zoom; `contorno` é a do
+ * traço claro por baixo. É a conta de que sai a expressão do MapLibre
+ * (`larguraDaRede`), e é ela que os testes leem.
+ */
+export function larguraDoTraco(
+  { modo, viagens }: TracoDaRede,
+  z: number,
+  contorno = false,
+): number {
+  if (modo === 'comboio') {
+    const n = viagens ?? 0;
+    const classe = n >= LIMIARES_DO_COMBOIO[1] ? 2 : n >= LIMIARES_DO_COMBOIO[0] ? 1 : 0;
+    return arredondar(aoZoom(LARGURAS_DO_COMBOIO[classe], z) + (contorno ? 2 : 0));
+  }
+  const linha = aoZoom(LARGURAS_DA_REDE[classeDasViagens(viagens)], z);
+  if (!contorno) return arredondar(linha);
+  return arredondar(linha + haloDoContorno(z));
+}
+
+/** A largura de um traço da rede como expressão do MapLibre, a partir de `larguraDoTraco`. */
+function larguraDaRede(contorno = false): unknown {
+  const px = (modo: string, viagens: number, z: number) =>
+    larguraDoTraco({ modo, viagens }, z, contorno);
+  const em = (z: number) => [
+    'case',
+    ['==', ['get', 'modo'], 'comboio'],
+    [
+      'step',
+      ['coalesce', ['get', 'viagens'], 0],
+      px('comboio', 0, z),
+      LIMIARES_DO_COMBOIO[0],
+      px('comboio', LIMIARES_DO_COMBOIO[0], z),
+      LIMIARES_DO_COMBOIO[1],
+      px('comboio', LIMIARES_DO_COMBOIO[1], z),
+    ],
+    [
+      'match',
+      ['get', 'f'],
+      3,
+      px('autocarro', LIMIARES_DA_REDE[2], z),
+      2,
+      px('autocarro', LIMIARES_DA_REDE[1], z),
+      1,
+      px('autocarro', LIMIARES_DA_REDE[0], z),
+      px('autocarro', 0, z),
+    ],
+  ];
+  return ['interpolate', ['linear'], ['zoom'], ...ZOOMS_DA_REDE.flatMap((z) => [z, em(z)])];
 }
 
 /**
- * AS LARGURAS, a z8, z11, z14 e z16. A de z16 só pode ser esta porque a forma
- * vem do traçado a 8 m (`rede_no_mapa.TOLERANCIA_FINA`): com os 25 m dos
- * percursos do planeador, um traço de 7 px desviado vinte e sete píxeis
- * atravessava um quarteirão a direito e parecia um erro.
+ * OS RAMAIS RECUAM DE LONGE. Até z10 — a escala a que a região inteira cabe
+ * no ecrã — as linhas com três viagens por dia ou menos vão num tom da cor do
+ * modo, misturado com o fundo; a z12,5 já têm a cor inteira. Recuam e não se
+ * escondem: um mapa da rede que tira uma linha por ela passar pouco mente
+ * sobre a rede (`rede_no_mapa.py`).
+ *
+ * O tom é uma cor e não uma opacidade, pela razão da rede esbatida (abaixo),
+ * e fica a 3:1 ou mais (WCAG 1.4.11) sobre as superfícies grandes do mapa —
+ * o fundo, a mata, os jardins e o casario —, nos dois temas
+ * (`tests/rede-no-mapa.test.mts`).
+ *
+ * Só recua o que se sabe que passa pouco: um urbano sem número de viagens tem
+ * o traço mais fino, mas a cor inteira. E o comboio fica como estava.
  */
-const LARGURAS_DA_REDE: Record<1 | 2 | 3, [number, number, number, number]> = {
-  3: [1.5, 3, 5, 7],
-  2: [1, 2, 3.5, 5],
-  1: [0.6, 1.2, 2, 3],
-};
+export const PESO_DOS_RAMAIS = 0.75;
+const RAMAL_ATE_VIAGENS = 3;
+const RAMAIS_RECUADOS_ATE = 10;
+const RAMAIS_INTEIROS_DESDE = 12.5;
 
-/** A largura de um traço da rede, por classe e por zoom; `mais` é o contorno. */
-function larguraDaRede(mais = 0): unknown {
-  const em = (i: number) => [
-    'match',
-    ['get', 'f'],
-    3,
-    LARGURAS_DA_REDE[3][i] + mais,
-    2,
-    LARGURAS_DA_REDE[2][i] + mais,
-    LARGURAS_DA_REDE[1][i] + mais,
-  ];
-  return ['interpolate', ['linear'], ['zoom'], 8, em(0), 11, em(1), 14, em(2), 16, em(3)];
+export function corDoRamal(tema: TemaDoMapa, modo: string): string {
+  return misturar(corDaRede(tema, modo), FUNDO_DO_MAPA[tema], PESO_DOS_RAMAIS);
 }
+
+/** As superfícies do mapa de fundo por onde um traço da rede passa quilómetros a fio. */
+export const SUPERFICIES_DO_MAPA: Record<TemaDoMapa, readonly string[]> = {
+  claro: [CLARA.FUNDO, CLARA.MATA, CLARA.PARQUE, CLARA.URBANO],
+  escuro: [ESCURA.FUNDO, ESCURA.MATA, ESCURA.PARQUE, ESCURA.URBANO],
+};
 
 export const FONTE_DA_REDE = 'rede';
 
@@ -684,16 +873,35 @@ export const FONTE_DA_REDE = 'rede';
  */
 export function camadasDaRede(tema: TemaDoMapa, esbatida = false): LayerSpecification[] {
   const fundo = FUNDO_DO_MAPA[tema];
-  const cor = (modo: string) => {
+  const cor = (modo: string, ramal: boolean) => {
     const c = corDaRede(tema, modo);
-    return esbatida ? misturar(c, fundo, 0.25) : c;
+    if (esbatida) return misturar(c, fundo, 0.25);
+    return ramal ? corDoRamal(tema, modo) : c;
   };
-  const porModo = [
+  const porModo = (ramal = false) => [
     'match',
     ['get', 'modo'],
-    ...Object.keys(CORES_DA_REDE[tema]).flatMap((m) => [m, cor(m)]),
-    cor('autocarro'),
+    ...Object.keys(CORES_DA_REDE[tema]).flatMap((m) => [m, cor(m, ramal)]),
+    cor('autocarro', ramal),
   ];
+  // Um ramal: não é comboio, e sabe-se que passa pouco — sem número, não é.
+  const eRamal = [
+    'all',
+    ['!=', ['get', 'modo'], 'comboio'],
+    ['<=', ['coalesce', ['get', 'viagens'], RAMAL_ATE_VIAGENS + 1], RAMAL_ATE_VIAGENS],
+  ];
+  // Por trás de uma viagem escolhida a rede inteira já recuou, e por igual.
+  const corDoTraco = esbatida
+    ? porModo()
+    : [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        RAMAIS_RECUADOS_ATE,
+        ['case', eRamal, porModo(true), porModo()],
+        RAMAIS_INTEIROS_DESDE,
+        porModo(),
+      ];
   // Os mais frequentes por cima: onde uma linha de hora a hora cruza uma de
   // duas viagens por dia, o traço grosso não fica cortado pelo fino.
   const ordem = ['coalesce', ['get', 'viagens'], 0];
@@ -708,8 +916,17 @@ export function camadasDaRede(tema: TemaDoMapa, esbatida = false): LayerSpecific
         // Branco no claro; no escuro, o fundo — um contorno claro à volta
         // de cada traço era uma segunda rede, mais clara do que a primeira.
         'line-color': tema === 'claro' ? '#ffffff' : fundo,
-        'line-width': larguraDaRede(2),
-        'line-opacity': esbatida ? 0 : 1,
+        'line-width': larguraDaRede(true),
+        // De longe só o comboio leva contorno; a rede de autocarros, a partir de z9,5.
+        'line-opacity': esbatida
+          ? 0
+          : [
+              'step',
+              ['zoom'],
+              ['case', ['==', ['get', 'modo'], 'comboio'], 1, 0],
+              CONTORNO_DESDE,
+              1,
+            ],
       },
     } as LayerSpecification,
     {
@@ -719,7 +936,7 @@ export function camadasDaRede(tema: TemaDoMapa, esbatida = false): LayerSpecific
       minzoom: 7,
       layout: { 'line-cap': 'round', 'line-join': 'round', 'line-sort-key': ordem },
       paint: {
-        'line-color': porModo,
+        'line-color': corDoTraco,
         'line-width': larguraDaRede(),
       },
     } as LayerSpecification,
@@ -818,10 +1035,14 @@ export const FONTE_DAS_PARAGENS_DA_LINHA = 'paragens-da-linha';
 /** As cores de uma linha no mapa, uma por tema — a do escuro clareada, como os traços da página. */
 export type CorDaLinha = { claro: string; escuro: string };
 
+/** O zoom a partir do qual as paragens acesas são anéis, e não pontos cheios. */
+export const ANEL_DAS_PARAGENS_DESDE = 13;
+
 /**
  * A LINHA ESCOLHIDA, por cima da rede esbatida: um contorno da cor do fundo,
  * o traço na cor da linha, e as paragens dela como as estações de um mapa de
- * metro — o miolo claro e o anel da cor da linha. Mais grossa do que qualquer
+ * metro — o miolo claro e o anel da cor da linha, de perto; de longe, pontos
+ * cheios (`ANEL_DAS_PARAGENS_DESDE`). Mais grossa do que qualquer
  * traço da rede, para ser a única coisa que se lê.
  *
  * SEM TRAÇADO, A TRACEJADO (`aproximado`): as paragens ligadas a direito, que
@@ -835,7 +1056,7 @@ export function camadasDaLinha(
 ): LayerSpecification[] {
   const fundo = tema === 'claro' ? '#ffffff' : FUNDO_DO_MAPA.escuro;
   const traco = cor[tema];
-  const pelo = (pares: [number, number][]) => [
+  const pelo = (pares: [number, number | string][]) => [
     'interpolate',
     ['linear'],
     ['zoom'],
@@ -884,7 +1105,16 @@ export function camadasDaLinha(
           [13, 3.6],
           [16, 6.5],
         ]),
-        'circle-color': tema === 'claro' ? '#ffffff' : CORES_DOS_PONTOS.escuro.miolo,
+        // DE LONGE, UM PONTO CHEIO; DE PERTO, O ANEL. A z11 o miolo de um
+        // anel de 2 px é um píxel claro, e as centenas de paragens de um
+        // concelho liam-se como contas de um colar enfiadas na rede — mais
+        // ruído do que sítio. Até z12 o ponto é todo da cor do traço; a z13
+        // ganha o miolo claro, quando já é grande que chegue para ele se ver
+        // e para se ler como uma paragem de mapa de metro.
+        'circle-color': pelo([
+          [ANEL_DAS_PARAGENS_DESDE - 1, traco],
+          [ANEL_DAS_PARAGENS_DESDE, tema === 'claro' ? '#ffffff' : CORES_DOS_PONTOS.escuro.miolo],
+        ]),
         'circle-stroke-color': traco,
         'circle-stroke-width': pelo([
           [8, 1],

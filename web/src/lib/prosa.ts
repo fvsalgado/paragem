@@ -366,3 +366,24 @@ export function fraseDoPrazoDasMedicoes(prazo: string | null | undefined): strin
     ? `As medições ficam no serviço de medição durante ${p}, e depois apagam-se; nunca se juntam a um nome nem a um contacto.`
     : 'As medições ficam no serviço de medição pelo prazo de conservação dele, e nunca se juntam a um nome nem a um contacto.';
 }
+
+/** O espaço que não parte (U+00A0). */
+const INSEPARAVEL = ' ';
+
+/**
+ * NADA DE PALAVRAS SOLTAS NUMA NOTA ESTREITA. Numa coluna de 120 px, «Em
+ * tempo de aulas · Dias úteis» partia-se em «Dias» numa linha e «úteis»
+ * sozinha na seguinte. Cada pedaço curto entre os «·» — até três palavras e
+ * doze letras: «Dias úteis», «Todo o ano» — fica inteiro, com espaços que não
+ * partem; os compridos partem onde for preciso, que é para isso que lá estão.
+ */
+export function semPalavrasSoltas(texto: string): string {
+  return texto
+    .split(' · ')
+    .map((pedaco) =>
+      pedaco.length <= 12 && pedaco.split(' ').length <= 3
+        ? pedaco.replace(/ /g, INSEPARAVEL)
+        : pedaco,
+    )
+    .join(' · ');
+}

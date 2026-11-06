@@ -28,6 +28,7 @@ import { limitesDaRede } from '@/lib/pontos-no-mapa';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { disponibilidadeDaRegiao, motorDaRegiao } from '@/lib/enderecos';
 import { metadadosDaRegiao } from '@/lib/metadados';
+import { atribuicaoDoMapa } from '@/lib/estilo-mapa';
 import { avisosEmVigor, type AvisoNoMapa } from '@/lib/avisos';
 import { catalogoDosAvisos } from '@/lib/avisos-do-sitio';
 
@@ -202,7 +203,8 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
   // AS SEDES DE CONCELHO, NOMEADAS NO MAPA A TODOS OS ZOOMS (`sedes.ts`): o
   // sítio de cada uma é o do lugar do OpenStreetMap com o nome do concelho.
   // Uma dúzia de pontos, que vão no HTML — o mapa nasce já com eles.
-  const sedes = sedesDosConcelhos(await concelhos(rid), await sitios(rid));
+  const cs = await concelhos(rid);
+  const sedes = sedesDosConcelhos(cs, await sitios(rid));
   // AS ESTAÇÕES SEM AUTOCARRO A MENOS DE 300 m, assinaladas no mapa: quem
   // chega de comboio a uma delas tem de saber, antes, que ali não há autocarro.
   const estacoesSemAutocarro = (await estacoes(rid)).filter((e) => e.sem_ligacao).map((e) => e.id);
@@ -237,7 +239,7 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
         tipos={tipos}
         contagens={contagens}
         mosaicos={enderecoDosDados(rid, 'regiao.pmtiles')}
-        atribuicaoDoMapa={r.mapa?.atribuicao}
+        atribuicaoDoMapa={atribuicaoDoMapa(r.mapa)}
         modos={modos}
         temAPedido={temAPedido}
         modosDesligados={r.modos_desligados ?? []}
@@ -248,6 +250,7 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
         avisos={avisos}
         precos={precos}
         aPedidoNaFolha={aPedidoNaFolha}
+        concelhos={cs.map((c) => ({ id: c.id, nome: c.nome }))}
         oQueJunta={fraseDoQueJunta(
           r,
           modos.map((m) => m.id),

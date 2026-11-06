@@ -248,8 +248,12 @@ export type FeedDaRegiao = {
   fim: string | null;
 };
 
-/** Quantos dias de folga antes de um feed «acabar antes» dos outros (`frasesDosFeeds`). */
-const FOLGA_DO_FIM_DIAS = 30;
+/**
+ * A QUANTOS DIAS DO FIM UM FEED DIZ «SÓ ATÉ» (`frasesDosFeeds`). Dois meses
+ * chegam para quem planeia uma viagem pelo calendário dos horários; mais longe
+ * do que isso, a data do fim não é notícia.
+ */
+export const FIM_PERTO_DIAS = 60;
 
 /** Dias entre duas datas `AAAA-MM-DD`. */
 function diasAte(de: string, ate: string): number {
@@ -278,13 +282,23 @@ export function feedsDosServicos(servicos: readonly (string | null | undefined)[
 
 /**
  * O QUE SE DIZ DE CADA FEED AO LADO DAS HORAS DELE: desde quando valem, e até
- * quando vão quando acabam antes dos outros.
+ * quando vão quando o fim está perto.
  *
  * «Horários da Alta Transportes em vigor desde 5/12/2025.» — a data de CONTEÚDO que o
  * próprio documento imprime, declarada no registo; nunca a de obtenção
- * adivinhada. «Horários da CP só até 12/12/2026.» — o feed de outra entidade
- * que acaba antes do resto: sem isto, a estação ficava sem comboios no dia 13
- * sem ter avisado ninguém.
+ * adivinhada. «Horários da CP só até 12/12/2026.» — o feed que acaba daqui a
+ * pouco: sem isto, a estação ficava sem comboios no dia 13 sem ter avisado
+ * ninguém.
+ *
+ * «SÓ ATÉ» SÓ QUANDO O FIM ESTÁ PERTO — a `FIM_PERTO_DIAS` de `hoje`, ou já
+ * passou. Dizia-se de cada feed que acabasse antes dos outros, e numa região
+ * real dizia-se em todas as linhas e paragens: a rede regular tem os dias
+ * gerados por regras para uma janela de um ano a contar da construção, e o
+ * fim dessa janela calhava antes do de um feed de outra entidade. Não é uma
+ * data da operadora, e lia-se como um aviso de que a rede acabava.
+ *
+ * `hoje` é o dia civil no fuso da casa (`diaNoFuso`), `AAAA-MM-DD`: quem
+ * desenha a página di-lo, e a conta não lê o relógio.
  *
  * Com o artigo do operador declarado, «da …»; sem ele, «do operador …», que
  * não precisa de artigo nenhum. A rede da casa vem primeiro.
@@ -292,12 +306,9 @@ export function feedsDosServicos(servicos: readonly (string | null | undefined)[
 export function frasesDosFeeds(
   r: Pick<Regiao, 'feeds'> | null | undefined,
   feeds: readonly string[],
+  hoje: string,
 ): string[] {
   const todos = r?.feeds ?? {};
-  const fins = Object.values(todos)
-    .map((f) => f.fim)
-    .filter((f): f is string => !!f);
-  const maisLonge = fins.length ? fins.reduce((a, b) => (b > a ? b : a)) : '';
   const quais = feeds
     .filter((f) => todos[f])
     .sort((a, b) => Number(todos[a].terceiro) - Number(todos[b].terceiro));
@@ -309,14 +320,22 @@ export function frasesDosFeeds(
     if (f.em_vigor_desde && /^\d{4}-\d{2}-\d{2}$/.test(f.em_vigor_desde)) {
       frases.push(`Horários ${quem} em vigor desde ${dataDoFeed(f.em_vigor_desde)}.`);
     }
-    // «ACABA ANTES» É COM FOLGA: as janelas que andam com o relógio acabam
-    // com um ou dois dias de diferença umas das outras, e «só até» a um dia
-    // do fim do resto era ruído na paragem mais servida da região.
-    if (f.fim && maisLonge && diasAte(f.fim, maisLonge) > FOLGA_DO_FIM_DIAS) {
+    if (f.fim && /^\d{4}-\d{2}-\d{2}$/.test(f.fim) && diasAte(hoje, f.fim) <= FIM_PERTO_DIAS) {
       frases.push(`Horários ${quem} só até ${dataDoFeed(f.fim)}.`);
     }
   }
   return frases;
+}
+
+/**
+ * OS FEEDS DA PRÓPRIA REDE — os que não são de outra entidade —, dos modos que
+ * estão ligados. É o que uma página sem partidas suas, como a de um concelho,
+ * tem para dizer de quando são os horários dela.
+ */
+export function feedsProprios(r: Pick<Regiao, 'feeds' | 'modos'> | null | undefined): string[] {
+  return Object.entries(r?.feeds ?? {})
+    .filter(([, f]) => !f.terceiro && r!.modos.includes(f.modo))
+    .map(([nome]) => nome);
 }
 
 /**

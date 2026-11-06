@@ -185,10 +185,15 @@ export function ResumoDoSistema({ ids }: { ids: (string | null | undefined)[] })
   const idade = haQuanto((e.agoraMs - e.geradoEmMs) / 1000);
   return (
     <p className="marca-dados" aria-live="polite">
-      Neste momento, <strong>{bicicletas}</strong>{' '}
-      {bicicletas === 1 ? 'bicicleta disponível' : 'bicicletas disponíveis'} em {comContagem}{' '}
-      {comContagem === 1 ? 'estação' : 'estações'} — {idade}. As contagens são do operador e podem
-      falhar.
+      {/* A FRASE NUM SÓ BLOCO. A marca dos dados é uma fila flexível — o
+          ícone e o texto —, e cada pedaço solto da frase passava a ser uma
+          coluna dela: o número em negrito partia-a em três. */}
+      <span>
+        Neste momento, <strong>{bicicletas}</strong>{' '}
+        {bicicletas === 1 ? 'bicicleta disponível' : 'bicicletas disponíveis'} em {comContagem}{' '}
+        {comContagem === 1 ? 'estação' : 'estações'} — {idade}. As contagens são do operador e podem
+        falhar.
+      </span>
     </p>
   );
 }

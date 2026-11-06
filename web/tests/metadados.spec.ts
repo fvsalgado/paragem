@@ -16,6 +16,7 @@
 import { test, expect, type APIRequestContext } from '@playwright/test';
 import { PORTA, PRODUTO, REGIAO, anfitriao, regioes } from './anfitrioes';
 import {
+  concelhoComMaisParagens,
   corDaMarca,
   linhaComMaisViagens,
   paragemComMaisPartidas,
@@ -85,6 +86,7 @@ test('cada página de uma região diz o que é e de onde, no domínio dela', asy
   const host = `${id}.localhost`;
   const paragem = paragemComMaisPartidas();
   const linha = linhaComMaisViagens();
+  const concelho = concelhoComMaisParagens();
   const descricoes = new Set<string>();
   const daRegiao = `${anfitriao(id)}/cartao.png`;
   for (const [caminho, imagem] of [
@@ -92,6 +94,10 @@ test('cada página de uma região diz o que é e de onde, no domínio dela', asy
     ['/rede/', daRegiao],
     [`/rede/paragens/${paragem.id}/`, `${anfitriao(id)}/cartao/paragens/${seguro(paragem.id)}.png`],
     [`/rede/linhas/${linha.id}/`, `${anfitriao(id)}/cartao/linhas/${seguro(linha.id)}.png`],
+    [
+      `/rede/concelhos/${concelho.id}/`,
+      `${anfitriao(id)}/cartao/concelhos/${seguro(concelho.id)}.png`,
+    ],
     ['/rede/tarifario/', daRegiao],
   ]) {
     const { meta, canonica } = await cabeca(request, host, caminho);
@@ -110,7 +116,7 @@ test('cada página de uma região diz o que é e de onde, no domínio dela', asy
     descricoes.add(meta('description') ?? '');
   }
   // Uma descrição por página — era a mesma em todas.
-  expect(descricoes.size).toBe(5);
+  expect(descricoes.size).toBe(6);
 });
 
 /** A largura e a altura de um PNG, lidas do cabeçalho (`IHDR`), sem o descodificar. */
@@ -120,12 +126,15 @@ function medidaDoPng(corpo: Buffer): { largura: number; altura: number } {
   return { largura: corpo.readUInt32BE(16), altura: corpo.readUInt32BE(20) };
 }
 
-test('cada região responde o seu cartão, o da paragem e o da linha: 1200 × 630, e não para sempre', async ({
+test('cada região responde o seu cartão, o da paragem, o da linha e o do concelho: 1200 × 630, e não para sempre', async ({
   request,
 }) => {
   const corpos = new Set<string>();
   for (const id of regioes()) {
-    const caminhos = ['/cartao.png'];
+    const caminhos = [
+      '/cartao.png',
+      `/cartao/concelhos/${seguro(concelhoComMaisParagens(id).id)}.png`,
+    ];
     if (temModoLigado('autocarro', id)) {
       caminhos.push(
         `/cartao/paragens/${seguro(paragemComMaisPartidas(id).id)}.png`,
@@ -143,9 +152,10 @@ test('cada região responde o seu cartão, o da paragem e o da linha: 1200 × 63
       corpos.add(corpo.toString('base64'));
     }
   }
-  // Nenhum cartão sai igual a outro: cada um diz de que região, paragem ou linha é.
+  // Nenhum cartão sai igual a outro: cada um diz de que região, paragem, linha
+  // ou concelho é.
   expect(corpos.size).toBe(
-    regioes().reduce((n, id) => n + (temModoLigado('autocarro', id) ? 3 : 1), 0),
+    regioes().reduce((n, id) => n + (temModoLigado('autocarro', id) ? 4 : 2), 0),
   );
 });
 
@@ -155,6 +165,7 @@ test('um cartão do que não existe dá 404, e o anfitrião do produto não tem 
   for (const caminho of [
     '/cartao/paragens/nao-existe.png',
     '/cartao/linhas/nao-existe.png',
+    '/cartao/concelhos/nao-existe.png',
     // Só `<id>.png`: uma paragem que existe, pedida com outra extensão, não.
     `/cartao/paragens/${seguro(paragemComMaisPartidas().id)}.jpg`,
   ]) {

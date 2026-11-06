@@ -74,20 +74,6 @@ export default function Distintivo({
   );
 }
 
-/**
- * A cor da linha para desenhar o PERCURSO sobre o fundo claro da página.
- *
- * É a mesma do distintivo, e pela mesma razão: o `comContrasteSuficiente`
- * escurece-a até o branco passar os 4,5:1 por cima dela — e uma cor que dá
- * 4,5:1 contra o branco dá mais de 3:1 contra o fundo da página, que é o que
- * a WCAG 1.4.11 pede a um traço que diz alguma coisa. Um fio amarelo-claro num
- * fundo claro não se via; escurecido, continua amarelo e vê-se.
- */
-export function corDoTraco(cor?: string | null): string {
-  const original = normalizar(cor);
-  return original ? comContrasteSuficiente(original) : 'var(--marca)';
-}
-
 export function textoSobre(fundo: string): string {
   return contraste(fundo, '#ffffff') >= contraste(fundo, '#102c3f') ? '#ffffff' : '#102c3f';
 }

@@ -23,4 +23,8 @@ test('a contagem ao vivo aparece na estação, com a hora', async ({ page }) => 
   // Um resumo por sistema com contagens frescas — daí o `.first()`.
   await expect(page.getByText(/Neste momento,/).first()).toBeVisible();
   await expect(page.getByText(/há \d+ s|há \d+ min/).first()).toBeVisible();
+  // A frase é um bloco só dentro da marca: o número em negrito partia-a em
+  // colunas, que é o que a marca faz a cada filho solto.
+  const resumo = page.locator('p.marca-dados').filter({ hasText: 'Neste momento' }).first();
+  expect(await resumo.evaluate((p) => p.childNodes.length)).toBe(1);
 });

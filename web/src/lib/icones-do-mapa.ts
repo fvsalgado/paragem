@@ -100,3 +100,46 @@ export function imagemDaPlaca(
   const imagem = ctx.getImageData(0, 0, LADO, LADO);
   return { width: LADO, height: LADO, data: imagem.data };
 }
+
+/** O nome da imagem da seta no mapa (`imagemDaSeta`). */
+export const SETA_DO_PERCURSO = 'seta-do-percurso';
+
+/**
+ * A SETA DO SENTIDO DO PERCURSO, que o mapa do planeador repete ao longo de
+ * cada troço de transporte: uma divisa a apontar para a direita, que o
+ * MapLibre roda com a linha. Branca, com um contorno escuro meio
+ * transparente por fora — vai por cima do traço do percurso, que é da cor de
+ * cada linha, e tem de se ver sobre qualquer uma: o branco sobre as escuras,
+ * o contorno sobre as claras.
+ *
+ * Como as placas, desenha-se numa tela ao dobro do tamanho (`DENSIDADE`);
+ * `null` sem tela, e aí o percurso fica sem setas, como era.
+ */
+export function imagemDaSeta(): { width: number; height: number; data: Uint8ClampedArray } | null {
+  if (typeof document === 'undefined') return null;
+  const lado = 48;
+  const tela = document.createElement('canvas');
+  tela.width = lado;
+  tela.height = lado;
+  const ctx = tela.getContext('2d');
+  if (!ctx) return null;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  const divisa = () => {
+    ctx.beginPath();
+    ctx.moveTo(17, 12);
+    ctx.lineTo(31, 24);
+    ctx.lineTo(17, 36);
+  };
+  // O contorno primeiro, mais largo; o branco por cima, mais estreito.
+  divisa();
+  ctx.strokeStyle = 'rgba(16, 44, 63, 0.6)';
+  ctx.lineWidth = 11;
+  ctx.stroke();
+  divisa();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 6;
+  ctx.stroke();
+  const imagem = ctx.getImageData(0, 0, lado, lado);
+  return { width: lado, height: lado, data: imagem.data };
+}

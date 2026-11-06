@@ -16,6 +16,7 @@ import {
   CORETO,
   correioPara,
   eDaMontra,
+  fraseDaDemonstracao,
   ordemDaMontra,
 } from '@/lib/produto';
 import { metadadosDoProduto } from '@/lib/metadados';
@@ -275,9 +276,10 @@ export default async function Produto() {
                 <p className="secundario">
                   {n.origem ? new URL(n.origem).host : 'Ainda sem endereço próprio.'}
                 </p>
+                {/* O QUE ESTA TEM DE SEU, e não a mesma frase nos três cartões
+                    (`fraseDaDemonstracao`): o tipo de autoridade e os modos. */}
                 <p>
-                  <strong>Demonstração.</strong> Uma região inventada, para ver o produto a
-                  funcionar sem usar dados de ninguém.
+                  <strong>Demonstração.</strong> {fraseDaDemonstracao(r)}
                 </p>
                 <dl className="numeros">
                   <div>

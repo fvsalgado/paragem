@@ -31,6 +31,9 @@ export const cartaoDaParagem = (stopId: string): string => `/cartao/paragens/${s
 /** O cartão de uma linha, pelo identificador da página dela. */
 export const cartaoDaLinha = (id: string): string => `/cartao/linhas/${seguro(id)}.png`;
 
+/** O cartão de um concelho, pelo identificador da página dele. */
+export const cartaoDoConcelho = (id: string): string => `/cartao/concelhos/${seguro(id)}.png`;
+
 /**
  * O identificador que vem no endereço de um cartão — o `<id>.png` das duas
  * funções de cima —, ou `null` se não for um: só o que `seguro` deixa passar,

@@ -6,7 +6,6 @@ import EscolherPonto from './EscolherPonto';
 import PegaDaFolha, { type Altura } from './PegaDaFolha';
 import type { PontosNoNavegador } from '@/lib/pontos-do-navegador';
 import Distintivo from './Distintivo';
-import { traco } from '@/lib/cor';
 import {
   APe,
   Bicicleta as IconeBicicleta,
@@ -944,17 +943,21 @@ export default function Direccoes({
           {/* As etiquetas, como as do Maps: recarregar e a hora de partida. */}
           <p className="etiquetas">
             {/* COM O NOME À VISTA (#193): a seta circular sozinha só dizia o
-                que fazia a quem usa leitor de ecrã. */}
-            <button
-              type="submit"
-              form="nenhum"
-              className="etiqueta"
-              aria-busy={estado.tipo === 'a-procurar'}
-              onClick={() => procurar(true)}
-            >
-              <Recarregar />
-              Atualizar
-            </button>
+                que fazia a quem usa leitor de ecrã. E SÓ COM AS DUAS PONTAS:
+                antes delas não há procura nenhuma para atualizar, e o botão
+                estava lá à espera, a prometer uma coisa que não fazia. */}
+            {de && para && (
+              <button
+                type="submit"
+                form="nenhum"
+                className="etiqueta"
+                aria-busy={estado.tipo === 'a-procurar'}
+                onClick={() => procurar(true)}
+              >
+                <Recarregar />
+                Atualizar
+              </button>
+            )}
             <button
               type="button"
               className="etiqueta"
@@ -1043,7 +1046,7 @@ export default function Direccoes({
               uma em vez de serem despejadas todas de uma vez (P3-017). */}
           <div aria-live="polite" aria-busy={estado.tipo === 'a-procurar'}>
             {estado.tipo === 'parado' && !problema && (!de || !para) && (
-              <p className="secundario">Escolha de onde parte e para onde vai.</p>
+              <p className="secundario falta-escolher">Escolha de onde parte e para onde vai.</p>
             )}
             {estado.tipo === 'a-procurar' && !problema && (
               <p className="a-procurar">A procurar viagens…</p>
@@ -1372,7 +1375,7 @@ function Opcao({
             const espera = antes ? Math.round((p.startTime - antes.endTime) / 60_000) : 0;
             // CADA TROÇO NA COR DA SUA LINHA, como no mapa: a 2 e a 1 eram
             // dois fios do mesmo azul, e o transbordo não se via.
-            const cor = p.modo === 'expresso' ? null : traco(corDaPerna(p));
+            const cor = tracoDaPerna(p);
             return (
               <Fragment key={j}>
                 <li className="paragem">
@@ -1454,6 +1457,17 @@ function corDaPerna(p: Perna): string | null {
   if (p.modo === 'expresso') return null;
   if (p.mode === 'RAIL' && semCor(p.route?.color)) return '#3f4852';
   return p.route?.color ?? null;
+}
+
+/**
+ * A cor do fio da perna na linha do tempo: a da linha como traço, que o
+ * planeador lhe pôs quando a viagem chegou (`route.corDoTraco`), ou a do
+ * comboio do §6, que já passa como traço. O expresso fica neutro.
+ */
+function tracoDaPerna(p: Perna): string | null {
+  if (p.modo === 'expresso') return null;
+  if (p.mode === 'RAIL' && semCor(p.route?.color)) return '#3f4852';
+  return p.route?.corDoTraco ?? null;
 }
 
 /**

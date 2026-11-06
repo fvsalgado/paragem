@@ -46,6 +46,19 @@
   --atencao: #b54708;
   --atencao-fundo: #fef0e6;
   --foco: #f2b705;
+  /* O ANEL DO FOCO TEM DOIS TONS: o contorno amarelo e, por baixo, um halo
+     escuro que o envolve por dentro e por fora. O amarelo sozinho dava 1,7:1
+     sobre o papel claro (WCAG 1.4.11 pede 3:1): via-se sobre o escuro e
+     sobre as cores fortes, e perdia-se onde mais se navega. Com o halo, o
+     amarelo tem o escuro dos dois lados e lê-se em qualquer fundo, nos dois
+     temas — o halo é o mesmo azul-noite nos dois, e no escuro é o amarelo
+     que se separa da página. São 7 px: os 2 do afastamento, os 3 do
+     contorno e 2 de halo por fora dele. */
+  --foco-halo: #102c3f;
+  --anel-do-foco: 0 0 0 7px var(--foco-halo);
+  /* Por DENTRO, para o que o desenha para dentro (`outline-offset` negativo)
+     e para o que está numa fila que rola, que cortava o anel por fora. */
+  --anel-do-foco-dentro: inset 0 0 0 5px var(--foco-halo);
 
   /* A marca do produto — o feixe (§6) —, de fora para dentro. Só a página do
      produto a pinta: nas regiões e no painel o vermelho quer dizer alerta, e
@@ -88,7 +101,14 @@
   --letra-corpo: 1.0625rem; /* o texto corrido — o do `body` */
   --letra-destaque: 1.2rem; /* o título de um cartão, uma hora que se procura */
   --letra-titulo: 1.3rem; /* o h2 */
-  --letra-titulo-grande: 1.75rem; /* o h1 */
+  --letra-titulo-grande: 1.75rem; /* o h1 num telemóvel, e os números grandes */
+  /* O H1 DAS PÁGINAS CRESCE COM O ECRÃ: 1,75 rem num telemóvel, 2,5 rem a
+     partir de uns 840 px. No computador, um título de 28 px por cima de uma
+     página de 1 440 lia-se como mais um parágrafo — e ficava mais pequeno do
+     que os números por modo do concelho (2,1 rem a partir dos 40 rem), que
+     estão por baixo dele. A conta garante-lhe pelo menos esses 2,1 rem a
+     partir daí. */
+  --letra-titulo-da-pagina: clamp(1.75rem, 1.05rem + 2.75vw, 2.5rem);
   --letra-cartaz: 2.1rem; /* os números grandes da montra */
   --letra-montra: 2.75rem; /* o título da montra do produto */
   /* Os espaços, em quartos de rem: o ritmo vertical e os afastamentos. */
@@ -240,6 +260,7 @@ body {
 :focus-visible {
   outline: 3px solid var(--foco);
   outline-offset: 2px;
+  box-shadow: var(--anel-do-foco);
 }
 
 a {
@@ -260,7 +281,7 @@ h3 {
   margin: 0 0 var(--espaco-2);
 }
 h1 {
-  font-size: var(--letra-titulo-grande);
+  font-size: var(--letra-titulo-da-pagina);
   margin-bottom: var(--espaco-3);
 }
 h2 {
@@ -420,6 +441,22 @@ code {
   align-items: center;
   min-height: var(--alvo);
   padding: 0 var(--espaco-1);
+}
+/* A SECÇÃO ONDE SE ESTÁ, com um traço de 3 px por baixo em vez do sublinhado
+   das outras: a forma diz o que o `aria-current` diz a quem ouve, e não
+   depende da cor (`LigacaoDaSeccao`). */
+.cabecalho nav a[aria-current] {
+  position: relative;
+  text-decoration: none;
+}
+.cabecalho nav a[aria-current]::after {
+  content: '';
+  position: absolute;
+  left: var(--espaco-1);
+  right: var(--espaco-1);
+  bottom: 0.5rem;
+  height: 3px;
+  background: currentColor;
 }
 
 /* O CABEÇALHO DE UMA REGIÃO É A MARCA DELA (P4-008, P1-007): o endereço
@@ -929,6 +966,7 @@ details.lista-fechada[open] > summary::after {
 .quadro-de-horario > summary:focus-visible {
   outline: 3px solid var(--foco);
   outline-offset: -3px;
+  box-shadow: var(--anel-do-foco-dentro);
 }
 
 /* A nota e as regras que a folha escreve por baixo do quadro. */
@@ -1494,6 +1532,7 @@ details.quadro-do-dia > summary:hover {
 }
 details.quadro-do-dia > summary:focus-visible {
   outline-offset: -3px;
+  box-shadow: var(--anel-do-foco-dentro);
 }
 details.quadro-do-dia .nome-do-quadro {
   min-width: 0;
@@ -1869,6 +1908,12 @@ table.saidas .horas-da-saida .secundario {
   font-size: var(--letra-mini);
   line-height: 1.3;
 }
+/* «COM AUTOCARRO PERTO» NUMA LINHA SÓ, ao lado do nome da estação: partia-se
+   em «com autocarro» e «perto», como a pastilha do «Sem autocarro perto», que
+   não parte, ao lado. O nome da estação é que dá a volta. */
+.estado-da-estacao {
+  white-space: nowrap;
+}
 .linhas-da-saida,
 .linhas-da-paragem {
   display: flex;
@@ -2133,9 +2178,12 @@ details.zona-a-pedido .circuitos-da-zona {
 }
 
 /* Uma lista comprida, fechada, com o nome à vista: o catálogo dos circuitos. */
+/* Com um intervalo entre o nome e a contagem: numa fila flexível, o espaço
+   do texto antes do `<span>` some-se, e saía «da operadora(2)». */
 details.lista-fechada > summary {
   display: flex;
   align-items: center;
+  gap: var(--espaco-1);
   min-height: var(--alvo);
   padding-right: 2.25rem;
   position: relative;
@@ -2731,6 +2779,7 @@ button.pega-da-folha:focus-visible::before {
 }
 button.pega-da-folha:focus-visible {
   outline-offset: -3px;
+  box-shadow: var(--anel-do-foco-dentro);
 }
 
 .folha-titulo {
@@ -2859,7 +2908,12 @@ button.modo.activo {
   font-size: var(--letra-pequena);
   padding: 0.3rem 0.7rem;
 }
+/* O ÍCONE AO MEIO DA LETRA: em linha, o «Atualizar» tinha a seta 3 px acima
+   do texto, assente na linha de base. */
 button.etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   background: var(--superficie);
   color: var(--texto);
   border: 1px solid var(--linhas);
@@ -3123,15 +3177,17 @@ button.resumo-opcao:hover {
 /* OS BOTÕES DE APROXIMAR E AFASTAR, POR BAIXO DO QUE FLUTUA NO ALTO.
    Num telemóvel a barra da procura vai de uma borda à outra e tapava-os; o
    `--tapado-no-alto` é o que a procura, a fila das camadas e o cartão das
-   direções lhes tapam, medido pelo `AppDoMapa`. Numa janela larga vale zero.
-
-   E com o alvo do §4.5: o MapLibre desenha-os com 29 px, e são o que resta a
-   quem afasta o mapa sem o gesto de dois dedos. */
+   direções lhes tapam, medido pelo `AppDoMapa`. Numa janela larga vale zero. */
 .app-mapa .maplibregl-ctrl-top-right {
   top: var(--tapado-no-alto, 0px);
 }
-.app-mapa .maplibregl-ctrl button.maplibregl-ctrl-zoom-in,
-.app-mapa .maplibregl-ctrl button.maplibregl-ctrl-zoom-out {
+/* OS BOTÕES DO MAPA COM O ALVO DO §4.5, EM TODOS OS MAPAS. O MapLibre
+   desenha-os com 29 px, e são o que resta a quem mexe no mapa sem os gestos
+   de dois dedos. Só o mapa de ecrã inteiro os tinha a 44; os embutidos numa
+   página — o do concelho, o do planeador —, que agora só se arrastam com dois
+   dedos, ficavam com os 29. A localização do mapa de ecrã inteiro tem a sua
+   medida, maior (`.app-mapa … geolocate`). */
+.mapa-caixa .maplibregl-ctrl-group button {
   width: var(--alvo);
   height: var(--alvo);
 }
@@ -3247,6 +3303,14 @@ button.resumo-opcao:hover {
 }
 .sugestoes li:last-child {
   border-bottom: 0;
+}
+/* O ícone do que o resultado é, à cabeça e ao meio da primeira linha, na cor
+   do texto secundário: ajuda a ver, e o rótulo por extenso continua a dizer. */
+.sugestoes .icone-do-resultado {
+  display: inline-flex;
+  vertical-align: -0.2em;
+  margin-right: 0.4rem;
+  color: var(--texto-secundario);
 }
 /* A opção que as setas percorrem. Não é `:hover`: quem navega por teclado
    nunca passa o rato, e precisa de ver onde está tanto como quem passa. */
@@ -4289,11 +4353,17 @@ main.pagina:has(.app-mapa) {
   margin: 0.4rem 0 0;
   padding: 0;
 }
+/* AS LINHAS TÊM TODAS A MESMA ALTURA, as verdadeiras e as fantasmas. A
+   fantasma tem a espera e a hora, em duas linhas; uma partida sem espera só
+   tem a hora, e era 15 px mais baixa. A caixa guarda a altura das fantasmas
+   para nada saltar quando as horas chegam (`ProximasPartidas`), e cinco
+   partidas sem espera deixavam um buraco de 75 px no fundo do «A seguir». */
 .partidas li,
 .fantasma-das-partidas li {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  min-height: 3.8rem;
   padding: 0.55rem 0;
   border-bottom: 1px solid var(--linhas);
 }
@@ -4375,6 +4445,35 @@ main.pagina:has(.app-mapa) {
   font-weight: 700;
 }
 
+/* «PARTILHAR», com o peso de uma ligação e a forma de um botão: vai no fim
+   da frase da paragem, ou ao lado do «Ver o percurso no mapa» na linha, e
+   nunca numa fila só sua — uma fila a mais empurrava o horário para baixo da
+   dobra. O texto vai sempre escrito; o ícone ajuda quem vê. A frase de
+   «copiada» fica ao lado, e só ocupa lugar quando diz alguma coisa. */
+button.partilhar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  vertical-align: middle;
+  padding: 0 var(--espaco-1);
+  background: transparent;
+  border-color: transparent;
+  color: var(--marca-texto);
+}
+button.partilhar:hover {
+  background: transparent;
+  border-color: transparent;
+  color: var(--marca-texto-hover);
+}
+/* A frase vai inteira para a linha de baixo quando não cabe, e não partida a
+   meio; a de quando não se copiou leva o endereço, que se parte onde for. */
+.estado-da-partilha:not(:empty) {
+  display: inline-block;
+  max-width: 100%;
+  margin-left: var(--espaco-2);
+  overflow-wrap: anywhere;
+}
+
 /* O botão «Como chegar» — o verbo do Maps, e por isso o único destacado. */
 a.botao {
   display: inline-flex;
@@ -4422,10 +4521,12 @@ a.botao:focus-visible {
 .app-procura input:focus,
 .app-procura input:focus-visible {
   outline: none;
+  box-shadow: none;
 }
 .app-procura:focus-within {
   outline: 3px solid var(--foco);
   outline-offset: 2px;
+  box-shadow: var(--anel-do-foco);
 }
 
 /* --- O ECRÃ DE ABERTURA: o mapa de bordo a bordo ------------------------- */
@@ -5565,6 +5666,7 @@ ul.perto-partidas > li {
    ser LIDO, e um contorno à volta de um título lê-se como um botão. */
 .cartao-de-baixo h2:focus {
   outline: none;
+  box-shadow: none;
 }
 
 /* --- as direções: o lugar dos resultados, o esqueleto, os desvios ------- */
@@ -5575,7 +5677,8 @@ ul.perto-partidas > li {
 .zona-de-resultados.em-pagina {
   min-height: 60vh;
 }
-.zona-de-resultados .a-procurar {
+.zona-de-resultados .a-procurar,
+.zona-de-resultados .falta-escolher {
   margin: var(--espaco-3) var(--espaco-4);
 }
 /* Uma classe à parte, e não `opcoes`: o esqueleto não é uma lista de opções,
@@ -5732,12 +5835,22 @@ ol.percurso li.modo-expresso .fio {
    do MapLibre, que no canto do ecrã passava despercebida. */
 .maplibregl-ctrl button:focus-visible,
 .maplibregl-ctrl a:focus-visible {
-  box-shadow: none;
   outline: 3px solid var(--foco);
   outline-offset: 2px;
+  box-shadow: var(--anel-do-foco);
 }
 .maplibregl-ctrl-group button:focus:not(:focus-visible) {
   box-shadow: none;
+}
+
+/* O ANEL POR DENTRO ONDE POR FORA SE CORTAVA: nas filas que rolam na
+   horizontal (as pílulas das camadas, os modos das direções, as iniciais) e
+   no botão redondo da localização, que o grupo dele recorta em círculo. Por
+   fora, o anel ficava cortado ao meio — ou desaparecia. */
+:is(.app-camadas, .modos, .grelha-de-iniciais.compacta ul) :focus-visible,
+.app-mapa .maplibregl-ctrl-bottom-right .maplibregl-ctrl-group button:focus-visible {
+  outline-offset: -3px;
+  box-shadow: var(--anel-do-foco-dentro);
 }
 
 /* Um endereço de correio não se parte sozinho, e com a letra grande empurrava
@@ -6009,6 +6122,7 @@ a[href^='mailto:'] {
 .campo-de-escolhas:focus-within {
   outline: 3px solid var(--foco);
   outline-offset: 2px;
+  box-shadow: var(--anel-do-foco);
 }
 .campo-de-escolhas > input {
   flex: 1 1 10rem;
@@ -6020,6 +6134,7 @@ a[href^='mailto:'] {
 .campo-de-escolhas > input:focus,
 .campo-de-escolhas > input:focus-visible {
   outline: none;
+  box-shadow: none;
 }
 /* Uma lista a sério (e não `display: contents`, que em alguns navegadores
    tira a lista à árvore de acessibilidade e o leitor de ecrã deixa de dizer
@@ -6599,6 +6714,30 @@ details.meio-do-percurso + ol.percurso-da-linha {
   font-weight: 700;
   text-decoration: underline;
 }
+/* OS CONCELHOS, no fim da folha: os nomes seguidos, como numa frase, e cada
+   um com o seu alvo de 44 px. Uma lista em coluna eram treze linhas de folha
+   para uma coisa que se procura pelo nome. */
+.folha-de-abertura .concelhos-na-folha {
+  margin: var(--espaco-3) 0.6rem 0;
+}
+.folha-de-abertura .concelhos-na-folha h2 {
+  margin: 0;
+  padding: 0;
+  font-size: var(--letra-corpo);
+}
+.folha-de-abertura .concelhos-na-folha ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--espaco-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.folha-de-abertura .concelhos-na-folha a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+}
 
 /* --- o planeador: a espera grande e o prazo da reserva (#119, #121) ------- */
 
@@ -6653,6 +6792,7 @@ details.meio-do-percurso + ol.percurso-da-linha {
 }
 .cartao-da-linha h2:focus {
   outline: none;
+  box-shadow: none;
 }
 ul.sentidos-no-cartao {
   list-style: none;
@@ -6968,6 +7108,7 @@ fieldset.escolha-do-sentido legend {
 .escolha-do-sentido label:has(input:focus-visible) {
   outline: 3px solid var(--foco);
   outline-offset: 2px;
+  box-shadow: var(--anel-do-foco);
 }
 /* SÓ A SECÇÃO DO SENTIDO ESCOLHIDO, e o título dela fica para quem ouve: o
    botão escolhido já o diz a quem vê. Sem `:has()`, tudo à vista, como era. */
@@ -7141,6 +7282,7 @@ details.concelho-a-pedido[open] > summary::after {
 details.concelho-a-pedido > summary:focus-visible {
   outline: 3px solid var(--foco);
   outline-offset: -3px;
+  box-shadow: var(--anel-do-foco-dentro);
 }
 
 /* As condições de uma tabela do tarifário, por baixo dela (#188). */

@@ -12,9 +12,7 @@ import {
   type Ponto,
 } from '@/lib/formato';
 import { tituloDoSentido } from '@/lib/sentidos';
-import { comContrasteSuficiente } from '@/componentes/Distintivo';
-import { normalizar } from '@/lib/cor';
-import { corDaRede, misturar, type CorDaLinha } from '@/lib/estilo-mapa';
+import { corDaRede, type CorDaLinha } from '@/lib/estilo-mapa';
 import { descodificarLinha } from '@/lib/otp';
 import { aplicaAParagem, redeToda, type AvisoNoMapa } from '@/lib/avisos';
 import Distintivo from '@/componentes/Distintivo';
@@ -192,16 +190,21 @@ function escrever(camada: Camada | null, endereco: string, empilhar: boolean): v
 }
 
 /**
- * A cor de uma linha no mapa, nos dois temas: a do feed escurecida até se ler
- * sobre o branco (a mesma do distintivo e do percurso da página), e no escuro
- * misturada com branco, como os traços da página (`--mistura-dos-tracos`).
- * Sem cor no feed, a do modo.
+ * A cor de uma linha no mapa, nos dois temas: a do traço da linha
+ * (`tracoDaLinha`), a ≥ 3:1 do fundo do mapa e do contorno branco no claro, e
+ * misturada com branco no escuro, como os traços da página
+ * (`--mistura-dos-tracos`). Sem cor no feed, a do modo.
  */
-function corDaLinhaNoMapa(l: Pick<LinhaDetalhe, 'cor' | 'modo'>): CorDaLinha {
-  const original = normalizar(l.cor);
-  if (!original) return { claro: corDaRede('claro', l.modo), escuro: corDaRede('escuro', l.modo) };
-  const claro = comContrasteSuficiente(original);
-  return { claro, escuro: misturar(claro, '#ffffff', 0.58) };
+function corDaLinhaNoMapa(
+  l: Pick<LinhaDetalhe, 'cor' | 'modo'>,
+  tracoDaLinha: (cor?: string | null) => CorDaLinha | null,
+): CorDaLinha {
+  return (
+    tracoDaLinha(l.cor) ?? {
+      claro: corDaRede('claro', l.modo),
+      escuro: corDaRede('escuro', l.modo),
+    }
+  );
 }
 
 /** A caixa que leva a linha inteira — as paragens e o traçado. */
@@ -241,6 +244,7 @@ export default function AppDoMapa({
   avisos = [],
   precos = null,
   aPedidoNaFolha = null,
+  concelhos = [],
   oQueJunta = null,
   sedes = [],
   estacoesSemAutocarro = [],
@@ -300,6 +304,13 @@ export default function AppDoMapa({
   precos?: string | null;
   /** O telefone das reservas do transporte a pedido, quando a região o tem. */
   aPedidoNaFolha?: { telefone: string; apresentado: string; nota: string | null } | null;
+  /**
+   * OS CONCELHOS, no fim da folha de abertura (§6: a estrutura da página
+   * inicial acaba nos concelhos e no rodapé). O ecrã do mapa não tem rodapé,
+   * e a página de cada concelho — a que cada câmara quer mostrar — só se
+   * achava pela rede.
+   */
+  concelhos?: { id: string; nome: string }[];
   /** O que o sítio junta, numa frase (`fraseDoQueJunta`) — por baixo da assinatura. */
   oQueJunta?: string | null;
   /** As sedes de concelho, para o mapa as nomear a todos os zooms (`sedes.ts`). */
@@ -331,6 +342,12 @@ export default function AppDoMapa({
    * mapa — que é onde se vê por onde ela vai — ficava para trás.
    */
   const [linha, setLinha] = useState<LinhaDetalhe | 'falhou' | null>(null);
+  /**
+   * A CONTA DA COR DA LINHA NO MAPA (`traco.ts`), descarregada com a primeira
+   * linha que se acende, e não com a página: quem abre o mapa e não escolhe
+   * linha nenhuma não a leva.
+   */
+  const tracos = useRef<typeof import('@/lib/traco') | null>(null);
   const [alturaDaLinha, setAlturaDaLinha] = useState<Altura>('media');
   const tituloDaLinha = useRef<HTMLHeadingElement>(null);
 
@@ -725,9 +742,16 @@ export default function AppDoMapa({
     setDirecoes(null);
     setPercurso(null);
     setAlturaDaLinha('media');
-    fetch(enderecoDosDados(regiao, `linhas/${seguro(id)}.json`))
-      .then((r) => (r.ok ? (r.json() as Promise<LinhaDetalhe>) : Promise.reject(r.status)))
-      .then((l) => setLinha(l))
+    Promise.all([
+      fetch(enderecoDosDados(regiao, `linhas/${seguro(id)}.json`)).then((r) =>
+        r.ok ? (r.json() as Promise<LinhaDetalhe>) : Promise.reject(r.status),
+      ),
+      import('@/lib/traco'),
+    ])
+      .then(([l, modulo]) => {
+        tracos.current = modulo;
+        setLinha(l);
+      })
       .catch(() => setLinha('falhou'));
   }
 
@@ -919,7 +943,7 @@ export default function AppDoMapa({
     if (!linha || linha === 'falhou' || !linha.no_mapa) return null;
     return {
       ...linha.no_mapa,
-      cor: corDaLinhaNoMapa(linha),
+      cor: corDaLinhaNoMapa(linha, tracos.current?.tracoDaLinha ?? (() => null)),
       caixa: caixaDaLinha(linha.no_mapa),
     };
   }, [linha]);
@@ -1547,6 +1571,18 @@ export default function AppDoMapa({
                   <span className="qual">Que título me serve?</span>
                 </Link>
               </p>
+            )}
+            {concelhos.length > 0 && (
+              <section className="concelhos-na-folha" aria-labelledby="concelhos-na-folha">
+                <h2 id="concelhos-na-folha">Concelhos</h2>
+                <ul>
+                  {concelhos.map((c) => (
+                    <li key={c.id}>
+                      <Link href={`/rede/concelhos/${c.id}/`}>{c.nome}</Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             )}
             {/* O ÚLTIMO FILHO DA FOLHA, e tem de continuar a sê-lo: o CSS só
                 pinta a folha quando ele já chegou (`global.css`, «A FOLHA SÓ SE

@@ -310,3 +310,63 @@ export function porLocalidade<P extends { nome: string }>(
     }))
     .sort((a, b) => ordem(a.localidade, b.localidade));
 }
+
+/**
+ * SE UMA LINHA PASSA MESMO NUM CONCELHO: alguma paragem de algum sentido, ou do
+ * horário dele, é das do concelho (`aqui`). As paragens dizem os NÚMEROS das
+ * linhas que lá param, e há números que se repetem entre concessões — por isso
+ * lê-se a ficha de cada candidata e fica só a que passa aqui.
+ */
+export function passaNoConcelho(l: LinhaDetalhe, aqui: ReadonlySet<string>): boolean {
+  return l.sentidos.some(
+    (s) =>
+      s.paragens.some((p) => aqui.has(p.id)) ||
+      (s.quadro?.paragens ?? []).some((p) => aqui.has(p.id)),
+  );
+}
+
+/** Um número do concelho, com o modo a que pertence e o que conta. */
+export type NumeroDoConcelho = { modo: string; n: number; rotulo: string };
+
+/**
+ * O CONCELHO EM NÚMEROS, cada um do modo a que pertence: as paragens e as
+ * linhas, e as estações de comboio e as zonas de transporte a pedido quando as
+ * há. Um modo que o concelho não tem não dá número nenhum, pela regra das
+ * secções: um zero à espera de dados não diz nada a quem viaja. É o que a
+ * página do concelho mostra por baixo do título, e o que o cartão de partilha
+ * dele diz.
+ */
+export function numerosDoConcelho({
+  paragens,
+  linhas,
+  estacoes,
+  zonas,
+}: {
+  paragens: number;
+  linhas: number;
+  estacoes: number;
+  zonas: number;
+}): NumeroDoConcelho[] {
+  return [
+    { modo: 'autocarro', n: paragens, rotulo: paragens === 1 ? 'paragem' : 'paragens' },
+    { modo: 'autocarro', n: linhas, rotulo: linhas === 1 ? 'linha' : 'linhas' },
+    ...(estacoes
+      ? [
+          {
+            modo: 'comboio',
+            n: estacoes,
+            rotulo: estacoes === 1 ? 'estação de comboio' : 'estações de comboio',
+          },
+        ]
+      : []),
+    ...(zonas
+      ? [
+          {
+            modo: 'a-pedido',
+            n: zonas,
+            rotulo: zonas === 1 ? 'zona de transporte a pedido' : 'zonas de transporte a pedido',
+          },
+        ]
+      : []),
+  ];
+}

@@ -28,7 +28,13 @@ import {
   zoomDeAparecer,
   type CamadaDePontos,
 } from '@/lib/pontos-no-mapa';
-import { DENSIDADE, LADO, imagemDaPlaca } from '@/lib/icones-do-mapa';
+import {
+  DENSIDADE,
+  LADO,
+  SETA_DO_PERCURSO,
+  imagemDaPlaca,
+  imagemDaSeta,
+} from '@/lib/icones-do-mapa';
 import type { Ponto } from '@/lib/formato';
 import { descodificarLinha, type PercursoGeo } from '@/lib/otp';
 import { ouvirTema, temaEfetivo } from '@/lib/tema';
@@ -83,6 +89,10 @@ const NOMES_DOS_CONTROLOS = {
   'NavigationControl.ZoomIn': 'Aproximar',
   'NavigationControl.ZoomOut': 'Afastar',
   'Popup.Close': 'Fechar',
+  // Os avisos dos mapas embutidos numa página (`embutido`), por cima do mapa.
+  'CooperativeGesturesHandler.WindowsHelpText': 'Use Ctrl + deslocar para aproximar o mapa',
+  'CooperativeGesturesHandler.MacHelpText': 'Use ⌘ + deslocar para aproximar o mapa',
+  'CooperativeGesturesHandler.MobileHelpText': 'Use dois dedos para mover o mapa',
 };
 
 /**
@@ -566,6 +576,7 @@ export default function Mapa({
   sedes = SEM_SEDES,
   linha = null,
   estacoesSemAutocarro = SEM_ESTACOES,
+  embutido = false,
 }: {
   centro: [number, number];
   zoom?: number;
@@ -669,6 +680,16 @@ export default function Mapa({
    * melhor sabê-lo antes de apanhar o comboio.
    */
   estacoesSemAutocarro?: readonly string[];
+  /**
+   * UM MAPA NO MEIO DE UMA PÁGINA, e não o ecrã inteiro: o do concelho, o do
+   * planeador ao lado das opções. Aí o dedo que só queria descer a página
+   * ficava preso no mapa, que se mexia em vez dela — e a roda do rato
+   * aproximava o mapa em vez de rolar. Embutido, o mapa só se arrasta com dois
+   * dedos e só se aproxima com Ctrl (⌘ num Mac) e a roda, e diz isso por cima
+   * dele quando alguém tenta. No mapa de ecrã inteiro não há página para
+   * rolar, e um dedo mexe o mapa como em qualquer aplicação de mapas.
+   */
+  embutido?: boolean;
 }) {
   const caixa = useRef<HTMLDivElement>(null);
   const mapa = useRef<MapaLibre | null>(null);
@@ -769,6 +790,7 @@ export default function Mapa({
           // inglês: quem parava o rato no botão da localização lia «Find my
           // location», numa página que é toda em português.
           locale: NOMES_DOS_CONTROLOS,
+          cooperativeGestures: embutido,
           // O tipo de letra do sistema para as etiquetas — sem servidor de
           // glifos de terceiro. Ver `estilo-mapa.ts`.
           localIdeographFontFamily: "'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif",
@@ -964,6 +986,43 @@ export default function Mapa({
             },
             antesDosNomes,
           );
+          // AS SETAS DO SENTIDO, ao longo de cada troço de transporte: num
+          // percurso que volta para trás, ou que sobe e desce o mesmo vale,
+          // o traço sozinho não dizia para que lado se ia. A partir de z13,
+          // que é quando o troço já é comprido que chegue para levar mais do
+          // que uma; por baixo dos nomes e das paragens. Nos troços a pé
+          // não: os pontinhos já dizem «isto andas tu», e uma seta em cada
+          // um era ruído.
+          //
+          // NÃO MUDAM COM O TEMA, e não é esquecimento: vão por cima do traço
+          // do percurso, que é o mesmo nos dois — a cor da linha sobre o
+          // contorno branco —, e são brancas com contorno escuro para se
+          // verem sobre qualquer cor de linha.
+          const seta = imagemDaSeta();
+          if (seta) {
+            if (!criado!.hasImage(SETA_DO_PERCURSO)) {
+              criado!.addImage(SETA_DO_PERCURSO, seta, { pixelRatio: DENSIDADE });
+            }
+            criado!.addLayer(
+              {
+                id: 'percurso-setas',
+                type: 'symbol',
+                source: 'percurso',
+                minzoom: 13,
+                filter: ['!=', ['get', 'modo'], 'WALK'],
+                layout: {
+                  'symbol-placement': 'line',
+                  'symbol-spacing': 72,
+                  'icon-image': SETA_DO_PERCURSO,
+                  'icon-size': ['interpolate', ['linear'], ['zoom'], 13, 0.7, 16, 1, 18, 1.2],
+                  'icon-rotation-alignment': 'map',
+                  'icon-allow-overlap': true,
+                  'icon-ignore-placement': true,
+                },
+              },
+              antesDosNomes,
+            );
+          }
 
           criado!.addSource('paragens', {
             type: 'geojson',

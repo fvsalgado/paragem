@@ -14,6 +14,7 @@ import {
   modos as lerModos,
   caminhoDoModo,
   numeros as lerNumeros,
+  tarifas,
 } from '@/lib/dados';
 import FaixaDeAvisos from '@/componentes/Avisos';
 import MarcaDeDados from '@/componentes/MarcaDeDados';
@@ -62,6 +63,7 @@ export default async function CatalogoDaRegiao({
   const es = await estacoes(rid);
   const [as, catalogo] = await Promise.all([avisosEmVigor(rid), catalogoDosAvisos(rid)]);
   const pedido = await aPedido(rid);
+  const temTarifario = (await tarifas(rid)).titulos.length > 0;
   // OS PONTOS NÃO VÃO NA PÁGINA (P3-006): a procura pede-os à primeira tecla,
   // o «Perto de ti» quando sabe onde se está, e o planeador ao abrir.
   const desligados = r.modos_desligados ?? [];
@@ -210,7 +212,10 @@ export default async function CatalogoDaRegiao({
               </Link>
             </li>
           )}
-          {inicio && (
+          {/* O TARIFÁRIO TAMBÉM EM «A REDE», e não só no início sem mapa: com
+              mapa, só se lá chegava pelo menu dele, e quem abria a rede à
+              procura do preço não o achava. Só quando a região tem títulos. */}
+          {temTarifario && (
             <li>
               <Link href={urlRede(rid, 'tarifario/')}>
                 <span>Tarifário</span>

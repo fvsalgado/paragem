@@ -700,9 +700,11 @@ test.describe('a abertura de uma região', () => {
     // A distância, em metros, E O TEMPO A PÉ — «a 250 m» não diz se dá tempo.
     // Quem está em cima da primeira lê «Aqui mesmo», e não «0 m».
     await expect(perto.first().locator('.perto-distancia')).toHaveText(
-      /^(Aqui mesmo|(\d+\s?m|\d+,\d\s?km) · uns \d+ min a pé)$/,
+      /^(Aqui mesmo|(\d+\s?m|\d+,\d\s?km) · (uns \d+ min|um minuto) a pé)$/,
     );
-    await expect(bloco).toContainText(/(\d+\s?m|\d+,\d\s?km) · uns \d+ min a pé/);
+    await expect(bloco).toContainText(/(\d+\s?m|\d+,\d\s?km) · (uns \d+ min|um minuto) a pé/);
+    // «Uns 1 min» não se escreve.
+    await expect(bloco).not.toContainText('uns 1 min');
     // O MAPA MOSTRA AS MESMAS, COM OS MESMOS NÚMEROS: a paragem 2 da lista é a
     // que tem um 2 por cima no mapa.
     const quantas = await perto.count();

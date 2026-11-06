@@ -292,6 +292,14 @@ try {
  * 1,7 e 2,1; «como chegar» fica perto de 313 no total e de 191 no HTML e
  * JS. Os tetos passam ao maior dos dois com 5 KiB de folga, que é a folga de
  * sempre, e o CI do PR diz o número a sério.
+ *
+ * A 6/11/2026, O TARIFÁRIO SOBE 1 KiB NO HTML E JS, por decisão do dono. As
+ * melhorias rápidas desse dia levaram duas coisas a todas as páginas da rede:
+ * a ligação do cabeçalho que diz em que secção se está (`aria-current`, que
+ * só o navegador sabe pôr sem tirar as páginas da cache) e o ícone de cada
+ * resultado da procura. Depois de as contas do traço e o ícone de partilhar
+ * saírem do que é comum, sobraram 0,4 KiB, e o tarifário ficou a 170,1 de
+ * 170. Os outros cabem nos seus.
  */
 const ORCAMENTO = {
   início: { htmlEJs: 520, total: 770 },
@@ -299,7 +307,7 @@ const ORCAMENTO = {
   'como chegar': { htmlEJs: 195, total: 320 },
   paragem: { htmlEJs: 175, total: 235 },
   linha: { htmlEJs: 155, total: 220 },
-  tarifário: { htmlEJs: 170, total: 235 },
+  tarifário: { htmlEJs: 171, total: 235 },
 };
 
 const daDemonstracao = (r) => {
