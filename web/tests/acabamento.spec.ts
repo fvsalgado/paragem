@@ -300,3 +300,17 @@ test('o título da página cresce no computador, e não fica mais pequeno do que
     if (largura === 1440) expect(titulo).toBe(40);
   }
 });
+
+test('na caixa de procura do mapa, o anel do foco é o da cápsula, e não um segundo à volta do campo', async ({
+  page,
+}) => {
+  test.skip(!temMosaicos(), SEM.mosaicos);
+  await page.goto('/');
+  const campo = page.getByRole('combobox');
+  await campo.focus();
+  await page.keyboard.type('a');
+  expect(await campo.evaluate((e) => getComputedStyle(e).boxShadow)).toBe('none');
+  expect(await page.locator('.app-procura').evaluate((e) => getComputedStyle(e).outlineStyle)).toBe(
+    'solid',
+  );
+});

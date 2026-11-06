@@ -4515,6 +4515,7 @@ a.botao:focus-visible {
 .app-procura input:focus,
 .app-procura input:focus-visible {
   outline: none;
+  box-shadow: none;
 }
 .app-procura:focus-within {
   outline: 3px solid var(--foco);
@@ -5659,6 +5660,7 @@ ul.perto-partidas > li {
    ser LIDO, e um contorno à volta de um título lê-se como um botão. */
 .cartao-de-baixo h2:focus {
   outline: none;
+  box-shadow: none;
 }
 
 /* --- as direções: o lugar dos resultados, o esqueleto, os desvios ------- */
@@ -6126,6 +6128,7 @@ a[href^='mailto:'] {
 .campo-de-escolhas > input:focus,
 .campo-de-escolhas > input:focus-visible {
   outline: none;
+  box-shadow: none;
 }
 /* Uma lista a sério (e não `display: contents`, que em alguns navegadores
    tira a lista à árvore de acessibilidade e o leitor de ecrã deixa de dizer
@@ -6783,6 +6786,7 @@ details.meio-do-percurso + ol.percurso-da-linha {
 }
 .cartao-da-linha h2:focus {
   outline: none;
+  box-shadow: none;
 }
 ul.sentidos-no-cartao {
   list-style: none;
