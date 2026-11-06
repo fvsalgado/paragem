@@ -147,6 +147,32 @@ export default function PartidasDoDia({
     : '';
   const passou = (p: PartidaLeve) => chave === agora?.chave && p.hora < agora.hora;
 
+  // AS QUE JÁ PASSARAM, ATRÁS DE UM BOTÃO. Ficavam à vista, apagadas, e às
+  // seis da tarde a paragem mais servida abria com vinte ecrãs de horas que
+  // já não servem a ninguém antes da próxima. O dia inteiro continua a um
+  // toque, e sem JavaScript continua todo à vista: o servidor não sabe a
+  // hora de quem lê, e não esconde nada.
+  const [verPassadas, setVerPassadas] = useState(false);
+  const passadas = doDia ? doDia.filter(passou).length : 0;
+  const aMostrar = doDia ? (verPassadas ? doDia : doDia.filter((d) => !passou(d))) : [];
+
+  // AS HORAS ESTIMADAS, ditas uma vez. Era «estimada» por baixo de cada hora
+  // — numa paragem em que todas o são, meia lista de palavras repetidas.
+  // Quando são todas, diz-se por cima; quando são algumas, cada uma leva «≈»
+  // e a legenda diz o que é. A palavra continua lá para o leitor de ecrã.
+  const estimadas = aMostrar.filter((d) => d.estimada).length;
+  const todasEstimadas = aMostrar.length > 0 && estimadas === aMostrar.length;
+
+  // O PERÍODO DE CADA PARTIDA, NUMA CHAMADA. «Todo o ano, exceto julho, agosto
+  // e férias de Natal» repetia-se, em três linhas, numa partida sim e noutra
+  // não. Cada nota diferente ganha uma letra, como num horário impresso, e a
+  // legenda diz-se uma vez.
+  const chamadas = new Map<string, string>();
+  for (const d of aMostrar) {
+    const nota = d.servico_id ? notas.get(d.servico_id) : undefined;
+    if (nota && !chamadas.has(nota)) chamadas.set(nota, String.fromCharCode(97 + chamadas.size));
+  }
+
   return (
     <div className="partidas-do-dia">
       <fieldset className="escolha-do-dia">
@@ -230,7 +256,52 @@ export default function PartidasDoDia({
         )}
       </div>
 
-      {doDia && doDia.length > 0 && (
+      {doDia && doDia.length > 0 && passadas > 0 && (
+        <p className="ja-passaram">
+          {aMostrar.length === 0 && !verPassadas && (
+            <span>Hoje já não há mais partidas {deQue}. </span>
+          )}
+          <button
+            type="button"
+            className="secundario"
+            aria-expanded={verPassadas}
+            onClick={() => setVerPassadas((v) => !v)}
+          >
+            {verPassadas
+              ? 'Esconder as que já passaram'
+              : passadas === 1
+                ? 'Mostrar a que já passou'
+                : `Mostrar as ${passadas} que já passaram`}
+          </button>
+        </p>
+      )}
+
+      {aMostrar.length > 0 && (todasEstimadas || estimadas > 0 || chamadas.size > 0) && (
+        <ul className="legenda-do-dia">
+          {todasEstimadas ? (
+            <li>As horas desta lista são todas estimadas.</li>
+          ) : (
+            estimadas > 0 && (
+              <li>
+                <span className="marca-estimada" aria-hidden="true">
+                  ≈
+                </span>{' '}
+                hora estimada
+              </li>
+            )
+          )}
+          {[...chamadas.entries()].map(([nota, letra]) => (
+            <li key={letra}>
+              <span className="chamada" aria-hidden="true">
+                {letra}
+              </span>{' '}
+              {nota}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {aMostrar.length > 0 && (
         <table className="horario quadro-fixo partidas-do-dia-tabela">
           <caption className="so-para-leitores">
             Partidas {deQue}: {nomeDoDia}
@@ -247,9 +318,10 @@ export default function PartidasDoDia({
             </tr>
           </thead>
           <tbody>
-            {doDia.map((d, i) => {
+            {aMostrar.map((d, i) => {
               const h = horaLegivel(d.hora);
               const nota = d.servico_id ? notas.get(d.servico_id) : undefined;
+              const letra = nota ? chamadas.get(nota) : undefined;
               const jaPassou = passou(d);
               return (
                 <tr
@@ -257,9 +329,16 @@ export default function PartidasDoDia({
                   className={jaPassou ? 'passou' : undefined}
                 >
                   <td>
-                    <span className="hora">{h.texto}</span>
+                    <span className="hora">
+                      {d.estimada && !todasEstimadas && (
+                        <span className="marca-estimada" aria-hidden="true">
+                          ≈
+                        </span>
+                      )}
+                      {h.texto}
+                    </span>
                     {jaPassou && <span className="so-para-leitores">, já passou</span>}
-                    {d.estimada && <span className="nota-da-hora">estimada</span>}
+                    {d.estimada && <span className="so-para-leitores">, estimada</span>}
                     {h.diaSeguinte && <span className="nota-da-hora">dia seguinte</span>}
                   </td>
                   <td>
@@ -284,10 +363,13 @@ export default function PartidasDoDia({
                   </td>
                   <td>
                     {d.circular ? 'circular · volta aqui' : d.destino}
-                    {nota && (
+                    {letra && (
                       <>
-                        <br />
-                        <span className="secundario">{nota}</span>
+                        {' '}
+                        <span className="chamada" aria-hidden="true">
+                          {letra}
+                        </span>
+                        <span className="so-para-leitores">: {nota}</span>
                       </>
                     )}
                     {d.operador && (

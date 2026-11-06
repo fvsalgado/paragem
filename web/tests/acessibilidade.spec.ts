@@ -72,6 +72,7 @@ const PAGINAS: [string, string][] = [
   ...(temAPedido() ? ([['a pedido', `/a-pedido/`]] as [string, string][]) : []),
   ['paragens', `/rede/paragens/`],
   ['paragem com mais partidas', `/rede/paragens/${PARAGEM.id}/`],
+  ['horário para afixar', `/rede/paragens/${PARAGEM.id}/horario/`],
   ['linhas', `/rede/linhas/`],
   ['linha com mais viagens', `/rede/linhas/${LINHA.id}/`],
   ['concelhos', `/rede/concelhos/`],

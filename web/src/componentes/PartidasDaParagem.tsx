@@ -48,6 +48,7 @@ export default function PartidasDaParagem({
   doDiaNoServidor = null,
   caminhoDasLinhas,
   aoLado = null,
+  reservarASeguir,
 }: {
   regiao: string;
   partidas: PartidasCompactas;
@@ -63,6 +64,8 @@ export default function PartidasDaParagem({
   caminhoDasLinhas: string;
   /** O que vai por baixo do «A seguir», na mesma coluna: as linhas que param aqui. */
   aoLado?: ReactNode;
+  /** Quantas filas o «A seguir» guarda enquanto faz as contas — ver `ProximasPartidas`. */
+  reservarASeguir?: number;
 }) {
   return (
     <div className="em-colunas partidas-e-horario">
@@ -74,6 +77,7 @@ export default function PartidasDaParagem({
             cores={cores}
             Titulo="h2"
             id="a-seguir"
+            reservar={reservarASeguir}
           />
         </section>
         {aoLado}
