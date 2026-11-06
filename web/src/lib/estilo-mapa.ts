@@ -996,10 +996,14 @@ export const FONTE_DAS_PARAGENS_DA_LINHA = 'paragens-da-linha';
 /** As cores de uma linha no mapa, uma por tema — a do escuro clareada, como os traços da página. */
 export type CorDaLinha = { claro: string; escuro: string };
 
+/** O zoom a partir do qual as paragens acesas são anéis, e não pontos cheios. */
+export const ANEL_DAS_PARAGENS_DESDE = 13;
+
 /**
  * A LINHA ESCOLHIDA, por cima da rede esbatida: um contorno da cor do fundo,
  * o traço na cor da linha, e as paragens dela como as estações de um mapa de
- * metro — o miolo claro e o anel da cor da linha. Mais grossa do que qualquer
+ * metro — o miolo claro e o anel da cor da linha, de perto; de longe, pontos
+ * cheios (`ANEL_DAS_PARAGENS_DESDE`). Mais grossa do que qualquer
  * traço da rede, para ser a única coisa que se lê.
  *
  * SEM TRAÇADO, A TRACEJADO (`aproximado`): as paragens ligadas a direito, que
@@ -1013,7 +1017,7 @@ export function camadasDaLinha(
 ): LayerSpecification[] {
   const fundo = tema === 'claro' ? '#ffffff' : FUNDO_DO_MAPA.escuro;
   const traco = cor[tema];
-  const pelo = (pares: [number, number][]) => [
+  const pelo = (pares: [number, number | string][]) => [
     'interpolate',
     ['linear'],
     ['zoom'],
@@ -1062,7 +1066,16 @@ export function camadasDaLinha(
           [13, 3.6],
           [16, 6.5],
         ]),
-        'circle-color': tema === 'claro' ? '#ffffff' : CORES_DOS_PONTOS.escuro.miolo,
+        // DE LONGE, UM PONTO CHEIO; DE PERTO, O ANEL. A z11 o miolo de um
+        // anel de 2 px é um píxel claro, e as centenas de paragens de um
+        // concelho liam-se como contas de um colar enfiadas na rede — mais
+        // ruído do que sítio. Até z12 o ponto é todo da cor do traço; a z13
+        // ganha o miolo claro, quando já é grande que chegue para ele se ver
+        // e para se ler como uma paragem de mapa de metro.
+        'circle-color': pelo([
+          [ANEL_DAS_PARAGENS_DESDE - 1, traco],
+          [ANEL_DAS_PARAGENS_DESDE, tema === 'claro' ? '#ffffff' : CORES_DOS_PONTOS.escuro.miolo],
+        ]),
         'circle-stroke-color': traco,
         'circle-stroke-width': pelo([
           [8, 1],

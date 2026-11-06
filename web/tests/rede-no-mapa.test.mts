@@ -11,6 +11,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { contraste, MINIMO_DE_UM_TRACO } from '../src/lib/cor.ts';
 import {
+  ANEL_DAS_PARAGENS_DESDE,
+  camadasDaLinha,
   CONTORNO_DESDE,
   SUPERFICIES_DO_MAPA,
   classeDasViagens,
@@ -85,5 +87,21 @@ test('o tom dos ramais recua, e continua a ler-se sobre as superfícies do mapa'
         );
       }
     }
+  }
+});
+
+test('as paragens acesas são pontos cheios de longe, e anéis de perto', () => {
+  // Centenas de anéis de 2 px num concelho inteiro liam-se como contas de um
+  // colar: de longe o miolo é da cor do traço, e só de perto fica claro.
+  const cor = { claro: '#0a5c7a', escuro: '#6cb8d6' };
+  for (const tema of TEMAS) {
+    const paragens = camadasDaLinha(tema, cor, false).find((c) => c.id === 'linha-paragens');
+    const paint = (paragens as { paint: Record<string, unknown> }).paint;
+    const [, , , zLonge, longe, zPerto, perto] = paint['circle-color'] as unknown[];
+    assert.equal(zPerto, ANEL_DAS_PARAGENS_DESDE);
+    assert.ok((zLonge as number) >= 12, 'cheio até z12, pelo menos');
+    assert.equal(longe, cor[tema], `${tema}: de longe, da cor do traço`);
+    assert.equal(paint['circle-stroke-color'], cor[tema]);
+    assert.notEqual(perto, cor[tema], `${tema}: de perto, o miolo é claro`);
   }
 });
