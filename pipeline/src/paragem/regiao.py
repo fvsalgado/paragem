@@ -17,6 +17,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import yaml
 
@@ -119,6 +120,39 @@ class UrbanoDaRede:
     nome: str
     concelho: str
     linhas: tuple[str, ...]
+
+
+#: O marcador do identificador do concelho no endereço da agenda cultural.
+MARCADOR_DO_CONCELHO = "{concelho}"
+
+
+@dataclass(frozen=True)
+class AgendaCultural:
+    """A agenda cultural da região: o que há para ver em cada concelho, noutro sítio.
+
+    Quem procura como chegar a um concelho quer muitas vezes saber, também, o
+    que lá há — e há regiões onde isso já está escrito, concelho a concelho,
+    num sítio de agenda. A página do concelho leva lá, e diz de quem é a
+    agenda e que se sai deste sítio.
+
+    DECLARADA, não adivinhada (`agenda_cultural` no `regiao.yaml`): `nome` é o
+    que se mostra, `url` o endereço da página de UM concelho, com o
+    identificador dele no lugar de `{concelho}`, e `concelhos` aqueles a que a
+    ligação se aplica. A lista não se presume inteira: uma agenda feita para os
+    municípios membros de uma autoridade não tem página para um concelho que a
+    rede serve sem ele o ser, e uma ligação para uma página que não existe é
+    pior do que ligação nenhuma.
+    """
+
+    nome: str
+    url: str
+    concelhos: tuple[str, ...]
+
+    def pagina(self, concelho: str) -> str | None:
+        """O endereço da página deste concelho na agenda, ou `None` se ela não o tem."""
+        if concelho not in self.concelhos:
+            return None
+        return self.url.replace(MARCADOR_DO_CONCELHO, quote(concelho, safe=""))
 
 
 @dataclass(frozen=True)
@@ -268,6 +302,10 @@ class Regiao:
     #: dos avisos vazia dizia, em três parágrafos, que podia não ter os avisos
     #: oficiais — sem uma ligação para onde eles estão (auditoria de 1/11/2026).
     avisos_oficiais: list[dict[str, str]] = field(default_factory=list)
+    #: A AGENDA CULTURAL DA REGIÃO (`AgendaCultural`), declarada em
+    #: `agenda_cultural`. Sem ela, a página do concelho não fala de agenda
+    #: nenhuma.
+    agenda_cultural: AgendaCultural | None = None
 
     # --- prosa -----------------------------------------------------------
 
@@ -472,6 +510,7 @@ class Regiao:
             urbanos_da_rede=_urbanos_da_rede(d["id"], (d.get("rede") or {}).get("urbanos")),
             servicos_sem_dados=_servicos_sem_dados(d["id"], d.get("servicos_sem_dados")),
             avisos_oficiais=_avisos_oficiais(d["id"], d.get("avisos_oficiais")),
+            agenda_cultural=_agenda_cultural(d["id"], d.get("agenda_cultural")),
             municipios_membros=int(terr.get("municipios_membros", len(concelhos))),
             concelhos_servidos=int(terr.get("concelhos_servidos", len(concelhos))),
             caixa=caixa,
@@ -575,6 +614,14 @@ class Regiao:
                 f"{self.id}: `servicos_sem_dados` fala de {', '.join(fora_dos_modos)}, que não "
                 "está na lista de modos da região: a página onde a frase iria não existe."
             )
+
+        if self.agenda_cultural:
+            fora = sorted(set(self.agenda_cultural.concelhos) - set(ids))
+            if fora:
+                raise ErroDeRegiao(
+                    f"{self.id}: `agenda_cultural.concelhos` fala de concelhos que a região não "
+                    f"tem — {', '.join(fora)}. São os identificadores do `concelhos.yaml`."
+                )
 
         if self.urbanos_da_rede:
             if "urbano-municipal" not in self.modos:
@@ -816,6 +863,52 @@ def _avisos_oficiais(id_regiao: str, valor: Any) -> list[dict[str, str]]:
             )
         saida.append(d)
     return saida
+
+
+def _agenda_cultural(id_regiao: str, valor: Any) -> AgendaCultural | None:
+    """A agenda cultural, como a região a declara (`Regiao.agenda_cultural`).
+
+    Com `nome`, `url` e `concelhos`, os três e mais nada. O endereço vai por
+    https e leva o marcador `{concelho}` uma vez, e nenhum outro: um `{id}`
+    escrito por engano passava tal e qual para a ligação, e todas as páginas
+    levavam ao mesmo endereço partido. Que os concelhos sejam da região
+    confere-o o `_verificar`.
+    """
+    if valor is None:
+        return None
+    if not isinstance(valor, dict) or sorted(valor) != ["concelhos", "nome", "url"]:
+        raise ErroDeRegiao(
+            f"{id_regiao}: `agenda_cultural` declara-se com `nome`, `url` e `concelhos`, os três "
+            f"e mais nada — tem {sorted(valor) if isinstance(valor, dict) else valor!r}."
+        )
+    nome = str(valor["nome"] or "").strip()
+    url = str(valor["url"] or "").strip()
+    resto = url.replace(MARCADOR_DO_CONCELHO, "")
+    if (
+        not nome
+        or not url.startswith("https://")
+        or url.count(MARCADOR_DO_CONCELHO) != 1
+        or "{" in resto
+        or "}" in resto
+    ):
+        raise ErroDeRegiao(
+            f"{id_regiao}: `agenda_cultural` tem de ter `nome`, e um `url` por https com "
+            f"{MARCADOR_DO_CONCELHO} uma vez no lugar do identificador do concelho — "
+            f"«https://agenda.example.org/concelho/{MARCADOR_DO_CONCELHO}»."
+        )
+    concelhos = valor["concelhos"]
+    if (
+        not isinstance(concelhos, list)
+        or not concelhos
+        or any(not isinstance(c, str) or not c.strip() for c in concelhos)
+        or len({c.strip() for c in concelhos}) != len(concelhos)
+    ):
+        raise ErroDeRegiao(
+            f"{id_regiao}: `agenda_cultural.concelhos` é a lista dos identificadores dos "
+            "concelhos que a agenda tem, sem vazios nem repetidos. Não se presume inteira: um "
+            "concelho que a agenda não tem ficava com uma ligação para uma página que não existe."
+        )
+    return AgendaCultural(nome=nome, url=url, concelhos=tuple(c.strip() for c in concelhos))
 
 
 def _ler_yaml(caminho: Path) -> dict[str, Any]:

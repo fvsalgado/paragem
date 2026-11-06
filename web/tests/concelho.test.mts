@@ -235,3 +235,23 @@ test('a lista dos concelhos diz o que cada um tem, e não só as paragens', asyn
   );
   assert.equal(resumoDoConcelho({ paragens: 0, estacoes: 0, aPedido: false, modos: [] }), '');
 });
+
+test('a agenda cultural diz de quem é e para onde se sai, sem o «www.»', async () => {
+  const { ondeFicaAAgenda } = await import('../src/lib/formato.ts');
+  assert.equal(
+    ondeFicaAAgenda({
+      nome: 'Cartaz da Serra',
+      url: 'https://cartaz-da-serra.example.org/concelho/pedra-alta',
+    }),
+    'na agenda cultural Cartaz da Serra (cartaz-da-serra.example.org)',
+  );
+  assert.equal(
+    ondeFicaAAgenda({ nome: 'Agenda', url: 'https://www.agenda.example.org/c/x' }),
+    'na agenda cultural Agenda (agenda.example.org)',
+  );
+  // Um endereço que não se lê fica com o nome, e a página não parte.
+  assert.equal(
+    ondeFicaAAgenda({ nome: 'Agenda', url: 'não é um endereço' }),
+    'na agenda cultural Agenda',
+  );
+});

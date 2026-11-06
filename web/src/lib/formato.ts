@@ -397,7 +397,34 @@ export type Concelho = {
   paragens: number;
   /** Ausente em dados de antes disto, e `null` num concelho sem feriado declarado. */
   feriado_municipal?: FeriadoMunicipal | null;
+  /**
+   * A página deste concelho na agenda cultural da região, com o nome da
+   * agenda (`agenda_cultural`, no `regiao.yaml`). `null` quando a região não
+   * declara agenda ou ela não tem este concelho, e ausente em dados de antes
+   * disto: nos dois casos, a página não fala de agenda nenhuma.
+   */
+  agenda_cultural?: AgendaDoConcelho | null;
 };
+
+/** A página de um concelho na agenda cultural da região. */
+export type AgendaDoConcelho = { nome: string; url: string };
+
+/**
+ * «na agenda cultural Cartaz da Serra (cartaz-da-serra.example.org)»: de quem
+ * é a agenda e para onde se vai. O nome sozinho não chega — a ligação sai
+ * deste sítio, e quem a segue tem de o saber antes —, e o endereço vai sem o
+ * `www.`, como nos outros sítios que a região nomeia. Um endereço que não se
+ * leia fica só com o nome, em vez de partir a página.
+ */
+export function ondeFicaAAgenda(a: AgendaDoConcelho): string {
+  let anfitriao = '';
+  try {
+    anfitriao = new URL(a.url).hostname.replace(/^www\./, '');
+  } catch {
+    /* sem anfitrião, só o nome */
+  }
+  return `na agenda cultural ${a.nome}${anfitriao ? ` (${anfitriao})` : ''}`;
+}
 
 const MESES = [
   'janeiro',

@@ -6815,6 +6815,16 @@ nav.indice-da-pagina a {
   min-height: var(--alvo);
 }
 
+/* A AGENDA CULTURAL DO CONCELHO, perto do alto: o que há para ver, e por
+   baixo de quem é a agenda e o endereço dela, que é para onde se sai. Uma
+   ligação só, com o alvo de 44 px. */
+p.agenda-do-concelho a {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: var(--alvo);
+}
+
 /* «SAIR DO CONCELHO» NUM TELEMÓVEL: cada destino numa linha com as horas, e os
    distintivos por baixo, à largura toda (#74). Na tabela de três colunas, a
    das linhas empilhava-os dois a dois e o destino partia-se em três linhas.

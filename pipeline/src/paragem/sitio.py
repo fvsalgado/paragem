@@ -461,6 +461,15 @@ class Sitio:
             if p.get("concelho"):
                 por_concelho[p["concelho"]] += 1
         feriados = self._proximos_feriados_municipais()
+        agenda = self.regiao.agenda_cultural
+
+        def na_agenda(concelho: str) -> dict[str, str] | None:
+            # A PÁGINA DESTE CONCELHO NA AGENDA CULTURAL DA REGIÃO, com o nome
+            # da agenda — o sítio diz de quem ela é. `None` quando a região não
+            # declara agenda, ou ela não tem este concelho: aí não há ligação.
+            url = agenda.pagina(concelho) if agenda else None
+            return {"nome": agenda.nome, "url": url} if agenda and url else None
+
         return [
             {
                 "id": c.id,
@@ -474,6 +483,7 @@ class Sitio:
                 "servido_por": c.servido_por,
                 "paragens": por_concelho.get(c.id, 0),
                 "feriado_municipal": feriados.get(c.id),
+                "agenda_cultural": na_agenda(c.id),
             }
             for c in self.regiao.concelhos
         ]
