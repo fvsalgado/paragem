@@ -28,7 +28,13 @@ import {
   zoomDeAparecer,
   type CamadaDePontos,
 } from '@/lib/pontos-no-mapa';
-import { DENSIDADE, LADO, imagemDaPlaca } from '@/lib/icones-do-mapa';
+import {
+  DENSIDADE,
+  LADO,
+  SETA_DO_PERCURSO,
+  imagemDaPlaca,
+  imagemDaSeta,
+} from '@/lib/icones-do-mapa';
 import type { Ponto } from '@/lib/formato';
 import { descodificarLinha, type PercursoGeo } from '@/lib/otp';
 import { ouvirTema, temaEfetivo } from '@/lib/tema';
@@ -980,6 +986,43 @@ export default function Mapa({
             },
             antesDosNomes,
           );
+          // AS SETAS DO SENTIDO, ao longo de cada troço de transporte: num
+          // percurso que volta para trás, ou que sobe e desce o mesmo vale,
+          // o traço sozinho não dizia para que lado se ia. A partir de z13,
+          // que é quando o troço já é comprido que chegue para levar mais do
+          // que uma; por baixo dos nomes e das paragens. Nos troços a pé
+          // não: os pontinhos já dizem «isto andas tu», e uma seta em cada
+          // um era ruído.
+          //
+          // NÃO MUDAM COM O TEMA, e não é esquecimento: vão por cima do traço
+          // do percurso, que é o mesmo nos dois — a cor da linha sobre o
+          // contorno branco —, e são brancas com contorno escuro para se
+          // verem sobre qualquer cor de linha.
+          const seta = imagemDaSeta();
+          if (seta) {
+            if (!criado!.hasImage(SETA_DO_PERCURSO)) {
+              criado!.addImage(SETA_DO_PERCURSO, seta, { pixelRatio: DENSIDADE });
+            }
+            criado!.addLayer(
+              {
+                id: 'percurso-setas',
+                type: 'symbol',
+                source: 'percurso',
+                minzoom: 13,
+                filter: ['!=', ['get', 'modo'], 'WALK'],
+                layout: {
+                  'symbol-placement': 'line',
+                  'symbol-spacing': 72,
+                  'icon-image': SETA_DO_PERCURSO,
+                  'icon-size': ['interpolate', ['linear'], ['zoom'], 13, 0.7, 16, 1, 18, 1.2],
+                  'icon-rotation-alignment': 'map',
+                  'icon-allow-overlap': true,
+                  'icon-ignore-placement': true,
+                },
+              },
+              antesDosNomes,
+            );
+          }
 
           criado!.addSource('paragens', {
             type: 'geojson',

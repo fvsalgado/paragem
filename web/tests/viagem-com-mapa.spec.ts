@@ -50,6 +50,58 @@ test.describe('num ecrã largo', () => {
         .toBeGreaterThan(0);
     }
   });
+
+  test('o percurso leva setas no sentido da viagem, fora dos troços a pé', async ({ page }) => {
+    test.skip(!temMosaicos(), SEM.mosaicos);
+    const endereco = viagem();
+    test.skip(!endereco, 'a região não tem duas paragens');
+    await page.goto(endereco!);
+    await expect(page.locator('.mapa-da-viagem canvas.maplibregl-canvas')).toBeVisible({
+      timeout: 20_000,
+    });
+    test.skip(
+      !(await page
+        .locator('.opcao')
+        .first()
+        .isVisible({ timeout: 20_000 })
+        .catch(() => false)),
+      'nenhuma opção para esta viagem',
+    );
+    type Feicao = {
+      properties: Record<string, unknown>;
+      geometry: { type: string; coordinates: [number, number][] };
+    };
+    type MapaDeTeste = {
+      __mapa: {
+        querySourceFeatures(fonte: string): Feicao[];
+        queryRenderedFeatures(o: { layers: string[] }): Feicao[];
+        jumpTo(o: { center: [number, number]; zoom: number }): void;
+      };
+    };
+    // Perto de um troço de transporte, onde as setas já se desenham.
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const m = (window as unknown as MapaDeTeste).__mapa;
+          const troco = m
+            .querySourceFeatures('percurso')
+            .find((f) => f.properties.modo !== 'WALK' && f.geometry.type === 'LineString');
+          if (!troco) return false;
+          const c = troco.geometry.coordinates;
+          m.jumpTo({ center: c[Math.floor(c.length / 2)], zoom: 15 });
+          return true;
+        }),
+      )
+      .toBe(true);
+    const setas = () =>
+      page.evaluate(() =>
+        (window as unknown as MapaDeTeste).__mapa
+          .queryRenderedFeatures({ layers: ['percurso-setas'] })
+          .map((f) => f.properties.modo),
+      );
+    await expect.poll(async () => (await setas()).length, { timeout: 15_000 }).toBeGreaterThan(0);
+    expect(await setas()).not.toContain('WALK');
+  });
 });
 
 test('num telemóvel, a página das direções não descarrega o mapa', async ({ page }) => {
