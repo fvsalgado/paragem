@@ -10,6 +10,7 @@ import {
   CARTAO_DA_REGIAO,
   cartaoDaLinha,
   cartaoDaParagem,
+  cartaoDoConcelho,
   corpoDoTitulo,
   encurtar,
   idDoCartao,
@@ -23,7 +24,7 @@ test('o cartão tem a medida que as redes recortam', () => {
 
 test('o endereço de um cartão volta a dar o identificador do ficheiro da paragem ou da linha', () => {
   for (const id of ['pa_mercado', 'tmr:1234', 'linha 1.2', 'ÁGUA-1']) {
-    for (const endereco of [cartaoDaParagem(id), cartaoDaLinha(id)]) {
+    for (const endereco of [cartaoDaParagem(id), cartaoDaLinha(id), cartaoDoConcelho(id)]) {
       const segmento = endereco.split('/').pop()!;
       // É o mesmo `seguro` que dá o nome ao ficheiro no armazém.
       assert.equal(idDoCartao(segmento), seguro(id), endereco);
@@ -31,6 +32,7 @@ test('o endereço de um cartão volta a dar o identificador do ficheiro da parag
   }
   assert.equal(cartaoDaParagem('pa:1'), '/cartao/paragens/pa-1.png');
   assert.equal(cartaoDaLinha('L1'), '/cartao/linhas/L1.png');
+  assert.equal(cartaoDoConcelho('vale-serrado'), '/cartao/concelhos/vale-serrado.png');
 });
 
 test('um endereço torto não chega ao armazém', () => {

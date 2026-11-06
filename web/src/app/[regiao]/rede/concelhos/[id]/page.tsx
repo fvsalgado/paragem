@@ -33,7 +33,9 @@ import Estado from '@/componentes/Estado';
 import { aAutoridade, lista, numero, plural } from '@/lib/prosa';
 import {
   fraseDoDistrito,
+  numerosDoConcelho,
   paragemPrincipal,
+  passaNoConcelho,
   porLocalidade,
   quantosComUnidade,
   quantosNoConcelho,
@@ -42,6 +44,7 @@ import {
 import { caminhoDoHorario } from '@/lib/a-pedido';
 import { feedsProprios, horaLegivel, ondeFicaAAgenda } from '@/lib/formato';
 import { metadadosDaRegiao } from '@/lib/metadados';
+import { cartaoDoConcelho } from '@/lib/partilha';
 import { atribuicaoDoMapa } from '@/lib/estilo-mapa';
 
 /**
@@ -75,6 +78,9 @@ export async function generateMetadata({
     titulo: c.nome,
     descricao: `Os transportes em ${c.nome}${que}.`,
     caminho: urlRede(rid, `concelhos/${c.id}/`),
+    // O CARTÃO DELE, com o nome e os números por modo, e não o da região:
+    // quem manda a página do concelho a alguém manda o concelho.
+    imagem: { url: cartaoDoConcelho(c.id), alt: `${c.nome}: os transportes no concelho` },
   });
 }
 
@@ -104,13 +110,7 @@ export default async function Concelho({
   const codigos = new Set(ps.flatMap((p) => p.linhas));
   const candidatas = indiceDeLinhas.filter((l) => codigos.has(l.codigo));
   const detalhes = (await Promise.all(candidatas.map((l) => linhaDetalhe(rid, l.id)))).filter(
-    (l): l is LinhaDetalhe =>
-      !!l &&
-      l.sentidos.some(
-        (s) =>
-          s.paragens.some((p) => aqui.has(p.id)) ||
-          (s.quadro?.paragens ?? []).some((p) => aqui.has(p.id)),
-      ),
+    (l): l is LinhaDetalhe => !!l && passaNoConcelho(l, aqui),
   );
   const nomes = new Map(cs.map((x) => [x.id, x.nome]));
   const saidas = saidasDoConcelho(c.id, detalhes, todas, nomes);
@@ -157,36 +157,13 @@ export default async function Concelho({
 
   // O CONCELHO EM NÚMEROS, cada um com a cor do modo a que pertence. Eram uma
   // linha cinzenta e pequena debaixo do título — a informação mais forte da
-  // página era a que menos se via. Um modo que o concelho não tem não desenha
-  // número nenhum, pela regra das secções: um zero à espera de dados não diz
-  // nada a quem viaja.
-  const numeros: { modo: string; n: number; rotulo: string }[] = [
-    { modo: 'autocarro', n: ps.length, rotulo: ps.length === 1 ? 'paragem' : 'paragens' },
-    {
-      modo: 'autocarro',
-      n: detalhes.length,
-      rotulo: detalhes.length === 1 ? 'linha' : 'linhas',
-    },
-    ...(es.length
-      ? [
-          {
-            modo: 'comboio',
-            n: es.length,
-            rotulo: es.length === 1 ? 'estação de comboio' : 'estações de comboio',
-          },
-        ]
-      : []),
-    ...(zonas.length
-      ? [
-          {
-            modo: 'a-pedido',
-            n: zonas.length,
-            rotulo:
-              zonas.length === 1 ? 'zona de transporte a pedido' : 'zonas de transporte a pedido',
-          },
-        ]
-      : []),
-  ];
+  // página era a que menos se via (`numerosDoConcelho`).
+  const numeros = numerosDoConcelho({
+    paragens: ps.length,
+    linhas: detalhes.length,
+    estacoes: es.length,
+    zonas: zonas.length,
+  });
 
   return (
     <>
