@@ -2,7 +2,8 @@ name: Dados
 
 # Três gatilhos, e cada um responde a uma pergunta diferente:
 #
-#   - **semanal**: as fontes mudaram? A CP, a FlixBus e o OpenStreetMap
+#   - **semanal** (desligado desde 6/11/2026, ver o `on:`): as fontes mudaram?
+#     A CP, a FlixBus e o OpenStreetMap
 #     republicam sem avisar, e uma linha suprimida a meio de fevereiro não se
 #     descobre sozinha. É o build de dados que o CLAUDE.md §7 pede;
 #   - **por PR**: esta alteração ao pipeline ainda produz os mesmos números?
@@ -12,11 +13,11 @@ name: Dados
 #     vão para o armazém que o sítio lê (CLAUDE.md §11.7), e uma alteração ao
 #     pipeline que fique só no repositório não chega a ninguém.
 on:
-  schedule:
-    # Segundas, às 5h07 UTC. Fora da hora certa de propósito: à hora certa toda
-    # a gente corre os seus, e os servidores de quem nos serve os dados não têm
-    # nada que aguentar isso por nossa causa.
-    - cron: "7 5 * * 1"
+  # SEM AGENDAMENTO desde 6/11/2026, por decisão do dono: o produto não avança
+  # por agora, e uma construção semanal que publica sozinha não tem quem a
+  # olhe. Corria às segundas, às 5h07 UTC — fora da hora certa de propósito, para
+  # não carregar os servidores de quem nos serve os dados. Para voltar, repor o
+  # `schedule:` com o cron de então ("7 5 * * 1").
   workflow_dispatch:
   push:
     branches: [main]
