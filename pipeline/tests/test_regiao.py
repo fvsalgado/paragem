@@ -511,6 +511,101 @@ def test_onde_saem_os_avisos_mal_declarado_recusa_se(tmp_path, avisos, erro):
         Regiao.carregar(_regiao_minima(tmp_path / "x", avisos_oficiais=avisos))
 
 
+def _com_dois_concelhos(pasta, **extra):
+    """Uma região mínima com dois concelhos, para a agenda cultural."""
+    pasta = _regiao_minima(pasta, inclui={"concelhos": "concelhos.yaml"}, **extra)
+    (pasta / "concelhos.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "concelhos": [
+                    {"id": "vila", "nome": "Vila", "distrito": "D", "dico": "0001"},
+                    {"id": "aldeia", "nome": "Aldeia", "distrito": "D", "dico": "0002"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    return pasta
+
+
+def test_a_agenda_cultural_declara_se_e_so_leva_aos_concelhos_que_tem(tmp_path):
+    """Uma agenda dos municípios membros não tem página para um concelho servido sem o ser."""
+    agenda = {
+        "nome": "Agenda X",
+        "url": "https://agenda.example.org/concelho/{concelho}",
+        "concelhos": ["vila"],
+    }
+    r = Regiao.carregar(_com_dois_concelhos(tmp_path / "x", agenda_cultural=agenda))
+    assert r.agenda_cultural is not None
+    assert r.agenda_cultural.nome == "Agenda X"
+    assert r.agenda_cultural.pagina("vila") == "https://agenda.example.org/concelho/vila"
+    assert r.agenda_cultural.pagina("aldeia") is None
+    assert Regiao.carregar(_regiao_minima(tmp_path / "sem")).agenda_cultural is None
+
+
+def test_a_agenda_cultural_chega_a_cada_concelho_ou_a_nenhum(raiz, tmp_path):
+    """No sítio, cada concelho leva o nome da agenda e a página dele — ou `None`, e nada."""
+    from paragem.sitio import Sitio
+
+    agenda = {
+        "nome": "Agenda X",
+        "url": "https://agenda.example.org/concelho/{concelho}",
+        "concelhos": ["vila"],
+    }
+    com = Regiao.carregar(_com_dois_concelhos(tmp_path / "com", agenda_cultural=agenda))
+    por_id = {c["id"]: c for c in Sitio(raiz, com, tmp_path / "s1").concelhos_json([])}
+    assert por_id["vila"]["agenda_cultural"] == {
+        "nome": "Agenda X",
+        "url": "https://agenda.example.org/concelho/vila",
+    }
+    assert por_id["aldeia"]["agenda_cultural"] is None
+
+    sem = Regiao.carregar(_com_dois_concelhos(tmp_path / "sem"))
+    assert all(
+        c["agenda_cultural"] is None for c in Sitio(raiz, sem, tmp_path / "s2").concelhos_json([])
+    )
+
+
+def test_a_prova_declara_a_agenda_so_para_um_concelho_e_o_savel_nenhuma():
+    """O par das provas é o que mostra no sítio as duas coisas: a ligação, e a ausência dela."""
+    prova = regiao_ou_salta("prova")
+    assert prova.agenda_cultural is not None
+    com = [c.id for c in prova.concelhos if prova.agenda_cultural.pagina(c.id)]
+    assert com and len(com) < len(prova.concelhos)
+    assert all(".example.org/" in str(prova.agenda_cultural.pagina(c)) for c in com)
+    assert regiao_ou_salta("prova-municipio").agenda_cultural is None
+
+
+@pytest.mark.parametrize(
+    ("agenda", "erro"),
+    [
+        ({"nome": "A", "url": "https://a.example.org/{concelho}"}, "os três e mais nada"),
+        (
+            {"nome": "A", "url": "https://a.example.org/{concelho}", "concelhos": ["vila"], "x": 1},
+            "os três e mais nada",
+        ),
+        ({"nome": "A", "url": "http://a.example.org/{concelho}", "concelhos": ["vila"]}, "https"),
+        ({"nome": "A", "url": "https://a.example.org/vila", "concelhos": ["vila"]}, "uma vez"),
+        ({"nome": "A", "url": "https://a.example.org/{id}", "concelhos": ["vila"]}, "uma vez"),
+        (
+            {"nome": "A", "url": "https://a.example.org/{concelho}/{id}", "concelhos": ["vila"]},
+            "uma vez",
+        ),
+        ({"nome": " ", "url": "https://a.example.org/{concelho}", "concelhos": ["vila"]}, "nome"),
+        ({"nome": "A", "url": "https://a.example.org/{concelho}", "concelhos": []}, "presume"),
+        (
+            {"nome": "A", "url": "https://a.example.org/{concelho}", "concelhos": ["vila", "vila"]},
+            "repetidos",
+        ),
+        ({"nome": "A", "url": "https://a.example.org/{concelho}", "concelhos": ["outra"]}, "outra"),
+        (["Agenda"], "os três e mais nada"),
+    ],
+)
+def test_a_agenda_cultural_mal_declarada_recusa_se(tmp_path, agenda, erro):
+    with pytest.raises(ErroDeRegiao, match=erro):
+        Regiao.carregar(_com_dois_concelhos(tmp_path / "x", agenda_cultural=agenda))
+
+
 def test_um_horario_a_pedido_diz_que_titulos_se_pagam_nele(tmp_path):
     """A página de um folheto de ligações não dizia quanto custa; um `id` trocado tirava-lho."""
     pasta = _com_a_pedido(tmp_path / "x", ["norte"])

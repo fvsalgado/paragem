@@ -40,7 +40,7 @@ import {
   saidasDoConcelho,
 } from '@/lib/concelho';
 import { caminhoDoHorario } from '@/lib/a-pedido';
-import { horaLegivel } from '@/lib/formato';
+import { horaLegivel, ondeFicaAAgenda } from '@/lib/formato';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
 /**
@@ -188,6 +188,21 @@ export default async function Concelho({
           sobre ele empurravam o «Sair do concelho» para fora do primeiro ecrã.
           Fora disso, uma linha no fim da página. */}
       <FeriadoMunicipalDoConcelho feriado={c.feriado_municipal} emBreve dias={DIAS_DO_FERIADO} />
+
+      {/* O QUE HÁ PARA VER NO CONCELHO, na agenda cultural da região — quando
+          ela o tem (`agenda_cultural`, no `regiao.yaml`). Antes do mapa, para
+          se ver no primeiro ecrã. A ligação sai deste sítio, e diz de quem é
+          a agenda e para onde vai, na própria ligação. «No concelho», e não
+          «em <concelho>», pela razão do «Sair do concelho»: há concelhos que
+          pedem contração («no Porto»), e o artigo não está nos dados. */}
+      {c.agenda_cultural && (
+        <p className="agenda-do-concelho">
+          <a href={c.agenda_cultural.url} rel="noreferrer">
+            <span>O que há para ver no concelho</span>{' '}
+            <span className="secundario">{ondeFicaAAgenda(c.agenda_cultural)}</span>
+          </a>
+        </p>
+      )}
 
       {/* O CONCELHO NO MAPA, logo à cabeça (#75): a rede que o atravessa, as
           paragens e as estações dele, e as sedes nomeadas. Carrega-se quando

@@ -55,6 +55,17 @@ rede:
   # O artigo do operador, pela mesma razão: «operada pela …».
   operador_artigo: a
 
+# A AGENDA CULTURAL DA REGIÃO, inventada como o resto: a página de cada
+# concelho leva à página dele na agenda, e diz de quem ela é e que se sai
+# daqui. Só para a Pedra Alta, DE PROPÓSITO: a Ribeira do Corvo fica sem
+# ligação, e é assim que se prova que a lista manda — uma agenda não tem de
+# ter os concelhos todos que a rede serve. O Baixo Sável não declara agenda
+# nenhuma, e a página dos concelhos dele não fala dela.
+agenda_cultural:
+  nome: Cartaz da Serra
+  url: https://cartaz-da-serra.example.org/concelho/{concelho}
+  concelhos: [pedra-alta]
+
 dominio_env: PARAGEM_DOMINIO_PROVA
 
 # O domínio canónico em que esta região responde. DECLARADO, não adivinhado

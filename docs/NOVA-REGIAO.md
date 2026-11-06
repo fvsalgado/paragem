@@ -57,6 +57,22 @@ Opcional ao nascer, sem bloquear nada:
   página dos urbanos leva às linhas deles. Pede `urbano-municipal` nos modos.
   Não se adivinham pelo nome da linha; sem a declaração, essas linhas são só
   linhas da rede;
+- a **agenda cultural** da região (`agenda_cultural`: `nome`, `url` e
+  `concelhos`) — quando há um sítio de agenda com uma página por concelho. A
+  página de cada concelho leva à dele, perto do alto, com o nome da agenda e o
+  endereço à vista, porque se sai deste sítio. O `url` é o da página de **um**
+  concelho, com `{concelho}` no lugar do identificador — o do
+  `concelhos.yaml`, que tem de ser o mesmo nos dois sítios. `concelhos` diz a
+  que concelhos se aplica, e não se presume inteira: uma agenda dos municípios
+  membros não tem página para um concelho que a rede serve sem o ser. Sem a
+  declaração, a página não fala de agenda nenhuma:
+
+  ```yaml
+  agenda_cultural:
+    nome: Cartaz da Serra
+    url: https://cartaz-da-serra.example.org/concelho/{concelho}
+    concelhos: [pedra-alta]
+  ```
 - tarifário — sem ele, não se anuncia preço nenhum;
 - calendário escolar e feriados municipais — sem eles, o gerador projeta só o
   que consegue e o relatório conta o resto;
