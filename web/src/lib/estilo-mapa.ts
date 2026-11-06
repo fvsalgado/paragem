@@ -271,7 +271,9 @@ export function atribuicaoDoMapa(
   mapa: { atribuicao: string; fonte: string } | null | undefined,
 ): string | undefined {
   if (!mapa) return undefined;
-  if (mapa.fonte !== 'openstreetmap' || mapa.atribuicao.includes('openmaptiles.org')) {
+  // UMA VEZ SÓ: se os dados um dia já trouxerem o crédito, não se repete. É
+  // pelo nome, e não pelo endereço — isto não valida ligação nenhuma.
+  if (mapa.fonte !== 'openstreetmap' || /\bOpenMapTiles\b/.test(mapa.atribuicao)) {
     return mapa.atribuicao;
   }
   return mapa.atribuicao ? `${mapa.atribuicao} · ${ATRIBUICAO_OPENMAPTILES}` : ATRIBUICAO_OSM;
