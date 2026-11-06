@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Distintivo from './Distintivo';
+import { Chegada, DoModo, Localizacao } from './Icones';
 
 // O `Ponto` é o do `formato.ts`, e não um local com os campos que davam
 // jeito aqui. Dois tipos com o mesmo nome e campos diferentes divergem, e
@@ -36,6 +37,29 @@ const ROTULO_DO_TIPO: Record<string, string> = {
 /** O que cada resultado é, por extenso, por baixo do nome. */
 const rotuloDe = (p: Ponto): string =>
   p.tipo === 'sitio' ? p.descricao || 'sítio' : (ROTULO_DO_TIPO[p.tipo] ?? p.tipo);
+
+/**
+ * O QUE CADA RESULTADO É, TAMBÉM EM DESENHO: o ícone do modo — o mesmo da
+ * fila dos modos e das pílulas do mapa —, um alfinete para um sítio, e a mira
+ * da localização para «A minha localização». Numa lista de doze nomes, a
+ * estação, a paragem e a cidade com o mesmo nome distinguem-se de relance; o
+ * rótulo por extenso continua lá, e o ícone é `aria-hidden`. Uma linha não o
+ * leva: já tem a tabuleta com o número.
+ */
+const MODO_DO_TIPO: Record<string, string> = { paragem: 'autocarro', estacao: 'comboio' };
+
+function IconeDoResultado({ p }: { p: Ponto }) {
+  if (p.tipo === 'linha') return null;
+  const icone =
+    p.tipo === 'aqui' ? (
+      <Localizacao tamanho={18} />
+    ) : p.tipo === 'sitio' ? (
+      <Chegada tamanho={18} />
+    ) : (
+      <DoModo modo={MODO_DO_TIPO[p.tipo] ?? p.tipo} tamanho={18} />
+    );
+  return <span className="icone-do-resultado">{icone}</span>;
+}
 
 /**
  * Escolher de onde e para onde, a escrever.
@@ -376,6 +400,7 @@ export default function EscolherPonto({
                 escolher(p);
               }}
             >
+              <IconeDoResultado p={p} />
               {p.tipo === 'linha' && (
                 <Distintivo codigo={p.descricao ?? ''} cor={p.classe || null} />
               )}

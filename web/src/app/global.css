@@ -3298,6 +3298,14 @@ button.resumo-opcao:hover {
 .sugestoes li:last-child {
   border-bottom: 0;
 }
+/* O ícone do que o resultado é, à cabeça e ao meio da primeira linha, na cor
+   do texto secundário: ajuda a ver, e o rótulo por extenso continua a dizer. */
+.sugestoes .icone-do-resultado {
+  display: inline-flex;
+  vertical-align: -0.2em;
+  margin-right: 0.4rem;
+  color: var(--texto-secundario);
+}
 /* A opção que as setas percorrem. Não é `:hover`: quem navega por teclado
    nunca passa o rato, e precisa de ver onde está tanto como quem passa. */
 .sugestoes li.activo,
