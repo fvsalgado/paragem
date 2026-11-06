@@ -30,7 +30,7 @@ import FeriadoMunicipalDoConcelho, {
 } from '@/componentes/FeriadoMunicipal';
 import Distintivo from '@/componentes/Distintivo';
 import Estado from '@/componentes/Estado';
-import { aAutoridade, lista, plural } from '@/lib/prosa';
+import { aAutoridade, lista, numero, plural } from '@/lib/prosa';
 import {
   fraseDoDistrito,
   paragemPrincipal,
@@ -154,14 +154,38 @@ export default async function Concelho({
     ...es.map((e) => ({ ...e, tipo: 'estacao', concelho: e.concelho ?? '' })),
   ]);
 
-  const numeros = [
-    plural(ps.length, 'paragem', 'paragens'),
-    plural(detalhes.length, 'linha', 'linhas'),
-    es.length ? plural(es.length, 'estação de comboio', 'estações de comboio') : '',
-    zonas.length
-      ? plural(zonas.length, 'zona de transporte a pedido', 'zonas de transporte a pedido')
-      : '',
-  ].filter(Boolean);
+  // O CONCELHO EM NÚMEROS, cada um com a cor do modo a que pertence. Eram uma
+  // linha cinzenta e pequena debaixo do título — a informação mais forte da
+  // página era a que menos se via. Um modo que o concelho não tem não desenha
+  // número nenhum, pela regra das secções: um zero à espera de dados não diz
+  // nada a quem viaja.
+  const numeros: { modo: string; n: number; rotulo: string }[] = [
+    { modo: 'autocarro', n: ps.length, rotulo: ps.length === 1 ? 'paragem' : 'paragens' },
+    {
+      modo: 'autocarro',
+      n: detalhes.length,
+      rotulo: detalhes.length === 1 ? 'linha' : 'linhas',
+    },
+    ...(es.length
+      ? [
+          {
+            modo: 'comboio',
+            n: es.length,
+            rotulo: es.length === 1 ? 'estação de comboio' : 'estações de comboio',
+          },
+        ]
+      : []),
+    ...(zonas.length
+      ? [
+          {
+            modo: 'a-pedido',
+            n: zonas.length,
+            rotulo:
+              zonas.length === 1 ? 'zona de transporte a pedido' : 'zonas de transporte a pedido',
+          },
+        ]
+      : []),
+  ];
 
   return (
     <>
@@ -182,7 +206,15 @@ export default async function Concelho({
             ? `Município membro ${aAutoridade(r, 'de')}.`
             : `Não é município membro ${aAutoridade(r, 'de')}, e a rede serve-o na mesma.`}
       </p>
-      <p className="secundario">{numeros.join(' · ')}.</p>
+      {/* Uma lista e não um parágrafo: quem ouve ouve «409 paragens», um a
+          um, e sabe quantos são. A cor é só a borda — o texto diz o modo. */}
+      <ul className="numeros-do-concelho" aria-label={`${c.nome} em números`}>
+        {numeros.map((x) => (
+          <li key={x.rotulo} className={`modo-${x.modo}`}>
+            <strong>{numero(x.n)}</strong> <span>{x.rotulo}</span>
+          </li>
+        ))}
+      </ul>
       <MarcaDeDados regiao={rid} />
       {/* A CAIXA DO FERIADO SÓ QUANDO ESTÁ PERTO: a quatro meses, sete linhas
           sobre ele empurravam o «Sair do concelho» para fora do primeiro ecrã.
