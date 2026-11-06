@@ -42,6 +42,7 @@ import {
 import { caminhoDoHorario } from '@/lib/a-pedido';
 import { feedsProprios, horaLegivel, ondeFicaAAgenda } from '@/lib/formato';
 import { metadadosDaRegiao } from '@/lib/metadados';
+import { atribuicaoDoMapa } from '@/lib/estilo-mapa';
 
 /**
  * VAZIO DE PROPÓSITO, E NÃO SE APAGA. Sem `generateStaticParams`, o Next trata
@@ -248,7 +249,7 @@ export default async function Concelho({
           concelho={c.id}
           nome={c.nome}
           mosaicos={enderecoDosDados(rid, 'regiao.pmtiles')}
-          atribuicao={r.mapa?.atribuicao}
+          atribuicao={atribuicaoDoMapa(r.mapa)}
           limites={limitesDoConcelho}
           rede={enderecoDosDados(rid, 'rede-no-mapa.json')}
           tipos={es.length ? ['paragem', 'estacao'] : ['paragem']}

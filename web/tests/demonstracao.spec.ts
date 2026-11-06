@@ -44,6 +44,8 @@ test('o mapa desenhado por nós diz de quem é, e não o atribui ao OpenStreetMa
     const atribuicao = page.locator('.maplibregl-ctrl-attrib');
     await expect(atribuicao, id).toContainText(declaracao(id)!.mapa!.atribuicao);
     await expect(atribuicao, id).not.toContainText('OpenStreetMap');
+    // Nem ao OpenMapTiles: os mosaicos imitam as camadas dele, e não saem dele.
+    await expect(atribuicao, id).not.toContainText('OpenMapTiles');
     // E o rodapé diz o mesmo, por extenso.
     await expect(page.locator('footer'), id).toContainText('inventados pelo Paragem.pt');
   }

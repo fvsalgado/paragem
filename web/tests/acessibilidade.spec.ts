@@ -184,8 +184,9 @@ test('os alvos táteis autónomos têm pelo menos 44 px', async ({ page }) => {
           const pai = e.parentElement;
           if (!pai) return true;
           // A ATRIBUIÇÃO DO MAPA É UMA FRASE — «© contribuidores do
-          // OpenStreetMap, sob ODbL» —, escrita pelo MapLibre num `div`. A
-          // ligação está nela como num parágrafo, e a exceção é a mesma.
+          // OpenStreetMap, sob ODbL · © OpenMapTiles» —, escrita pelo
+          // MapLibre num `div`. As ligações estão nela como num parágrafo, e
+          // a exceção é a mesma.
           // Media-se só quando o mapa acabava de carregar antes da medição.
           if (e.closest('.maplibregl-ctrl-attrib-inner')) return false;
           const emProsa = ['P', 'LI', 'TD', 'SPAN', 'STRONG', 'EM'].includes(pai.tagName);

@@ -234,11 +234,48 @@ const ESTRADAS: {
 ];
 
 /**
- * A atribuição de um mapa do OpenStreetMap — a de omissão, para os dados de
- * antes de a região dizer de quem é o mapa dela.
+ * O CRÉDITO DO ESQUEMA DOS MOSAICOS. Os de uma região real saem do Planetiler,
+ * e o Planetiler escreve-os no esquema do OpenMapTiles — as camadas, os nomes
+ * e as classes que este estilo lê. O desenho desse esquema está sob CC BY 4.0,
+ * e a licença pede o crédito à vista em quem usa mapas feitos com ele; o canto
+ * do mapa só nomeava o OpenStreetMap, que é de onde vêm os DADOS.
+ *
+ * Os mosaicos de uma região inventada imitam as camadas (`mosaicos_proprios.py`)
+ * e não saem do OpenMapTiles: não levam o crédito, como não levam o do
+ * OpenStreetMap.
+ *
+ * O espaço depois do «©» não parte: num telemóvel a atribuição vai em duas
+ * linhas, e o «©» ficava sozinho no fim da primeira.
  */
-export const ATRIBUICAO_OSM =
+export const ATRIBUICAO_OPENMAPTILES =
+  '©&nbsp;<a href="https://openmaptiles.org/">OpenMapTiles</a>';
+
+const ATRIBUICAO_DOS_DADOS_OSM =
   '© contribuidores do <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, sob ODbL';
+
+/**
+ * A atribuição de um mapa do OpenStreetMap feito pelo Planetiler — a de
+ * omissão, para os dados de antes de a região dizer de quem é o mapa dela, que
+ * eram todos assim.
+ */
+export const ATRIBUICAO_OSM = `${ATRIBUICAO_DOS_DADOS_OSM} · ${ATRIBUICAO_OPENMAPTILES}`;
+
+/**
+ * O que o canto do mapa de uma região diz, em HTML: a atribuição que os dados
+ * dela trazem (`regiao.json`, `mapa`), e o crédito do OpenMapTiles quando os
+ * mosaicos são do OpenStreetMap — que é quando saem do Planetiler. Um mapa
+ * desenhado por nós diz só o que a receita declara. Sem a declaração (dados
+ * de antes dela), `undefined`, e o mapa usa a de omissão (`ATRIBUICAO_OSM`).
+ */
+export function atribuicaoDoMapa(
+  mapa: { atribuicao: string; fonte: string } | null | undefined,
+): string | undefined {
+  if (!mapa) return undefined;
+  if (mapa.fonte !== 'openstreetmap' || mapa.atribuicao.includes('openmaptiles.org')) {
+    return mapa.atribuicao;
+  }
+  return mapa.atribuicao ? `${mapa.atribuicao} · ${ATRIBUICAO_OPENMAPTILES}` : ATRIBUICAO_OSM;
+}
 
 export const FONTE_REGULAR = ['Atkinson Hyperlegible Regular'];
 export const FONTE_NEGRITO = ['Atkinson Hyperlegible Bold'];

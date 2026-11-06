@@ -16,6 +16,7 @@ import { sedesDosConcelhos } from '@/lib/sedes';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { limitesDaRede } from '@/lib/pontos-no-mapa';
 import { metadadosDaRegiao } from '@/lib/metadados';
+import { atribuicaoDoMapa } from '@/lib/estilo-mapa';
 import { dataDosHorarios } from '@/lib/formato';
 
 export async function generateMetadata({
@@ -52,7 +53,7 @@ export default async function Viagem({ params }: { params: Promise<{ regiao: str
   const mapa = pontos
     ? {
         mosaicos: enderecoDosDados(rid, 'regiao.pmtiles'),
-        atribuicao: r.mapa?.atribuicao,
+        atribuicao: atribuicaoDoMapa(r.mapa),
         limites,
         centro: [
           (r.caixa.lat_min + r.caixa.lat_max) / 2,

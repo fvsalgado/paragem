@@ -28,6 +28,7 @@ import { limitesDaRede } from '@/lib/pontos-no-mapa';
 import { enderecoDosDados } from '@/lib/dados-do-navegador';
 import { disponibilidadeDaRegiao, motorDaRegiao } from '@/lib/enderecos';
 import { metadadosDaRegiao } from '@/lib/metadados';
+import { atribuicaoDoMapa } from '@/lib/estilo-mapa';
 import { avisosEmVigor, type AvisoNoMapa } from '@/lib/avisos';
 import { catalogoDosAvisos } from '@/lib/avisos-do-sitio';
 
@@ -237,7 +238,7 @@ export default async function Inicio({ params }: { params: Promise<{ regiao: str
         tipos={tipos}
         contagens={contagens}
         mosaicos={enderecoDosDados(rid, 'regiao.pmtiles')}
-        atribuicaoDoMapa={r.mapa?.atribuicao}
+        atribuicaoDoMapa={atribuicaoDoMapa(r.mapa)}
         modos={modos}
         temAPedido={temAPedido}
         modosDesligados={r.modos_desligados ?? []}
