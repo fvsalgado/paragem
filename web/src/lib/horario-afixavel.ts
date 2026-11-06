@@ -91,22 +91,42 @@ export function quadrosDaFolha(partidas: readonly PartidaDaFolha[]): QuadroDaFol
   });
 }
 
+/** O que uma letra da folha quer dizer: uma linha, para um destino. */
+export type ChamadaDaFolha = { letra: string; linha: string; linha_id: string; destino: string };
+
+/** A chave de uma combinação linha × destino. */
+export const chaveDaChamada = (linha_id: string, destino: string) => `${linha_id}\u0000${destino}`;
+
 /**
- * Os destinos da folha, com uma letra cada — só quando há mais do que um.
+ * As letras da folha: uma por LINHA E DESTINO — só quando há mais do que uma
+ * combinação.
  *
- * Numa paragem servida por uma linha só, para um sítio só, a letra não diz
- * nada e só suja a grelha. Com mais, cada minuto leva a letra do destino, e a
- * legenda diz qual é qual: «A — Tomar (Terminal)». Os mais servidos ficam com
- * as primeiras letras.
+ * Cada minuto da grelha leva a cor da sua linha, e a cor sozinha não chega:
+ * há quem não a veja, e há linhas com cores vizinhas. A letra diz o resto —
+ * «A — 1095 para Tomar (Terminal)» —, e é pela letra que a legenda se lê.
+ * Numa paragem com uma linha só para um sítio só, a letra não diz nada e só
+ * sujava a grelha. As combinações mais servidas ficam com as primeiras letras.
  */
-export function destinosDaFolha(partidas: readonly PartidaDaFolha[]): Map<string, string> {
-  const conta = new Map<string, number>();
-  for (const p of partidas) conta.set(p.destino, (conta.get(p.destino) ?? 0) + 1);
+export function chamadasDaFolha(partidas: readonly PartidaDaFolha[]): Map<string, ChamadaDaFolha> {
+  const conta = new Map<string, { n: number; p: PartidaDaFolha }>();
+  for (const p of partidas) {
+    const chave = chaveDaChamada(p.linha_id, p.destino);
+    const atual = conta.get(chave);
+    conta.set(chave, { n: (atual?.n ?? 0) + 1, p });
+  }
   if (conta.size < 2) return new Map();
-  const ordem = [...conta.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'pt'))
-    .map(([d]) => d);
-  return new Map(ordem.map((d, i) => [d, letraDe(i)]));
+  const ordem = [...conta.entries()].sort(
+    ([, a], [, b]) =>
+      b.n - a.n ||
+      a.p.linha.localeCompare(b.p.linha, 'pt', { numeric: true }) ||
+      a.p.destino.localeCompare(b.p.destino, 'pt'),
+  );
+  return new Map(
+    ordem.map(([chave, { p }], i) => [
+      chave,
+      { letra: letraDe(i), linha: p.linha, linha_id: p.linha_id, destino: p.destino },
+    ]),
+  );
 }
 
 /** A, B, …, Z, AA, AB… — a 27.ª letra não pode ser outra vez «A». */

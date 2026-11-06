@@ -3,7 +3,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { destinosDaFolha, quadrosDaFolha } from '../src/lib/horario-afixavel.ts';
+import { chamadasDaFolha, chaveDaChamada, quadrosDaFolha } from '../src/lib/horario-afixavel.ts';
 import { codigoQr } from '../src/lib/qr.ts';
 
 const partida = (hora: string, extra: Partial<Record<string, unknown>> = {}) => ({
@@ -54,15 +54,19 @@ test('depois da meia-noite fica no fim, na fila «00», e diz-se', () => {
   );
 });
 
-test('a letra do destino só aparece quando há mais do que um, o mais servido com o A', () => {
-  assert.equal(destinosDaFolha([partida('07:00'), partida('08:00')]).size, 0);
-  const letras = destinosDaFolha([
+test('a letra é de uma linha para um destino, e só aparece quando há mais do que uma', () => {
+  assert.equal(chamadasDaFolha([partida('07:00'), partida('08:00')]).size, 0);
+  const letras = chamadasDaFolha([
     partida('07:00', { destino: 'Escola' }),
     partida('08:00'),
     partida('09:00'),
+    partida('10:00', { linha: '2', linha_id: 'L2' }),
   ]);
-  assert.equal(letras.get('Centro'), 'A');
-  assert.equal(letras.get('Escola'), 'B');
+  // A mais servida fica com o A; depois, pela linha e pelo destino.
+  assert.equal(letras.get(chaveDaChamada('L1', 'Centro'))?.letra, 'A');
+  assert.equal(letras.get(chaveDaChamada('L1', 'Escola'))?.letra, 'B');
+  assert.equal(letras.get(chaveDaChamada('L2', 'Centro'))?.letra, 'C');
+  assert.equal(letras.get(chaveDaChamada('L2', 'Centro'))?.linha, '2');
 });
 
 test('o código QR tem o tamanho da norma e a margem silenciosa', () => {
