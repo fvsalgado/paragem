@@ -72,30 +72,60 @@ const FEEDS = {
   },
 };
 
+/** O dia em que a página se desenha: o fim do feed do comboio está a 36 dias. */
+const HOJE = '2026-11-06';
+
 test('a data de conteúdo diz-se com quem a publica, e não a de obtenção', async () => {
   const { frasesDosFeeds } = await import('../src/lib/formato.ts');
-  assert.deepEqual(frasesDosFeeds({ feeds: FEEDS }, ['rede']), [
+  assert.deepEqual(frasesDosFeeds({ feeds: FEEDS }, ['rede'], HOJE), [
     'Horários da Alta Transportes em vigor desde 5/12/2025.',
   ]);
 });
 
-test('o feed que acaba antes dos outros diz até quando vai — sem adivinhar o artigo', async () => {
+test('o feed com o fim perto diz até quando vai — sem adivinhar o artigo', async () => {
   const { frasesDosFeeds } = await import('../src/lib/formato.ts');
-  assert.deepEqual(frasesDosFeeds({ feeds: FEEDS }, ['comboio']), [
+  assert.deepEqual(frasesDosFeeds({ feeds: FEEDS }, ['comboio'], HOJE), [
     'Horários do operador Comboios da Serra só até 12/12/2026.',
   ]);
   // A rede da casa primeiro, e o feed que vai mais longe não diz «só até».
-  assert.deepEqual(frasesDosFeeds({ feeds: FEEDS }, ['comboio', 'rede']), [
+  assert.deepEqual(frasesDosFeeds({ feeds: FEEDS }, ['comboio', 'rede'], HOJE), [
     'Horários da Alta Transportes em vigor desde 5/12/2025.',
     'Horários do operador Comboios da Serra só até 12/12/2026.',
   ]);
-  // Um feed que acaba um dia antes dos outros não «acaba antes»: as janelas
-  // que andam com o relógio diferem de um ou dois dias, e isso é ruído.
-  const quaseIgual = { ...FEEDS, vizinho: { ...FEEDS.comboio, fim: '2027-10-30' } };
-  assert.deepEqual(frasesDosFeeds({ feeds: quaseIgual }, ['vizinho']), []);
   // Dados de antes disto, ou um feed que não se conhece: nada.
-  assert.deepEqual(frasesDosFeeds({}, ['rede']), []);
-  assert.deepEqual(frasesDosFeeds({ feeds: FEEDS }, ['outro']), []);
+  assert.deepEqual(frasesDosFeeds({}, ['rede'], HOJE), []);
+  assert.deepEqual(frasesDosFeeds({ feeds: FEEDS }, ['outro'], HOJE), []);
+});
+
+test('«só até» só quando o fim está perto: acabar antes dos outros não é notícia', async () => {
+  const { FIM_PERTO_DIAS, frasesDosFeeds } = await import('../src/lib/formato.ts');
+  // A janela de um ano da rede regular acaba antes de um feed de outra
+  // entidade — e a onze meses de distância não se diz nada.
+  const janela = {
+    rede: { ...FEEDS.rede, em_vigor_desde: null, fim: '2027-11-05' },
+    outro: { ...FEEDS.comboio, fim: '2028-01-31' },
+  };
+  assert.deepEqual(frasesDosFeeds({ feeds: janela }, ['rede', 'outro'], HOJE), []);
+  // A FIM_PERTO_DIAS diz-se; um dia depois, não.
+  const perto = { rede: { ...janela.rede, fim: '2027-01-05' } };
+  assert.equal(FIM_PERTO_DIAS, 60);
+  assert.deepEqual(frasesDosFeeds({ feeds: perto }, ['rede'], HOJE), [
+    'Horários da Alta Transportes só até 5/1/2027.',
+  ]);
+  assert.deepEqual(frasesDosFeeds({ feeds: perto }, ['rede'], '2026-11-05'), []);
+  // Um fim que já passou também se diz: os horários acabaram.
+  assert.deepEqual(frasesDosFeeds({ feeds: perto }, ['rede'], '2027-02-01'), [
+    'Horários da Alta Transportes só até 5/1/2027.',
+  ]);
+});
+
+test('a página de um concelho fala dos feeds da rede da casa, e só dos modos ligados', async () => {
+  const { feedsProprios } = await import('../src/lib/formato.ts');
+  const urbano = { ...FEEDS.rede, modo: 'urbano-municipal' };
+  const r = { modos: ['autocarro', 'comboio'], feeds: { ...FEEDS, urbano } };
+  assert.deepEqual(feedsProprios(r), ['rede']);
+  assert.deepEqual(feedsProprios({ modos: ['autocarro'] }), []);
+  assert.deepEqual(feedsProprios(null), []);
 });
 
 test('os feeds de uma página saem das chaves dos serviços dela', async () => {

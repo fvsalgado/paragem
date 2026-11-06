@@ -40,7 +40,7 @@ import {
   saidasDoConcelho,
 } from '@/lib/concelho';
 import { caminhoDoHorario } from '@/lib/a-pedido';
-import { horaLegivel, ondeFicaAAgenda } from '@/lib/formato';
+import { feedsProprios, horaLegivel, ondeFicaAAgenda } from '@/lib/formato';
 import { metadadosDaRegiao } from '@/lib/metadados';
 
 /**
@@ -215,7 +215,10 @@ export default async function Concelho({
           </li>
         ))}
       </ul>
-      <MarcaDeDados regiao={rid} />
+      {/* OS FEEDS DA REDE DA CASA, para a marca dizer desde quando valem os
+          horários: o concelho não tem partidas suas, e sem eles a página
+          ficava só com «horários planeados», sem data nenhuma. */}
+      <MarcaDeDados regiao={rid} feeds={feedsProprios(r)} />
       {/* A CAIXA DO FERIADO SÓ QUANDO ESTÁ PERTO: a quatro meses, sete linhas
           sobre ele empurravam o «Sair do concelho» para fora do primeiro ecrã.
           Fora disso, uma linha no fim da página. */}
