@@ -244,6 +244,7 @@ export default function AppDoMapa({
   avisos = [],
   precos = null,
   aPedidoNaFolha = null,
+  concelhos = [],
   oQueJunta = null,
   sedes = [],
   estacoesSemAutocarro = [],
@@ -303,6 +304,13 @@ export default function AppDoMapa({
   precos?: string | null;
   /** O telefone das reservas do transporte a pedido, quando a região o tem. */
   aPedidoNaFolha?: { telefone: string; apresentado: string; nota: string | null } | null;
+  /**
+   * OS CONCELHOS, no fim da folha de abertura (§6: a estrutura da página
+   * inicial acaba nos concelhos e no rodapé). O ecrã do mapa não tem rodapé,
+   * e a página de cada concelho — a que cada câmara quer mostrar — só se
+   * achava pela rede.
+   */
+  concelhos?: { id: string; nome: string }[];
   /** O que o sítio junta, numa frase (`fraseDoQueJunta`) — por baixo da assinatura. */
   oQueJunta?: string | null;
   /** As sedes de concelho, para o mapa as nomear a todos os zooms (`sedes.ts`). */
@@ -1563,6 +1571,18 @@ export default function AppDoMapa({
                   <span className="qual">Que título me serve?</span>
                 </Link>
               </p>
+            )}
+            {concelhos.length > 0 && (
+              <section className="concelhos-na-folha" aria-labelledby="concelhos-na-folha">
+                <h2 id="concelhos-na-folha">Concelhos</h2>
+                <ul>
+                  {concelhos.map((c) => (
+                    <li key={c.id}>
+                      <Link href={`/rede/concelhos/${c.id}/`}>{c.nome}</Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             )}
             {/* O ÚLTIMO FILHO DA FOLHA, e tem de continuar a sê-lo: o CSS só
                 pinta a folha quando ele já chegou (`global.css`, «A FOLHA SÓ SE

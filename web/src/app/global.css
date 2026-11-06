@@ -6688,6 +6688,30 @@ details.meio-do-percurso + ol.percurso-da-linha {
   font-weight: 700;
   text-decoration: underline;
 }
+/* OS CONCELHOS, no fim da folha: os nomes seguidos, como numa frase, e cada
+   um com o seu alvo de 44 px. Uma lista em coluna eram treze linhas de folha
+   para uma coisa que se procura pelo nome. */
+.folha-de-abertura .concelhos-na-folha {
+  margin: var(--espaco-3) 0.6rem 0;
+}
+.folha-de-abertura .concelhos-na-folha h2 {
+  margin: 0;
+  padding: 0;
+  font-size: var(--letra-corpo);
+}
+.folha-de-abertura .concelhos-na-folha ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--espaco-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.folha-de-abertura .concelhos-na-folha a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alvo);
+}
 
 /* --- o planeador: a espera grande e o prazo da reserva (#119, #121) ------- */
 
