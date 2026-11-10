@@ -69,7 +69,7 @@ export default async function Rodape({ regiao: id }: { regiao: string }) {
             livro, e não na capa. «Paragem.pt» leva à página do produto, noutro
             domínio. E diz quem o faz na mesma frase (decidido pelo dono a
             10/11/2026): «Feito com Paragem.pt, um produto Stineta — software
-            para regiões e comunidades.» Eram duas linhas. */}
+            para a comunidade.» Eram duas linhas. */}
         <AssinaturaStineta className="feito-com" rel="noreferrer">
           Feito com <a href={ORIGEM_DO_PRODUTO}>Paragem.pt</a>, um produto{' '}
         </AssinaturaStineta>

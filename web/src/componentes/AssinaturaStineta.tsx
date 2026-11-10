@@ -3,7 +3,7 @@ import { STINETA } from '@/lib/produto';
 import MarcaStineta from './MarcaStineta';
 
 /**
- * «Stineta — software para regiões e comunidades.» — quem faz o produto, numa
+ * «Stineta — software para a comunidade.» — quem faz o produto, numa
  * frase igual em todo o lado (`STINETA`, em `lib/produto.ts`).
  *
  * Um componente só para todos os sítios onde a frase aparece, para que digam a
@@ -13,7 +13,7 @@ import MarcaStineta from './MarcaStineta';
  * `children` é o princípio da frase, quando ela não começa no nome. No rodapé
  * do produto não há: a frase está sozinha. Numa região, o produto assina tudo
  * numa frase só (decidido pelo dono a 10/11/2026) — «Feito com Paragem.pt, um
- * produto Stineta — software para regiões e comunidades.» —, no rodapé e no
+ * produto Stineta — software para a comunidade.» —, no rodapé e no
  * menu do mapa, e o princípio vem de quem a usa.
  *
  * AS LIGAÇÕES FICAM NA FRASE, filhas diretas do parágrafo e com texto ao lado.

@@ -19,11 +19,11 @@ export const PRODUTO = { nome: 'Paragem.pt' } as const;
  * QUEM FAZ O PRODUTO ASSINA COMO STINETA (decidido pelo dono a 10/11/2026).
  *
  * Uma frase só, igual em todos os produtos da casa: «Stineta — software para
- * regiões e comunidades.» — a marca e o nome a levar à morada dela, e a
- * descrição em texto ao lado (`componentes/AssinaturaStineta.tsx`). No
- * rodapé do produto vai sozinha. Numa região, no rodapé e no menu do mapa, o
- * produto assina numa frase só: «Feito com Paragem.pt, um produto Stineta —
- * software para regiões e comunidades.»
+ * a comunidade.» — a marca e o nome a levar à morada dela, e a descrição em
+ * texto ao lado (`componentes/AssinaturaStineta.tsx`). No rodapé do produto
+ * vai sozinha. Numa região, no rodapé e no menu do mapa, o produto assina
+ * numa frase só: «Feito com Paragem.pt, um produto Stineta — software para a
+ * comunidade.»
  *
  * O nome de uma pessoa saiu das assinaturas e da prosa do produto. A
  * titularidade dos direitos continua no `AUTORIA.md`, que é o sítio canónico
@@ -32,7 +32,7 @@ export const PRODUTO = { nome: 'Paragem.pt' } as const;
 export const STINETA = {
   nome: 'Stineta',
   url: 'https://stineta.pt',
-  descricao: 'software para regiões e comunidades',
+  descricao: 'software para a comunidade',
 } as const;
 
 /**
