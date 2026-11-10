@@ -797,12 +797,24 @@ code {
   font-size: var(--letra-pequena);
   color: var(--texto-secundario);
 }
-/* A marca da Stineta à altura da letra da frase que assina. */
+/* A MARCA DA STINETA, à altura da letra da frase que assina: dois cristais de
+   sal-gema, na cor da ligação. O desenho é uma máscara e a cor é o fundo, e
+   por isso vive aqui e não no HTML — em linha, o Next mandava-o três vezes
+   em cada página e passava o orçamento de peso (`tests/lighthouse.mjs`).
+   As arestas de dentro são recortadas pela máscara interna do próprio
+   desenho, e a marca serve sobre qualquer fundo. Nas cores forçadas fica na
+   cor da ligação, em vez de o fundo lhe ser apagado. */
 .marca-stineta {
+  --desenho: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='4.3 4.1 21.3 26'%3E%3Cmask id='m' maskUnits='userSpaceOnUse' x='0' y='0' width='32' height='32'%3E%3Crect width='32' height='32' fill='%23fff'/%3E%3Cpath d='M4.59 14.2 13.6 19.4 22.61 14.2M13.6 19.4V29.8M15.92 7.1 20.6 9.8 25.28 7.1M20.6 9.8V15.2' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/mask%3E%3Cg mask='url(%23m)'%3E%3Cpath d='M13.6 9 22.61 14.2V24.6L13.6 29.8 4.59 24.6V14.2Z'/%3E%3Cpath d='M20.6 4.4 25.28 7.1V12.5L20.6 15.2 15.92 12.5V7.1Z'/%3E%3C/g%3E%3C/svg%3E");
+  display: inline-block;
   height: 1.1em;
-  width: auto;
+  width: 0.9em;
   vertical-align: -0.2em;
   margin-right: 0.28em;
+  background-color: currentColor;
+  forced-color-adjust: none;
+  -webkit-mask: var(--desenho) no-repeat center / contain;
+  mask: var(--desenho) no-repeat center / contain;
 }
 
 /* O RODAPÉ ALINHA COM O CONTEÚDO (#170): o espaço dos lados ia por fora da
