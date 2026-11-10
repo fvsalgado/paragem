@@ -196,13 +196,26 @@ test('a região que declara um logótipo mostra-o, sem saltar quando chega', asy
   await expect(img).toHaveAttribute('alt', '');
 });
 
-test('«Feito com Paragem.pt» discreto, no fim, a levar ao produto', async ({ page }) => {
+/**
+ * A ASSINATURA DO PRODUTO NUMA REGIÃO É UMA FRASE SÓ (decidido pelo dono a
+ * 10/11/2026), no rodapé e no menu do mapa: o produto, e quem o faz.
+ */
+const FEITO_COM = 'Feito com Paragem.pt, um produto Stineta — software para regiões e comunidades.';
+
+test('«Feito com Paragem.pt, um produto Stineta» discreto, no fim, a levar ao produto', async ({
+  page,
+}) => {
   await page.goto('/rede/');
   const feito = page.getByRole('contentinfo').locator('.feito-com');
-  await expect(feito).toHaveText('Feito com Paragem.pt');
+  await expect(feito).toHaveText(FEITO_COM);
   // A montra do produto, noutro anfitrião (a construção dos testes leva-a a
   // `NEXT_PUBLIC_PARAGEM_PRODUTO`, que é este).
   await expect(feito.getByRole('link', { name: 'Paragem.pt' })).toHaveAttribute('href', PRODUTO);
+  // E quem o faz: a marca é decorativa, e o nome da ligação é só o nome.
+  await expect(feito.getByRole('link', { name: 'Stineta', exact: true })).toHaveAttribute(
+    'href',
+    'https://stineta.pt',
+  );
 });
 
 test('o rodapé de uma região diz para onde se escreve', async ({ page }) => {
@@ -230,7 +243,7 @@ test('a marca da região está no primeiro ecrã do mapa, e no menu', async ({ p
   await page.getByRole('button', { name: 'Abrir o menu' }).click();
   const menu = page.getByRole('dialog', { name: 'Menu' });
   await assinada(menu.locator('.assinatura'));
-  await expect(menu.locator('.feito-com')).toHaveText('Feito com Paragem.pt');
+  await expect(menu.locator('.feito-com')).toHaveText(FEITO_COM);
 });
 
 test('um nome ou um endereço comprido não muda a altura do cabeçalho, nem empurra a página', async ({

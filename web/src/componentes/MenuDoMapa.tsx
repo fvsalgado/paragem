@@ -120,14 +120,13 @@ export default function MenuDoMapa({
       {/* A ASSINATURA DO PRODUTO, discreta e no fim, como no rodapé das outras
           páginas — que esta não tem. Era uma entrada do menu, «Sobre o
           Paragem.pt», ao lado das da rede, e antes disso «Outras regiões»: o
-          menu da autoridade a oferecer o fornecedor (P4-008). */}
-      <p className="feito-com">
-        Feito com <a href={ORIGEM_DO_PRODUTO}>Paragem.pt</a>
-      </p>
-      {/* E QUEM FAZ O PRODUTO, logo por baixo, como no rodapé das outras
-          páginas (decidido pelo dono a 10/11/2026): todas as páginas de uma
-          região levam a frase, também a do mapa, que não tem rodapé. */}
-      <AssinaturaStineta className="assinatura-stineta" rel="noreferrer" />
+          menu da autoridade a oferecer o fornecedor (P4-008). A mesma frase do
+          rodapé (decidido pelo dono a 10/11/2026), para todas as páginas de
+          uma região a dizerem: «Feito com Paragem.pt, um produto Stineta —
+          software para regiões e comunidades.» */}
+      <AssinaturaStineta className="feito-com" rel="noreferrer">
+        Feito com <a href={ORIGEM_DO_PRODUTO}>Paragem.pt</a>, um produto{' '}
+      </AssinaturaStineta>
     </dialog>
   );
 }

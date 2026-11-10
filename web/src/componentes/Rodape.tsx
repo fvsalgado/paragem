@@ -66,15 +66,13 @@ export default async function Rodape({ regiao: id }: { regiao: string }) {
         <Atribuicoes r={r} />
         {/* A ASSINATURA DO PRODUTO, discreta e no fim (P4-008, P3-029). O
             sítio é da autoridade, e quem o fez assina por baixo — como num
-            livro, e não na capa. Leva à página do produto, noutro domínio. */}
-        <p className="feito-com">
-          Feito com <a href={ORIGEM_DO_PRODUTO}>Paragem.pt</a>
-        </p>
-        {/* E QUEM FAZ O PRODUTO, logo por baixo e no mesmo tom (decidido pelo
-            dono a 10/11/2026): a frase da casa, igual à do rodapé do produto.
-            Numa classe sua, e não na `.feito-com`: essa diz só «Feito com
-            Paragem.pt», e é isso que se confere. */}
-        <AssinaturaStineta className="assinatura-stineta" rel="noreferrer" />
+            livro, e não na capa. «Paragem.pt» leva à página do produto, noutro
+            domínio. E diz quem o faz na mesma frase (decidido pelo dono a
+            10/11/2026): «Feito com Paragem.pt, um produto Stineta — software
+            para regiões e comunidades.» Eram duas linhas. */}
+        <AssinaturaStineta className="feito-com" rel="noreferrer">
+          Feito com <a href={ORIGEM_DO_PRODUTO}>Paragem.pt</a>, um produto{' '}
+        </AssinaturaStineta>
       </div>
     </footer>
   );

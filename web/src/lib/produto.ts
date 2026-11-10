@@ -20,8 +20,10 @@ export const PRODUTO = { nome: 'Paragem.pt' } as const;
  *
  * Uma frase só, igual em todos os produtos da casa: «Stineta — software para
  * regiões e comunidades.» — a marca e o nome a levar à morada dela, e a
- * descrição em texto ao lado (`componentes/AssinaturaStineta.tsx`). Vai no
- * rodapé do produto e no de cada região, por baixo do «Feito com Paragem.pt».
+ * descrição em texto ao lado (`componentes/AssinaturaStineta.tsx`). No
+ * rodapé do produto vai sozinha. Numa região, no rodapé e no menu do mapa, o
+ * produto assina numa frase só: «Feito com Paragem.pt, um produto Stineta —
+ * software para regiões e comunidades.»
  *
  * O nome de uma pessoa saiu das assinaturas e da prosa do produto. A
  * titularidade dos direitos continua no `AUTORIA.md`, que é o sítio canónico

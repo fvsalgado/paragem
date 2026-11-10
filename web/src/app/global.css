@@ -791,9 +791,8 @@ code {
 /* A ASSINATURA DO PRODUTO: discreta, no fim do rodapé, da folha do mapa e do
    menu. A ligação está no meio de uma frase, e por isso não leva os 44 px das
    ligações de navegação (critério 2.5.8, a exceção das ligações no texto).
-   A frase da Stineta vai logo por baixo, no mesmo tom. */
-.feito-com,
-.assinatura-stineta {
+   Diz também quem o faz, na mesma frase: «…, um produto Stineta — …». */
+.feito-com {
   font-size: var(--letra-pequena);
   color: var(--texto-secundario);
 }
@@ -815,6 +814,10 @@ code {
   forced-color-adjust: none;
   -webkit-mask: var(--desenho) no-repeat center / contain;
   mask: var(--desenho) no-repeat center / contain;
+}
+/* A marca não fica no fim de uma linha e o nome no princípio da seguinte. */
+a:has(> .marca-stineta) {
+  white-space: nowrap;
 }
 
 /* O RODAPÉ ALINHA COM O CONTEÚDO (#170): o espaço dos lados ia por fora da
@@ -4798,8 +4801,7 @@ dialog.menu-do-mapa::backdrop {
 .assinatura-da-folha .nome-secundario {
   color: var(--texto-secundario);
 }
-dialog.menu-do-mapa .feito-com,
-dialog.menu-do-mapa .assinatura-stineta {
+dialog.menu-do-mapa .feito-com {
   margin: var(--espaco-3);
 }
 /* A LISTA DO MENU NÃO É A LISTA DA REDE.
