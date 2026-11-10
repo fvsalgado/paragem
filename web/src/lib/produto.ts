@@ -34,10 +34,12 @@ export const STINETA = {
 } as const;
 
 /**
- * Quem desenha e desenvolve o produto, e é titular dos direitos — o mesmo
- * nome do `AUTORIA.md`, que é o sítio canónico dessa afirmação.
+ * QUEM RESPONDE, EM TERMOS LEGAIS. A Stineta é um nome comercial, e quem
+ * responde é a pessoa que o usa: é assim que se escreve onde a página
+ * identifica o responsável — o contacto do produto, a privacidade do produto e
+ * a de cada região enquanto a autoridade não indicar outro —, e só aí.
  */
-export const AUTOR = { nome: 'Fábio Salgado' } as const;
+export const RESPONSAVEL_LEGAL = `${STINETA.nome}, nome comercial de Fábio Salgado`;
 
 /** O código, que é público e livre (AGPL-3.0-only). */
 export const CODIGO = 'https://github.com/fvsalgado/paragem';

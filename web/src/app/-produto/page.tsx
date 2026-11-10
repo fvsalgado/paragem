@@ -10,13 +10,13 @@ import {
 } from '@/lib/dados';
 import { numero } from '@/lib/prosa';
 import {
-  AUTOR,
   CODIGO,
   CONTACTO,
   correioPara,
   eDaMontra,
   fraseDaDemonstracao,
   ordemDaMontra,
+  STINETA,
 } from '@/lib/produto';
 import { metadadosDoProduto } from '@/lib/metadados';
 
@@ -413,9 +413,9 @@ export default async function Produto() {
           <div>
             <h2 id="quem-titulo">Quem está por trás</h2>
             <p>
-              O Paragem.pt é desenhado e desenvolvido por {AUTOR.nome}: o nome, o código e o desenho
-              são dele. O sítio de cada região é publicado em nome da autoridade de transportes, e
-              abrir os dados dela com uma licença aberta é decisão dela.
+              O Paragem.pt é desenhado e desenvolvido pela {STINETA.nome}: o nome, o código e o
+              desenho são dela. O sítio de cada região é publicado em nome da autoridade de
+              transportes, e abrir os dados dela com uma licença aberta é decisão dela.
             </p>
           </div>
           <div>

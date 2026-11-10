@@ -1,4 +1,4 @@
-import { AUTOR, CONTACTO, SEGURANCA, correioPara } from '@/lib/produto';
+import { CONTACTO, RESPONSAVEL_LEGAL, SEGURANCA, correioPara } from '@/lib/produto';
 import { metadadosDoProduto } from '@/lib/metadados';
 
 export const metadata = metadadosDoProduto({
@@ -65,7 +65,7 @@ export default function Contacto() {
       <p>Não é preciso ter tudo isto à mão para escrever: a primeira conversa serve para o ver.</p>
 
       <h2>Quem responde</h2>
-      <p>{AUTOR.nome}, que desenha e desenvolve o Paragem.pt.</p>
+      <p>{RESPONSAVEL_LEGAL}, que desenha e desenvolve o Paragem.pt.</p>
 
       <h2>Uma falha de segurança</h2>
       <p>

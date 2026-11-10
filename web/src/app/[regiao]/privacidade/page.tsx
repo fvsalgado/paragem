@@ -53,7 +53,7 @@ export default async function Privacidade({ params }: { params: Promise<{ regiao
   // ENQUANTO A AUTORIDADE NÃO INDICAR, responde quem faz o produto, pelo
   // contacto do produto (`DO_PRODUTO`). Dizia «Por preencher».
   const declarado = responsavelNaFrase(contactos, aAutoridade(r, 'com_artigo'));
-  const responsavel = declarado ?? DO_PRODUTO.responsavel;
+  const responsavel = declarado ?? DO_PRODUTO.responsavelLegal;
   const emailDePrivacidade = contactos?.privacidade_email || (declarado ? null : DO_PRODUTO.email);
 
   return (

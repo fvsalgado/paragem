@@ -1,5 +1,5 @@
 import VerificacoesDeAcessibilidade from '@/componentes/VerificacoesDeAcessibilidade';
-import { AUTOR, CONTACTO, correioPara } from '@/lib/produto';
+import { CONTACTO, STINETA, correioPara } from '@/lib/produto';
 import { metadadosDoProduto } from '@/lib/metadados';
 import QueixasDeAcessibilidade from '@/componentes/QueixasDeAcessibilidade';
 
@@ -79,9 +79,9 @@ export default function AcessibilidadeDoProduto() {
 
       <h2>Contacto</h2>
       <p>
-        Responde por esta declaração {AUTOR.nome}, que faz o Paragem.pt. Para comunicar um problema
-        de acessibilidade neste sítio, ou pedir a informação de uma página noutro formato, escreva
-        para{' '}
+        Responde por esta declaração a {STINETA.nome}, que faz o Paragem.pt. Para comunicar um
+        problema de acessibilidade neste sítio, ou pedir a informação de uma página noutro formato,
+        escreva para{' '}
         <a href={correioPara('Acessibilidade do Paragem.pt')} className="endereco-de-correio">
           {CONTACTO}
         </a>
