@@ -200,7 +200,7 @@ test('a região que declara um logótipo mostra-o, sem saltar quando chega', asy
  * A ASSINATURA DO PRODUTO NUMA REGIÃO É UMA FRASE SÓ (decidido pelo dono a
  * 10/11/2026), no rodapé e no menu do mapa: o produto, e quem o faz.
  */
-const FEITO_COM = 'Feito com Paragem.pt, um produto Stineta — software para regiões e comunidades.';
+const FEITO_COM = 'Feito com Paragem.pt, um produto Stineta — software para a comunidade.';
 
 test('«Feito com Paragem.pt, um produto Stineta» discreto, no fim, a levar ao produto', async ({
   page,

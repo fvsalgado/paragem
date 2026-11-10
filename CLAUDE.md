@@ -232,7 +232,7 @@ Por esta ordem, um PR de cada vez: (0) a base, provada num Postgres real;
     num escuro —, e no ecrã principal vai em papel;
   - nas regiões, o produto assina a uma cor e mais pequeno do que a marca da
     região: no rodapé e no menu do mapa, numa frase só — «Feito com
-    Paragem.pt, um produto Stineta — software para regiões e comunidades.»
+    Paragem.pt, um produto Stineta — software para a comunidade.»
     (decidido a 10/11/2026) —; no cartão de partilha, só «Feito com
     Paragem.pt».
 - **O logótipo de cada região é o endereço dela** (decidido a 3/10/2026),
