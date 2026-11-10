@@ -1,4 +1,5 @@
 import Link from '@/componentes/Ligacao';
+import AssinaturaStineta from '@/componentes/AssinaturaStineta';
 import { DO_PRODUTO, lerContactos } from '@/lib/contactos';
 import { exigirRegiao, tarifas, url, urlRede } from '@/lib/dados';
 import { redeEQuemAGere } from '@/lib/prosa';
@@ -69,6 +70,11 @@ export default async function Rodape({ regiao: id }: { regiao: string }) {
         <p className="feito-com">
           Feito com <a href={ORIGEM_DO_PRODUTO}>Paragem.pt</a>
         </p>
+        {/* E QUEM FAZ O PRODUTO, logo por baixo e no mesmo tom (decidido pelo
+            dono a 10/11/2026): a frase da casa, igual à do rodapé do produto.
+            Numa classe sua, e não na `.feito-com`: essa diz só «Feito com
+            Paragem.pt», e é isso que se confere. */}
+        <AssinaturaStineta className="assinatura-stineta" rel="noreferrer" />
       </div>
     </footer>
   );

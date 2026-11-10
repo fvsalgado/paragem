@@ -790,10 +790,19 @@ code {
 
 /* A ASSINATURA DO PRODUTO: discreta, no fim do rodapé, da folha do mapa e do
    menu. A ligação está no meio de uma frase, e por isso não leva os 44 px das
-   ligações de navegação (critério 2.5.8, a exceção das ligações no texto). */
-.feito-com {
+   ligações de navegação (critério 2.5.8, a exceção das ligações no texto).
+   A frase da Stineta vai logo por baixo, no mesmo tom. */
+.feito-com,
+.assinatura-stineta {
   font-size: var(--letra-pequena);
   color: var(--texto-secundario);
+}
+/* A marca da Stineta à altura da letra da frase que assina. */
+.marca-stineta {
+  height: 1.1em;
+  width: auto;
+  vertical-align: -0.2em;
+  margin-right: 0.28em;
 }
 
 /* O RODAPÉ ALINHA COM O CONTEÚDO (#170): o espaço dos lados ia por fora da
