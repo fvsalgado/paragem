@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import Link from '@/componentes/Ligacao';
 import { Acessibilidade, APedido, Aviso, Bilhete, Descarregar, Fechar, Lista } from './Icones';
 import AssinaturaDaRegiao from './AssinaturaDaRegiao';
+import AssinaturaStineta from './AssinaturaStineta';
 import { EscolhaDoTema } from './EscolherTema';
 import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
 import type { Assinatura, Marca } from '@/lib/marca';
@@ -123,6 +124,10 @@ export default function MenuDoMapa({
       <p className="feito-com">
         Feito com <a href={ORIGEM_DO_PRODUTO}>Paragem.pt</a>
       </p>
+      {/* E QUEM FAZ O PRODUTO, logo por baixo, como no rodapé das outras
+          páginas (decidido pelo dono a 10/11/2026): todas as páginas de uma
+          região levam a frase, também a do mapa, que não tem rodapé. */}
+      <AssinaturaStineta className="assinatura-stineta" rel="noreferrer" />
     </dialog>
   );
 }

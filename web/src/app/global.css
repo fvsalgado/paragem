@@ -4798,7 +4798,8 @@ dialog.menu-do-mapa::backdrop {
 .assinatura-da-folha .nome-secundario {
   color: var(--texto-secundario);
 }
-dialog.menu-do-mapa .feito-com {
+dialog.menu-do-mapa .feito-com,
+dialog.menu-do-mapa .assinatura-stineta {
   margin: var(--espaco-3);
 }
 /* A LISTA DO MENU NÃO É A LISTA DA REDE.
