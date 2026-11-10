@@ -1,4 +1,5 @@
 import Link from '@/componentes/Ligacao';
+import AssinaturaStineta from '@/componentes/AssinaturaStineta';
 import { DO_PRODUTO, lerContactos } from '@/lib/contactos';
 import { exigirRegiao, tarifas, url, urlRede } from '@/lib/dados';
 import { redeEQuemAGere } from '@/lib/prosa';
@@ -65,10 +66,13 @@ export default async function Rodape({ regiao: id }: { regiao: string }) {
         <Atribuicoes r={r} />
         {/* A ASSINATURA DO PRODUTO, discreta e no fim (P4-008, P3-029). O
             sítio é da autoridade, e quem o fez assina por baixo — como num
-            livro, e não na capa. Leva à página do produto, noutro domínio. */}
-        <p className="feito-com">
-          Feito com <a href={ORIGEM_DO_PRODUTO}>Paragem.pt</a>
-        </p>
+            livro, e não na capa. «Paragem.pt» leva à página do produto, noutro
+            domínio. E diz quem o faz na mesma frase (decidido pelo dono a
+            10/11/2026): «Feito com Paragem.pt, um produto Stineta — software
+            para regiões e comunidades.» Eram duas linhas. */}
+        <AssinaturaStineta className="feito-com" rel="noreferrer">
+          Feito com <a href={ORIGEM_DO_PRODUTO}>Paragem.pt</a>, um produto{' '}
+        </AssinaturaStineta>
       </div>
     </footer>
   );

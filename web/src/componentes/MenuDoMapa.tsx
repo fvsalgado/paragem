@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import Link from '@/componentes/Ligacao';
 import { Acessibilidade, APedido, Aviso, Bilhete, Descarregar, Fechar, Lista } from './Icones';
 import AssinaturaDaRegiao from './AssinaturaDaRegiao';
+import AssinaturaStineta from './AssinaturaStineta';
 import { EscolhaDoTema } from './EscolherTema';
 import { ORIGEM_DO_PRODUTO } from '@/lib/dados-do-navegador';
 import type { Assinatura, Marca } from '@/lib/marca';
@@ -119,10 +120,13 @@ export default function MenuDoMapa({
       {/* A ASSINATURA DO PRODUTO, discreta e no fim, como no rodapé das outras
           páginas — que esta não tem. Era uma entrada do menu, «Sobre o
           Paragem.pt», ao lado das da rede, e antes disso «Outras regiões»: o
-          menu da autoridade a oferecer o fornecedor (P4-008). */}
-      <p className="feito-com">
-        Feito com <a href={ORIGEM_DO_PRODUTO}>Paragem.pt</a>
-      </p>
+          menu da autoridade a oferecer o fornecedor (P4-008). A mesma frase do
+          rodapé (decidido pelo dono a 10/11/2026), para todas as páginas de
+          uma região a dizerem: «Feito com Paragem.pt, um produto Stineta —
+          software para regiões e comunidades.» */}
+      <AssinaturaStineta className="feito-com" rel="noreferrer">
+        Feito com <a href={ORIGEM_DO_PRODUTO}>Paragem.pt</a>, um produto{' '}
+      </AssinaturaStineta>
     </dialog>
   );
 }

@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { AUTOR, CODIGO, CONTACTO, correioPara } from '@/lib/produto';
+import { CODIGO, CONTACTO, correioPara } from '@/lib/produto';
+import AssinaturaStineta from './AssinaturaStineta';
 import { EscolhaDoTema } from './EscolherTema';
 
 /**
@@ -35,8 +36,11 @@ export default function RodapeDoProduto({ origem = '' }: { origem?: string }) {
           </ul>
         </nav>
         <EscolhaDoTema />
+        {/* QUEM FAZ O PRODUTO, na frase da casa, igual à do rodapé de cada
+            região (decidido pelo dono a 10/11/2026). */}
+        <AssinaturaStineta />
         <p>
-          O Paragem.pt é desenhado e desenvolvido por {AUTOR.nome}. Contacto:{' '}
+          Contacto:{' '}
           <a href={correioPara('Paragem.pt')} className="endereco-de-correio">
             {CONTACTO}
           </a>

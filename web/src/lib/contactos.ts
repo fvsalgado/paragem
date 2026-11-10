@@ -10,15 +10,22 @@
  * enquanto a autoridade não indicar os seus, e o contacto recebe. As páginas
  * diziam «Por preencher» — honesto, mas deixava quem quer reclamar sem para
  * onde escrever. Inventado continua a não haver nada: o nome e o endereço são
- * os do `lib/produto.ts`, e o `AUTORIA.md` publica os mesmos.
+ * os do `lib/produto.ts`: a Stineta, que é quem faz o produto, e o contacto
+ * que o `AUTORIA.md` publica.
  */
 import { IDENTIFICADOR } from './formato.ts';
-import { AUTOR, CONTACTO } from './produto.ts';
+import { CONTACTO, RESPONSAVEL_LEGAL, STINETA } from './produto.ts';
 
 /** Quem responde, e para onde se escreve, enquanto a autoridade não indicar os seus. */
 export const DO_PRODUTO = {
-  /** «Fábio Salgado, que faz o Paragem.pt» — para a frase «o responsável … é …». */
-  responsavel: `${AUTOR.nome}, que faz o Paragem.pt`,
+  /** «a Stineta, que faz o Paragem.pt» — para a frase «responde por esta declaração …». */
+  responsavel: `a ${STINETA.nome}, que faz o Paragem.pt`,
+  /**
+   * O mesmo na forma legal, para a frase «o responsável pelo tratamento é …» da
+   * privacidade: é aí que se identifica quem responde, e a Stineta é um nome
+   * comercial (`RESPONSAVEL_LEGAL`).
+   */
+  responsavelLegal: `a ${RESPONSAVEL_LEGAL}, que faz o Paragem.pt`,
   email: CONTACTO,
 } as const;
 

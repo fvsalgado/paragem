@@ -16,10 +16,32 @@
 export const PRODUTO = { nome: 'Paragem.pt' } as const;
 
 /**
- * Quem desenha e desenvolve o produto, e é titular dos direitos — o mesmo
- * nome do `AUTORIA.md`, que é o sítio canónico dessa afirmação.
+ * QUEM FAZ O PRODUTO ASSINA COMO STINETA (decidido pelo dono a 10/11/2026).
+ *
+ * Uma frase só, igual em todos os produtos da casa: «Stineta — software para
+ * regiões e comunidades.» — a marca e o nome a levar à morada dela, e a
+ * descrição em texto ao lado (`componentes/AssinaturaStineta.tsx`). No
+ * rodapé do produto vai sozinha. Numa região, no rodapé e no menu do mapa, o
+ * produto assina numa frase só: «Feito com Paragem.pt, um produto Stineta —
+ * software para regiões e comunidades.»
+ *
+ * O nome de uma pessoa saiu das assinaturas e da prosa do produto. A
+ * titularidade dos direitos continua no `AUTORIA.md`, que é o sítio canónico
+ * dessa afirmação, e não muda com isto.
  */
-export const AUTOR = { nome: 'Fábio Salgado' } as const;
+export const STINETA = {
+  nome: 'Stineta',
+  url: 'https://stineta.pt',
+  descricao: 'software para regiões e comunidades',
+} as const;
+
+/**
+ * QUEM RESPONDE, EM TERMOS LEGAIS. A Stineta é um nome comercial, e quem
+ * responde é a pessoa que o usa: é assim que se escreve onde a página
+ * identifica o responsável — o contacto do produto, a privacidade do produto e
+ * a de cada região enquanto a autoridade não indicar outro —, e só aí.
+ */
+export const RESPONSAVEL_LEGAL = `${STINETA.nome}, nome comercial de Fábio Salgado`;
 
 /** O código, que é público e livre (AGPL-3.0-only). */
 export const CODIGO = 'https://github.com/fvsalgado/paragem';

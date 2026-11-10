@@ -230,8 +230,11 @@ Por esta ordem, um PR de cada vez: (0) a base, provada num Postgres real;
   - o ícone desenha-se ao píxel a 16, 32 e 48 px; no separador troca de
     azulejo com o tema do navegador — azul-noite num separador claro, papel
     num escuro —, e no ecrã principal vai em papel;
-  - nas regiões, o produto assina «Feito com Paragem.pt», a uma cor e mais
-    pequeno do que a marca da região — no rodapé e no cartão de partilha.
+  - nas regiões, o produto assina a uma cor e mais pequeno do que a marca da
+    região: no rodapé e no menu do mapa, numa frase só — «Feito com
+    Paragem.pt, um produto Stineta — software para regiões e comunidades.»
+    (decidido a 10/11/2026) —; no cartão de partilha, só «Feito com
+    Paragem.pt».
 - **O logótipo de cada região é o endereço dela** (decidido a 3/10/2026),
   desenhado com o mesmo feixe — «prova.paragem.pt» como «paragem.pt» — e pelo
   mesmo motor (`web/src/lib/feixe.ts`): o alfabeto de um endereço, e o espaço

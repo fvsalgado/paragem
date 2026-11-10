@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import DireitosDePrivacidade from '@/componentes/DireitosDePrivacidade';
-import { AUTOR, CONTACTO, correioPara } from '@/lib/produto';
+import { CONTACTO, RESPONSAVEL_LEGAL, correioPara } from '@/lib/produto';
 import { metadadosDoProduto } from '@/lib/metadados';
 
 export const metadata = metadadosDoProduto({
@@ -121,8 +121,8 @@ export default function PrivacidadeDoProduto() {
 
       <h2>Quem responde</h2>
       <p>
-        {AUTOR.nome}, que faz o Paragem.pt, pelo mesmo endereço. A declaração de acessibilidade
-        deste sítio está em <Link href="/acessibilidade/">Acessibilidade</Link>.
+        {RESPONSAVEL_LEGAL}, que faz o Paragem.pt, pelo mesmo endereço. A declaração de
+        acessibilidade deste sítio está em <Link href="/acessibilidade/">Acessibilidade</Link>.
       </p>
     </div>
   );

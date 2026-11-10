@@ -96,10 +96,16 @@ test('lê com a chave pública; sem base, sem tabela ou sem linha, não sabe', a
 });
 
 test('quem responde enquanto a autoridade não indicar é quem faz o produto, pelo contacto dele', () => {
-  // Os mesmos do `AUTORIA.md`: nada aqui é inventado. Era «Por preencher», e
-  // quem precisava de reclamar ficava sem para onde escrever.
+  // Quem faz o produto, e nada inventado: a Stineta, e na forma legal o
+  // titular do `AUTORIA.md`. Era «Por preencher», e quem precisava de
+  // reclamar ficava sem para onde escrever.
   // O endereço é o do produto: o publicado, ou o que a instalação declarar.
-  assert.equal(DO_PRODUTO.responsavel, 'Fábio Salgado, que faz o Paragem.pt');
+  assert.equal(DO_PRODUTO.responsavel, 'a Stineta, que faz o Paragem.pt');
+  // Na privacidade, onde se identifica quem responde, vai a forma legal.
+  assert.equal(
+    DO_PRODUTO.responsavelLegal,
+    'a Stineta, nome comercial de Fábio Salgado, que faz o Paragem.pt',
+  );
   assert.equal(DO_PRODUTO.email, CONTACTO);
   assert.equal(CONTACTO_PUBLICADO, 'correio@paragem.pt');
 });
